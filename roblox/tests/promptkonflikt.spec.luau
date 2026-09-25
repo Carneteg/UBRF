@@ -363,8 +363,10 @@ do
 	end
 	check("varje rad i närområdet är en prompt som verkligen finns här",
 		frammande == 0, ("%d främmande"):format(frammande))
+	--[[ #264 PLAYER_INTERACTION_CONSOLIDATION: taket är kontraktets — en
+	     primär och två sekundära. Resten nås genom panelens overflow. ]]
 	check("och listan är full — taket, inte tomhet, är det som begränsar",
-		#rader == math.min(#nara, 5),
+		#rader == math.min(#nara, 3),
 		("%d rader av %d möjliga"):format(#rader, #nara))
 end
 

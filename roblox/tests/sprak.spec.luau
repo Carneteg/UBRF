@@ -78,7 +78,12 @@ do
 	     BROMS, vars etiketter ("DRIV"/"GO", "BROMS"/"SLOW") är riktiga
 	     översättningar. En tom lista är starkast möjliga läge för regeln:
 	     varje sammanfallande sträng är nu ett fynd. ]]
-	local SAMMANFALLER: { [string]: string } = {}
+	--[[ #264 PLAYER_INTERACTION_CONSOLIDATION: `gangart.halt` — panelens
+	     rubrik uppsutten visar gångarten, och "Halt" är samma ridterm på
+	     båda språken, av exakt samma skäl som `touch.halt` stod här förut. ]]
+	local SAMMANFALLER: { [string]: string } = {
+		["gangart.halt"] = "halt är ridtermen på både svenska och engelska",
+	}
 	local samma = {}
 	for _, nyckel in ipairs(nycklar) do
 		if Sprak.iSprak("sv", nyckel) == Sprak.iSprak("en", nyckel)

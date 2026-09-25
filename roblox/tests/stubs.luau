@@ -326,6 +326,9 @@ Enum = {
 	HorizontalAlignment = { Left = 1, Center = 2, Right = 3 },
 	VerticalAlignment = { Top = 1, Center = 2, Bottom = 3 },
 	AutomaticSize = { None = 0, X = 1, Y = 2, XY = 3 },
+	--[[ #264 PLAYER_INTERACTION_CONSOLIDATION: panelens handlingslista rullar
+	     (`ScrollingFrame.ScrollingDirection`). Namn och värden är Robloxs. ]]
+	ScrollingDirection = { X = 1, Y = 2, XY = 4 },
 	--[[ #244: toningens enum. Uppraknade av samma skal som Material och de
 	     ovriga UI-enumen ovan — en __index som svarar pa allt hade latit
 	     `Enum.EasingStyle.Kvadratisk` passera hela sviten och falla forst i

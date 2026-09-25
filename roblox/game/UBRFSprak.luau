@@ -45,6 +45,38 @@ Sprak.text = {
 		sv = "Håll inne",
 		en = "Hold",
 	},
+	["gangart.halt"] = {
+		sv = "Halt",
+		en = "Halt",
+	},
+	["gangart.walk"] = {
+		sv = "Skritt",
+		en = "Walk",
+	},
+	["gangart.trot"] = {
+		sv = "Trav",
+		en = "Trot",
+	},
+	["gangart.canter"] = {
+		sv = "Galopp",
+		en = "Canter",
+	},
+	["gangart.gallop"] = {
+		sv = "Fyrsprång",
+		en = "Gallop",
+	},
+	["panel.leder"] = {
+		sv = "Leder",
+		en = "Leading",
+	},
+	["panel.fler"] = {
+		sv = "Fler handlingar",
+		en = "More actions",
+	},
+	["panel.hjalp"] = {
+		sv = "Hjälp",
+		en = "Help",
+	},
 	["interaktion.sitt_av"] = {
 		sv = "SITT AV",
 		en = "DISMOUNT",

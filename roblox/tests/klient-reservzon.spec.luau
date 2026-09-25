@@ -221,10 +221,18 @@ for _, sk in ipairs(SKARMAR) do
 	--[[ 1. FÖRE UPPSITTNINGEN: skötseln syns, reglagen finns inte. ]]
 	visa(st, Preparation.STATUS.REDO)
 	local hud, g = hudPaSkarmen(W, H)
+	--[[ #264 PLAYER_INTERACTION_CONSOLIDATION: skötselns innehåll står i
+	     den enhetliga panelen; skötselns egen yta är släckt med avsikt, så
+	     att det inte finns två. «Påslagen» betyder numera att PANELEN bär
+	     skötselns rubrik. ]]
+	local pnl = Naromrade._panel()
 	prova("före uppsittningen är skötsel-HUD:en påslagen",
-		g ~= nil and g.Enabled ~= false)
-	prova("och spåraren står på skärmen", hud.Sparare ~= nil,
-		hud.Sparare and r2s(hud.Sparare))
+		pnl.synlig and PC._rubrik() ~= ""
+			and string.find(pnl.rubrik, PC._rubrik(), 1, true) ~= nil,
+		("panel=%s rubrik=%q"):format(tostring(pnl.synlig), pnl.rubrik))
+	prova("och skötselns egen yta är släckt — en yta, inte två",
+		g == nil or g.Enabled == false)
+	local _ = hud
 	prova("ridningens pekreglage finns inte förrän man rider",
 		reserv(W, H) == nil and not TouchControls.isActive())
 
@@ -401,9 +409,12 @@ for _, sk in ipairs(SKARMAR) do
 	prova("HUD:en är fortfarande släckt tills servern säger något annat",
 		g4 ~= nil and g4.Enabled == false)
 	visa(st, Preparation.STATUS.REDO)
-	local hud5, g5 = hudPaSkarmen(W, H)
+	local _, g5 = hudPaSkarmen(W, H)
+	local pnl5 = Naromrade._panel()
 	prova("serverns nästa vy tänder skötseln igen — utan reglage på skärmen",
-		g5 ~= nil and g5.Enabled ~= false and hud5.Sparare ~= nil and reserv(W, H) == nil)
+		pnl5.synlig and string.find(pnl5.rubrik, PC._rubrik(), 1, true) ~= nil
+			and (g5 == nil or g5.Enabled == false) and reserv(W, H) == nil,
+		("panel=%s rubrik=%q"):format(tostring(pnl5.synlig), pnl5.rubrik))
 
 	--[[ OBSERVATION, inte krav (#221 gäller skötselpanelen): `?`-knappen i
 		KontrollHjalp bor också uppe till höger, 48 px med 12 px marginal,

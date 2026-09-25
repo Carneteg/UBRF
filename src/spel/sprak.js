@@ -57,6 +57,17 @@ const SPRAK = {
      när menyn ersätter den, så menyn säger det själv — medan hållet
      pågår, och när någon släppt för tidigt. */
   "interaktion.hall_inne": { sv: "Håll inne", en: "Hold" },
+  /* #264 PLAYER_INTERACTION_CONSOLIDATION: panelens rubrik uppsutten visar
+     den gångart servern säger att hästen går i. `Gaits.label` finns bara
+     på svenska och är kanonens identitet, inte spelartext. */
+  "gangart.halt": { sv: "Halt", en: "Halt" },
+  "gangart.walk": { sv: "Skritt", en: "Walk" },
+  "gangart.trot": { sv: "Trav", en: "Trot" },
+  "gangart.canter": { sv: "Galopp", en: "Canter" },
+  "gangart.gallop": { sv: "Fyrsprång", en: "Gallop" },
+  "panel.leder": { sv: "Leder", en: "Leading" },
+  "panel.fler": { sv: "Fler handlingar", en: "More actions" },
+  "panel.hjalp": { sv: "Hjälp", en: "Help" },
   "interaktion.sitt_av": { sv: "SITT AV", en: "DISMOUNT" },
 
   /* Utrustningsstegets namn är en RÄKNARE, inte kanon: "Utrustning 2/4"

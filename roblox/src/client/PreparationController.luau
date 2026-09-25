@@ -343,6 +343,27 @@ local avslagNr = 0
 	som fanns att säga. Sedan är läget spelarens igen. ]]
 local senasteLage: string? = nil
 
+--[[ ══ EN PANEL, EN ÄGARE (#264 PLAYER_INTERACTION_CONSOLIDATION) ═══════
+
+	Kontraktet 2026-09-25: EN sammanhållen panel bär hästen, nästa steg och
+	handlingen. Den här modulen ägde hittills två egna ytor för det — stegkortet
+	(`Sparare`) och interaktionspanelen (`Interaktion`) — bredvid närområdets
+	handlingsrader. Tre ytor för en sak.
+
+	Presentationen flyttar till `Naromrade`. TILLSTÅNDET OCH HANDLINGARNA
+	stannar här: raderna nedan fylls av exakt samma grenar i `rita` som ritar
+	knapparna, och varje val bär sin befintliga `skicka` — ingen kopia av
+	regler, ingen tolkning av översatt text.
+
+	Utan en värd (`satVard`) ritar modulen sina ytor precis som förut, så att
+	varje befintligt layoutprov mäter samma sak. Med en värd är ytorna släckta
+	och innehållet går till värden i stället — flyttat, inte gömt. ]]
+local panelVal: { any } = {}
+local panelSteg: { any } = {}
+local panelData: any = nil
+local panelHastnamn: string? = nil
+local vard: (() -> ())? = nil
+
 --[[ ══ KORTET HÖR TILL KONTEXTEN, INTE TILL SKÄRMEN (PO-order 2026-09-20) ══
 
 	"The top-right «Take care of her» progress card belongs to
@@ -1274,6 +1295,8 @@ local function rad(steg: any, ordning: number)
 	befintlig.ram.LayoutOrder = ordning
 	befintlig.ram.Visible = true
 	befintlig.namn.Text = steg.namn
+	table.insert(panelSteg, { namn = steg.namn, klar = steg.klar == true,
+		paTur = senasteVy ~= nil and senasteVy.nasta == steg.id })
 	if steg.klar then
 		befintlig.bock.Text = "✓"
 		befintlig.bock.TextColor3 = FARG_KLAR
@@ -1340,6 +1363,11 @@ local function momentRad(m: any, ordning: number, paTur: boolean, skicka: () -> 
 	knapp.LayoutOrder = ordning
 	knapp.Visible = true
 	knapp.Text = (if m.klar then "✓  " else "")  .. m.namn
+	--[[ Samma val, samma handling, till den enhetliga panelen. `aktiv` är
+	     samma grind som knappen själv har: utom räckhåll skickas ingenting. ]]
+	table.insert(panelVal, { id = m.id, text = m.namn, klar = m.klar == true,
+		fel = m.fel == true, paTur = paTur, aktiv = not utomRackhall and not m.klar,
+		skicka = skicka })
 
 	if utomRackhall and not m.klar then
 		--[[ Död knapp. Sedan PO-ordern 09:36 GÖMS hela interaktionspanelen
@@ -1526,7 +1554,53 @@ local function avsluta(lage: string, antalVal: number, ledtext: string,
 		framsteg.Text = if totalt > 0 then ("%d/%d"):format(klara, totalt) else ""
 	end
 	PreparationController.tillampaLayout()
-	if gui then gui.Enabled = synlig end
+	--[[ TILL VÄRDEN. Samma tal och texter som ytorna nyss fick, som data.
+	     `aterkoppling` skiljer en kvittens och ett nej från en instruktion,
+	     så att panelen kan visa dem i sitt återkopplingsfält i stället för
+	     att de tar över instruktionens plats för gott. ]]
+	panelData = {
+		lage = lage,
+		rubrik = if rubrik then rubrik.Text else "",
+		text = ledtext,
+		aterkoppling = if avslag then "nej" elseif bekraftelse then "ok" else nil,
+		klara = klara, totalt = totalt,
+		synlig = synlig,
+		harVal = interaktionPagar(antalVal),
+		hastnamn = panelHastnamn,
+	}
+	if vard then
+		if gui then gui.Enabled = false end
+		vard()
+	else
+		if gui then gui.Enabled = synlig end
+	end
+end
+
+--[[ ── VÄRDEN (#264 PLAYER_INTERACTION_CONSOLIDATION) ─────────────────
+
+	`satVard(fn)`: den enhetliga panelen tar över presentationen. Modulens egna
+	ytor släcks — innehållet går till värden, som anropas efter varje ny vy.
+	`satVard(nil)` lämnar tillbaka ytorna. ]]
+function PreparationController.satVard(fn: (() -> ())?)
+	vard = fn
+	if gui then
+		gui.Enabled = if fn then false else (panelData ~= nil and panelData.synlig == true)
+	end
+	if fn and panelData then fn() end
+end
+
+--[[ Vad panelen ska visa just nu. Kopior, så att värden inte kan skriva i
+     modulens tillstånd; `skicka` är den befintliga handlingen, orörd. ]]
+function PreparationController.panel(): any
+	if not panelData then return nil end
+	local val = {}
+	for i, v in ipairs(panelVal) do val[i] = table.clone(v) end
+	local steg = {}
+	for i, s in ipairs(panelSteg) do steg[i] = table.clone(s) end
+	local ut = table.clone(panelData)
+	ut.val = val
+	ut.steg = steg
+	return ut
 end
 
 --[[ ── DIREKT FEEDBACK ─────────────────────────────────────────────
@@ -1632,6 +1706,9 @@ function rita(vy: any)
 		inte har är samma sak som ingen tur alls, men den syns senare och
 		är svårare att läsa. ]]
 	paTurNu, arValNu, allaNu = nil, false, false
+	table.clear(panelVal)
+	table.clear(panelSteg)
+	panelHastnamn = if type(vy.hastnamn) == "string" then vy.hastnamn else nil
 
 	local anvanda: { [string]: boolean } = {}
 
@@ -1856,6 +1933,9 @@ end
 	Ren avläsning: den sätts där panelen faktiskt läggs ut, och ingen
 	annan modul räknar om den. ]]
 function PreparationController.interaktionsruta(): { [string]: number }?
+	--[[ Med en värd syns inte panelen, och en osynlig ruta ska ingen väja
+	     för (#264 PLAYER_INTERACTION_CONSOLIDATION). ]]
+	if vard then return nil end
 	return senasteRuta
 end
 

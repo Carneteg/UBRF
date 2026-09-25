@@ -95,7 +95,11 @@ do
 	local led = nyPrompt("Häst", "Led Trixie", "Trixie", Vector3.new(6, 0, 0), 12)
 	local upp = nyPrompt("Sadelpunkt", "Sitt upp", "Trixie", Vector3.new(6.5, 0, 0), 12)
 
-	local nara = N.nara(HAR, { workspace })
+	--[[ #264 PLAYER_INTERACTION_CONSOLIDATION: panelen har tre handlings-
+	     rader och en overflow. «Har en touchväg» betyder att handlingen
+	     NÅS — alltså hela den sorterade mängden, som overflow bläddrar i,
+	     inte bara första sidan. ]]
+	local nara = N.sorterade(HAR, { workspace }, nil)
 	local funna = {}
 	for _, p in ipairs(nara) do funna[p.ActionText] = true end
 
@@ -228,9 +232,17 @@ do
 	     pekar på en prompt. ]]
 	N.satRider(true)
 	local ridhjalp = KontrollHjalp.ridrader()
+	--[[ #264 PLAYER_INTERACTION_CONSOLIDATION: kärnan står som panelens
+	     vägledning, inte som knappar — handlingarna har sina riktiga
+	     reglage. Ingen handlingsrad syns uppsutten. ]]
+	local ridtext = N._panel().steg
+	local allaMed = #ridhjalp > 0
+	for _, r in ipairs(ridhjalp) do
+		if not string.find(ridtext, r.vad, 1, true) then allaMed = false end
+	end
 	check("medan man rider visar listan ridningens kärna",
-		#N._rader() == #ridhjalp and #ridhjalp > 0,
-		("%d rader, %d kärnrader"):format(#N._rader(), #ridhjalp))
+		allaMed and #N._rader() == 0 and N._panel().synlig,
+		("%d rader, %d kärnrader, text=%q"):format(#N._rader(), #ridhjalp, ridtext))
 	check("och ingen rad pekar på en stallprompt", #N._prompter() == 0,
 		("%d prompter"):format(#N._prompter()))
 	N.satRider(false)
@@ -519,16 +531,20 @@ do
 	check("en panel som äter hela höjden lämnar ändå EN rad",
 		trangt == 1, ("%d rader"):format(trangt))
 
-	--[[ EN HÖG PANEL ÄTER RADER — det är hela poängen. Utan panel ska
-	     taket vara det gamla. ]]
+	--[[ #264 PLAYER_INTERACTION_CONSOLIDATION: skötselns yta är inte längre
+	     en egen panel att väja för — dess innehåll bor i den enhetliga
+	     panelen, och dess egen yta är släckt medan panelen är värd. En
+	     släckt yta ska ingen väja för; det vore att ge bort rader åt en
+	     osynlig ruta. Taket är kontraktets: en primär och två sekundära. ]]
 	yta.AbsoluteSize = Vector3.new(1080, 810, 0)
 	PreparationController._satRutaForProv(nil)
 	local utan = N.radplatser()
 	PreparationController._satRutaForProv({ x0 = 16, y0 = 200, x1 = 332, y1 = 810 })
 	local med = N.radplatser()
-	check("en hög skötselpanel minskar antalet rader", med < utan,
-		("utan panel %d · med panel %d"):format(utan, med))
-	check("och utan panel är taket kanonens fem", utan == 5, ("%d"):format(utan))
+	check("med värd väjer panelen inte för skötselns släckta yta", med == utan,
+		("utan ruta %d · med ruta %d"):format(utan, med))
+	check("och taket är kontraktets tre handlingsrader", utan == 3, ("%d"):format(utan))
+	PreparationController._satRutaForProv(nil)
 
 	--[[ ── ROBLOXS VÄNSTRA RÖRELSEKONTROLL ────────────────────────────
 
@@ -665,9 +681,12 @@ do
 			Reviewns poäng: en hjälpfunktion kan svara rätt medan ramen
 			ritas någon annanstans. Här läses ramens FAKTISKA position och
 			storlek efter en riktig ritning. ]]
+		--[[ #264: ramen är numera den enhetliga panelen, `Panel`. Den är
+		     ankrad i nederkanten och växer med sitt innehåll, så höjden
+		     mäts som synliga handlingsrader i stället för ett fast tal. ]]
 		local function listramen()
 			for _, b in ipairs(yta._barn or {}) do
-				if b.Name == "Lista" then return b end
+				if b.Name == "Panel" then return b end
 			end
 			return nil
 		end
@@ -676,17 +695,14 @@ do
 		check("ramen finns att mäta", f ~= nil)
 		if f then
 			local px = f.Position and f.Position.X and f.Position.X.Offset or -1
-			local py = f.Position and f.Position.Y and f.Position.Y.Offset or -1
 			local bx = f.Size and f.Size.X and f.Size.X.Offset or -1
 			check("DEN RITADE RAMEN ligger helt innanför vyn",
 				px >= 0 and px + bx <= 844,
 				("x=%d bredd=%d hogerkant=%d av 844"):format(px, bx, px + bx))
 			check("och den ritade ramen börjar till höger om rörelseytan",
 				px >= 250, ("x=%d mot ytans 250"):format(px))
-			check("och ramen har en höjd som rymmer minst en rad",
-				(f.Size and f.Size.Y and f.Size.Y.Offset or 0) >= 60,
-				("hojd=%s"):format(tostring(f.Size and f.Size.Y
-					and f.Size.Y.Offset)))
+			check("och panelen rymmer minst en handlingsrad",
+				N.radplatser() >= 1, ("%d platser"):format(N.radplatser()))
 		end
 
 		--[[ POSITIV KONTROLL FÖR TANGENTBORD/MUS: utan kontrollträd ska
@@ -795,9 +811,12 @@ do
 		end
 		return sok(Players.LocalPlayer._gui)
 	end)()
-	--[[ Radkapacitet 2: liten telefon i landskap med en skötselpanel uppe. ]]
-	yta.AbsoluteSize = Vector3.new(844, 390, 0)
-	PreparationController._satRutaForProv({ x0 = 16, y0 = 190, x1 = 332, y1 = 390 })
+	--[[ Radkapacitet 2. #264 PLAYER_INTERACTION_CONSOLIDATION: hela panelen
+	     ska rymmas inom 40 % av höjden, och skötselns innehåll bor i den.
+	     Förut gav en telefon med skötselpanelen uppe två rader; nu ger en
+	     telefon i landskap EN rad plus overflow. Två rader ger en kompakt
+	     landskapsyta på 640 px — samma fråga, rätt yta. ]]
+	yta.AbsoluteSize = Vector3.new(1180, 640, 0)
 	PreparationController._satHastIdForProv("trixie")
 	check("radkapaciteten är 2 på den här ytan", N.radplatser() == 2,
 		("%d"):format(N.radplatser()))
@@ -1092,7 +1111,9 @@ do
 	end
 
 	--[[ …och den ligger FÖRST, före den frivilliga omsorgen. ]]
-	local full = N.nara(Vector3.new(0, 0, 0), { workspace }, "trixie", 5)
+	--[[ Hela ordningen, inte en sida: taket är numera tre (#264), och
+	     ordningen gäller hela mängden som panelen bläddrar i. ]]
+	local full = N.sorterade(Vector3.new(0, 0, 0), { workspace }, "trixie")
 	check("Rida nu står först av dagens hästs handlingar", full[1] == rida,
 		tostring(full[1] and full[1].ActionText))
 	check("och ledningen — den frivilliga omsorgen — kommer efter",
@@ -1905,6 +1926,9 @@ do
 		local forePos, foreStorlek = yta.AbsolutePosition, yta.AbsoluteSize
 		yta.AbsolutePosition = Vector2.new(0, 58)
 		yta.AbsoluteSize = Vector2.new(1179, 761)
+		--[[ Rutan gäller bara när skötselns egen yta ritas, alltså utan
+		     värd. Med den enhetliga panelen (#264) är den släckt. ]]
+		PreparationController.satVard(nil)
 		PreparationController._satRutaForProv({ x0 = 12, y0 = 697, x1 = 328, y1 = 807 })
 		check("RUTAN RÄKNAS OM TILL LISTANS RUM — golvet är panelens överkant",
 			N.blockgolv() == 697 - 58, ("golv %s"):format(tostring(N.blockgolv())))

@@ -81,16 +81,30 @@ local Naromrade = {}
 	`TouchControls`, så att de två ytorna känns som samma spel. ]]
 --[[ Bläddringsraden är avsiktligt LÅG: den är en väg vidare, inte en
      handling, och ska inte konkurrera med raderna om blicken. ]]
-local BLADDRA_H = 26
-local KNAPP_H = 52
-local KNAPP_B = 190
-local LUFT = 8
+local BLADDRA_H = 44
+--[[ #264 PLAYER_INTERACTION_CONSOLIDATION: raderna är 44 px — kontraktets
+     golv för en träffyta — och växer med radbruten text. Panelen är
+     nominellt 300 px bred, 260–320 där det finns plats, och aldrig bredare
+     än den användbara ytan. ]]
+local KNAPP_H = 44
+local KNAPP_B = 300
+local PANEL_MIN = 260
+local PANEL_MAX = 320
+local LUFT = 6
 local KANT = 16
 
---[[ Hur många rader som ritas. Fler än så är inte ett val, det är en
-	lista — och mätningen ovan hittade fem konkurrerande prompter, så
-	taket måste rymma dem utan att fylla skärmen. ]]
-local MAX_RADER = 5
+--[[ EN PRIMÄR HANDLING OCH HÖGST TVÅ SEKUNDÄRA (#264 kontraktet). Fler
+	relevanta handlingar nås genom panelens egen overflow-rad, inte genom
+	fler rader och aldrig genom världsbubblor. ]]
+local MAX_RADER = 3
+
+--[[ Skötselns frågor och checklistor: högst fyra alternativ i blocket. ]]
+local MAX_VAL = 4
+
+--[[ Panelens ungefärliga fasta höjd utöver handlingsraderna: rubrik, nästa
+     steg, återkoppling och hjälpraden med luft. Används för att hålla hela
+     panelen inom 40 % av den användbara höjden. ]]
+local PANEL_FAST = 150
 
 --[[ Hur ofta listan räknas om. Tätare än så kostar utan att synas;
 	glesare gör att en rad ligger kvar när man gått därifrån. ]]
@@ -120,6 +134,26 @@ local senaste: { ProximityPrompt } = {}
      taget — och då får allt relevant också släckas. ]]
 local sida = 1
 local relevanta: { ProximityPrompt } = {}
+
+--[[ ── PANELENS DELAR (#264 PLAYER_INTERACTION_CONSOLIDATION) ──────────
+
+     `panelRam` är den enda ytan. `ram` (listan) ligger inuti den och bär
+     handlingsraderna precis som förut — samma knappar, samma håll, samma
+     tangentägarskap. Runt dem: rubriken, nästa steg, återkopplingen och
+     hjälpen. `valRader[i]` är ett skötselval ur `PreparationController`
+     när raden bär ett sådant i stället för en prompt. ]]
+local panelRam: Frame? = nil
+local rubrikEtikett: TextLabel? = nil
+local stegEtikett: TextLabel? = nil
+local aterEtikett: TextLabel? = nil
+local hjalpKnapp: TextButton? = nil
+local hjalpText: TextLabel? = nil
+local hjalpUt = false
+local valRader: { [number]: any } = {}
+local valKnappar: { TextButton } = {}
+local valYta: ScrollingFrame? = nil
+local antalHandlingar = 0
+local sistaInstruktion = ""
 --[[ #246 C: prompter vars EGNA UI vi släckt, och stilen de hade innan.
      Nyckeln är prompten själv, så att en som försvinner ur världen tas
      med av skräpsamlaren utan att lämna en post efter sig. ]]
@@ -497,24 +531,34 @@ end
 local function nyKnapp(i: number): TextButton
 	local b = Instance.new("TextButton")
 	b.Name = "Rad" .. i
-	b.Size = UDim2.fromOffset(KNAPP_B, KNAPP_H)
-	b.Position = UDim2.fromOffset(0, (i - 1) * (KNAPP_H + LUFT))
-	b.BackgroundColor3 = Color3.fromRGB(24, 27, 33)
-	b.BackgroundTransparency = 0.12
+	--[[ Full panelbredd, 44 px och uppåt: raden växer med radbruten text i
+	     stället för att krympa typsnittet. Fasta storlekar, ingen
+	     viewportskalning (#264 kontraktet). ]]
+	b.Size = UDim2.new(1, 0, 0, KNAPP_H)
+	b.AutomaticSize = Enum.AutomaticSize.Y
+	b.LayoutOrder = i
+	b.BackgroundColor3 = Color3.fromRGB(38, 41, 47)
+	b.BackgroundTransparency = 0.1
 	b.TextColor3 = Color3.fromRGB(236, 232, 222)
 	b.Font = Enum.Font.GothamMedium
-	b.TextSize = 15
-	b.TextScaled = true
+	b.TextSize = 14
+	b.TextScaled = false
 	b.TextWrapped = true
+	b.TextXAlignment = Enum.TextXAlignment.Left
 	b.AutoButtonColor = false
 	b.BorderSizePixel = 0
 	b.Visible = false
-	local tak = Instance.new("UITextSizeConstraint")
-	tak.MaxTextSize = 15
-	tak.MinTextSize = 9
-	tak.Parent = b
+	local pad = Instance.new("UIPadding")
+	pad.PaddingLeft = UDim.new(0, 10)
+	pad.PaddingRight = UDim.new(0, 10)
+	pad.PaddingTop = UDim.new(0, 6)
+	pad.PaddingBottom = UDim.new(0, 6)
+	pad.Parent = b
+	local golv = Instance.new("UISizeConstraint")
+	golv.MinSize = Vector2.new(0, KNAPP_H)
+	golv.Parent = b
 	local horn = Instance.new("UICorner")
-	horn.CornerRadius = UDim.new(0, 12)
+	horn.CornerRadius = UDim.new(0, 6)
 	horn.Parent = b
 	--[[ HÅLLET SYNS (#264 ROBLOX_HUMAN_PLAYTEST_FIX). Motorns bubbla ritade
 	     en ring som fylldes medan man höll; menyn ersätter bubblan och
@@ -528,7 +572,7 @@ local function nyKnapp(i: number): TextButton
 	fyll.Visible = false
 	fyll.Parent = b
 	local fyllHorn = Instance.new("UICorner")
-	fyllHorn.CornerRadius = UDim.new(0, 12)
+	fyllHorn.CornerRadius = UDim.new(0, 6)
 	fyllHorn.Parent = fyll
 	return b
 end
@@ -866,16 +910,132 @@ local function bygg()
 	g.Parent = mapp
 	gui = g
 
+	--[[ ══ EN PANEL (#264 PLAYER_INTERACTION_CONSOLIDATION) ══════════════
+
+		Tobias 2026-09-25: separata handlingsknappar OCH en instruktions-
+		bubbla, igen. Kontraktet: EN kompakt panel som bär hästen, nästa
+		steg och handlingen som utför det — uppifrån och ned:
+
+		    rubrik        hästen en gång, och läget
+		    nästa steg    en kort mening
+		    handlingar    en primär, högst två sekundära, overflow
+		    återkoppling  kvittens, nej, väntan
+		    hjälp         fälls ut INUTI panelen
+
+		En mörk, genomskinlig yta; den varma accenten bara på den primära
+		handlingen och på hållets fyllning. Inga nästlade kort. Nere till
+		vänster, ankrad i nederkanten och växer uppåt — platsen räknas i
+		`rita` ur den yta som faktiskt är ledig. ]]
+	local pn = Instance.new("Frame")
+	pn.Name = "Panel"
+	pn.AnchorPoint = Vector2.new(0, 1)
+	pn.Size = UDim2.fromOffset(KNAPP_B, 0)
+	pn.AutomaticSize = Enum.AutomaticSize.Y
+	pn.Position = UDim2.new(0, KANT, 1, -KANT)
+	pn.BackgroundColor3 = Color3.fromRGB(24, 27, 33)
+	pn.BackgroundTransparency = 0.12
+	pn.BorderSizePixel = 0
+	pn.Visible = false
+	pn.Parent = g
+	local horn = Instance.new("UICorner")
+	horn.CornerRadius = UDim.new(0, 8)
+	horn.Parent = pn
+	local pad = Instance.new("UIPadding")
+	pad.PaddingLeft = UDim.new(0, 10)
+	pad.PaddingRight = UDim.new(0, 10)
+	pad.PaddingTop = UDim.new(0, 10)
+	pad.PaddingBottom = UDim.new(0, 10)
+	pad.Parent = pn
+	local lista = Instance.new("UIListLayout")
+	lista.FillDirection = Enum.FillDirection.Vertical
+	lista.SortOrder = Enum.SortOrder.LayoutOrder
+	lista.Padding = UDim.new(0, LUFT)
+	lista.Parent = pn
+	local tak = Instance.new("UISizeConstraint")
+	tak.Name = "Tak"
+	tak.Parent = pn
+	panelRam = pn
+
+	local function etikettYta(namn: string, ordning: number, storlek: number,
+		fet: boolean): TextLabel
+		local t = Instance.new("TextLabel")
+		t.Name = namn
+		t.LayoutOrder = ordning
+		t.Size = UDim2.new(1, 0, 0, 0)
+		t.AutomaticSize = Enum.AutomaticSize.Y
+		t.BackgroundTransparency = 1
+		t.TextColor3 = Color3.fromRGB(236, 232, 222)
+		t.Font = if fet then Enum.Font.GothamBold else Enum.Font.Gotham
+		t.TextSize = storlek
+		t.TextScaled = false
+		t.TextWrapped = true
+		t.TextXAlignment = Enum.TextXAlignment.Left
+		t.Text = ""
+		t.Parent = pn
+		return t
+	end
+	--[[ RUBRIKRADEN bär hästen, läget och hjälpens `?` — hjälpen tar ingen
+	     egen rad i panelen, bara en träffyta på 44 px i rubrikens hörn. ]]
+	local rr = Instance.new("Frame")
+	rr.Name = "RubrikRad"
+	rr.LayoutOrder = 1
+	rr.BackgroundTransparency = 1
+	rr.Size = UDim2.new(1, 0, 0, 0)
+	rr.AutomaticSize = Enum.AutomaticSize.Y
+	rr.Parent = pn
+	local rub = etikettYta("Rubrik", 1, 16, true)
+	rub.Size = UDim2.new(1, -(KNAPP_H + 4), 0, 0)
+	rub.Parent = rr
+	rubrikEtikett = rub
+	stegEtikett = etikettYta("Steg", 2, 14, false)
+
+	--[[ SKÖTSELNS FRÅGA RULLAR I SIN EGEN SEKTION när den inte ryms inom
+	     40 % av höjden — kontraktet: långa svarslistor rullar utan att
+	     dölja kärnhandlingen. Handlingsraderna under den (Rida nu, dörren,
+	     ledningen) står fast och syns alltid. Höjden sätts i `placera`. ]]
+	local vl = Instance.new("ScrollingFrame")
+	vl.Name = "Fragan"
+	vl.LayoutOrder = 3
+	vl.BackgroundTransparency = 1
+	vl.BorderSizePixel = 0
+	vl.ScrollBarThickness = 4
+	vl.ScrollingDirection = Enum.ScrollingDirection.Y
+	vl.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	vl.CanvasSize = UDim2.new(0, 0, 0, 0)
+	vl.Size = UDim2.new(1, 0, 0, 0)
+	vl.Visible = false
+	vl.Parent = pn
+	local vlista = Instance.new("UIListLayout")
+	vlista.FillDirection = Enum.FillDirection.Vertical
+	vlista.SortOrder = Enum.SortOrder.LayoutOrder
+	vlista.Padding = UDim.new(0, LUFT)
+	vlista.Parent = vl
+	valYta = vl
+	for j = 1, MAX_VAL do
+		local b = nyKnapp(j)
+		b.Name = "FraganVal" .. j
+		b.Parent = vl
+		--[[ ETT SKÖTSELVAL är ett tryck, inte ett håll — samma som knappen
+		     i `PreparationController` var. Handlingen är dess egen `skicka`. ]]
+		b.Activated:Connect(function()
+			local v = valRader[j]
+			if v and v.aktiv and type(v.skicka) == "function" then v.skicka() end
+		end)
+		valKnappar[j] = b
+	end
+
 	local f = Instance.new("Frame")
 	f.Name = "Lista"
+	f.LayoutOrder = 4
 	f.BackgroundTransparency = 1
-	f.Size = UDim2.fromOffset(KNAPP_B, MAX_RADER * (KNAPP_H + LUFT))
-	--[[ VÄNSTERKANTEN, NEDTILL. Skötsel-HUD:ens spårare bor uppe till
-		höger och lektionskortet nedtill i mitten; vänsterkanten är den
-		enda som är fri medan man går till fots. Ridningens spak bor
-		också där — men då rider man, och då är den här ytan släckt. ]]
-	f.Position = UDim2.new(0, KANT, 1, -(MAX_RADER * (KNAPP_H + LUFT)) - KANT)
-	f.Parent = g
+	f.Size = UDim2.new(1, 0, 0, 0)
+	f.AutomaticSize = Enum.AutomaticSize.Y
+	f.Parent = pn
+	local radlista = Instance.new("UIListLayout")
+	radlista.FillDirection = Enum.FillDirection.Vertical
+	radlista.SortOrder = Enum.SortOrder.LayoutOrder
+	radlista.Padding = UDim.new(0, LUFT)
+	radlista.Parent = f
 	ram = f
 
 	for i = 1, MAX_RADER do
@@ -889,37 +1049,62 @@ local function bygg()
 			if p then borjaHall(p, i) end
 		end)
 		--[[ ETT SLÄPP FRÅN EN ANNAN RAD ÄR INTE VÅRT. Signalerna kommer
-		     från fem knappar som alla lever hela tiden; ett `MouseLeave`
-		     som hinner efter att ett nytt håll börjat på en annan rad
-		     skulle annars avsluta det nyare hållet. ]]
+		     från knappar som alla lever hela tiden; ett `MouseLeave` som
+		     hinner efter att ett nytt håll börjat på en annan rad skulle
+		     annars avsluta det nyare hållet. ]]
 		b.MouseButton1Up:Connect(function() slappHallFran(i) end)
 		b.MouseLeave:Connect(function() slappHallFran(i) end)
 		rader[i] = b
 	end
 
-	--[[ BLÄDDRINGSRADEN. Samma knapptyp och samma yta som raderna — den
-	     är en rad till, inte ett nytt UI-lager. Den fyrar på ett vanligt
-	     klick: att bläddra är inget man ska behöva hålla inne. ]]
+	--[[ OVERFLOW, INUTI PANELEN. Samma knapptyp och samma yta som raderna;
+	     den fyrar på ett vanligt klick — att bläddra är inget man ska
+	     behöva hålla inne. ]]
 	local v = nyKnapp(0)
 	v.Name = "Bladdra"
-	v.Size = UDim2.fromOffset(KNAPP_B, BLADDRA_H)
-	v.TextSize = 13
-	v.BackgroundTransparency = 0.3
+	v.LayoutOrder = 99
 	v.Visible = false
 	v.Parent = f
 	v.MouseButton1Click:Connect(function()
-		--[[ Ett håll som pågår hör till den sida vi lämnar. ]]
 		slappHall()
-		--[[ RUNT, inte in i en återvändsgränd. En lista som tar slut
-		     på sista sidan kräver att spelaren vet att hon ska gå
-		     tillbaka — och det finns ingen bakåtknapp. ]]
+		--[[ Sidan går runt: sista sidan leder tillbaka till den första,
+		     annars kräver den att spelaren vet att hon ska gå tillbaka —
+		     och det finns ingen bakåtknapp. ]]
 		local platser = Naromrade.radplatser()
 		local sidor = if platser > 0
-			then math.max(1, math.ceil(#relevanta / platser)) else 1
+			then math.max(1, math.ceil(antalHandlingar / platser)) else 1
 		sida = if sida >= sidor then 1 else sida + 1
 		rita()
 	end)
 	bladdra = v
+
+	aterEtikett = etikettYta("Aterkoppling", 5, 14, false)
+	aterEtikett.TextColor3 = Color3.fromRGB(236, 196, 92)
+	aterEtikett.Visible = false
+
+	--[[ HJÄLPEN FÄLLS UT I PANELEN, inte i ett eget fönster. ]]
+	local hk = Instance.new("TextButton")
+	hk.Name = "Hjalp"
+	hk.AnchorPoint = Vector2.new(1, 0)
+	hk.Position = UDim2.new(1, 0, 0, 0)
+	hk.Size = UDim2.fromOffset(KNAPP_H, KNAPP_H)
+	hk.BackgroundTransparency = 1
+	hk.TextColor3 = Color3.fromRGB(170, 172, 176)
+	hk.Font = Enum.Font.GothamBold
+	hk.TextSize = 16
+	hk.AutoButtonColor = false
+	hk.Text = "?"
+	--[[ Den läsbara frasen hänger på knappen, som skötselns `?` gjorde. ]]
+	hk:SetAttribute("Etikett", Sprak.t("panel.hjalp"))
+	hk.Parent = rr
+	hk.MouseButton1Click:Connect(function()
+		hjalpUt = not hjalpUt
+		rita()
+	end)
+	hjalpKnapp = hk
+	hjalpText = etikettYta("HjalpText", 6, 14, false)
+	hjalpText.TextColor3 = Color3.fromRGB(190, 192, 196)
+	hjalpText.Visible = false
 end
 
 --[[ ── HUR MÅNGA RADER RYMS? (#246 E) ──────────────────────────────────
@@ -1025,6 +1210,20 @@ function Naromrade.rorelseytan(): (number, number)
 	if tgPa then kontrollSedd = true end
 	local hittade = false
 	local x1, y0 = 0, math.huge
+	--[[ #264 PLAYER_INTERACTION_CONSOLIDATION: ridningens EGEN spak
+	     (`HorseTouch.Spak`) är också en rörelsekontroll. Panelen bor kvar
+	     medan man rider och får inte täcka den. ]]
+	local ht = pg and pg:FindFirstChild("HorseTouch")
+	local spak = ht and ht:FindFirstChild("Spak")
+	if spak and spak:IsA("GuiObject") and spak.Visible
+		and (ht :: any).Enabled ~= false then
+		local a, b = spak.AbsolutePosition, spak.AbsoluteSize
+		if a and b and b.X > 0 and b.Y > 0 then
+			hittade = true
+			x1 = math.max(x1, a.X + b.X)
+			y0 = math.min(y0, a.Y)
+		end
+	end
 	if tgPa then
 		for _, d in ipairs(tg:GetDescendants()) do
 			if d:IsA("GuiButton") and d.Visible then
@@ -1076,7 +1275,10 @@ function Naromrade.radplatser(): number
 	     `rita` läser det och släcker ytan. ]]
 	local x, golv = Naromrade.blockplats()
 	if x == nil or golv == nil then return 0 end
-	local ledigt = golv - KANT - LUFT
+	--[[ #264 PLAYER_INTERACTION_CONSOLIDATION: hela panelen — rubrik, nästa
+	     steg, återkoppling och hjälp (`PANEL_FAST`) plus raderna — ska rymmas
+	     ovanför golvet OCH inom 40 % av höjden. Minst en rad, alltid. ]]
+	local ledigt = math.min(golv - KANT, h * 0.4) - PANEL_FAST
 	local n = math.floor(ledigt / (KNAPP_H + LUFT))
 	return math.clamp(n, 1, MAX_RADER)
 end
@@ -1150,53 +1352,208 @@ function Naromrade.blockvanster(): number
 	return x or KANT
 end
 
+--[[ ── PANELENS PLATS (#264 PLAYER_INTERACTION_CONSOLIDATION) ─────────
+
+	Nere till vänster, ankrad i nederkanten: golvet är det lägsta av
+	skärmens kant och rörelsekontrollens överkant (`blockplats`). Bredden är
+	nominellt 300 px, 260–320 där det finns plats, och aldrig bredare än den
+	användbara ytan. Höjden tak 40 % av skärmen — det som inte ryms bläddras
+	eller rullas inuti panelen, aldrig utanför. ]]
+local function placera(pn: Frame)
+	local g = gui
+	local bredd = if g and g.AbsoluteSize then g.AbsoluteSize.X else 0
+	local hojd = if g and g.AbsoluteSize then g.AbsoluteSize.Y else 0
+	local x, golv = Naromrade.blockplats()
+	local ledigt = if bredd > 0 then bredd - (x or KANT) - KANT else KNAPP_B
+	local b = math.clamp(KNAPP_B, PANEL_MIN, PANEL_MAX)
+	if ledigt < b then b = math.max(ledigt, 120) end
+	pn.Size = UDim2.fromOffset(b, 0)
+	local botten = math.min(golv or hojd, hojd) - KANT
+	pn.Position = UDim2.fromOffset(x or KANT, math.max(0, botten))
+	--[[ LISTANS HÖJD: det som blir kvar av 40 % när rubrik, nästa steg,
+	     återkoppling och en utfälld hjälp tagit sitt. Innehållet mäts ur
+	     layouten när motorn har räknat den; i bänken, där ingen layoutmotor
+	     finns, räknas synliga rader. Aldrig under en rad — kärnhandlingen
+	     ska alltid synas. ]]
+	--[[ Svarssektionens höjd: det som blir kvar av 40 % när rubriken, nästa
+	     steg, de fasta handlingsraderna, återkopplingen och en utfälld hjälp
+	     tagit sitt. Handlingsraderna står fast — de rullar aldrig bort. ]]
+	local vl = valYta
+	if vl and vl.Visible and hojd > 0 then
+		local function h(o: any): number
+			if o and o.Visible and o.AbsoluteSize then return o.AbsoluteSize.Y + LUFT end
+			return 0
+		end
+		local rr = rubrikEtikett and rubrikEtikett.Parent
+		local fast = 20 + h(rr) + h(stegEtikett) + h(ram) + h(aterEtikett) + h(hjalpText)
+		local lay = vl:FindFirstChildOfClass("UIListLayout")
+		local innehall = lay and (lay :: any).AbsoluteContentSize
+		local behov = if innehall and innehall.Y then innehall.Y else 0
+		if behov <= 0 then
+			local n = 0
+			for _, vb in ipairs(valKnappar) do if vb.Visible then n += 1 end end
+			behov = n * (KNAPP_H + LUFT)
+		end
+		local budget = math.max(KNAPP_H, hojd * 0.4 - fast)
+		--[[ Minst två alternativ syns: en fråga med ett synligt svar ser ut
+		     som en ensam knapp. Resten rullar i sektionen. ]]
+		local golvVal = math.min(behov, 2 * KNAPP_H + LUFT)
+		vl.Size = UDim2.new(1, 0, 0, math.clamp(behov, golvVal, math.max(golvVal, budget)))
+	end
+end
+
+--[[ Rubrikens läge — hästen EN gång, sedan läget. Står hästens namn redan i
+     lägestexten («Gå till Blackrock Jack») skrivs det inte två gånger. ]]
+local function rubrikFor(hastnamn: string?, lage: string?): string
+	local l = lage or ""
+	if hastnamn == nil or hastnamn == "" then return l end
+	if l == "" then return hastnamn end
+	if string.find(l, hastnamn, 1, true) then return l end
+	return hastnamn .. "  ·  " .. l
+end
+
+local function stegLista(steg: { any }): string
+	local ut = {}
+	for _, s in ipairs(steg) do
+		local tecken = if s.klar then "✓" elseif s.paTur then "•" else "·"
+		table.insert(ut, tecken .. "  " .. tostring(s.namn))
+	end
+	return table.concat(ut, "\n")
+end
+
+local function visaHjalp(text: string)
+	local hk, ht = hjalpKnapp, hjalpText
+	if not (hk and ht) then return end
+	hk.Visible = text ~= ""
+	ht.Text = text
+	ht.Visible = hjalpUt and text ~= ""
+end
+
+local function visaAterkoppling(text: string?)
+	local a = aterEtikett
+	if not a then return end
+	a.Text = text or ""
+	a.Visible = text ~= nil and text ~= ""
+end
+
+--[[ ── RUBRIK, NÄSTA STEG, ÅTERKOPPLING ──────────────────────────────────
+
+	Ur skötselns adapter (`PreparationController.panel`). En kvittens eller
+	ett nej står i återkopplingsfältet; nästa steg står kvar ovanför i
+	stället för att skrivas över. Utan tilldelning: ett ärligt besked. ]]
+local function fyllText(data: any, minHast: string?, hastnamn: string?)
+	local lage: string
+	local steg = ""
+	local ater: string? = nil
+	if data == nil or minHast == nil then
+		lage = Sprak.t("hud.vantar_pa_hast")
+	else
+		lage = data.rubrik or ""
+		if PreparationController.kontext() == "ledning" then
+			lage = Sprak.t("panel.leder")
+		end
+		if data.totalt and data.totalt > 0 and data.lage ~= "raknat" then
+			lage ..= ("  ·  %d/%d"):format(data.klara or 0, data.totalt)
+		end
+		if data.aterkoppling then
+			ater = data.text
+			steg = sistaInstruktion
+		else
+			steg = data.text or ""
+			sistaInstruktion = steg
+		end
+	end
+	if rubrikEtikett then rubrikEtikett.Text = rubrikFor(hastnamn, lage) end
+	if stegEtikett then
+		stegEtikett.Text = steg
+		stegEtikett.Visible = steg ~= ""
+	end
+	visaAterkoppling(ater)
+	visaHjalp(if data then stegLista(data.steg or {}) else "")
+end
+
 rita = function()
 	local f = ram
-	if not f then return end
+	local pn = panelRam
+	if not f or not pn then return end
 	local spelare = Players.LocalPlayer
 	local karaktar = spelare.Character
 	local rot = karaktar and karaktar:FindFirstChild("HumanoidRootPart")
+	local data = PreparationController.panel()
+	local hastnamn = if data then data.hastnamn else nil
 
-	--[[ Medan man rider äger `TouchControls` skärmen, och till fots utan
-		kropp finns ingenting att stå nära. Båda släcker listan hellre än
-		att visa en rad som inte går att lita på. ]]
-	if rider or not (rot and rot:IsA("BasePart")) then
-		--[[ Ingen lista alls — då kan inget håll pågå i den. ]]
+	--[[ ── UPPSUTTEN ────────────────────────────────────────────────────
+
+		Stallhandlingarna försvinner; panelen bär gångarten och ridningens
+		kärna ur `KontrollHjalp` — samma tabell och samma reglagetext som
+		bindningarna. Ingen rad är en knapp här: handlingarna har sina
+		riktiga reglage, tangenterna och ridreglagen till höger, och
+		panelen säger bara vilka. Motorns bubblor får tillbaka sin bild, men
+		ridningens prompter är av när man sitter upp. ]]
+	if rider then
 		slappHall()
 		senaste = {}
+		table.clear(valRader)
+		if valYta then valYta.Visible = false end
+		antalHandlingar = 0
 		for _, b in ipairs(rader) do b.Visible = false end
-		--[[ Ingen lista — då ska Roblox egna prompter tillbaka, annars blir
-		     de osynliga för någon som inte längre har en rad att trycka på. ]]
 		tandAllaIgen()
 		local bl = bladdra
 		if bl then bl.Visible = false end
-		--[[ ── RIDLÄGET ERSÄTTER STALLHANDLINGARNA (#264 ROBLOX_HUMAN_PLAYTEST_FIX)
-
-			Speltest 2026-09-25, uppsutten: en spak och ingenting annat.
-			Menyn var släckt och kontrollpanelen är släckt av `MINIMAL_UI`,
-			så ingenting sa hur man kommer framåt, stannar eller sitter av.
-
-			Menyn visar i stället ridningens kärna ur `KontrollHjalp` — samma
-			tabell och samma reglagetext som panelen, en rad per handling.
-			Raderna är text, inte knappar: `senaste` är tom, så ett tryck
-			på dem gör ingenting. Handlingarna har sina riktiga reglage —
-			tangenterna och pekknapparna — och menyn säger bara vilka.
-
-			UPPE till vänster, inte nere: där nere bor ridningens egen spak,
-			och `rorelseytan` räknar bara Robloxs `TouchGui`. ]]
-		if rider then
-			local hjalp = KontrollHjalp.ridrader()
-			local n = math.min(#hjalp, #rader)
-			f.Size = UDim2.fromOffset(KNAPP_B, math.max(n, 1) * (KNAPP_H + LUFT))
-			f.Position = UDim2.fromOffset(KANT, KANT)
-			for i, b in ipairs(rader) do
-				local r = hjalp[i]
-				if r and i <= n then
-					b.Text = r.vad .. "  [" .. r.reglage .. "]"
-					b.Visible = true
-				end
+		local modell = nil
+		local minHast = PreparationController.hastId()
+		for _, d in ipairs(workspace:GetChildren()) do
+			if d:IsA("Model") and minHast ~= nil and d:GetAttribute("HorseId") == minHast then
+				modell = d
+				break
 			end
 		end
+		local gang = modell and modell:GetAttribute("Gait")
+		--[[ Nycklarna utskrivna, en per gångart: språkgrinden läser dem ur
+		     källan, och en sammansatt nyckel går inte att pröva. ]]
+		local GANGART = {
+			halt = Sprak.t("gangart.halt"), walk = Sprak.t("gangart.walk"),
+			trot = Sprak.t("gangart.trot"), canter = Sprak.t("gangart.canter"),
+			gallop = Sprak.t("gangart.gallop"),
+		}
+		local gangText = if type(gang) == "string" and GANGART[gang]
+			then GANGART[gang] else Sprak.t("hud.du_rider")
+		if rubrikEtikett then rubrikEtikett.Text = rubrikFor(hastnamn, gangText) end
+		local rader2 = {}
+		for _, r in ipairs(KontrollHjalp.ridrader()) do
+			table.insert(rader2, r.vad .. "  [" .. r.reglage .. "]")
+		end
+		if stegEtikett then
+			stegEtikett.Text = table.concat(rader2, "\n")
+			stegEtikett.Visible = #rader2 > 0
+		end
+		visaAterkoppling(nil)
+		local alla = {}
+		for _, r in ipairs(KontrollHjalp.rader()) do
+			table.insert(alla, r.vad .. "  [" .. r.reglage .. "]")
+		end
+		visaHjalp(table.concat(alla, "\n"))
+		placera(pn)
+		pn.Visible = true
+		return
+	end
+
+	--[[ UTAN KROPP — respawn, eller innan karaktären laddat. Kontraktet: ett
+	     begripligt läge och inga handlingar som kan fyra. Panelen står kvar
+	     med rubriken och nästa steg; raderna är tomma. ]]
+	if not (rot and rot:IsA("BasePart")) then
+		slappHall()
+		senaste = {}
+		table.clear(valRader)
+		if valYta then valYta.Visible = false end
+		antalHandlingar = 0
+		for _, b in ipairs(rader) do b.Visible = false end
+		local bl = bladdra
+		if bl then bl.Visible = false end
+		tandAllaIgen()
+		fyllText(data, PreparationController.hastId(), hastnamn)
+		placera(pn)
+		pn.Visible = true
 		return
 	end
 
@@ -1204,112 +1561,110 @@ rita = function()
 	     avläsning av samma tilldelning servern gjort — ingen ny kanal. ]]
 	local minHast = PreparationController.hastId()
 	local platser = Naromrade.radplatser()
-	--[[ Ingen användbar plats — släck listan och lämna tillbaka Robloxs
-	     prompter, samma väg som när man rider. En rad som ligger under
-	     rörelsekontrollen eller utanför skärmen är ingen handling. ]]
+	--[[ Ingen användbar plats — släck panelen och lämna tillbaka Robloxs
+	     prompter. En rad som ligger under rörelsekontrollen eller utanför
+	     skärmen är ingen handling. ]]
 	if platser <= 0 then
 		slappHall()
 		senaste = {}
+		table.clear(valRader)
+		if valYta then valYta.Visible = false end
 		for _, b in ipairs(rader) do b.Visible = false end
 		tandAllaIgen()
+		pn.Visible = false
 		return
 	end
-	--[[ EN fråga, ett svar: vad blir rader. Det styr numera BÅDE listan
-	     och släckningen — se rättelsen längre ned. Tidigare fanns två
-	     mängder här, och att de kunde gå isär var hela felet. ]]
-	--[[ Hela den sorterade mängden först; raderna får en sida av den. ]]
 	relevanta = Naromrade.sorterade((rot :: BasePart).Position, { workspace },
 		minHast)
-	local sidor = math.max(1, math.ceil(#relevanta / platser))
+
+	--[[ ── LEDNING: DÖRREN PÅ VÄGEN, SEDAN SLÄPPET ─────────────────────
+
+		Kontraktet: medan hon leder bär panelen ledningens status och
+		släppet; en dörr på vägen får tillfälligt vara den primära. Samma
+		prompter som förut, bara en annan ordning — stabil inom varje
+		klass. ]]
+	local ordnade = table.clone(relevanta)
+	if PreparationController.kontext() == "ledning" then
+		local rang: { [ProximityPrompt]: number } = {}
+		for i, p in ipairs(ordnade) do rang[p] = i end
+		local function klass(p: ProximityPrompt): number
+			if arDorr(p) then return 0 end
+			if p.Name == "LedPrompt" then return 1 end
+			return 2
+		end
+		table.sort(ordnade, function(a, b)
+			local ka, kb = klass(a), klass(b)
+			if ka ~= kb then return ka < kb end
+			return rang[a] < rang[b]
+		end)
+	end
+
+	--[[ ── HANDLINGARNA ─────────────────────────────────────────────────
+
+		Skötselns val först när förberedelsen har något att välja: det är
+		den auktoritativa uppgiften, och den som står på tur är primär.
+		Därefter prompterna. Ett val utom räckhåll (`aktiv = false`) får
+		ingen rad — det är samma nej som skötselknappen själv gav. ]]
+	--[[ FRÅGAN ÄR ETT BLOCK, INTE TRE HANDLINGSRADER. Skötselns val står i
+	     sin ursprungliga ordning — att flytta den som står på tur först
+	     hade avslöjat svaret på en fråga — och prompterna blir sekundära:
+	     högst två, «Rida nu» först enligt produktordningen, resten genom
+	     overflow. Utan val gäller en primär och två sekundära. ]]
+	local valen: { any } = {}
+	if data and data.harVal then
+		for _, v in ipairs(data.val) do
+			if v.aktiv and #valen < MAX_VAL then table.insert(valen, v) end
+		end
+	end
+	--[[ Under en fråga står EN sekundär handling fast — Rida nu, enligt
+	     produktordningen — så att frågans alternativ får plats att synas. ]]
+	local promptPlatser = if #valen > 0 then 1 else platser
+	antalHandlingar = #ordnade
+	local sidor = math.max(1, math.ceil(#ordnade / promptPlatser))
 	--[[ Sidan klampas varje ritning: listan krymper när hon går därifrån,
 	     och då får hon inte bli kvar på en sida som inte finns. ]]
 	if sida > sidor then sida = sidor end
 	if sida < 1 then sida = 1 end
 	senaste = {}
-	for i = 1, platser do
-		local k = (sida - 1) * platser + i
-		if relevanta[k] == nil then break end
-		senaste[i] = relevanta[k]
+	table.clear(valRader)
+	for i, v in ipairs(valen) do valRader[i] = v end
+	for j = 1, promptPlatser do
+		local p = ordnade[(sida - 1) * promptPlatser + j]
+		if p == nil then break end
+		senaste[j] = p
 	end
-	--[[ Först av allt: höll hon i något som inte längre finns i listan? ]]
+	--[[ Först av allt: höll hon i något som inte längre finns i panelen? ]]
 	provaHallet()
-	--[[ Ramen följer antalet platser, så att den tomma ytan inte ligger
-	     kvar över panelen och äter tryck som inte hör listan till. ]]
-	f.Size = UDim2.fromOffset(KNAPP_B, platser * (KNAPP_H + LUFT))
-	--[[ Blockets plats räknas, den står inte i en konstant: både
-	     skötselpanelen och Robloxs rörelsekontroll kan ta hörnet. ]]
-	local g = gui
-	local hojd = if g and g.AbsoluteSize then g.AbsoluteSize.Y else 0
-	local x, golv = Naromrade.blockplats()
-	local botten = math.min(golv or hojd, hojd) - KANT
-	local topp = botten - platser * (KNAPP_H + LUFT)
-	f.Position = UDim2.fromOffset(x or KANT, math.max(0, topp))
 
-	--[[ ── EN PROMPT SOM SLÄCKS MÅSTE FÅ EN RAD ────────────────────
-
-		Här stod förut «#246 C: ALLT INOM RÄCKVIDD SLÄCKS, INTE BARA
-		RADERNA», med motiveringen att det annars blev listan plus
-		flytande knappar i djupet. Den regeln är BORTTAGEN, och noten
-		står kvar bara för att ingen ska återinföra den.
-
-		Varför den var fel: en släckt prompt utan rad är inte diskret, den
-		är omöjlig att använda. Entrédörren blev overflow på telefonen,
-		släcktes, fick ingen rad — och gick inte att öppna. Tobias hittade
-		det i ett riktigt playtest.
-
-		Ordningen spelar fortfarande roll — tänd först det som inte längre
-		visas, släck sedan det som gör det — annars kan en prompt som
-		ligger kvar hinna tändas och släckas i samma bildruta. ]]
-	--[[ ── RÄTTELSE #264: SLÄCK BARA DET DU ERSÄTTER ─────────────────
-
-		SPELTEST 2026-09-21: Tobias såg «Open — Door» och kunde inte
-		öppna dörren. Rutten genom stallet var stängd.
-
-		Raden ovanför löd `for _, p in ipairs(alla) do slack(p) end` —
-		allt inom RÄCKVIDD släcktes, medan rader bara ritas för URVALET.
-		En prompt som föll under radtaket blev därmed varken rad eller
-		knapp: Roblox bild borttagen, ingen egen satt dit.
-
-		Modulen beskrev själv den felklassen redan, vid `nara`:
-		«Eftersom touch-ytan äger promptbilderna var den då varken rad
-		eller knapp.» Den gången rättades ORDNINGEN så att «Rida nu»
-		fick en rad. Orsaken låg kvar: taket är 2–3 rader på en telefon,
-		och i en stallgång konkurrerar dörren med sadel, träns, boxfront
-		och ledknapp. Faller den ur listan är den oåtkomlig.
-
-		Invarianten är enkel och gäller utan undantag: EN AFFORDANS FÅR
-		BARA TAS BORT AV EN SOM ERSÄTTER DEN. Släckningen följer därför
-		urvalet, inte räckvidden.
-
-		Priset är det review av `c3f48c7` ville undvika: en prompt som
-		listan valt bort kan visa Roblox egen knapp igen. Det är en
-		dubbel yta — irriterande. Alternativet var en dörr som inte går
-		att öppna. Ska den dubbleringen bort är det ett FILTRERINGSVAL i
-		`nara`, inte ett skäl att lämna något utan väg in. ]]
-	--[[ EN YTA, INTE TVÅ. Släckt blir det som fått en rad — listan
-	     ersätter bubblan — OCH det som valts bort som en annan hästs sak.
-	     Allt annat behåller sin bubbla: en dörr som inte fick plats i
-	     listan ska fortfarande gå att öppna. ]]
-	--[[ ALLT RELEVANT släcks, inte bara den synliga sidan — för allt
-	     relevant HAR en väg in nu, genom bläddringen. Det är skillnaden
-	     mot den gamla regressionen: där släcktes saker som inte gick att
-	     nå, här släcks bara sådant som går att nå. ]]
+	--[[ ── EN YTA, EN MOTTAGARE ──────────────────────────────────────────
+		Oförändrat från ROBLOX_HUMAN_PLAYTEST_FIX: allt relevant släcks (det
+		HAR en väg in, genom panelen och dess overflow), grannars saker,
+		dörrar utöver den närmaste och förkanten släcks och tystas, och
+		tangenterna delas ut i panelens ordning. ]]
 	local slacks: { [ProximityPrompt]: boolean } = {}
 	local tysta: { [ProximityPrompt]: boolean } = {}
 	for _, p in ipairs(relevanta) do slacks[p] = true end
 	for p in pairs(bortvalda) do slacks[p] = true; tysta[p] = true end
-	--[[ Förkanten: släckt och tyst innan motorn hinner visa den. Se
-	     `FORKANT`. En prompt som både ligger i förkanten och i urvalet
-	     finns inte — förkanten är per definition utanför räckvidd. ]]
 	for _, p in ipairs(forkant) do slacks[p] = true; tysta[p] = true end
 	for p in pairs(slackta) do
 		if not slacks[p] then tandIgen(p) end
 	end
 	for p in pairs(slacks) do slack(p) end
-	--[[ Tangenterna FÖRE etiketterna: en rad visar `[G]` bara om dess
-	     prompt faktiskt äger G. `etikett` läser tangenten ur prompten. ]]
-	delaUtTangenter(relevanta, tysta)
+	delaUtTangenter(ordnade, tysta)
 
+	--[[ Den varma accenten bara på den primära handlingen: med en fråga det
+	     alternativ som står på tur — samma markering som skötselns egen yta
+	     gav — annars första handlingen på första sidan. ]]
+	local ACCENT, NEUTRAL = Color3.fromRGB(92, 76, 38), Color3.fromRGB(38, 41, 47)
+	for j, b in ipairs(valKnappar) do
+		local v = valRader[j]
+		b.Visible = v ~= nil
+		if v then
+			b.Text = tostring(v.text)
+			b.BackgroundColor3 = if v.paTur then ACCENT else NEUTRAL
+		end
+	end
+	if valYta then valYta.Visible = #valen > 0 end
 	for i, b in ipairs(rader) do
 		local p = senaste[i]
 		if p then
@@ -1318,21 +1673,23 @@ rita = function()
 		else
 			b.Visible = false
 		end
+		local primar = #valen == 0 and i == 1 and sida == 1 and b.Visible
+		b.BackgroundColor3 = if primar then ACCENT else NEUTRAL
 	end
 
-	--[[ Bläddringsraden syns bara när den behövs, och den ligger OVANFÖR
-	     listan i stället för att äta en handlingsrad — på en liten skärm
-	     med bara en rad hade en stulen rad betytt noll handlingar. ]]
 	local bl = bladdra
 	if bl then
 		if sidor > 1 then
-			bl.Text = ("▾  Fler handlingar  ·  %d/%d"):format(sida, sidor)
-			bl.Position = UDim2.fromOffset(0, -(BLADDRA_H + LUFT))
+			bl.Text = ("+  %s  ·  %d/%d"):format(Sprak.t("panel.fler"), sida, sidor)
 			bl.Visible = true
 		else
 			bl.Visible = false
 		end
 	end
+
+	fyllText(data, minHast, hastnamn)
+	placera(pn)
+	pn.Visible = true
 end
 
 --[[ Provets fönster in: vad står på skärmen just nu? ]]
@@ -1360,13 +1717,43 @@ function Naromrade._relevanta(): { ProximityPrompt }
 end
 
 function Naromrade._prompter(): { ProximityPrompt }
+	--[[ Radordning, utan hål: med skötselval står prompterna efter blocket. ]]
 	local ut = {}
-	for i, p in ipairs(senaste) do ut[i] = p end
+	for i = 1, #rader do
+		local p = senaste[i]
+		if p then table.insert(ut, p) end
+	end
 	return ut
 end
 
-function Naromrade._rader(): { string }
+--[[ #264 PLAYER_INTERACTION_CONSOLIDATION: provets fönster in i panelen. ]]
+function Naromrade._val(): { [number]: any }
 	local ut = {}
+	for i = 1, MAX_VAL do ut[i] = valRader[i] end
+	return ut
+end
+
+function Naromrade._panel(): { [string]: any }
+	local pn = panelRam
+	return {
+		synlig = pn ~= nil and pn.Visible,
+		rubrik = if rubrikEtikett then rubrikEtikett.Text else "",
+		steg = if stegEtikett and stegEtikett.Visible then stegEtikett.Text else "",
+		ater = if aterEtikett and aterEtikett.Visible then aterEtikett.Text else "",
+		hjalp = if hjalpText and hjalpText.Visible then hjalpText.Text else "",
+		hjalpKnapp = hjalpKnapp,
+		ram = pn,
+	}
+end
+
+function Naromrade._rader(): { string }
+	--[[ I skärmens ordning: skötselns alternativ först, sedan handlingarna. ]]
+	local ut = {}
+	if valYta and valYta.Visible then
+		for _, b in ipairs(valKnappar) do
+			if b.Visible then table.insert(ut, b.Text) end
+		end
+	end
 	for _, b in ipairs(rader) do
 		if b.Visible then table.insert(ut, b.Text) end
 	end
@@ -1444,6 +1831,9 @@ function Naromrade.start()
 		`Style = Custom` bara tar Robloxs egen rityta, inte dess input. ]]
 	if not ytaBehovs() then return end
 	bygg()
+	--[[ EN PANEL (#264 PLAYER_INTERACTION_CONSOLIDATION): skötselns egna
+	     ytor släcks och deras innehåll kommer hit. Varje ny vy ritar om. ]]
+	PreparationController.satVard(function() rita() end)
 	if koppling then koppling:Disconnect() end
 	koppling = RunService.RenderStepped:Connect(function(dt)
 		--[[ Fyllningen varje bildruta — ett håll på 0,2 s ryms annars
@@ -1478,6 +1868,7 @@ function Naromrade.stopp()
 	--[[ Lämna aldrig ett öppet håll — eller en släckt prompt — efter sig. ]]
 	slappHall()
 	tandAllaIgen()
+	PreparationController.satVard(nil)
 	fyllPrompt = nil
 	for _, k in ipairs(hallKopplingar) do k:Disconnect() end
 	table.clear(hallKopplingar)
@@ -1490,6 +1881,13 @@ function Naromrade.stopp()
 		gui = nil
 	end
 	ram = nil
+	panelRam = nil
+	rubrikEtikett, stegEtikett, aterEtikett = nil, nil, nil
+	hjalpKnapp, hjalpText = nil, nil
+	hjalpUt = false
+	table.clear(valRader)
+	table.clear(valKnappar)
+	valYta = nil
 	rader = {}
 	bladdra = nil
 	senaste = {}
