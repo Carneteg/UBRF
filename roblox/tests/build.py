@@ -128,6 +128,12 @@ SIKT = QA + [
     #[[ #252 DEL B: HastGang require:ar Riggprofiler (ledernas ordning).
     #   Den saknades i bunten, sa `Riggprofiler` var nil i sikt.spec. ]]
     ("Riggprofiler", "src/shared/HorseCore/Riggprofiler.luau"),
+    #[[ #264: HastGang laser benfoljden ur Gangfas (RidKanon.GANGFAS) och
+    #   cykellangden ur Gaits/Config. ]]
+    ("Config",       "src/shared/HorseCore/Config.luau"),
+    ("Gaits",        "src/shared/HorseCore/Gaits.luau"),
+    ("RidKanon",     "src/shared/HorseCore/RidKanon.luau"),
+    ("Gangfas",      "src/shared/HorseCore/Gangfas.luau"),
     ("HastGang", "src/client/HastGang.luau"),
 ]
 
@@ -144,6 +150,9 @@ FORBEREDELSE = SPEL + [
     ("Utseende", "src/shared/HorseCore/Utseende.luau"),
     ("Config",       "src/shared/HorseCore/Config.luau"),
     ("Gaits",        "src/shared/HorseCore/Gaits.luau"),
+    #[[ #264: MovementController laser Core.Gangfas (varv och galoppsida).
+    #   RidKanon ligger redan i SPEL. ]]
+    ("Gangfas",      "src/shared/HorseCore/Gangfas.luau"),
     ("Ridtrappa",    "src/shared/HorseCore/Ridtrappa.luau"),
     # HorseService rakner numera energin med G02-B:s kanon (blocker 3),
     # och laser den tilldelade hastens profil (blocker 1).
@@ -272,6 +281,8 @@ PARITET = [
     #   regel som hela listan: en modul far bara referera det som star
     #   over. ]]
     ("CoachBanner",      "src/client/CoachBanner.luau"),
+    #[[ #264: sprakflaggan fragar servern genom Networking. ]]
+    ("Networking",       "src/shared/HorseCore/Networking.luau"),
     ("UgnetaController", "src/client/UgnetaController.luau"),
     ("UgnetaGestalt",    "src/client/UgnetaGestalt.luau"),
     ("ReplayController", "src/client/ReplayController.luau"),
@@ -303,6 +314,8 @@ KLIENT = SPEL + [
     ("Utseende", "src/shared/HorseCore/Utseende.luau"),
     ("Config",       "src/shared/HorseCore/Config.luau"),
     ("Gaits",        "src/shared/HorseCore/Gaits.luau"),
+    #[[ #264: benfoljden. RidKanon ligger redan i SPEL, ovanfor. ]]
+    ("Gangfas",      "src/shared/HorseCore/Gangfas.luau"),
     ("Ridtrappa",    "src/shared/HorseCore/Ridtrappa.luau"),
     ("Hjalper",      "src/shared/HorseCore/Hjalper.luau"),
     ("Svar",         "src/shared/HorseCore/Svar.luau"),
@@ -376,6 +389,8 @@ KLIENT = SPEL + [
     #[[ #235: den gemensamma touchytan. Som DinHast ovan maste den
     #   namnges har - banken hittar den inte sjalv. ]]
     ("Naromrade",           "src/client/Naromrade.luau"),
+    #[[ #264: Ugnetas ridrad utanfor lektionen. Bara init.client require:ar den. ]]
+    ("UgnetaRad",           "src/client/UgnetaRad.luau"),
     ("Init",                "src/client/init.client.luau"),
 ]
 
@@ -453,6 +468,8 @@ MODULER = [
     # provar att en RIKTIG controller-frame producerar underlaget till
     # telemetrin (G02-A, senior review blocker B).
     ("RidKanon",     "src/shared/HorseCore/RidKanon.luau"),
+    #[[ #264: benfoljden per gangart. Ben, hovslag och lattridning laser den. ]]
+    ("Gangfas",      "src/shared/HorseCore/Gangfas.luau"),
     ("Hjalper",      "src/shared/HorseCore/Hjalper.luau"),
     ("Svar",         "src/shared/HorseCore/Svar.luau"),
     ("Telemetri",    "src/shared/HorseCore/Telemetri.luau"),
@@ -894,7 +911,7 @@ def foga(spec_rel: str, moduler, stubbar: str) -> pathlib.Path:
         # (stubs-bygge.luau) gor inte det: de stubbar huset, inte hastsystemet.
         if har_core and namn in ("Config", "Gaits", "Ridtrappa", "StateMachine", "RigAdapter",
                                 "Riggprofiler", "Utseende",
-                    "Networking", "RidKanon", "Hjalper", "Svar", "Telemetri",
+                    "Networking", "RidKanon", "Gangfas", "Hjalper", "Svar", "Telemetri",
                     "Inspelning", "Kameralage", "Pass", "Sparning"):
             delar.append(f"__Core.{namn} = {namn}\n")
     delar.append(f"--[[ ══ {spec_rel} ══ ]]\n{inlina(las(spec_rel), kanda, spec_rel, spec_rel, har_core)}\n")

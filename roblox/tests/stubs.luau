@@ -113,6 +113,16 @@ local function cframe(pos, look, yaw, pitch, roll)
 	     vinklarna, sa den svarar med dem i samma ordning. G02-D laser yaw
 	     har for att spela in at vilket hall hasten stod. ]]
 	c.ToOrientation = function(self) return self.Pitch or 0, self.Yaw or 0, self.Roll or 0 end
+	--[[ #264: `CFrame:Lerp(mål, alfa)` — motorns egen interpolation, som
+	     `HastGang` filtrerar varje led med. Stubben interpolerar positionen
+	     och de tre vinklar den bär linjärt; för små ledvinklar är det samma
+	     svar som motorns sfäriska interpolation. ]]
+	c.Lerp = function(self, mal, a)
+		local p0, p1 = self.Position or vec(), mal.Position or vec()
+		local function l(x0, x1) return (x0 or 0) + ((x1 or 0) - (x0 or 0)) * a end
+		return cframe(vec(l(p0.X, p1.X), l(p0.Y, p1.Y), l(p0.Z, p1.Z)), mal.LookVector,
+			l(self.Yaw, mal.Yaw), l(self.Pitch, mal.Pitch), l(self.Roll, mal.Roll))
+	end
 	--[[ ROTATIONSMATRISEN, sa langt bankan har en.
 
 	     `BuildKit.speglaCF` har tva grenar: en riktig matrisgren, som ar den
@@ -678,6 +688,25 @@ local __services = {
 			--[[ Karaktären kan försvinna mitt i en ritt. Klienten sitter av
 			     på den signalen, och det är också där lärarytan släcks. ]]
 			CharacterRemoving = __signal(),
+			--[[ #264: spelarens språkval bor i ett attribut (`UBRFSprak`).
+			     `Instance:GetAttribute`, `SetAttribute` och
+			     `GetAttributeChangedSignal` är motorns egna — en Player är en
+			     Instance. Signalen fyras när värdet faktiskt ändras. ]]
+			_attr = {},
+			_attrSignaler = {},
+			GetAttribute = function(self, namn) return rawget(self, "_attr")[namn] end,
+			SetAttribute = function(self, namn, varde)
+				local a = rawget(self, "_attr")
+				if a[namn] == varde then return end
+				a[namn] = varde
+				local sig = rawget(self, "_attrSignaler")[namn]
+				if sig then sig:Fire() end
+			end,
+			GetAttributeChangedSignal = function(self, namn)
+				local s = rawget(self, "_attrSignaler")
+				s[namn] = s[namn] or __signal()
+				return s[namn]
+			end,
 		},
 		_spelare = {},
 		GetPlayers = function(self) return self._spelare end,
@@ -1448,6 +1477,12 @@ local function __nyInstans(klass)
 		     knappen; `TouchControls` kopplar den pa bada. ]]
 		inst.MouseLeave = __signal()
 		inst.MouseEnter = __signal()
+		--[[ #264: sprakflaggan visar sitt tips nar den far fokus med
+		     tangentbord eller handkontroll. `GuiObject.SelectionGained` och
+		     `SelectionLost` — namnen kontrollerade i Roblox API-referens
+		     (GuiObject, 2026-09-25). ]]
+		inst.SelectionGained = __signal()
+		inst.SelectionLost = __signal()
 	end
 	--[[ `GuiObject.InputBegan` — samma skäl som `Activated` ovan.
 

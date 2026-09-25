@@ -44,6 +44,8 @@ local PreparationController = require(script.PreparationController)
 local UgnetaController = require(script.UgnetaController)
 local LektionController = require(script.LektionController)
 local KontrollHjalp = require(script.KontrollHjalp)
+--[[ #264 GAIT_READABILITY_AND_UGNETA: Ugnetas ridrad utanför lektionen. ]]
+local UgnetaRad = require(script.UgnetaRad)
 --[[ #263: vilken build sitter jag i? Egen liten yta, se modulhuvudet. ]]
 local Byggidentitet = require(script.Byggidentitet)
 --[[ #162: världens prompter skrivs om till spelarens språk på klienten —
@@ -357,6 +359,8 @@ local function mount(model: Model, rittId: string?)
 		sound = SoundController.new(rig, stats),
 		effects = EffectsController.new(rig),
 		rider = RiderController.new(rig),
+		--[[ #264: Ugnetas ridrad börjar om för varje ritt. ]]
+		ugnetaRad = UgnetaRad.ny(),
 		--[[ G02-A: ridningens tillstånd och telemetri, samma kontrakt som
 		     webbens src/riding/telemetri.js. Sätts FÖRE första bildrutan
 		     av samma skäl som på webben — annars finns ett fönster där
@@ -1211,6 +1215,7 @@ RunService.RenderStepped:Connect(function(dt)
 		ride.movement:release()
 		local loco = ride.movement.loco
 		ride.animation:step(loco, dt)
+		HastGang.mata(ride.rig.model, loco)
 		ride.rider:step(loco, dt)
 		ride.camera:step(loco, dt)
 		return
@@ -1293,8 +1298,26 @@ RunService.RenderStepped:Connect(function(dt)
 	     annat i den här ordningen: den ska se bildrutans mätning, inte
 	     förra bildrutans, och den rör varken rörelse eller kamera. ]]
 	LektionController.steg(dt, ride.telemetri, poseAv(ride.rig))
+	--[[ #264 GAIT_READABILITY_AND_UGNETA: panelens gångartsrad och Ugnetas
+	     ridrad läser samma bildrutas läge. Ugneta säger den knapp spelaren
+	     faktiskt har för högre gångart; lektionen äger rösten medan den pågår. ]]
+	Naromrade.ridlage(loco)
+	do
+		local tak = ride.rig.model:GetAttribute("GaitCeiling")
+		local nyckel, args = UgnetaRad.steg(ride.ugnetaRad, dt, {
+			uppsutten = true,
+			lektion = LektionController.pagar(),
+			gait = loco.gait,
+			driv = KontrollHjalp.reglageFor("hjalp.hogre_gangart"),
+			travTillaten = type(tak) == "string" and Core.Gaits.index(tak) >= Core.Gaits.index("trot"),
+		})
+		UgnetaController.ridrad(nyckel, args)
+	end
 
 	ride.animation:step(loco, dt)
+	--[[ #264: ett ekipage, en klocka. Benen i `HastGang` läser samma fas
+	     och gångart som ljudet och ryttaren nedan. ]]
+	HastGang.mata(ride.rig.model, loco)
 	ride.rider:step(loco, dt)
 	ride.sound:step(loco, dt)
 	ride.effects:step(loco, dt)

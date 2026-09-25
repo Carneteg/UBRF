@@ -13,7 +13,8 @@
 
 local Core = require(game:GetService("ReplicatedStorage").HorseCore)
 local Types = require(game:GetService("ReplicatedStorage").HorseCore.Types)
-local Config, Gaits = Core.Config, Core.Gaits
+local Config = Core.Config
+local Gangfas = Core.Gangfas
 
 local SoundController = {}
 SoundController.__index = SoundController
@@ -36,10 +37,11 @@ function SoundController.new(rig: Types.Rig, stats: { [string]: any })
 	self.temperament = Config.TEMPERAMENTS[stats.Temperament] or Config.TEMPERAMENTS.Calm
 	self.config = rig.model:FindFirstChild("Sounds")
 	self.lastPhase = 0
-	--[[ Slagräknarens minne. `lastBeats = 0` betyder "ingen takt igång",
-	     alltså seedas nästa rörelse utan att fyra ett slag. ]]
-	self.lastBeats = 0
-	self.lastIndex = 0
+	--[[ Slagräknarens minne. `monster = nil` betyder "ingen takt igång",
+	     alltså seedas nästa rörelse utan att fyra ett slag. `lopande` är
+	     läget i cykler + fas sedan seedningen. ]]
+	self.monster = nil :: string?
+	self.lopande = 0
 	self.surface = "Grass"
 	self.nextVocal = os.clock() + 12
 	self.pool = {} :: { [string]: Sound }
@@ -86,38 +88,46 @@ function SoundController:step(loco: Types.Locomotion, dt: number)
 
 	     `loco.ryggar` speglar den `reverse` som driver rörelsen, alltså
 	     samma sanning som benen. Ingen egen gångartsstate här. ]]
-	local gait = Gaits.get(loco.gait)
-	local steps = if loco.ryggar then Config.RYGGNING.Steps else gait.steps
+	--[[ ── SLAGEN KOMMER UR BENFÖLJDEN (#264 GAIT_READABILITY_AND_UGNETA) ──
 
-	--[[ ── TAKTBYTET FÅR INTE GE ETT EXTRA SLAG ────────────────────────
+	     Förut delades fasen jämnt i `steps` delar: `floor(phase × steps)`.
+	     Det gav galoppen tre LIKA långa slag — men galopp är tre slag och
+	     en paus — och ljudet hade ingen koppling till vilka ben som
+	     faktiskt sattes i. Nu läser ljudet samma rad i `RidKanon.GANGFAS`
+	     som benen, med samma fas: ett slag hörs när en isättning passeras,
+	     och ett diagonalpar är ETT slag.
 
-	     Raden jämförde förut `floor(phase × beats)` mot
-	     `floor(lastPhase × beats)` med DAGENS `beats`. Det höll så länge
-	     takten var konstant, men ryggningen byter den: 2 slag blir 4 när
-	     hon stegar upp i skritt, och då mäts förra bildrutans fas mot en
-	     delning den aldrig levde i. Uppmätt: ett fasvärde på 0,45 som
-	     växer till 0,55 ger `before = 1, now = 2` med fyra delningar —
-	     ett hovslag som ingen häst tog.
+	     Läget bärs som ett LÖPANDE tal (cykler + fas), så att flera slag i
+	     en lång bildruta räknas i ordning och en faswrap inte tappar något.
 
-	     Slagindexet bärs därför självt, och när takten ändras SÄTTS det
-	     OM utan att fyra. Det gör övergången halt ↔ rygga ↔ skritt ren i
-	     båda riktningarna, vilket är precis vad acceptanskravet om
-	     "inga dubbla eller kvarhängande steg" begär. ]]
-	local rullar = steps > 0 and loco.grounded and not loco.airborne
-	if not rullar then
-		--[[ Tystnad nollar minnet. Annars ligger ett gammalt slagindex
-		     kvar och kan fyra på första bildrutan hon börjar röra sig
-		     igen — ett kvarhängande steg ur förra rörelsen. ]]
-		self.lastBeats = 0
+	     ── TAKTBYTET FÅR INTE GE ETT EXTRA SLAG (oförändrat krav) ───────
+
+	     Byter raden — halt ↔ rygga ↔ skritt ↔ trav ↔ galopp, eller
+	     galoppens sida — SEEDAS läget om utan att fyra. Det gör övergången
+	     ren i båda riktningarna: inga dubbla eller kvarhängande steg. ]]
+	local namn = Gangfas.monsterNamn(loco.gait, loco.lead, loco.ryggar)
+	local monster = Gangfas.monster(namn)
+	local rullar = monster ~= nil and loco.grounded and not loco.airborne
+	if not rullar or monster == nil then
+		--[[ Tystnad nollar minnet. Annars ligger ett gammalt läge kvar och
+		     kan fyra på första bildrutan hon börjar röra sig igen — ett
+		     kvarhängande steg ur förra rörelsen. ]]
+		self.monster = nil
 	else
-		local index = math.floor(loco.phase * steps)
-		if self.lastBeats ~= steps then
-			--[[ Ny takt: seed, inget slag. ]]
-			self.lastBeats = steps
-			self.lastIndex = index
-		elseif index ~= self.lastIndex then
-			self.lastIndex = index
-			self:_hoof()
+		local steg = (loco.phase - self.lastPhase) % 1
+		if self.monster ~= namn then
+			--[[ Ny rad: seed, inget slag. ]]
+			self.monster = namn
+			self.lopande = loco.phase
+		else
+			local fran = self.lopande
+			local till = fran + steg
+			self.lopande = till
+			for _ in ipairs(Gangfas.passerade(monster, fran, till)) do
+				self:_hoof()
+			end
+			--[[ Talet hålls litet; bara skillnaden mellan två lägen räknas. ]]
+			if self.lopande > 1e6 then self.lopande = self.lopande % 1 end
 		end
 	end
 	self.lastPhase = loco.phase

@@ -2275,6 +2275,11 @@ function PreparationController.start()
 		lyssnade än hade missat att eftervården väntade. ]]
 	Net.get("PreparationSync").OnClientEvent:Connect(ritaOmNyare)
 	Net.get("PassSync").OnClientEvent:Connect(PreparationController.tillampaPass)
+	--[[ #264 GAIT_READABILITY_AND_UGNETA: språkflaggan. Samma vy, ritad om
+	     på det nya språket — ingenting skickas, ingenting går vidare. ]]
+	Sprak.vidByte(function()
+		if senasteVy then rita(senasteVy) end
+	end)
 
 	task.spawn(function()
 		local ok, vy = pcall(function()

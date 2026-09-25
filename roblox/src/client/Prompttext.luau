@@ -160,6 +160,13 @@ function Prompttext.start()
 	--[[ …och den andra riktningen. Utan den växer tabellen med varje
 	     dörr som byggs och rivs, resten av sessionen. ]]
 	table.insert(varldKopplingar, workspace.DescendantRemoving:Connect(slapp))
+	--[[ #264: språkflaggan. Varje kopplad prompt skrivs om på plats. ]]
+	local frankoppla = Sprak.vidByte(function()
+		for inst in pairs(kopplade) do
+			if inst:IsA("ProximityPrompt") then skriv(inst) end
+		end
+	end)
+	table.insert(varldKopplingar, { Disconnect = frankoppla } :: any)
 end
 
 return Prompttext

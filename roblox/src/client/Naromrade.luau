@@ -158,6 +158,10 @@ local valKnappar: { TextButton } = {}
 local valYta: ScrollingFrame? = nil
 local antalHandlingar = 0
 local sistaInstruktion = ""
+--[[ #264 GAIT_READABILITY_AND_UGNETA: den ridna hästens eget läge — gångart,
+     målgångart och galoppsida — matat av ritloopen. Färskt eller inget. ]]
+local ridLage: { [string]: any }? = nil
+local ridLageTid = -math.huge
 --[[ #246 C: prompter vars EGNA UI vi släckt, och stilen de hade innan.
      Nyckeln är prompten själv, så att en som försvinner ur världen tas
      med av skräpsamlaren utan att lämna en post efter sig. ]]
@@ -1581,29 +1585,42 @@ rita = function()
 			trot = Sprak.t("gangart.trot"), canter = Sprak.t("gangart.canter"),
 			gallop = Sprak.t("gangart.gallop"),
 		}
+		--[[ #264 GAIT_READABILITY_AND_UGNETA: gångart och sits, kort. Den
+		     ridna hästens eget läge (`ridlage`) går före attributet: det
+		     vet om en övergång pågår och vilken sida galoppen går på.
+		     Under övergång «Skritt till trav», efter etablering «Trav ·
+		     lättridning (assisterad)». Okänd galoppsida skrivs inte ut. ]]
+		local lage = if ridLage and os.clock() - ridLageTid < 0.6 then ridLage else nil
+		if lage and type(lage.gait) == "string" then gang = lage.gait end
 		local gangText = if type(gang) == "string" and GANGART[gang]
 			then GANGART[gang] else Sprak.t("hud.du_rider")
+		local mal = lage and lage.targetGait
+		if type(gang) == "string" and type(mal) == "string" and mal ~= gang
+			and GANGART[gang] and GANGART[mal] and mal ~= "halt" and gang ~= "halt" then
+			gangText = Sprak.t("gangart.byte", GANGART[gang], string.lower(GANGART[mal]))
+		elseif gang == "trot" then
+			gangText = gangText .. "  ·  " .. Sprak.t("sits.lattridning")
+		elseif (gang == "canter" or gang == "gallop") and lage and lage.lead then
+			gangText = gangText .. "  ·  " .. (if lage.lead == "left"
+				then Sprak.t("galopp.vanster") else Sprak.t("galopp.hoger"))
+		end
 		if rubrikEtikett then rubrikEtikett.Text = rubrikFor(hastnamn, gangText) end
 		local rader2 = {}
 		for _, r in ipairs(KontrollHjalp.ridrader()) do
 			table.insert(rader2, r.vad .. "  [" .. r.reglage .. "]")
 		end
-		--[[ Övningen överst, reglagen under: lektionens vägledning och hur
-		     man driver, styr, bromsar och sitter av, i samma panel. ]]
-		local ugNu = UgnetaController.panel()
+		--[[ Reglagen i panelen. Lektionens vägledning och Ugnetas coachning
+		     står i HENNES yta uppe till höger (#264) — inte här, och inte
+		     två gånger. Lektionens VAL (Prova igen, Se ritten, Gå vidare) är
+		     handlingar och står kvar i panelens valsektion, med sina
+		     befintliga handlingar och sin befintliga vakt. ]]
 		local kropp = table.concat(rader2, "\n")
-		if LektionController.pagar() and ugNu.ovning and ugNu.ovning ~= "" then
-			kropp = ugNu.ovning .. "\n\n" .. kropp
-		end
 		if stegEtikett then
 			stegEtikett.Text = kropp
 			stegEtikett.Visible = kropp ~= ""
 		end
-		--[[ LEKTIONEN I SAMMA PANEL: coachningen i återkopplingsfältet, och
-		     lektionens val (Prova igen, Se ritten, Gå vidare) i valsektionen —
-		     med sina befintliga handlingar och sin befintliga vakt. ]]
 		local ug = UgnetaController.panel()
-		visaAterkoppling(ug.text)
+		visaAterkoppling(nil)
 		for j, k in ipairs(ug.knappar) do
 			if j <= MAX_VAL then valRader[j] = k end
 		end
@@ -1846,16 +1863,11 @@ rita = function()
 	end
 
 	fyllText(data, minHast, hastnamn)
-	--[[ PRIORITET (kontraktet): ett nej från uppgiften går före lektionens
-	     coachning — mätt i bänken: en kvarliggande efterritt-text skrev över
-	     skötselns «hämta sadeln först». ]]
-	--[[ Och ett JA likaså (mätt i bänken): en kvittens som kom efter vyn
-	     skrevs över av en kvarliggande efterritt-text. Båda svaren är
-	     tidsbegränsade i skötseln, så coachningen tar tillbaka fältet när
-	     de runnit ut. ]]
-	local svarFranUppgiften = data ~= nil
-		and (data.aterkoppling == "nej" or data.aterkoppling == "ok")
-	if ug.text and not svarFranUppgiften then visaAterkoppling(ug.text) end
+	--[[ #264 GAIT_READABILITY_AND_UGNETA: lektionens coachning skrivs inte
+	     längre i panelens återkopplingsfält — den står i Ugnetas yta uppe
+	     till höger. Fältet här bär uppgiftens kvittens och nej, nära
+	     handlingen, och kan därför aldrig skrivas över av en kvarliggande
+	     efterritt-text (det var felet prioritetsregeln här rättade förut). ]]
 	placera(pn)
 	pn.Visible = true
 end
@@ -1970,6 +1982,18 @@ end
 function Naromrade.satRider(v: boolean)
 	rider = v
 	rita()
+end
+
+--[[ #264: den ridna hästens läge, varje bildruta från ritloopen. Bara
+     gångart, målgångart och galoppsida kopieras — panelen får inte hålla
+     en referens till rörelsens egen tabell. ]]
+function Naromrade.ridlage(loco: any)
+	if loco == nil then
+		ridLage = nil
+		return
+	end
+	ridLage = { gait = loco.gait, targetGait = loco.targetGait, lead = loco.lead }
+	ridLageTid = os.clock()
 end
 
 --[[ Har spelaren en yta där en lista hör hemma? Pekskärm sedan #246,

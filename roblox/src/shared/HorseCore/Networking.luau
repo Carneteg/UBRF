@@ -73,6 +73,11 @@ local DEFINITIONS = {
 		 påstående. ]]
 	SadlaHast = "RemoteFunction",          -- klient → server: lägg sadeln jag bär på den här hästen
 	TransaHast = "RemoteFunction",         -- klient -> server: lagg transet jag bar pa den har hasten
+	--[[ #264 GAIT_READABILITY_AND_UGNETA: spelarens språkval ur flaggan.
+		 Argumentet är "sv" eller "en" och ingenting annat; servern skriver
+		 bara spelarens eget attribut, så att serverns egna texter till
+		 henne följer valet. Inget annat tillstånd går att nå härifrån. ]]
+	SprakVal = "RemoteFunction",           -- klient -> server: mitt sprak i spelet
 }
 
 local cache: { [string]: Instance } = {}

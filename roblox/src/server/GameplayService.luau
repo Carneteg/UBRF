@@ -594,6 +594,16 @@ local function ridaNuInre(player: Player): (boolean, string?, string?)
 	return klar, varfor, arg
 end
 
+--[[ #264 GAIT_READABILITY_AND_UGNETA: spelarens språkval. Argumentet är en
+	fråga från klienten och valideras här: "sv" eller "en", annars nej. Det
+	enda som skrivs är spelarens eget attribut, som `Sprak.sprakForSpelare`
+	läser — så att det servern säger till henne följer flaggan. ]]
+function GameplayService.sprakVal(player: Player, val: any): (boolean, string?)
+	if val ~= "sv" and val ~= "en" then return false, nil end
+	player:SetAttribute("UBRFSprak", val)
+	return true, val
+end
+
 function GameplayService.ridaNu(player: Player): (boolean, string?, string?)
 	--[[ #182 del 2: loggevidens. «Rida nu» ar genvagen forbi hela
 		forberedelsen, och nar den nekar vill man veta VILKEN hast och
@@ -1525,6 +1535,12 @@ function GameplayService.start()
 	HorseService.setLedareHook(LedService.ledsAv)
 	Net.get("RidaNu").OnServerInvoke = Skopa.grind("RidaNu", function(player)
 		return GameplayService.ridaNu(player)
+	end)
+
+	--[[ #264 GAIT_READABILITY_AND_UGNETA: språkflaggan. Bara "sv" eller
+		"en" tas emot, och bara spelarens EGET attribut skrivs. ]]
+	Net.get("SprakVal").OnServerInvoke = Skopa.grind("SprakVal", function(player, val)
+		return GameplayService.sprakVal(player, val)
 	end)
 
 	--[[ #235 FAS 2. Samma monster som `RidaNu`: klienten skickar en

@@ -44,7 +44,11 @@ vm.runInContext(las("src/model.js") + "\n" + las("src/riding/hjalper.js")
      webben kör (src/larare.js). Roblox ska inte ha en handskriven kopia
      av vilka dimensioner en 20 m volt bedöms på — då skulle de två
      ytorna kunna glida isär utan att något blir rött. */
-  + "\n" + las("src/larare.js"), ctx);
+  + "\n" + las("src/larare.js")
+  /* #264 GAIT_READABILITY_AND_UGNETA: gångarternas benföljd. Roblox ritar
+     ben och hovslag ur den här tabellen och ska inte ha en egen kopia. */
+  + "\n" + las("src/riding/gangfas.js"), ctx);
+const { GANGFAS, LATTRIDNING } = vm.runInContext("({GANGFAS, LATTRIDNING})", ctx);
 const { Gait, RID_ORDNING, K, HJALP_KANON, HJALP_FALT, HJALP_HARLEDDA, SVAR_KANON,
   SKOLHAST_PROFILER, SVAR_START, UGNETA_OVNING_DIM, UGNETA_DIM_LABEL,
   UGNETA_LIVE, UGNETA_DIM_CUE, UGNETA_KVALITET, UGNETA_PLATS, UGNETA_OVNINGAR, UGNETA_LIVE_CD } =
@@ -998,6 +1002,25 @@ for (const id of Object.keys(OVNINGAR_DEF).sort()) {
 }
 rader.push("\t},");
 rader.push("}");
+rader.push("");
+
+/* ── GÅNGFASEN: #264 GAIT_READABILITY_AND_UGNETA ──────────────────
+   Benföljden per gångart ur src/riding/gangfas.js. Roblox HastGang,
+   SoundController och RiderController läser den här raden — en tabell,
+   tre konsumenter, ingen kopia. */
+rader.push("--[[ #264: gångarternas benföljd och lättridningens takt, ur");
+rader.push("     src/riding/gangfas.js. `td` = isättningsfas, `stod` = bärandel. ]]");
+rader.push("RidKanon.GANGFAS = {");
+for (const namn of Object.keys(GANGFAS).sort()) {
+  const g = GANGFAS[namn];
+  rader.push(`\t${namn} = { takt = ${tal(g.takt)}, ben = {`);
+  for (const b of Object.keys(g.ben).sort())
+    rader.push(`\t\t${b} = { td = ${tal(g.ben[b].td)}, stod = ${tal(g.ben[b].stod)} },`);
+  rader.push("\t} },");
+}
+rader.push("}");
+rader.push("RidKanon.LATTRIDNING = { upp_per_cykel = " + tal(LATTRIDNING.upp_per_cykel)
+  + ", hojd_m = " + tal(LATTRIDNING.hojd_m) + " }");
 rader.push("");
 
 rader.push("return RidKanon");

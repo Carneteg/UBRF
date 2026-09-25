@@ -77,6 +77,62 @@ Sprak.text = {
 		sv = "Hjälp",
 		en = "Help",
 	},
+	["sits.lattridning"] = {
+		sv = "lättridning (assisterad)",
+		en = "rising trot (assisted)",
+	},
+	["sits.sittande"] = {
+		sv = "sittande",
+		en = "seated",
+	},
+	["galopp.hoger"] = {
+		sv = "höger galopp",
+		en = "right lead",
+	},
+	["galopp.vanster"] = {
+		sv = "vänster galopp",
+		en = "left lead",
+	},
+	["gangart.byte"] = {
+		sv = "%s till %s",
+		en = "%s to %s",
+	},
+	["ugneta.titel"] = {
+		sv = "Ugneta · Ridinstruktör",
+		en = "Ugneta · Riding instructor",
+	},
+	["sprak.nuvarande"] = {
+		sv = "Svenska",
+		en = "English",
+	},
+	["sprak.byt"] = {
+		sv = "Byt språk till engelska",
+		en = "Switch language to Swedish",
+	},
+	["ugneta.rad.borja_skritt"] = {
+		sv = "Börja i skritt. Tryck på %s en gång.",
+		en = "Start in walk. Press %s once.",
+	},
+	["ugneta.rad.bra_skritt"] = {
+		sv = "Bra! Du håller en lugn skritt.",
+		en = "Good! You're keeping a steady walk.",
+	},
+	["ugneta.rad.be_om_trav"] = {
+		sv = "Be om trav med ett tryck på %s.",
+		en = "Ask for trot by pressing %s once.",
+	},
+	["ugneta.rad.lattridning"] = {
+		sv = "Nu rider du lätt. Ryttaren följer travens rytm automatiskt.",
+		en = "You're rising to the trot. Your rider follows the rhythm automatically.",
+	},
+	["ugneta.rad.galopp"] = {
+		sv = "Nu galopperar du. Rid en stor båge.",
+		en = "You're cantering now. Ride a large curve.",
+	},
+	["ugneta.rad.fin_overgang"] = {
+		sv = "Fint! Det blev en lugn övergång.",
+		en = "Well done! That was a smooth transition.",
+	},
 	["interaktion.sitt_av"] = {
 		sv = "SITT AV",
 		en = "DISMOUNT",

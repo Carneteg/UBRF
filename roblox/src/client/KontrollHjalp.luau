@@ -282,6 +282,18 @@ end
 local RIDKARNA = { "hjalp.hogre_gangart", "hjalp.lagre_gangart",
 	"hjalp.styr", "hjalp.sitt_upp_av" }
 
+--[[ #264 GAIT_READABILITY_AND_UGNETA: reglaget för EN handling på den
+     inmatning spelaren har — «W / ↑» på tangentbord, knappens egen etikett
+     på pek. Ugneta säger den knapp spelaren faktiskt har, aldrig «tryck W»
+     till den som rider med fingret. Ur samma tabell som panelen. ]]
+function KontrollHjalp.reglageFor(nyckel: string): string?
+	local text = Sprak.t(nyckel)
+	for _, r in ipairs(KontrollHjalp.rader()) do
+		if r.vad == text then return r.reglage end
+	end
+	return nil
+end
+
 function KontrollHjalp.ridrader(): { { vad: string, reglage: string } }
 	local alla = KontrollHjalp.rader()
 	local ut = {}

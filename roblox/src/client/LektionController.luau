@@ -400,12 +400,16 @@ local function presentera(p: Lektion.Pass)
 		if ovId and Sprak.finns(nyckel) then return Sprak.t(nyckel) end
 		return reserv
 	end
-	local punkter = {}
-	for i, reserv in ipairs(o.punkter) do
-		punkter[i] = kortText("p" .. i, reserv)
-	end
-	UgnetaController.visa(kortText("rubrik", o.rubrik), punkter, true,
-		Sprak.t("ugneta.borja_lektionen"))
+	--[[ #264: en BYGGARE, inte färdiga strängar — språkflaggan skriver om
+	     presentationen på plats utan att lektionen går vidare. ]]
+	UgnetaController.visa(function()
+		local punkter = {}
+		for i, reserv in ipairs(o.punkter) do
+			punkter[i] = kortText("p" .. i, reserv)
+		end
+		return kortText("rubrik", o.rubrik), punkter, true,
+			Sprak.t("ugneta.borja_lektionen")
+	end)
 	lage = "presentation"
 end
 
@@ -498,10 +502,13 @@ function LektionController.steg(dt: number, tm: { [string]: any }?,
 		     alla andra kort. ]]
 		--[[ Ur katalogen, av samma skäl som presentationens knapp ovan:
 			de här fyra strängarna stod hårdkodade på svenska i logiken. ]]
-		UgnetaController.visa(Sprak.t("ugneta.ej_bedomd.rubrik"),
-			{ Sprak.t("ugneta.ej_bedomd.punkt") },
-			true, if p.forsokNr < 2 then Sprak.t("ugneta.prova_igen")
-				else Sprak.t("ugneta.nasta_ovning"))
+		local forsta = p.forsokNr < 2
+		UgnetaController.visa(function()
+			return Sprak.t("ugneta.ej_bedomd.rubrik"),
+				{ Sprak.t("ugneta.ej_bedomd.punkt") },
+				true, if forsta then Sprak.t("ugneta.prova_igen")
+					else Sprak.t("ugneta.nasta_ovning")
+		end)
 		lage = "efter"
 	end
 	liveCd, liveSagt = 0, ""

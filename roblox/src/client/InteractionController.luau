@@ -869,8 +869,24 @@ local function lyssnaPaLedningen()
 	end)
 end
 
+--[[ #264 GAIT_READABILITY_AND_UGNETA: språkflaggan byter text PÅ PLATS.
+     Knapparna bär sin text från när de byggdes; ett byte skriver om varje
+     knapp som finns, med samma nycklar som bygget använde. ]]
+function InteractionController._skrivOmTexter()
+	for _, p in pairs(prompts) do p.ActionText = Sprak.t("interaktion.sitt_upp") end
+	for model, p in pairs(ledKnappar) do p.ActionText = ledtext(model, lederNu == model) end
+	for _, p in pairs(ridaKnappar) do p.ActionText = Sprak.t("interaktion.rida_nu") end
+	for model, p in pairs(sadlaKnappar) do
+		p.ActionText = Sprak.t("interaktion.sadla_namn", hastnamn(model))
+	end
+	for model, p in pairs(transaKnappar) do
+		p.ActionText = Sprak.t("interaktion.transa_namn", hastnamn(model))
+	end
+end
+
 function InteractionController.start(mountCallback: (Model) -> ())
 	onMount = mountCallback
+	Sprak.vidByte(function() InteractionController._skrivOmTexter() end)
 	lyssnaPaLedningen()
 	for _, model in CollectionService:GetTagged("Horse") do
 		if model:IsA("Model") then addPrompt(model); addLedPrompt(model) end

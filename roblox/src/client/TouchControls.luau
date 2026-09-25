@@ -638,6 +638,14 @@ function TouchControls.mount(input: any, hooks: {
 	     svagare och längst från tummen: den ska vara hittbar, inte
 	     lättryckt. ]]
 	klaHandling(Input.AVSITT, Sprak.t("touch.sitt_av"), KD + LUFT, KD + LUFT, 0.55)
+	--[[ #264 GAIT_READABILITY_AND_UGNETA: språkflaggan byter knapparnas
+	     etiketter på plats. Kopplingen hör till ritten och rivs med den. ]]
+	local frankoppla = Sprak.vidByte(function()
+		ContextActionService:SetTitle(Input.BROMS, Sprak.t("touch.broms"))
+		ContextActionService:SetTitle(Input.DRIV, Sprak.t("touch.driv"))
+		ContextActionService:SetTitle(Input.AVSITT, Sprak.t("touch.sitt_av"))
+	end)
+	ager({ Disconnect = frankoppla } :: any)
 
 	--[[ ══ EN VAKT MOT `ModalEnabled`, OCH EN MÄTPUNKT ════════════════
 

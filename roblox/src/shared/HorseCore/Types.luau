@@ -71,6 +71,12 @@ export type Locomotion = {
 	     den är i sin tur reconcilad mot serverns replikerade `Ryggar`.
 	     Ett ställe räknar, resten läser. ]]
 	ryggar: boolean,
+	--[[ #264 GAIT_READABILITY_AND_UGNETA: varvet på ridbanan ("left" /
+	     "right", nil utanför banan) och galoppens ledande sida, vald när
+	     galoppen började. Räknas i `MovementController`; ben, ljud och
+	     ryttare läser. ]]
+	varv: string?,
+	lead: string?,
 	airborne: boolean,
 	grounded: boolean,
 	slope: Vector3,      -- markens normal, utjämnad
