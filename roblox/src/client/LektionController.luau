@@ -463,18 +463,26 @@ function LektionController.steg(dt: number, tm: { [string]: any }?,
 	end
 	local t = tema
 	if t and ovId then
-		local txt, bra, kalla = UgnetaTema.steg(t, dt, kvalitet,
+		local txt, bra, kalla, signal = UgnetaTema.steg(t, dt, kvalitet,
 			hastKontext, tonumber(tm.spanning), Ugneta.dimensionerFor(ovId))
 		if txt ~= "" then
 			--[[ Hästens rad byggs HÄR och inte i modulen: modulen är
 			     delad med webben och ska inte kunna språkvägarna. Den
 			     svarar med en KÄLLA, ytan väljer orden. ]]
+			--[[ #264 GAIT_UGNETA_REVIEW_R1: och så även temats rad. Den
+			     skickas som NYCKEL + argument och slås upp när den visas —
+			     förut gick kanonens svenska rakt till ytan, även på
+			     engelska. ]]
+			local nyckel: string?, args: { any } = nil, {}
 			if kalla == "hast" then
-				txt = Sprak.t("ugneta.hastens_dag"):format(
-					if hastNamn ~= "" then hastNamn else Sprak.t("ugneta.hasten"))
+				nyckel = "ugneta.hastens_dag"
+				args = { if hastNamn ~= "" then hastNamn else Sprak.t("ugneta.hasten") }
+			elseif kalla == "tema" then
+				nyckel = UgnetaController.liveNyckel(signal, bra)
 			end
+			if nyckel then txt = Sprak.t(nyckel, table.unpack(args)) end
 			liveSagt = txt
-			UgnetaController.live(txt, bra)
+			UgnetaController.live(txt, bra, nyckel, args)
 		end
 	end
 

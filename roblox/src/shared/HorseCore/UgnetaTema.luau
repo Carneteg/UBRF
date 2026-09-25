@@ -181,7 +181,7 @@ end
 	får höra om ett fel hon rättade för tio sekunder sedan. ]]
 function UgnetaTema.steg(tema: Tema, dt: number,
 	kvalitet: { [string]: number? }, hast: { [string]: any }?,
-	spanning: number?, dimensioner: { string }?): (string, boolean, string)
+	spanning: number?, dimensioner: { string }?): (string, boolean, string, ...string)
 
 	tema.cd -= dt
 	tema.attributCd -= dt
@@ -272,7 +272,11 @@ function UgnetaTema.steg(tema: Tema, dt: number,
 	--[[ Efter ett beröm börjar räkningen om, annars hade sex sekunders
 	     bra ridning gett beröm i varje spärrsläpp resten av passet. ]]
 	if bra then tema.braSedan = 0 end
-	return txt, bra, "tema"
+	--[[ #264 GAIT_UGNETA_REVIEW_R1: signalens IDENTITET följer med som
+	     fjärde värde. Texten ovan är kanonens svenska och får inte gå rakt
+	     till spelaren; ytan slår upp `ugneta.live.<id>.<fel|bra>` på det
+	     språk som gäller. Val, spärr och attribution är oförändrade. ]]
+	return txt, bra, "tema", tema.cue
 end
 
 return UgnetaTema

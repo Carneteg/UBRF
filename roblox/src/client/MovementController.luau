@@ -867,7 +867,14 @@ function MovementController:step(intent: Types.Intent, dt: number)
 	local cycle = if loco.ryggar then Config.RYGGNING.CycleLength
 		else Gaits.cycleLength(loco.gait)
 	if cycle > 0 then
-		loco.phase = (loco.phase + (moved / Config.STUDS_PER_METRE) / cycle) % 1
+		local steg = (moved / Config.STUDS_PER_METRE) / cycle
+		loco.phase = (loco.phase + steg) % 1
+		--[[ #264 GAIT_UGNETA_REVIEW_R1: samma framsteg LÖPANDE, utan
+		     modulo. Ljudet läste förut bara `phase` och räknade tillbaka
+		     med en modulo-differens — en bildruta som gick över en hel
+		     cykel tappade då hela cykelns slag (mätt i bänken: 0,1 till
+		     1,2 gav noll slag i stället för två). En ägare, två vyer. ]]
+		loco.fasLopande = (loco.fasLopande or loco.phase) + steg
 	end
 
 	--[[ ── Ut i världen ───────────────────────────────────────────────

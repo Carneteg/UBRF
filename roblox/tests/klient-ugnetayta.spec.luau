@@ -236,6 +236,36 @@ do
 	prova("under en lektion är raden tyst — lektionen äger rösten", n6 == nil, tostring(n6))
 	local n7 = steg(0.2, { uppsutten = false })
 	prova("avsittning kastar allt", n7 == nil and s.gait == nil and next(s.sagt) == nil)
+
+	--[[ R1 fynd 2: berömmet för skritten får inte överleva skritten. ]]
+	local function skrittBerom()
+		local ny = R.ny()
+		for k, v in pairs(ny) do s[k] = v end
+		s.gait, s.forra, s.berom, s.lektion = nil, nil, nil, nil
+		steg(0.1, med({ gait = "walk" }))
+		return steg(3.1, med({ gait = "walk" }))
+	end
+	for _, till in ipairs({ "halt", "trot", "canter" }) do
+		local fore = skrittBerom()
+		local efter = R.steg(s, 0.1, med({ gait = till }))
+		prova(("beröm för skritt, sedan %s: berömmet följer inte med"):format(till),
+			fore == "ugneta.rad.bra_skritt" and efter ~= "ugneta.rad.bra_skritt",
+			("%s → %s"):format(tostring(fore), tostring(efter)))
+	end
+	local fore = skrittBerom()
+	local iLektion = R.steg(s, 0.1, med({ gait = "walk", lektion = true }))
+	local efterLektion = R.steg(s, 0.1, med({ gait = "walk", lektion = false }))
+	prova("in i en lektion och ut igen: det gamla berömmet är borta",
+		fore == "ugneta.rad.bra_skritt" and iLektion == nil
+			and efterLektion ~= "ugneta.rad.bra_skritt",
+		("%s → %s → %s"):format(tostring(fore), tostring(iLektion), tostring(efterLektion)))
+	--[[ Och i halt efter skritten står inget beröm för skritten kvar, hur
+	     länge hon än står. (Börja-i-skritt gäller bara den som aldrig rört
+	     sig, så här är raden tyst.) ]]
+	skrittBerom()
+	local halt = steg(2.0, med({ gait = "halt" }))
+	prova("i halt efter skritten: ingen beröm för skritt",
+		halt ~= "ugneta.rad.bra_skritt", tostring(halt))
 end
 
 print("\n── 6b. Världens prompter och panelens rader byter språk på plats ──")

@@ -91,6 +91,10 @@ end
 	gånger. Taket skyddar mot en ljudsalva när lägena ligger långt isär;
 	en teleport eller ett återinsteg ska seedas om av den som bär läget. ]]
 Gangfas.MAX_SLAG = 6
+--[[ Längsta framsteg som räknas som rörelse på EN bildruta (#264 R1).
+     Galopp vid 5 bildrutor/s är ~0,3 cykel; två hela cykler är redan en
+     återställning, inte en häst som galopperat. ]]
+Gangfas.MAX_CYKLER = 2
 function Gangfas.passerade(m: Monster, fran: number, till: number):
 	{ { fas: number, ben: { string }, lage: number } }
 	local ut: { { fas: number, ben: { string }, lage: number } } = {}

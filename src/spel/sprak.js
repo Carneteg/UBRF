@@ -76,6 +76,21 @@ const SPRAK = {
   "galopp.vanster": { sv: "vänster galopp", en: "left lead" },
   "gangart.byte": { sv: "%s till %s", en: "%s to %s" },
   /* Ugneta är ridinstruktören, hon/henne. Titeln står i hennes yta. */
+  /* #264 GAIT_UGNETA_REVIEW_R1: live-signalerna. Den svenska texten är
+     EXAKT kanonens (RidKanon.UGNETA.LIVE, ur src/larare.js) — provet
+     jämför dem — och signalens id är identiteten, aldrig texten. */
+  "ugneta.live.framat.fel": { sv: "Rid framåt", en: "Ride forward" },
+  "ugneta.live.framat.bra": { sv: "Bra rytm", en: "Good rhythm" },
+  "ugneta.live.hand.fel": { sv: "Mjukare hand", en: "Softer hands" },
+  "ugneta.live.hand.bra": { sv: "Mjuk hand", en: "Soft hands" },
+  "ugneta.live.lugn.fel": { sv: "Andas ut", en: "Breathe out" },
+  "ugneta.live.lugn.bra": { sv: "Fint lugn", en: "Nice and calm" },
+  "ugneta.live.sits.fel": { sv: "Sitt stilla", en: "Sit still" },
+  "ugneta.live.sits.bra": { sv: "Bra sits", en: "Good seat" },
+  "ugneta.live.timing.fel": { sv: "Vänta på svaret", en: "Wait for the answer" },
+  "ugneta.live.timing.bra": { sv: "Precis så", en: "Just like that" },
+  "ugneta.live.vagen.fel": { sv: "Titta dit du ska", en: "Look where you are going" },
+  "ugneta.live.vagen.bra": { sv: "Bra linje", en: "Good line" },
   "ugneta.titel": { sv: "Ugneta · Ridinstruktör", en: "Ugneta · Riding instructor" },
   /* Flaggan visar det språk som GÄLLER; trycket byter. */
   "sprak.nuvarande": { sv: "Svenska", en: "English" },

@@ -709,13 +709,51 @@ local function medLedtext(txt: string): string
 end
 
 --[[ ── Live-registret ─────────────────────────────────────────── ]]
-function UgnetaController.liveText(fokusId: string, bra: boolean): string
-	local r = LIVE[fokusId]
-	if not r then return if bra then Sprak.t("ugneta.precis_sa") else "" end
+--[[ #264 GAIT_UGNETA_REVIEW_R1: live-signalernas NYCKLAR, utskrivna en och
+     en (språkgrinden läser källan). Kanonens `LIVE` är den svenska
+     identiteten; det spelaren läser slås upp här, på det språk som gäller
+     när det VISAS. Förut gick kanonens svenska rakt till ytan, även på
+     engelska. ]]
+local LIVE_NYCKEL: { [string]: { fel: string, bra: string } } = {
+	framat = { fel = "ugneta.live.framat.fel", bra = "ugneta.live.framat.bra" },
+	hand = { fel = "ugneta.live.hand.fel", bra = "ugneta.live.hand.bra" },
+	lugn = { fel = "ugneta.live.lugn.fel", bra = "ugneta.live.lugn.bra" },
+	sits = { fel = "ugneta.live.sits.fel", bra = "ugneta.live.sits.bra" },
+	timing = { fel = "ugneta.live.timing.fel", bra = "ugneta.live.timing.bra" },
+	vagen = { fel = "ugneta.live.vagen.fel", bra = "ugneta.live.vagen.bra" },
+}
+UgnetaController.LIVE_NYCKEL = LIVE_NYCKEL
+
+--[[ Nyckeln för en signal, eller nil för en signal kanonen inte har. ]]
+function UgnetaController.liveNyckel(fokusId: string?, bra: boolean): string?
+	local r = fokusId and LIVE_NYCKEL[fokusId]
+	if not r then return nil end
 	return if bra then r.bra else r.fel
 end
 
-function UgnetaController.live(txt: string, bra: boolean)
+function UgnetaController.liveText(fokusId: string, bra: boolean): string
+	local nyckel = UgnetaController.liveNyckel(fokusId, bra)
+	if nyckel then return Sprak.t(nyckel) end
+	if not LIVE[fokusId] then return if bra then Sprak.t("ugneta.precis_sa") else "" end
+	return ""
+end
+
+--[[ #264 GAIT_UGNETA_REVIEW_R1: `nyckel` och `args` är kommentarens
+     identitet. Finns de slås texten upp HÄR och igen varje gång ytan ritas,
+     på det språk som gäller då; `txt` är bara reserven för en anropare
+     utan nyckel. ]]
+local liveNyckelNu: string? = nil
+local liveArgsNu: { any } = {}
+
+local function liveTextNu(): string?
+	if liveNyckelNu then return Sprak.t(liveNyckelNu, table.unpack(liveArgsNu)) end
+	return nil
+end
+
+function UgnetaController.live(txt: string, bra: boolean, nyckel: string?, args: { any }?)
+	liveNyckelNu = nyckel
+	liveArgsNu = args or {}
+	if nyckel then txt = liveTextNu() or txt end
 	if txt == "" then return end
 	bygg()
 	local c = chip
@@ -1013,6 +1051,9 @@ end
 	Uppgiftens nej står INTE här: det hör till handlingen, i panelen. ]]
 local function lararMeddelande(): string?
 	local c = chip
+	--[[ Kommentaren slogs upp ur sin nyckel när den kom, på det språk som
+	     gällde då; ett språkbyte släcker den (`sprakBytt`), så den står
+	     aldrig kvar på ett språk som inte gäller. ]]
 	if c and c.Visible and c.Text ~= "" then return c.Text end
 	if CoachBanner.synlig() then
 		local m, d = CoachBanner.text()

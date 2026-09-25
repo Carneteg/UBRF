@@ -113,10 +113,21 @@ function SoundController:step(loco: Types.Locomotion, dt: number)
 		     kan fyra på första bildrutan hon börjar röra sig igen — ett
 		     kvarhängande steg ur förra rörelsen. ]]
 		self.monster = nil
+		self.forraLopande = loco.fasLopande
 	else
-		local steg = (loco.phase - self.lastPhase) % 1
-		if self.monster ~= namn then
-			--[[ Ny rad: seed, inget slag. ]]
+		--[[ #264 GAIT_UGNETA_REVIEW_R1: läget kommer LÖPANDE från rörelsens
+		     enda ägare (`fasLopande`). Utan det — en äldre rigg — faller
+		     läsningen tillbaka på modulo-differensen, som bara kan se
+		     mindre än en cykel per bildruta. ]]
+		local lopandeNu = loco.fasLopande
+		local steg = if lopandeNu ~= nil and self.forraLopande ~= nil
+			then lopandeNu - self.forraLopande
+			else (loco.phase - self.lastPhase) % 1
+		self.forraLopande = lopandeNu
+		if self.monster ~= namn or steg < 0 or steg > Gangfas.MAX_CYKLER then
+			--[[ Ny rad — eller ett läge som gått bakåt eller hoppat längre än
+			     en häst hinner på en bildruta (återställning, teleport):
+			     seed, inget slag. Ingen obegränsad eftersläpning spelas upp. ]]
 			self.monster = namn
 			self.lopande = loco.phase
 		else

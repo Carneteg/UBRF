@@ -240,6 +240,88 @@ do
 	check("inga markslag i luften", #slagFaser == 0, ("%d slag"):format(#slagFaser))
 end
 
+print("\n── 4b. Rörelse → ljud: en bildruta över en hel cykel tappar inga slag (R1) ──")
+do
+	--[[ GAIT_UGNETA_REVIEW_R1 fynd 4, genom PRODUKTIONENS väg: en riktig
+	     MovementController räknar fasen ur rotens förflyttning, och en
+	     riktig SoundController läser `loco`. Bara uppspelningen är utbytt. ]]
+	local STATS = { Speed = 0.5, Acceleration = 0.5, Agility = 0.5, Endurance = 0.5,
+		Temperament = "Calm", MaxStamina = 100 }
+	local rig = __makeRig()
+	rig.model.FindFirstChild = function() return nil end
+	local mc = MovementController.new(rig, STATS)
+	local sc = SoundController.new(rig, STATS)
+	local slag = 0
+	sc._hoof = function() slag += 1 end
+	local function intent(o)
+		o = o or {}
+		return { forward = 0, steer = 0, rein = 0, seat = 0, parad = 0,
+			gaitUp = o.gaitUp or false, gaitDown = false, jump = false }
+	end
+	local function flytta(studs)
+		local ny = rig.root.Position + Vector3.new(0, 0, studs)
+		rig.root.Position = ny
+		rig.root.CFrame = CFrame.new(ny)
+	end
+	local function ruta(studs, o)
+		mc:step(intent(o), 1 / 60)
+		flytta(studs)
+		sc:step(mc.loco, 1 / 60)
+	end
+	--[[ Upp i trav: två tryck, med tid emellan för övergången. ]]
+	for _ = 1, 2 do
+		ruta(0, { gaitUp = true })
+		for _ = 1, 150 do ruta(0.05) end
+	end
+	check("utgångsläget: hon travar", mc.loco.gait == "trot", tostring(mc.loco.gait))
+	for _ = 1, 10 do ruta(0.05) end
+	local cykel = Gaits.cycleLength("trot") * Config.STUDS_PER_METRE
+	--[[ EN lång bildruta: 1,1 cykel (2,4 m, under teleportgränsen 3 m). ]]
+	slag = 0
+	mc:step(intent(), 1 / 60)
+	sc:step(mc.loco, 1 / 60)
+	slag = 0
+	local fore = mc.loco.fasLopande
+	flytta(cykel * 1.1)
+	mc:step(intent(), 1 / 60)
+	sc:step(mc.loco, 1 / 60)
+	--[[ Facit: hur många isättningar spannet faktiskt rymmer — 1,1 cykel
+	     trav är två eller tre beroende på var den börjar. ]]
+	local vantat = #Gangfas.passerade(Gangfas.monster("trav"), fore, mc.loco.fasLopande)
+	check("en bildruta över en hel travcykel ger sina slag, inte noll",
+		vantat >= 2 and slag == vantat, ("%d slag, facit %d"):format(slag, vantat))
+	--[[ Stillastående: inga slag. ]]
+	slag = 0
+	for _ = 1, 30 do ruta(0) end
+	check("stillastående: inga slag", slag == 0, ("%d slag"):format(slag))
+	--[[ Teleport: seedas om, ingen salva. ]]
+	slag = 0
+	mc:step(intent(), 1 / 60)
+	flytta(60)
+	mc:step(intent(), 1 / 60)
+	sc:step(mc.loco, 1 / 60)
+	check("en teleport ger ingen salva", slag == 0, ("%d slag"):format(slag))
+	--[[ Ljudets EGEN spärr: ett läge som hoppar tio cykler eller går bakåt
+	     (återställning) seedas om — ingen eftersläpning spelas upp. ]]
+	slag = 0
+	local l = table.clone(mc.loco)
+	l.fasLopande = (mc.loco.fasLopande or 0) + 10.3
+	l.phase = l.fasLopande % 1
+	sc:step(l, 1 / 60)
+	local l2 = table.clone(l)
+	l2.fasLopande = 0.05
+	l2.phase = 0.05
+	sc:step(l2, 1 / 60)
+	check("ett läge som hoppar tio cykler, eller bakåt, ger ingen salva",
+		slag == 0, ("%d slag"):format(slag))
+	sc:step(mc.loco, 1 / 60)
+	--[[ Vanlig faswrap i jämn trav: två slag per cykel. ]]
+	slag = 0
+	local per = cykel / 60
+	for _ = 1, 120 do ruta(per) end
+	check("jämn trav, två cykler: fyra slag", slag == 4, ("%d slag"):format(slag))
+end
+
 print("\n── 5. Ryttaren: lättridning i trav, sittande i skritt och galopp ──")
 do
 	local rig = __makeRig()
@@ -272,10 +354,40 @@ do
 		n == 3, ("%d uppresningar"):format(n))
 	local sits = rc:sitsLage()
 	check("och sitsen redovisas som lättridning", sits == "rising", tostring(sits))
+	rid("walk", 1, "right")   -- utgången ur traven klingar av först (R1)
 	local w = rid("walk", 3, "right")
 	local maxW = 0
 	for _, y in ipairs(w) do maxW = math.max(maxW, y) end
 	check("SKRITT: ingen uppresning", maxW < 0.01, ("max %.3f"):format(maxW))
+	--[[ R1 fynd 3: UT UR lättridningen klingar det faktiska lyftet av. ]]
+	local function tillTopp()
+		rid("trot", 2, "right")
+		local bast, fasTopp = -1, 0
+		for i = 0, 99 do
+			local h = Gangfas.lattridning(Gangfas.monster("trav"), i / 100, "LF")
+			if h > bast then bast, fasTopp = h, i / 100 end
+		end
+		for _ = 1, 30 do
+			rc:step({ gait = "trot", phase = fasTopp, ryggar = false, grounded = true,
+				airborne = false, speed = 3, lean = 0, varv = "right" }, 1 / 60)
+		end
+		return lyft()
+	end
+	for _, till in ipairs({ "walk", "canter", "halt" }) do
+		local topp = tillTopp()
+		rc:step({ gait = till, phase = 0.3, ryggar = false, grounded = true,
+			airborne = false, speed = 2, lean = 0, varv = "right" }, 1 / 60)
+		local efter = lyft()
+		check(("trav → %s vid toppen: inget fall i sadeln på en bildruta"):format(till),
+			topp > 0.25 and efter > topp * 0.85,
+			("%.3f → %.3f"):format(topp, efter))
+		for _ = 1, 120 do
+			rc:step({ gait = till, phase = 0.3, ryggar = false, grounded = true,
+				airborne = false, speed = 2, lean = 0, varv = "right" }, 1 / 60)
+		end
+		check(("och efter två sekunder i %s sitter hon"):format(till), math.abs(lyft()) < 0.01,
+			("%.4f"):format(lyft()))
+	end
 	rc:release()
 	check("och avsittningen lämnar sätets svets i utgångsläget",
 		math.abs(svets.C0.Position.Y - 1) < 1e-6)

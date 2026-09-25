@@ -195,13 +195,24 @@ function RiderController:_gangartsSits(loco: Types.Locomotion, dt: number)
 			vagg = math.sin(tpi * loco.phase) * 0.015
 		end
 	end
-	--[[ Viktningen ger en mjuk övergång mellan sitsarna; en gångart som
-	     byts mitt i en uppresning ska inte släppa ryttaren i sadeln. ]]
+	--[[ IN I lättridningen: vikten växer mjukt, och uppresningen följer
+	     traven exakt (en per cykel) gånger vikten.
+
+	     UT UR den (#264 GAIT_UGNETA_REVIEW_R1): det FAKTISKA lyftet klingar
+	     av. Förut blev `lyft` noll i samma bildruta som gångarten byttes,
+	     och vikten multiplicerades med noll — mätt i bänken: 0,33 studs
+	     till 0 på en bildruta, så att ryttaren föll i sadeln. Nu går hon ned
+	     ur den höjd hon faktiskt hade, med samma tidskonstant. ]]
 	local vill = if sits == "rising" then 1 else 0
-	self.lyftVikt = (self.lyftVikt or 0) + (vill - (self.lyftVikt or 0))
-		* (1 - math.exp(-dt / SITS_TAU))
+	local mjuk = 1 - math.exp(-dt / SITS_TAU)
+	self.lyftVikt = (self.lyftVikt or 0) + (vill - (self.lyftVikt or 0)) * mjuk
 	self.sits = sits
-	self.uppe = lyft * self.lyftVikt
+	if sits == "rising" then
+		self.uppe = lyft * self.lyftVikt
+	else
+		self.uppe = (self.uppe or 0) * (1 - mjuk)
+		if self.uppe < 1e-4 then self.uppe = 0 end
+	end
 	local w = self:_sitsSvets()
 	if w and self.svetsBas then
 		local dy = self.uppe * RidKanon.LATTRIDNING.hojd_m * Config.STUDS_PER_METRE

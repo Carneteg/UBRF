@@ -41,6 +41,7 @@ export type Lage = {
 	berom: { nyckel: string, args: { any } }?,
 	beromKvar: number,
 	sedanTips: number,
+	lektion: boolean?,
 }
 
 function UgnetaRad.ny(): Lage
@@ -66,6 +67,7 @@ function UgnetaRad.steg(s: Lage, dt: number, inn: { [string]: any }): (string?, 
 		s.sedan, s.nedat, s.haftRorelse = 0, false, false
 		s.sagt = {}
 		s.beromKvar, s.sedanTips = 0, math.huge
+		s.lektion = nil
 		return nil, nil
 	end
 	local gait = inn.gait or "halt"
@@ -79,6 +81,12 @@ function UgnetaRad.steg(s: Lage, dt: number, inn: { [string]: any }): (string?, 
 		--[[ Ett byte gör en ny episod: samma beröm får komma igen nästa
 		     gång hon skrittar lugnt, men inte två gånger i samma skritt. ]]
 		s.sagt = {}
+		--[[ #264 GAIT_UGNETA_REVIEW_R1: och berömmet för FÖRRA läget
+		     kastas. Förut stod «Du håller en lugn skritt» kvar i sex
+		     sekunder efter att hon stannat, och gick före instruktionen.
+		     Takten (`sedanTips`) rörs inte — den begränsar nya tips, den
+		     håller inte kvar gamla. ]]
+		s.berom, s.beromKvar = nil, 0
 	else
 		s.sedan += dt
 	end
@@ -87,7 +95,14 @@ function UgnetaRad.steg(s: Lage, dt: number, inn: { [string]: any }): (string?, 
 	if s.beromKvar > 0 then s.beromKvar -= dt end
 	if s.beromKvar <= 0 then s.berom = nil end
 
-	if inn.lektion then return nil, nil end
+	--[[ Lektionen in eller ut är också ett nytt läge: berömmet hörde till
+	     det förra. ]]
+	local iLektion = inn.lektion == true
+	if iLektion ~= (s.lektion == true) then
+		s.berom, s.beromKvar = nil, 0
+		s.lektion = iLektion
+	end
+	if iLektion then return nil, nil end
 
 	local function berom(nyckel: string, args: { any }?)
 		if s.sagt[nyckel] or s.sedanTips < UgnetaRad.PAUS then return end

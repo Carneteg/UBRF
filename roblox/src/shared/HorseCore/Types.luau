@@ -59,6 +59,9 @@ export type Locomotion = {
 	targetGait: GaitName,
 	state: State,
 	phase: number,       -- 0..1 inom gångartens cykel, driver ljud och damm
+	--[[ #264: samma framsteg utan modulo (cykler + fas). Ljudet räknar
+	     slag ur den, så att en lång bildruta inte tappar hela cykler. ]]
+	fasLopande: number?,
 	--[[ Ryggar hon just nu? (#233, ryggningsljudet.)
 
 	     Rygga har ingen egen gångartsrad — hon ryggar i HALT, och `gait`
