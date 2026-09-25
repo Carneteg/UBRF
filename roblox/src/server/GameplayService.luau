@@ -594,6 +594,36 @@ local function ridaNuInre(player: Player): (boolean, string?, string?)
 	return klar, varfor, arg
 end
 
+--[[ #264 PLAYER_FLOW_CLOSURE_R4: LEDSTEGET KVITTERAS AV ANKOMSTEN.
+
+	Mätt i Studio på kandidat 167133b: hästen ledd box MB 5 -> ridhuset,
+	`malNatt=true`, kopplet släppt — panelen stod kvar på «Lead her to the
+	arena 4/5» tills spelaren tryckte på stegets egen rad en gång till.
+	Kontraktet (`PreparationController.aktuellUppgift`) säger att ledningen
+	TILL ridhuset är det som bockar av steget.
+
+	Anropas av `LedService` när målet nås och när kopplet släpps där. Går
+	genom den vanliga momentvägen: `harLamnatBox`, `harNattMal` och
+	närvaron prövas precis som för ett tryck. `utforare` lämnas tom — det
+	var spelaren som ledde henne, inte stallet. Står något annat än `leda`
+	på tur görs ingenting; ett nej här är tyst, för spelaren har inte bett
+	om något. ]]
+function GameplayService.kvitteraLedning(player: Player): boolean
+	local s = state[player]
+	if not s then return false end
+	local fas = Preparation.nasta(s)
+	if not fas or fas.id ~= "leda" then return false end
+	local kvitterat = false
+	while true do
+		local m = Preparation.nastaMoment(s, "leda")
+		if not m then break end
+		local ok = GameplayService.moment(player, "leda", m.id)
+		if not ok then break end
+		kvitterat = true
+	end
+	return kvitterat
+end
+
 --[[ #264 GAIT_READABILITY_AND_UGNETA: spelarens språkval. Argumentet är en
 	fråga från klienten och valideras här: "sv" eller "en", annars nej. Det
 	enda som skrivs är spelarens eget attribut, som `Sprak.sprakForSpelare`
@@ -1588,6 +1618,12 @@ function GameplayService.start()
 		att den oppnas utan att kanna till dem. ]]
 	LedService.satDorrKrok(function(blad)
 		return DorrService.satLage(blad, true)
+	end)
+
+	--[[ #264 R4: när hästen FYSISKT nått målzonen kvitteras ledsteget.
+		Se `GameplayService.kvitteraLedning`. ]]
+	LedService.satMalKrok(function(player)
+		GameplayService.kvitteraLedning(player)
 	end)
 
 	LedService.satRidenKrok(function(modell)

@@ -1013,6 +1013,92 @@ do
 	stadaSession(S)
 end
 
+--[[ ══ #264 PLAYER_FLOW_CLOSURE_R4: ANKOMSTEN KVITTERAR LEDSTEGET ══════
+
+	Mätt i Studio på kandidat 167133b: hästen ledd box MB 5 -> ridhuset,
+	`malNatt=true`, kopplet släppt — och panelen stod kvar på «Lead her to
+	the arena 4/5» tills spelaren tryckte på stegets rad en gång till.
+	Kontraktet i `PreparationController.aktuellUppgift` säger att det är
+	ledningen till ridhuset som bockar av steget.
+
+	Provet gör allt UTOM ledsteget genom tjänsten, leder sedan och låter
+	`LedService._steg` avgöra ankomsten. Inget moment för `leda` anropas
+	av provet. ]]
+print("\n── R4: ankomsten kvitterar ledsteget ──")
+do
+	local function allUtomLeda(spelare)
+		for _, fas in ipairs(Preparation.stegFaser()) do
+			if fas.id ~= "leda" then
+				if fas.id == "iordning" then
+					local s0 = GameplayService.stateFor(spelare)
+					GameplayService.valjUtrustning(spelare, "sadel", s0.hastId)
+					GameplayService.valjUtrustning(spelare, "trans", s0.hastId)
+				end
+				while true do
+					local s = GameplayService.stateFor(spelare)
+					local m = Preparation.nastaMoment(s, fas.id)
+					if not m then break end
+					local ok, skal = GameplayService.moment(spelare, fas.id, m.id)
+					if not ok then return false, fas.id .. "/" .. m.id .. ": " .. tostring(skal) end
+				end
+			end
+		end
+		return true, nil
+	end
+	local function ledTillMalet(S, spelarAvstand)
+		local zon = LedService.malzon()
+		local modell = S.modell
+		LedService.borja(S.spelare, modell, modell)
+		local mx = (zon.x + zon.w / 2) * 3
+		local mz = (170 - (zon.y + zon.h / 2)) * 3
+		modell.PrimaryPart.CFrame = CFrame.new(mx, modell.PrimaryPart.Position.Y, mz)
+		S.rot.CFrame = CFrame.new(mx + spelarAvstand, S.rot.Position.Y, mz)
+		LedService._steg(1 / 30)
+		return mx, mz
+	end
+
+	--[[ a) Spelaren vid hästen när hon kommer fram. ]]
+	local S = nySession("R4Ankomst", 9291)
+	local ok, skal = allUtomLeda(S.spelare)
+	check("R4: allt utom ledsteget gick igenom tjänsten", ok, tostring(skal))
+	local f0 = Preparation.nasta(GameplayService.stateFor(S.spelare))
+	check("R4 KONTROLL: ledsteget står på tur", f0 ~= nil and f0.id == "leda",
+		tostring(f0 and f0.id))
+	ledTillMalet(S, 6)
+	check("R4: målet är nått", LedService.harNattMal(S.spelare) == true)
+	check("R4: ANKOMSTEN KVITTERADE LEDSTEGET — inget tryck",
+		GameplayService.statusFor(S.spelare) == Preparation.STATUS.REDO,
+		tostring(GameplayService.statusFor(S.spelare)))
+	LedService.slapp(S.spelare)
+	stadaSession(S)
+
+	--[[ b) Spelaren för långt bort för närvaron när hon kommer fram, sedan
+	     vid hästen när kopplet släpps. ]]
+	local S2 = nySession("R4Slapp", 9292)
+	local ok2, skal2 = allUtomLeda(S2.spelare)
+	check("R4 b: allt utom ledsteget gick igenom", ok2, tostring(skal2))
+	local mx, mz = ledTillMalet(S2, 20)
+	check("R4 b: målet är nått", LedService.harNattMal(S2.spelare) == true)
+	check("R4 b: men utan närvaro kvitteras ingenting ännu",
+		GameplayService.statusFor(S2.spelare) ~= Preparation.STATUS.REDO,
+		tostring(GameplayService.statusFor(S2.spelare)))
+	S2.rot.CFrame = CFrame.new(mx + 6, S2.rot.Position.Y, mz)
+	LedService.slapp(S2.spelare)
+	check("R4 b: SLÄPPET VID HÄSTEN I MÅLET KVITTERADE LEDSTEGET",
+		GameplayService.statusFor(S2.spelare) == Preparation.STATUS.REDO,
+		tostring(GameplayService.statusFor(S2.spelare)))
+	stadaSession(S2)
+
+	--[[ c) Ledsteget står inte på tur: ankomsten kvitterar ingenting. ]]
+	local S3 = nySession("R4Tidigt", 9293)
+	ledTillMalet(S3, 6)
+	local f3 = Preparation.nasta(GameplayService.stateFor(S3.spelare))
+	check("R4 c: en tidig ledning hoppar inte över skötseln",
+		f3 ~= nil and f3.id ~= "leda", tostring(f3 and f3.id))
+	LedService.slapp(S3.spelare)
+	stadaSession(S3)
+end
+
 --[[ `os.exit` finns INTE i luau-CLI:t (den är nil). Ett anrop rakt ut gav
 	en "attempt to call a nil value" i loggen i stället för ett läsbart
 	slut — rött blev det, men av fel anledning i texten. Här används den

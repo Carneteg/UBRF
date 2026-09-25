@@ -2138,6 +2138,123 @@ do
 	delB:Destroy()
 end
 
+--[[ ══ #264 PLAYER_FLOW_CLOSURE_R4: ETT TRYCK SOM BYTER LÄGE ÄR ETT TRYCK ══
+
+	Mätt i Studio på kandidat 167133b (iPad-emulering, ledsteget):
+	  · pekläge: panelen rymmer 1 rad, ledningen ligger på sida 2 med F15.
+	    Ett L-tryck bytte läge, panelen fick 2 rader och ledningen fick L
+	    — efter att trycket redan passerat. Ingen ledning.
+	  · tangentläge: första musklicket på en valrad bytte läge, panelen
+	    hoppade mellan NED och UPP, och `Activated` fyrade aldrig.
+
+	Båda läggen byggs här med samma medel som motorn har: panelens storlek
+	avgör radantalet, och tryck kommer genom `UserInputService`. ]]
+print("\n── R4: ett tryck som byter läge är ett tryck ──")
+do
+	local UIS = game:GetService("UserInputService")
+	local Players = game:GetService("Players")
+	N.stopp()
+	UIS.TouchEnabled = true
+	UIS.KeyboardEnabled = true
+	N.start()
+	local spelare = Players.LocalPlayer
+	local rot = spelare.Character:FindFirstChild("HumanoidRootPart")
+	local yta = spelare:FindFirstChildOfClass("PlayerGui"):FindFirstChild("UBRFNaromrade")
+	local foreStorlek = yta.AbsoluteSize
+	local STOR, LITEN = Vector3.new(1080, 810, 0), Vector3.new(568, 320, 0)
+	PreparationController._satRutaForProv(nil)
+
+	local function tryck(typ, kod)
+		local inp = { UserInputType = typ, KeyCode = kod or Enum.KeyCode.Unknown }
+		UIS.InputBegan:Fire(inp, false)
+		return inp
+	end
+	local function slapp(inp) UIS.InputEnded:Fire(inp, false) end
+
+	--[[ ── 1. PANELEN FLYTTAR SIG INTE UNDER ETT FINGER ─────────────── ]]
+	yta.AbsoluteSize = STOR
+	local _, golvStor = N.blockplats()
+	yta.AbsoluteSize = LITEN
+	local _, golvLiten = N.blockplats()
+	check("R4 KONTROLL: de två storlekarna ger olika platser",
+		golvStor ~= golvLiten, ("%s / %s"):format(tostring(golvStor), tostring(golvLiten)))
+	yta.AbsoluteSize = STOR
+	N.blockplats()
+	local mus = tryck(Enum.UserInputType.MouseButton1)
+	yta.AbsoluteSize = LITEN
+	local _, golvNere = N.blockplats()
+	check("R4: MEDAN MUSEN ÄR NERE STÅR PANELEN KVAR", golvNere == golvStor,
+		("nere %s, före %s"):format(tostring(golvNere), tostring(golvStor)))
+	slapp(mus)
+	local _, golvUpp = N.blockplats()
+	check("R4: och efter släppet flyttar den sig", golvUpp == golvLiten,
+		("efter %s"):format(tostring(golvUpp)))
+	yta.AbsoluteSize = STOR
+	N.blockplats()
+	local finger = tryck(Enum.UserInputType.Touch)
+	yta.AbsoluteSize = LITEN
+	local _, golvFinger = N.blockplats()
+	check("R4: likadant under ett finger", golvFinger == golvStor,
+		("nere %s"):format(tostring(golvFinger)))
+	slapp(finger)
+
+	--[[ ── 2. TANGENTEN SOM BYTTE LÄGET TAPPAS INTE ──────────────────── ]]
+	rot.Position = Vector3.new(3000, 0, 0)
+	local dorr = nyPrompt("R4Dorr", "Open", "Door", Vector3.new(3001, 0, 0))
+	dorr.KeyboardKeyCode = Enum.KeyCode.X
+	local led = nyPrompt("R4Led", "Lead Trixie", "", Vector3.new(3003, 0, 0), 12, 0.2)
+	led.KeyboardKeyCode = Enum.KeyCode.L
+	local function iRad(p)
+		for i, q in ipairs(N._prompter()) do if q == p then return i end end
+		return nil
+	end
+
+	yta.AbsoluteSize = LITEN
+	N.satRider(false)
+	check("R4 KONTROLL: i pekläget syns en rad och ledningen är tyst",
+		iRad(led) == nil and led.KeyboardKeyCode == N.DODTANGENT,
+		("rad %s tangent %s"):format(tostring(iRad(led)), tostring(led.KeyboardKeyCode)))
+
+	--[[ a) Trycket kommer, radantalet ändras, raden får tangenten. ]]
+	local L = tryck(Enum.UserInputType.Keyboard, Enum.KeyCode.L)
+	yta.AbsoluteSize = STOR
+	N.satRider(false)
+	check("R4: L-TRYCKET SOM BYTTE LÄGET BÖRJAR HÅLLET PÅ LEDRADEN",
+		N._hallsNu() == led, tostring(N._hallsNu() and N._hallsNu().Name))
+	check("R4: och raden är den synliga ledraden", N._hallRad() == iRad(led),
+		("hållrad %s ledrad %s"):format(tostring(N._hallRad()), tostring(iRad(led))))
+	slapp(L)
+	check("R4: släppt tangent släpper hållet", N._hallsNu() == nil)
+
+	--[[ b) Radantalet ändras inte: ett tryck som ingen rad äger förblir
+	     ingenting. ]]
+	yta.AbsoluteSize = LITEN
+	N.satRider(false)
+	local L2 = tryck(Enum.UserInputType.Keyboard, Enum.KeyCode.L)
+	N.satRider(false)
+	check("R4: utan lägesbyte når tangenten inte en rad utanför sidan",
+		N._hallsNu() == nil, tostring(N._hallsNu() and N._hallsNu().Name))
+	slapp(L2)
+
+	--[[ c) Äger en synlig rad redan tangenten är trycket motorns. ]]
+	yta.AbsoluteSize = STOR
+	N.satRider(false)
+	local L3 = tryck(Enum.UserInputType.Keyboard, Enum.KeyCode.L)
+	yta.AbsoluteSize = LITEN
+	N.satRider(false)
+	yta.AbsoluteSize = STOR
+	N.satRider(false)
+	check("R4: en tangent som redan ägdes spelas inte upp en gång till",
+		N._hallsNu() == nil, tostring(N._hallsNu() and N._hallsNu().Name))
+	slapp(L3)
+
+	dorr.Parent:Destroy()
+	led.Parent:Destroy()
+	yta.AbsoluteSize = foreStorlek
+	rot.Position = Vector3.new(0, 0, 0)
+	N.satRider(false)
+end
+
 if fails > 0 then
 	print(string.format("\n%d mätning(ar) föll.", fails))
 	local avsluta = (os :: any).exit

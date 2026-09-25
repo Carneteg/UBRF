@@ -298,7 +298,7 @@ Enum = {
 	     varje nedslag pa `UserInputType`, och utan enumen jamforde banken
 	     mot nil — ett pekfinger och en mus var da samma sak. De tva
 	     mus-typerna finns for att kunna mata att en mus AVVISAS. ]]
-	UserInputType = { Gamepad1 = 1, Touch = 2, MouseButton1 = 3, MouseMovement = 4 },
+	UserInputType = { Gamepad1 = 1, Touch = 2, MouseButton1 = 3, MouseMovement = 4, Keyboard = 5 },
 	ContextActionResult = { Sink = 1 },
 	CameraType = { Scriptable = 1, Custom = 2 },
 	--[[ Front och Back tillkom med skyltarnas SurfaceGui: speglingen byter

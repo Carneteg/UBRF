@@ -321,6 +321,16 @@ local senasteLedning: { [Player]: Boxminne } = {}
 
 local hakar: { [string]: (Player, Led) -> () } = {}
 
+--[[ #264 R4: målkroken, se `LedService.satMalKrok`. Ett fel i den som
+	kvitterar får aldrig fälla ledningen. ]]
+local function malNattKrok(player: Player)
+	local f = (hakar :: any).mal
+	if f then
+		local ok, fel = pcall(f, player)
+		if not ok then warn("[Led] målkroken föll: " .. tostring(fel)) end
+	end
+end
+
 --[[ ══ DET UPPNÅDDA ÖVERLEVER KOPPLET ═══════════════════════════════════
 
 	`lamnatBox` och `malNatt` är inte kopplets tillstånd — de är sådant som
@@ -1127,6 +1137,8 @@ function LedService.slapp(player: Player, skal: string?): (boolean, string?)
 		logg(player, "LedSlapp", l.hastId, nil)
 	end
 	LedService._sync(player, skal)
+	--[[ #264 R4: ett släpp i målet kvitterar ledsteget, se `satMalKrok`. ]]
+	if LedService.harNattMal(player) then malNattKrok(player) end
 	return true, skal
 end
 
@@ -1703,6 +1715,7 @@ local function steg(_dt: number)
 			l.malNatt = true
 			noteraUppnatt(player, l.hastId, "malNatt")
 			LedService._sync(player)
+			malNattKrok(player)
 		end
 
 		--[[ HÄSTEN GÅR I SPELARENS SPÅR, inte mot en punkt bakom henne.
@@ -2522,6 +2535,28 @@ end
 	`CanCollide = false`. Det var den STANGDA dorren som holl henne. ]]
 function LedService.satDorrKrok(f: ((BasePart) -> boolean)?)
 	hakar.dorr = f :: any
+end
+
+--[[ ══ #264 PLAYER_FLOW_CLOSURE_R4: MÅLET KVITTERAR LEDSTEGET ══════════
+
+	Mätt i Studio på kandidat 167133b, riktig ledning box MB 5 -> ridhuset:
+	`malNatt=true`, `lamnatBox=true`, kopplet släppt — och panelen stod kvar
+	på «Lead her to the arena 4/5». `nastaFas` var fortfarande `leda`.
+
+	Kontraktet står i `PreparationController.aktuellUppgift`: «GameplayService
+	bockar av `leda` genom att hon FYSISKT leds till ridhuset». Det gjorde
+	den inte. `GameplayService.moment` PRÖVADE villkoret, men bara när
+	spelaren tryckte på stegets egen rad; ingenting kvitterade det när hon
+	faktiskt kom fram. Ett andra tryck efter en verklig ankomst är en
+	bekräftelse av något som redan hänt.
+
+	Kroken anropas när hästen når målzonen och när kopplet släpps i den.
+	Den som äger förberedelsen (GameplayService) kvitterar genom den
+	VANLIGA momentvägen — samma grindar, samma närvarokrav — så ingenting
+	här kan kvittera en förflyttning som inte skett. Samma krokmönster som
+	`satDorrKrok`: ledningen känner inte till skötseln. ]]
+function LedService.satMalKrok(f: ((Player) -> ())?)
+	hakar.mal = f :: any
 end
 
 --[[ För specar: kör EN bildruta explicit.

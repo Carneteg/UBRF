@@ -643,6 +643,44 @@ end
 	spelaren red iväg höll alltså kvar en prompt som inte längre var
 	inom räckhåll, och hade den nått sin `HoldDuration` hade den
 	utlösts från andra sidan stallet. Nu gör den det noten sa. ]]
+--[[ ══ #264 PLAYER_FLOW_CLOSURE_R4: ETT TRYCK SOM BYTER LÄGE ÄR ETT TRYCK ══
+
+	Panelens plats och antal rader beror på inmatningsläget: i pekläge står
+	den ovanför spaken och rymmer färre rader. Mätt i Studio på kandidat
+	167133b (iPad-emulering, ledsteget: dörren och ledningen ska båda synas):
+
+	    pekläge        1 rad   ledningen på sida 2, tangenten F15
+	    L-tryck        LastInputType -> Keyboard, ingen holdBegan, ingen
+	                   Triggered, ingen ledning
+	    nästa ritning  2 rader, ledningen får L — för sent för trycket
+
+	    tangentläge, första musklicket på «Lead her to the arena» (en
+	    valrad, `Activated`): panelen hoppade upp mellan NED och UPP, och
+	    ingenting kvitterades. Andra klicket, i pekläge, gick igenom.
+
+	Två rättelser, båda utan ny väg in:
+
+	  1. PANELEN FLYTTAR SIG INTE UNDER ETT FINGER. Medan en pekare är nere
+	     står blockets plats kvar (`blockplats`); den nya platsen räknas
+	     fram vid nästa ritning efter släppet. Då landar släppet på samma
+	     knapp som trycket, och ett håll på en rad avbryts inte av att
+	     raden glider bort under markören.
+	  2. TANGENTEN SOM BYTTE LÄGET TAPPAS INTE. Ett tryck som ingen synlig
+	     rad äger sparas en kort stund. Ändrades radantalet vid nästa
+	     ritning och äger en synlig rad nu tangenten, börjar hållet där —
+	     genom `borjaHall`, samma väg som ett tryck på raden — och slutar
+	     när tangenten släpps. Tangenten följer fortfarande raden: ingenting
+	     utanför den synliga sidan kan nås. ]]
+local pekare: { [any]: boolean } = {}
+local pekareSedan = 0
+local PEKARE_TAK = 2.0          -- s: längre än så fryses ingenting
+local frystPlats: { any }? = nil
+local vantandeTangent: { kod: Enum.KeyCode, tid: number, platser: number, slappt: boolean }? = nil
+local tangentHall: { kod: Enum.KeyCode, rad: number }? = nil
+local TANGENT_FONSTER = 0.5     -- s: så länge väntar ett tryck på sin rad
+local sistaPlatser = -1
+local inmatning: { RBXScriptConnection } = {}
+
 local hallsPrompt: ProximityPrompt? = nil
 --[[ VILKEN RAD trycket kom ifrån. Utan den är ett håll bara «någon
      prompt», och raden under fingret kan bytas ut medan hållet pågår —
@@ -1398,7 +1436,7 @@ end
 	är en överlappande rad oanvändbar och en rad utanför skärmen är värre
 	än ingen: båda ser ut som en handling men går inte att trycka på.
 	Mot panelen gäller regeln oförändrat. ]]
-function Naromrade.blockplats(): (number?, number?)
+local function raknaBlockplats(): (number?, number?)
 	local g = gui
 	local b = if g and g.AbsoluteSize then g.AbsoluteSize.X else 0
 	local h = if g and g.AbsoluteSize then g.AbsoluteSize.Y else 0
@@ -1432,6 +1470,18 @@ function Naromrade.blockplats(): (number?, number?)
 	if b > 0 and x + KNAPP_B <= b - KANT then return x, panelgolv end
 
 	return nil, nil
+end
+
+--[[ #264 R4: platsen står still medan en pekare är nere. Se noten vid
+     `pekare`. ]]
+function Naromrade.blockplats(): (number?, number?)
+	if next(pekare) ~= nil and frystPlats ~= nil
+		and os.clock() - pekareSedan < PEKARE_TAK then
+		return frystPlats[1], frystPlats[2]
+	end
+	local x, golv = raknaBlockplats()
+	frystPlats = { x, golv }
+	return x, golv
 end
 
 --[[ Kvar som läsbara namn för proven och för `rita`. ]]
@@ -1869,6 +1919,23 @@ rita = function()
 		if not paSidan[p] then tysta[p] = true end
 	end
 	delaUtTangenter(senaste, tysta)
+	--[[ #264 R4: ett tryck som väntar på sin rad. Se noten vid `pekare`. ]]
+	local v = vantandeTangent
+	if v ~= nil then
+		if os.clock() - v.tid > TANGENT_FONSTER then
+			vantandeTangent = nil
+		elseif platser ~= v.platser then
+			for i, p in ipairs(senaste) do
+				if p.KeyboardKeyCode == v.kod then
+					vantandeTangent = nil
+					borjaHall(p, i)
+					if v.slappt then slappHall() else tangentHall = { kod = v.kod, rad = i } end
+					break
+				end
+			end
+		end
+	end
+	sistaPlatser = platser
 
 	--[[ Den varma accenten bara på den primära handlingen: med en fråga det
 	     alternativ som står på tur — samma markering som skötselns egen yta
@@ -2103,11 +2170,54 @@ function Naromrade.start()
 			if fyllPrompt == p then fyllPrompt = nil end
 		end))
 	end)
+	--[[ #264 R4: pekare och tangenter, se noten vid `pekare`. ]]
+	for _, k in ipairs(inmatning) do k:Disconnect() end
+	table.clear(inmatning)
+	table.insert(inmatning, UserInputService.InputBegan:Connect(function(input)
+		local typ = input.UserInputType
+		if typ == Enum.UserInputType.MouseButton1 then
+			if next(pekare) == nil then pekareSedan = os.clock() end
+			pekare.mus = true
+		elseif typ == Enum.UserInputType.Touch then
+			if next(pekare) == nil then pekareSedan = os.clock() end
+			pekare[input] = true
+		elseif typ == Enum.UserInputType.Keyboard then
+			--[[ Äger en synlig rad redan tangenten tar motorn trycket. ]]
+			for _, p in ipairs(senaste) do
+				if p.KeyboardKeyCode == input.KeyCode then return end
+			end
+			vantandeTangent = { kod = input.KeyCode, tid = os.clock(),
+				platser = sistaPlatser, slappt = false }
+		end
+	end))
+	table.insert(inmatning, UserInputService.InputEnded:Connect(function(input)
+		local typ = input.UserInputType
+		if typ == Enum.UserInputType.MouseButton1 then
+			pekare.mus = nil
+		elseif typ == Enum.UserInputType.Touch then
+			pekare[input] = nil
+		elseif typ == Enum.UserInputType.Keyboard then
+			local v = vantandeTangent
+			if v ~= nil and v.kod == input.KeyCode then v.slappt = true end
+			local t = tangentHall
+			if t ~= nil and t.kod == input.KeyCode then
+				tangentHall = nil
+				slappHallFran(t.rad)
+			end
+		end
+	end))
 end
 
 function Naromrade.stopp()
 	--[[ Lämna aldrig ett öppet håll — eller en släckt prompt — efter sig. ]]
 	slappHall()
+	for _, k in ipairs(inmatning) do k:Disconnect() end
+	table.clear(inmatning)
+	table.clear(pekare)
+	frystPlats = nil
+	vantandeTangent = nil
+	tangentHall = nil
+	sistaPlatser = -1
 	tandAllaIgen()
 	PreparationController.satVard(nil)
 	UgnetaController.satVard(nil)
