@@ -756,6 +756,33 @@ do
 	check("statusraden slacks", status.namn == nil, tostring(status.namn))
 end
 
+--[[ ══ #264 LEADING_BOX_EXIT_R3: SLÄPPSKÄLET SKA SES ═════════════════
+
+	Mätt i Studio: när servern släppte kopplet (`led.fastnat`) stod skälet
+	bara i Output. Panelen och Ugneta var tysta. Skälet ska gå till samma
+	meddelanderad som ett nekat `LedBorja`. Ett eget släpp (inget skäl)
+	och en uppsittning (`led.rider`) är inga fel och visas inte. ]]
+print("\n-- R3: serverns släppskäl når spelaren --")
+do
+	local sedda = {}
+	IC.setAvslagVisare(function(skal) table.insert(sedda, tostring(skal)) end)
+	local function slapp(skal)
+		table.clear(sedda)
+		Net_LedSync.OnClientEvent:Fire({ leder = true, hastId = "trixie" })
+		Net_LedSync.OnClientEvent:Fire({ leder = false, hastId = nil, skal = skal })
+		return table.concat(sedda, ",")
+	end
+	local fast = slapp("led.fastnat")
+	check("R3: led.fastnat visas för spelaren", fast == "led.fastnat", "[" .. fast .. "]")
+	local bort = slapp("led.tappade_bort")
+	check("R3: led.tappade_bort visas för spelaren", bort == "led.tappade_bort", "[" .. bort .. "]")
+	local egen = slapp(nil)
+	check("R3: ett eget släpp visar inget fel", egen == "", "[" .. egen .. "]")
+	local upp = slapp("led.rider")
+	check("R3: en uppsittning visar inget fel", upp == "", "[" .. upp .. "]")
+	IC.setAvslagVisare(nil)
+end
+
 --[[ ══ HÅLLKONTRAKTET (#147, gate 2C) ═══════════════════════════════
 
 	Fixen fanns i koden, vakten gjorde det inte. `HoldDuration` styrde

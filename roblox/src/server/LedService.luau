@@ -625,13 +625,54 @@ local function byggFoljrigg(karaktar: Model, modell: Model): { [string]: any }?
 	vrid.Enabled = false
 	vrid.Parent = pivot
 
-	return { mal = mal, hastfast = hastfast, drag = drag, vrid = vrid }
+	--[[ ══ #264 LEADING_BOX_EXIT_R3: LEDAREN ÄR INGET HINDER ════════════
+
+		Mätt i Studio på kandidat 941ffeb, box MB 5, riktig ledning (håll L,
+		sedan gå). Den som leder står i dörröppningen — där står man när man
+		öppnar och tar hästen — och öppningen är 3,60 studs. Hästens rot är
+		1,86 bred, spelarens kropp ungefär 2. De ryms inte där samtidigt.
+
+		    spelaren i gången, x 500      ingen kontakt · ute på 2,0 s
+		    spelaren i öppningen          356 bildrutor rot/huvudskydd mot
+		                                  spelarens HumanoidRootPart,
+		                                  UpperTorso och ben · ute på 5 s
+		    spelaren i öppningen          knuffad ur dörraxeln, kurs −77 → 0,
+		                                  kilad mot norra karmen (Boxfront
+		                                  och Kappregel MB 5) · led.fastnat
+		    i öppningen, utan kollision   ute på 2,4 s, dörrplanet passerat
+		                                  vid z 273,3–273,9 (mitten 274,0)
+
+		`AlignPosition` drar henne mot vägpunkten, spelarens kropp står i
+		vägen och trycker tillbaka, och när spelaren sedan går knuffar hon
+		hästens främre del åt sidan. Planerarens vägar var giltiga hela
+		tiden; det var kroppen i öppningen som flyttade henne.
+
+		Därför kolliderar den ledda hästen inte med den som leder henne så
+		länge kopplet sitter. Allt annat — väggar, karmar, andra hästar och
+		andra spelare — kolliderar som förut. Rivs med riggen. ]]
+	local frikoll = Instance.new("Folder")
+	frikoll.Name = "UBRFLedIngenKrock"
+	for _, hastdel in ipairs(modell:GetDescendants()) do
+		if hastdel:IsA("BasePart") and hastdel.CanCollide then
+			for _, kroppsdel in ipairs(karaktar:GetDescendants()) do
+				if kroppsdel:IsA("BasePart") then
+					local nc = Instance.new("NoCollisionConstraint")
+					nc.Part0 = hastdel
+					nc.Part1 = kroppsdel
+					nc.Parent = frikoll
+				end
+			end
+		end
+	end
+	frikoll.Parent = pivot
+
+	return { mal = mal, hastfast = hastfast, drag = drag, vrid = vrid, frikoll = frikoll }
 end
 
 local function rivFoljrigg(l: any)
 	local r = l and l.rigg
 	if not r then return end
-	for _, namn in ipairs({ "drag", "vrid", "mal", "hastfast" }) do
+	for _, namn in ipairs({ "drag", "vrid", "mal", "hastfast", "frikoll" }) do
 		local d = r[namn]
 		if d then pcall(function() d:Destroy() end) end
 	end

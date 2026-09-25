@@ -1886,6 +1886,76 @@ do
 	anl4:Destroy()
 end
 
+--[[ ══ #264 LEADING_BOX_EXIT_R3: LEDAREN ÄR INGET HINDER ═══════════════
+
+	Mätt i Studio på kandidat 941ffeb, box MB 5, riktig ledning: den som
+	leder står i dörröppningen (3,60 studs) och hästen (1,86) ryms inte
+	förbi. 356 bildrutor kontakt mellan hästens rot och spelarens kropp,
+	och i ett av två försök knuffades hon ur dörraxeln in i norra karmen
+	och kopplet släppte på `led.fastnat`. Utan kollision mellan de två kom
+	hon ut på 2,4 s mitt i öppningen.
+
+	Varför de befintliga ledningsproven missade det: bänken har ingen
+	fysik och ingen spelarkropp som kan stå i vägen, och provens häst
+	står alltid på dörraxeln. Det som går att mäta här är kontraktet —
+	under ledningen kolliderar hästen inte med SIN ledare, men med allt
+	annat som förut, och undantaget rivs med kopplet. ]]
+print("\n── R3: ledaren är inget hinder för hästen hon leder ──")
+do
+	LedService._glomForProv()
+	local h, kropp = nyHast("frikollhäst", vec(1200, 3, 1200))
+	kropp.CanCollide = true
+	local skydd = Instance.new("Part")
+	skydd.Name = "Huvudskydd"
+	skydd.CanCollide = true
+	skydd.Parent = h
+	local pynt = Instance.new("Part")
+	pynt.Name = "Man"
+	pynt.CanCollide = false
+	pynt.Parent = h
+	local sp, rot = nySpelare("Frikollryttare", vec(1203, 3, 1200))
+	local torso = Instance.new("Part")
+	torso.Name = "UpperTorso"
+	torso.Parent = sp.Character
+	local annan, annanRot = nySpelare("Annan", vec(1206, 3, 1200))
+
+	local ok, skal = LedService.borja(sp, h, h)
+	check("R3: ledningen startar", ok == true, tostring(skal))
+
+	local function par()
+		local ut = {}
+		for _, d in ipairs(h:GetDescendants()) do
+			if d.ClassName == "NoCollisionConstraint" then
+				ut[#ut + 1] = { d.Part0, d.Part1 }
+			end
+		end
+		return ut
+	end
+	local function finns(a, b)
+		for _, pp in ipairs(par()) do
+			if (pp[1] == a and pp[2] == b) or (pp[1] == b and pp[2] == a) then return true end
+		end
+		return false
+	end
+	check("R3: roten krockar inte med ledarens rot", finns(kropp, rot))
+	check("R3: roten krockar inte med ledarens överkropp", finns(kropp, torso))
+	check("R3: huvudskyddet krockar inte med ledarens rot", finns(skydd, rot))
+	check("R3: en icke kolliderande hästdel får inget undantag",
+		not finns(pynt, rot) and not finns(pynt, torso))
+	check("R3: en ANNAN spelare kolliderar som förut",
+		not finns(kropp, annanRot) and not finns(skydd, annanRot))
+	check("R3: exakt två hästdelar × två kroppsdelar", #par() == 4,
+		("%d undantag"):format(#par()))
+
+	LedService.slapp(sp)
+	check("R3: undantaget rivs med kopplet", #par() == 0,
+		("%d kvar efter släpp"):format(#par()))
+
+	h:Destroy()
+	sp.Character:Destroy()
+	annan.Character:Destroy()
+end
+
 if fails > 0 then
 	print(string.format("\n%d mätning(ar) föll.", fails))
 	local avsluta = (os :: any).exit

@@ -862,6 +862,16 @@ local function lyssnaPaLedningen()
 			overgang som knappen anvander, sa att status och kvittens
 			kommer aven da. ]]
 		satLeder(min)
+		--[[ #264 LEADING_BOX_EXIT_R3: SKÄLET SKA SES, INTE BARA LOGGAS.
+			Mätt i Studio: `led.fastnat` syntes bara i Output — panelen och
+			Ugneta var tysta, och spelaren stod med en häst som slutat följa
+			utan att veta varför. Samma meddelanderad som ett nekat
+			`LedBorja` redan använder. `led.rider` är en uppsittning, inget
+			fel, och visas inte. ]]
+		if type(vy) == "table" and vy.skal and not leder
+			and vy.skal ~= "led.rider" and avslagVisare then
+			avslagVisare(vy.skal)
+		end
 		if type(vy) == "table" and vy.skal and not leder then
 			warn(("[Led] kopplet släpptes: %s (%s)")
 				:format(Sprak.t(tostring(vy.skal)), tostring(vy.skal)))
