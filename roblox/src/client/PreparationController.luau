@@ -847,9 +847,35 @@ function PreparationController.tillampaLayout()
 			Ett andra ställe som räknar om panelens höjd hade blivit en
 			andra sanning, och den som glider isär syns först som ett
 			överlapp på en telefon. ]]
+		--[[ ── RUTAN ÄR I SKÄRMENS RUM, INTE I PANELENS (#264 ROBLOX_HUMAN_
+			PLAYTEST_FIX) ──────────────────────────────────────────────
+
+			Speltest 2026-09-25: listan låg över instruktionen «Walk up
+			from the front…». Mätt i Studio, iPad-emulering:
+
+			    UBRFForberedelse   IgnoreGuiInset = true   AbsolutePosition 0, -58
+			    UBRFNaromrade      IgnoreGuiInset = false  AbsolutePosition 0, 0
+			    rutan              y0 = 697   (panelens EGET rum)
+			    instruktionen      y  = 649   (skärmens rum)
+
+			Rutan skrevs i panelens rum och lästes i listans, och de två
+			skiljer sig med topbarens inset. Listans golv hamnade 58 px för
+			lågt — rakt över texten. Rutan räknas därför om till skärmens
+			absoluta rum här, där förskjutningen är känd, och den som läser
+			den räknar om till sitt eget. Utan en förskjutning (bänken) är
+			talen oförändrade. ]]
+		local ox, oy = 0, 0
+		pcall(function()
+			local nod: any = p.Parent
+			while nod ~= nil and not nod:IsA("ScreenGui") do nod = nod.Parent end
+			local ap = nod and nod.AbsolutePosition
+			if ap ~= nil and type(ap.X) == "number" and type(ap.Y) == "number" then
+				ox, oy = ap.X, ap.Y
+			end
+		end)
 		senasteRuta = if p.Visible
-			then { x0 = L.interaktion.x0, y0 = L.interaktion.y0,
-				x1 = L.interaktion.x1, y1 = L.interaktion.y1 }
+			then { x0 = L.interaktion.x0 + ox, y0 = L.interaktion.y0 + oy,
+				x1 = L.interaktion.x1 + ox, y1 = L.interaktion.y1 + oy }
 			else nil
 	end
 	if momentBehallare then

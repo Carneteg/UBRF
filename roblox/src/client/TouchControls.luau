@@ -657,6 +657,27 @@ function TouchControls.mount(input: any, hooks: {
 	     Studio-QA kan SVARA på frågan i stället för att gissa.
 
 	     Rapporteras som NOT_TESTED tills någon kört den på en enhet. ]]
+	--[[ ══ SVARET, MÄTT (#264 ROBLOX_HUMAN_PLAYTEST_FIX) ═══════════════
+
+	     Studio, iPad Air-emulering, uppsutten på Blackrock Jack:
+
+	         ContextActionGui            Enabled = true
+	         ContextButtonFrame          Visible = FALSE
+	           GO / SLOW / DISMOUNT      Visible = true, 86×86
+
+	     Vakten tittade på YTAN och fann den tänd. Det som var släckt var
+	     RAMEN mellan ytan och knapparna — Robloxs kärnskript döljer den,
+	     och i den här placen finns varken `PlayerModule` eller `TouchGui`.
+	     `ModalEnabled = false` tände den inte. Knapparna fanns alltså,
+	     och ingen såg dem: det Tobias speltest visade som «spak men inga
+	     Driv/Broms/Sitt av».
+
+	     Tvingad synlig stod ramen kvar, och alla tre knapparna syntes
+	     nere till höger. Vakten går därför hela vägen från knappen upp
+	     till ytan, och ramen bevakas under ritten: döljer kärnskriptet
+	     den igen tänds den igen. Bevakningen ligger i rittens påse och
+	     rivs vid avsittning. ]]
+	local bevakade: { [Instance]: boolean } = {}
 	local function sakerstallSynlighet(handling: string)
 		local b = ContextActionService:GetButton(handling)
 		if not b then return end
@@ -665,6 +686,43 @@ function TouchControls.mount(input: any, hooks: {
 			yta.Enabled = true
 			warn(("[UBRF] %s var släckt av en annan yta — tänd igen (%s)")
 				:format(handling, yta.Name))
+		end
+		--[[ ── OCH KNAPPARNA MÅSTE GÅ ATT TRYCKA PÅ ──────────────────────
+
+		     Synliga var inte nog. Mätt i Studio samma dag, tryck på GO:
+
+		         GetGuiObjectsAtPosition(GO)
+		           HorseTouch/Blickyta        Active   DisplayOrder 8
+		           ContextActionGui/…Button   Active   DisplayOrder 0
+
+		     Blickytans not säger att «varje knapp ovanpå den tar sitt eget
+		     finger först». Det var sant när knapparna låg i samma ScreenGui.
+		     `ContextActionService` ritar dem i en EGEN yta med DisplayOrder
+		     0 — under blickytan — och varje tryck på GO, SLOW och DISMOUNT
+		     blev en kameravridning. Ytan lyfts därför till strax över
+		     `HorseTouch`, men under lektionskortet (10), som ska vinna. ]]
+		local ytansOrdning = yta and (yta :: any).DisplayOrder
+		if type(ytansOrdning) ~= "number" then ytansOrdning = 0 end
+		if yta and ytansOrdning <= g.DisplayOrder then
+			yta.DisplayOrder = g.DisplayOrder + 1
+		end
+		local nod: Instance? = b.Parent
+		while nod ~= nil and nod ~= yta do
+			local ram = nod
+			if ram:IsA("GuiObject") then
+				if not ram.Visible then
+					ram.Visible = true
+					warn(("[UBRF] %s låg i en dold ram — tänd igen (%s)")
+						:format(handling, ram.Name))
+				end
+				if not bevakade[ram] then
+					bevakade[ram] = true
+					ager(ram:GetPropertyChangedSignal("Visible"):Connect(function()
+						if not ram.Visible then ram.Visible = true end
+					end))
+				end
+			end
+			nod = nod.Parent
 		end
 	end
 	kopplaSpak(bas, knop)

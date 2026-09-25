@@ -52,6 +52,11 @@ const SPRAK = {
      ska anda ga att trycka pa; raden far da det neutrala ordet i
      stallet for en tom knapp. */
   "interaktion.anvand": { sv: "Anvand", en: "Use" },
+  /* #264 ROBLOX_HUMAN_PLAYTEST_FIX: vänstermenyns rad når en prompt med
+     håll-grind. Motorns bubbla ritade en hållring; den bubblan är borta
+     när menyn ersätter den, så menyn säger det själv — medan hållet
+     pågår, och när någon släppt för tidigt. */
+  "interaktion.hall_inne": { sv: "Håll inne", en: "Hold" },
   "interaktion.sitt_av": { sv: "SITT AV", en: "DISMOUNT" },
 
   /* Utrustningsstegets namn är en RÄKNARE, inte kanon: "Utrustning 2/4"

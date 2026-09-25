@@ -69,6 +69,8 @@ local PreparationController = require(script.Parent.PreparationController)
 --[[ #246 QA-blockerare: handlingarnas produktordning. Läses härifrån och
      skrivs inte av — se noten vid `handlingsrang`. ]]
 local InteractionController = require(script.Parent.InteractionController)
+--[[ #264: ridningens kärnrader när man sitter upp. Se `ritaRidhjalp`. ]]
+local KontrollHjalp = require(script.Parent.KontrollHjalp)
 
 local Naromrade = {}
 
@@ -122,6 +124,10 @@ local relevanta: { ProximityPrompt } = {}
      Nyckeln är prompten själv, så att en som försvinner ur världen tas
      med av skräpsamlaren utan att lämna en post efter sig. ]]
 local slackta: { [ProximityPrompt]: any } = {}
+
+--[[ Prompter som den här modulen håller stängda en bildruta medan
+     stilen byts. Se `bytStil`. ]]
+local dolda: { [ProximityPrompt]: boolean } = {}
 
 --[[ Andra hästars prompter, som varken ska få en rad eller en bubbla.
      Fylls av `nara` och läses av `rita`. Se noten där. ]]
@@ -196,9 +202,27 @@ local function etikett(p: ProximityPrompt): string
 	if handling == nil or handling == "" then handling = Sprak.t("interaktion.anvand") end
 	local text = Naromrade.kortEtikett(handling, p.ObjectText)
 	local tangent = tangenttext(p)
+	--[[ ── EN HÅLL-GRIND SÄGS INNAN MAN MISSLYCKAS (#264 ROBLOX_HUMAN_PLAYTEST_FIX)
+
+	     Speltest 2026-09-25: loggen saknar `LedBorja` helt. Mätt i Studio:
+	     ett vanligt klick på raden «Lead» gav ingen `Triggered` — raden
+	     börjar ett håll och klicket släpper det innan `HoldDuration`
+	     (0,2 s för ledning, 0,35 s för uppsittning och Rida nu) gått.
+	     Samma sak med ett kort tangenttryck.
+
+	     Hållet är avsiktligt och står kvar; se noten vid `slappHall`. Men
+	     motorns bubbla, som ritade hållringen, är borta när menyn ersätter
+	     den — och då sa ingenting längre att man ska hålla. Raden säger det
+	     nu själv, och `ritaFyllning` visar hur långt hållet kommit. ]]
+	local hall = (p.HoldDuration or 0) > 0
+	local hallOrd = if hall then Sprak.t("interaktion.hall_inne") else nil
 	--[[ Tangenten sist och inom hakparenteser, så att den korta etiketten
 	     fortfarande är det man läser först. ]]
-	if tangent then text ..= "  [" .. tangent .. "]" end
+	if tangent then
+		text ..= "  [" .. (if hallOrd then hallOrd .. " " else "") .. tangent .. "]"
+	elseif hallOrd then
+		text ..= "  (" .. hallOrd .. ")"
+	end
 	return text
 end
 
@@ -285,25 +309,59 @@ end
 	Tobias hittade det fysiskt — entrédörren gick inte att öppna.
 
 	Regeln är därför: släck bara det du ERSÄTTER. Se rättelsen i `rita`. ]]
-function Naromrade.iRackvidd(fran: Vector3, sok: { Instance }): { ProximityPrompt }
+--[[ ── FÖRKANTEN (#264 ROBLOX_HUMAN_PLAYTEST_FIX) ─────────────────────
+
+	Listan räknas om var `TAKT` sekund, men motorn visar en prompt i samma
+	bildruta som den kommer inom räckvidd. I gapet däremellan hann den
+	visas med Robloxs egen bubbla. Under gång längs stallgången mättes upp
+	till tio samtidiga bubblor.
+
+	Prompter som ligger strax UTANFÖR sin räckvidd släcks därför i förväg,
+	utan rad och utan tangent. Det tar ingen affordans från spelaren:
+	utanför räckvidd går prompten inte att använda ändå, och när den kommer
+	in får den sin rad i samma takt som förut. `FORKANT` är några takter av
+	gångfart (16 studs/s × 0,2 s ≈ 3,2 studs per takt). ]]
+local FORKANT = 8
+
+local function skanna(fran: Vector3, sok: { Instance }, kant: number):
+	({ ProximityPrompt }, { ProximityPrompt })
 	local ut: { ProximityPrompt } = {}
+	local fore: { ProximityPrompt } = {}
 	local avstand: { [ProximityPrompt]: number } = {}
 	for _, rot in ipairs(sok) do
 		for _, d in ipairs(rot:GetDescendants()) do
-			if d:IsA("ProximityPrompt") and d.Enabled then
+			--[[ `dolda`: prompter den här modulen själv håller stängda en
+			     bildruta medan stilen byts. De är inom räckvidd som förut. ]]
+			if d:IsA("ProximityPrompt") and (d.Enabled or dolda[d]) then
 				local p = varldslage(d)
 				if p then
 					local a = (p - fran).Magnitude
 					if a <= d.MaxActivationDistance then
 						table.insert(ut, d)
 						avstand[d] = a
+					elseif a <= d.MaxActivationDistance + kant then
+						table.insert(fore, d)
 					end
 				end
 			end
 		end
 	end
 	table.sort(ut, function(a, b) return avstand[a] < avstand[b] end)
+	return ut, fore
+end
+
+function Naromrade.iRackvidd(fran: Vector3, sok: { Instance }): { ProximityPrompt }
+	local ut = skanna(fran, sok, 0)
 	return ut
+end
+
+--[[ Prompterna strax utanför sin räckvidd. Se noten vid `FORKANT`. ]]
+local forkant: { ProximityPrompt } = {}
+
+--[[ EN DÖRR ÄR DÖRREN. Alla dörrprompter heter så — `DorrService` sätter
+     namnet för både stalldörrar och boxdörrar. ]]
+local function arDorr(p: ProximityPrompt): boolean
+	return p.Name == "DorrPrompt"
 end
 
 --[[ ── PRIORITERINGEN ÄR SEMANTISK, INTE BARA AVSTÅND (#246 D) ─────────
@@ -337,7 +395,8 @@ end
      anropar den får samma svar. ]]
 function Naromrade.sorterade(fran: Vector3, sok: { Instance },
 	minHast: string?): { ProximityPrompt }
-	local alla = Naromrade.iRackvidd(fran, sok)
+	local alla, fore = skanna(fran, sok, FORKANT)
+	forkant = fore
 	--[[ Nollställs per urval: en häst som gått ur räckvidd ska inte ligga
 	     kvar som bortvald och hållas släckt i evighet. ]]
 	table.clear(bortvalda)
@@ -394,6 +453,34 @@ function Naromrade.sorterade(fran: Vector3, sok: { Instance },
 		if handling[a] ~= handling[b] then return handling[a] < handling[b] end
 		return rang[a] < rang[b]
 	end)
+	--[[ ── HÖGST EN DÖRR (#264 ROBLOX_HUMAN_PLAYTEST_FIX) ──────────────
+
+		Speltestet 2026-09-25 visade fyra identiska «Open — Door [X]» på
+		rad, och alla fyra delade tangenten X. Stallgången har en boxdörr
+		på varje sida om varje box, så i gången ligger alltid flera inom
+		räckhåll — och raderna går inte att skilja åt, för ObjectText är
+		«Door» på alla.
+
+		Ordern: visa högst EN aktuell dörr, den närmaste. Den behåller
+		både rad och tangent. De andra blir varken rad, bubbla eller
+		tangent — samma behandling som en annan hästs sak — och den som
+		vill öppna en av dem går fram till den, varpå den blir närmast.
+		Dörrarna sorterades nyss på avstånd inom sin klass, så den första
+		som påträffas är den närmaste. ]]
+	local dorrSedd = false
+	local i = 1
+	while i <= #ut do
+		local d = ut[i]
+		if arDorr(d) then
+			if dorrSedd then
+				table.remove(ut, i)
+				bortvalda[d] = true
+				continue
+			end
+			dorrSedd = true
+		end
+		i += 1
+	end
 	return ut
 end
 
@@ -429,6 +516,20 @@ local function nyKnapp(i: number): TextButton
 	local horn = Instance.new("UICorner")
 	horn.CornerRadius = UDim.new(0, 12)
 	horn.Parent = b
+	--[[ HÅLLET SYNS (#264 ROBLOX_HUMAN_PLAYTEST_FIX). Motorns bubbla ritade
+	     en ring som fylldes medan man höll; menyn ersätter bubblan och
+	     ritar därför själv hur långt hållet kommit. Se `ritaFyllning`. ]]
+	local fyll = Instance.new("Frame")
+	fyll.Name = "Fyllning"
+	fyll.Size = UDim2.fromScale(0, 1)
+	fyll.BackgroundColor3 = Color3.fromRGB(236, 196, 92)
+	fyll.BackgroundTransparency = 0.7
+	fyll.BorderSizePixel = 0
+	fyll.Visible = false
+	fyll.Parent = b
+	local fyllHorn = Instance.new("UICorner")
+	fyllHorn.CornerRadius = UDim.new(0, 12)
+	fyllHorn.Parent = fyll
 	return b
 end
 
@@ -469,10 +570,36 @@ local hallsPrompt: ProximityPrompt? = nil
      se `provaHallet`. ]]
 local hallRad: number? = nil
 
+--[[ Vilken prompt som laddas just nu, och sedan när — för fyllningen i
+     raden. Sätts av radens eget håll OCH av motorns hållhändelser, så att
+     ett håll på tangenten syns lika väl som ett håll på raden. ]]
+local fyllPrompt: ProximityPrompt? = nil
+local fyllStart = 0
+local hallKopplingar: { RBXScriptConnection } = {}
+
+local function ritaFyllning()
+	for i, b in ipairs(rader) do
+		local f = b:FindFirstChild("Fyllning")
+		if f and f:IsA("Frame") then
+			local p = senaste[i]
+			if p ~= nil and p == fyllPrompt and b.Visible then
+				local langd = math.max(p.HoldDuration or 0, 0.01)
+				local andel = math.clamp((os.clock() - fyllStart) / langd, 0, 1)
+				f.Size = UDim2.fromScale(andel, 1)
+				f.Visible = true
+			elseif f.Visible then
+				f.Visible = false
+				f.Size = UDim2.fromScale(0, 1)
+			end
+		end
+	end
+end
+
 local function slappHall()
 	local p = hallsPrompt
 	hallsPrompt = nil
 	hallRad = nil
+	if fyllPrompt == p then fyllPrompt = nil end
 	if p ~= nil and p.Parent ~= nil then
 		pcall(function() p:InputHoldEnd() end)
 	end
@@ -522,6 +649,10 @@ local function borjaHall(p: ProximityPrompt, rad: number)
 	slappHall()
 	hallsPrompt = p
 	hallRad = rad
+	if (p.HoldDuration or 0) > 0 then
+		fyllPrompt = p
+		fyllStart = os.clock()
+	end
 	p:InputHoldBegin()
 end
 
@@ -555,25 +686,154 @@ end
 	bevisligen var satt. En inpackad post kan aldrig vara nil, och
 	därmed kan medlemskapet i registret inte glida isär från stilen det
 	bär. ]]
+--[[ ══ STILEN BYTS MEDAN PROMPTEN ÄR DOLD (#264 ROBLOX_HUMAN_PLAYTEST_FIX) ══
+
+	Tobias speltest 2026-09-25: listan OCH Robloxs världsbubblor samtidigt,
+	för samma handlingar. Mätt i Studio samma dag, stående vid Blackrock
+	Jacks box med sju prompter inom räckvidd:
+
+	    alla sju            Style = Custom
+	    motorns bubblor     7 BillboardGui, Enabled, 4 synliga barn var
+
+	Motorn ritar bubblan när prompten VISAS, i den stil den har då. Att
+	byta till `Custom` efteråt river inte en bubbla som redan står — och
+	den här modulen byter alltid efteråt, upp till en takt (0,2 s) efter
+	att prompten kommit inom räckvidd. Isolerat, med listan avstängd:
+
+	    Custom satt medan bubblan syns      bubblan står kvar
+	    dold, Custom satt, visad igen       ingen bubbla
+
+	Därför döljs prompten runt bytet. `Enabled` sätts lokalt och
+	replikeras inte; serverns prompt och dess handlare är orörda.
+	Återställningen går samma väg, av samma skäl åt andra hållet.
+
+	EN BILDRUTA MELLAN, INTE NOLL. Mätt i Studio med bubblan redan uppe:
+
+	    av, byt stil, på — i samma bildruta     bubblan står kvar
+	    av, byt stil, en Heartbeat, på          bubblan borta
+
+	Motorn ser bara läget vid bildrutans slut; en prompt som stängts och
+	öppnats inom samma bildruta har för den aldrig varit dold. Återöppningen
+	väntar därför en Heartbeat. Under tiden står prompten i `dolda`, så att
+	skanningen fortfarande räknar den som inom räckvidd — annars föll den ur
+	urvalet i nästa takt och tändes igen. `dolda` deklareras högst upp,
+	för skanningen läser den. ]]
+local function oppnaNastaBildruta(p: ProximityPrompt)
+	dolda[p] = true
+	local k: RBXScriptConnection? = nil
+	k = RunService.Heartbeat:Connect(function()
+		if k then k:Disconnect() end
+		if dolda[p] then
+			dolda[p] = nil
+			if p.Parent ~= nil then p.Enabled = true end
+		end
+	end)
+end
+
+local function bytStil(p: ProximityPrompt, stil: Enum.ProximityPromptStyle)
+	if p.Style == stil then return end
+	if p.Enabled or dolda[p] then
+		p.Enabled = false
+		p.Style = stil
+		oppnaNastaBildruta(p)
+	else
+		p.Style = stil
+	end
+end
+
+--[[ ══ EN TANGENT, EN MOTTAGARE (#264 ROBLOX_HUMAN_PLAYTEST_FIX) ═══════
+
+	`Style = Custom` tar Robloxs rityta och INGENTING annat — tangenten
+	lever kvar på varje prompt motorn visar. Loggen från speltestet:
+
+	    05:47:10.882  tog Blackrock Jacks sadel
+	    05:47:10.882  fick INTE Bränntomts Lydias sadel: tack.bar_redan_annan
+
+	Ett G, två mottagare, samma millisekund. Reproducerat i Studio med
+	en riktig tangenttryckning: `PromptTriggered` fyrade för BÅDA
+	sadlarna. Att grannens prompt var släckt spelade ingen roll.
+
+	Tangenten tas därför bort lokalt från varje prompt som inte ÄGER den.
+	Utan tangent reagerar motorn inte på tangenten, men
+	`InputHoldBegin` från listan fungerar som förut — raden är fortfarande
+	en väg in. Originalet sparas i posten och sätts tillbaka. ]]
+local function satTangenter(p: ProximityPrompt, tangent: Enum.KeyCode,
+	knapp: Enum.KeyCode)
+	pcall(function()
+		if p.KeyboardKeyCode ~= tangent then p.KeyboardKeyCode = tangent end
+	end)
+	pcall(function()
+		if p.GamepadKeyCode ~= knapp then p.GamepadKeyCode = knapp end
+	end)
+end
+
+local function lasTangent(p: ProximityPrompt, falt: string): Enum.KeyCode
+	local ok, v = pcall(function() return (p :: any)[falt] end)
+	if ok and v ~= nil then return v end
+	return Enum.KeyCode.Unknown
+end
+
 local function slack(p: ProximityPrompt)
 	if slackta[p] ~= nil then return end
-	slackta[p] = { stil = p.Style }
-	p.Style = Enum.ProximityPromptStyle.Custom
+	slackta[p] = { stil = p.Style,
+		tangent = lasTangent(p, "KeyboardKeyCode"),
+		knapp = lasTangent(p, "GamepadKeyCode") }
+	bytStil(p, Enum.ProximityPromptStyle.Custom)
+end
+
+local function aterstall(p: ProximityPrompt, post: any)
+	--[[ En prompt som lämnat världen ska inte skrivas på. ]]
+	if p.Parent == nil then return end
+	satTangenter(p, post.tangent, post.knapp)
+	bytStil(p, post.stil)
 end
 
 local function tandIgen(p: ProximityPrompt)
 	local post = slackta[p]
 	if post == nil then return end
 	slackta[p] = nil
-	--[[ En prompt som lämnat världen ska inte skrivas på. ]]
-	if p.Parent ~= nil then p.Style = post.stil end
+	aterstall(p, post)
 end
 
 local function tandAllaIgen()
 	for p, post in pairs(slackta) do
-		if p.Parent ~= nil then p.Style = post.stil end
+		aterstall(p, post)
 	end
 	table.clear(slackta)
+end
+
+--[[ Tangenterna delas ut efter listans ordning: den första prompten med
+     en viss tangent äger den, alla andra blir tysta på just den tangenten.
+     Det som inte är relevant alls — andra hästars saker, dörrar utöver den
+     närmaste, förkanten — blir tyst på alla. Allt som släckts har en post
+     i `slackta`, och originalet läses därifrån. ]]
+local function delaUtTangenter(ordning: { ProximityPrompt },
+	tysta: { [ProximityPrompt]: boolean })
+	local tagnaT: { [Enum.KeyCode]: boolean } = {}
+	local tagnaK: { [Enum.KeyCode]: boolean } = {}
+	for _, p in ipairs(ordning) do
+		local post = slackta[p]
+		if post then
+			local t = post.tangent
+			local k = post.knapp
+			if t ~= Enum.KeyCode.Unknown and not tagnaT[t] then
+				tagnaT[t] = true
+			else
+				t = Enum.KeyCode.Unknown
+			end
+			if k ~= Enum.KeyCode.Unknown and not tagnaK[k] then
+				tagnaK[k] = true
+			else
+				k = Enum.KeyCode.Unknown
+			end
+			satTangenter(p, t, k)
+		end
+	end
+	for p in pairs(tysta) do
+		if slackta[p] then
+			satTangenter(p, Enum.KeyCode.Unknown, Enum.KeyCode.Unknown)
+		end
+	end
 end
 
 --[[ Provets fönster in. ]]
@@ -861,7 +1121,12 @@ function Naromrade.blockplats(): (number?, number?)
 	local h = if g and g.AbsoluteSize then g.AbsoluteSize.Y else 0
 	if h <= 0 then return KANT, 0 end
 	local ruta = PreparationController.interaktionsruta()
-	local panelgolv = if ruta and ruta.y0 then math.min(h, ruta.y0) else h
+	--[[ Rutan står i skärmens absoluta rum; listan ritar i sitt eget.
+	     Se noten där rutan sparas i `PreparationController`. ]]
+	local egenY = 0
+	local ap = g and (g :: any).AbsolutePosition
+	if ap ~= nil and type(ap.Y) == "number" then egenY = ap.Y end
+	local panelgolv = if ruta and ruta.y0 then math.min(h, ruta.y0 - egenY) else h
 	local ytaX1, ytaY0 = Naromrade.rorelseytan()
 	if ytaY0 >= h then return KANT, panelgolv end
 
@@ -903,6 +1168,35 @@ rita = function()
 		--[[ Ingen lista — då ska Roblox egna prompter tillbaka, annars blir
 		     de osynliga för någon som inte längre har en rad att trycka på. ]]
 		tandAllaIgen()
+		local bl = bladdra
+		if bl then bl.Visible = false end
+		--[[ ── RIDLÄGET ERSÄTTER STALLHANDLINGARNA (#264 ROBLOX_HUMAN_PLAYTEST_FIX)
+
+			Speltest 2026-09-25, uppsutten: en spak och ingenting annat.
+			Menyn var släckt och kontrollpanelen är släckt av `MINIMAL_UI`,
+			så ingenting sa hur man kommer framåt, stannar eller sitter av.
+
+			Menyn visar i stället ridningens kärna ur `KontrollHjalp` — samma
+			tabell och samma reglagetext som panelen, en rad per handling.
+			Raderna är text, inte knappar: `senaste` är tom, så ett tryck
+			på dem gör ingenting. Handlingarna har sina riktiga reglage —
+			tangenterna och pekknapparna — och menyn säger bara vilka.
+
+			UPPE till vänster, inte nere: där nere bor ridningens egen spak,
+			och `rorelseytan` räknar bara Robloxs `TouchGui`. ]]
+		if rider then
+			local hjalp = KontrollHjalp.ridrader()
+			local n = math.min(#hjalp, #rader)
+			f.Size = UDim2.fromOffset(KNAPP_B, math.max(n, 1) * (KNAPP_H + LUFT))
+			f.Position = UDim2.fromOffset(KANT, KANT)
+			for i, b in ipairs(rader) do
+				local r = hjalp[i]
+				if r and i <= n then
+					b.Text = r.vad .. "  [" .. r.reglage .. "]"
+					b.Visible = true
+				end
+			end
+		end
 		return
 	end
 
@@ -1001,12 +1295,20 @@ rita = function()
 	     mot den gamla regressionen: där släcktes saker som inte gick att
 	     nå, här släcks bara sådant som går att nå. ]]
 	local slacks: { [ProximityPrompt]: boolean } = {}
+	local tysta: { [ProximityPrompt]: boolean } = {}
 	for _, p in ipairs(relevanta) do slacks[p] = true end
-	for p in pairs(bortvalda) do slacks[p] = true end
+	for p in pairs(bortvalda) do slacks[p] = true; tysta[p] = true end
+	--[[ Förkanten: släckt och tyst innan motorn hinner visa den. Se
+	     `FORKANT`. En prompt som både ligger i förkanten och i urvalet
+	     finns inte — förkanten är per definition utanför räckvidd. ]]
+	for _, p in ipairs(forkant) do slacks[p] = true; tysta[p] = true end
 	for p in pairs(slackta) do
 		if not slacks[p] then tandIgen(p) end
 	end
 	for p in pairs(slacks) do slack(p) end
+	--[[ Tangenterna FÖRE etiketterna: en rad visar `[G]` bara om dess
+	     prompt faktiskt äger G. `etikett` läser tangenten ur prompten. ]]
+	delaUtTangenter(relevanta, tysta)
 
 	for i, b in ipairs(rader) do
 		local p = senaste[i]
@@ -1144,10 +1446,31 @@ function Naromrade.start()
 	bygg()
 	if koppling then koppling:Disconnect() end
 	koppling = RunService.RenderStepped:Connect(function(dt)
+		--[[ Fyllningen varje bildruta — ett håll på 0,2 s ryms annars
+		     inom en enda takt och syns aldrig. ]]
+		ritaFyllning()
 		sedan += dt
 		if sedan < TAKT then return end
 		sedan = 0
 		rita()
+	end)
+	--[[ Motorns egna hållhändelser: ett håll på TANGENTEN går inte genom
+	     `borjaHall`, men ska synas i raden lika fullt. Finns inte tjänsten
+	     (bänken) gäller bara radens eget håll. ]]
+	for _, k in ipairs(hallKopplingar) do k:Disconnect() end
+	table.clear(hallKopplingar)
+	pcall(function()
+		local PPS = game:GetService("ProximityPromptService")
+		table.insert(hallKopplingar, PPS.PromptButtonHoldBegan:Connect(function(p)
+			fyllPrompt = p
+			fyllStart = os.clock()
+		end))
+		table.insert(hallKopplingar, PPS.PromptButtonHoldEnded:Connect(function(p)
+			if fyllPrompt == p then fyllPrompt = nil end
+		end))
+		table.insert(hallKopplingar, PPS.PromptTriggered:Connect(function(p)
+			if fyllPrompt == p then fyllPrompt = nil end
+		end))
 	end)
 end
 
@@ -1155,6 +1478,9 @@ function Naromrade.stopp()
 	--[[ Lämna aldrig ett öppet håll — eller en släckt prompt — efter sig. ]]
 	slappHall()
 	tandAllaIgen()
+	fyllPrompt = nil
+	for _, k in ipairs(hallKopplingar) do k:Disconnect() end
+	table.clear(hallKopplingar)
 	if koppling then
 		koppling:Disconnect()
 		koppling = nil

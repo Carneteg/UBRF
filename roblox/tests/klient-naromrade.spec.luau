@@ -46,6 +46,26 @@ end
 
 local N = Naromrade
 
+--[[ ── EN BILDRUTA EFTER VARJE OMRITNING (#264 ROBLOX_HUMAN_PLAYTEST_FIX) ──
+
+	`Naromrade` byter numera stil på en prompt genom att stänga den, byta,
+	och öppna den igen NÄSTA Heartbeat — mätt i Studio: ett byte inom samma
+	bildruta river inte motorns redan ritade bubbla. I motorn kommer den
+	bildrutan alltid innan en människa hinner trycka på raden.
+
+	Bänken har ingen egen klocka, så den bildrutan modelleras här, på ETT
+	ställe: `satRider` är provets deterministiska omritning, och efter den
+	fyrar bänken en Heartbeat. Inga påståenden nedan är ändrade — de gäller
+	läget efter bildrutan, som i spelet. ]]
+do
+	local ritaOm = N.satRider
+	local HB = game:GetService("RunService").Heartbeat
+	N.satRider = function(v)
+		ritaOm(v)
+		HB:Fire(1 / 60)
+	end
+end
+
 --[[ En prompt i världen, som tjänsterna bygger dem. ]]
 local function nyPrompt(namn, handling, objekt, lage, rackvidd, hold)
 	local del = Instance.new("Part")
@@ -201,10 +221,18 @@ do
 	check("ett tryck på en prompt utan förälder kastar inte", okTryck == true)
 	check("och utlöser ingenting", fyrade == 1, tostring(fyrade))
 
-	--[[ MEDAN MAN RIDER äger `TouchControls` skärmen. ]]
+	--[[ MEDAN MAN RIDER bär listan ridningens kärna, inte stallets
+	     handlingar (#264 ROBLOX_HUMAN_PLAYTEST_FIX). Förut var den släckt
+	     — och speltestet 2026-09-25 visade att ingenting då sa hur man
+	     driver, bromsar eller sitter av. Raderna är text: ingen av dem
+	     pekar på en prompt. ]]
 	N.satRider(true)
-	check("medan man rider är listan släckt", #N._rader() == 0,
-		("%d rader"):format(#N._rader()))
+	local ridhjalp = KontrollHjalp.ridrader()
+	check("medan man rider visar listan ridningens kärna",
+		#N._rader() == #ridhjalp and #ridhjalp > 0,
+		("%d rader, %d kärnrader"):format(#N._rader(), #ridhjalp))
+	check("och ingen rad pekar på en stallprompt", #N._prompter() == 0,
+		("%d prompter"):format(#N._prompter()))
 	N.satRider(false)
 	check("och den kommer tillbaka vid avsittning", #N._rader() > 0,
 		("%d rader"):format(#N._rader()))
@@ -268,10 +296,10 @@ do
 	     stannade så vore ett sämre fel än det vi rättar: spelaren som går
 	     därifrån skulle möta en handling utan knapp. ]]
 	N.satRider(true)
-	check("under ritten är listan släckt och bilden tillbaka",
-		#N._rader() == 0 and sadel.Style == Enum.ProximityPromptStyle.Default
+	check("under ritten pekar ingen rad på en prompt och bilden är tillbaka",
+		#N._prompter() == 0 and sadel.Style == Enum.ProximityPromptStyle.Default
 			and N._slackta() == 0,
-		("rader %d · stil %s · släckta %d"):format(#N._rader(),
+		("prompter %d · stil %s · släckta %d"):format(#N._prompter(),
 			tostring(sadel.Style), N._slackta()))
 	N.satRider(false)
 	check("och släcks igen när listan kommer tillbaka",
@@ -1694,6 +1722,212 @@ do
 
 	delA:Destroy()
 	delB:Destroy()
+	N.stopp()
+end
+
+--[[ ══ #264 ROBLOX_HUMAN_PLAYTEST_FIX: EN YTA OCH EN MOTTAGARE ════════════
+
+	Tobias speltest 2026-09-25: fyra identiska «Open — Door [X]», bubblor
+	för andra hästar, och ett G som tog Mac Kenzies trans och prövade två
+	grannars samtidigt. Mätt i Studio: `Custom` tar bara ritytan, tangenten
+	lever kvar på varje visad prompt.
+
+	Det här avsnittet mäter produktionsvägen i `rita` — inte en hjälpfunktion
+	— och läser tangenten ur prompten själv, som motorn gör. ]]
+print("\n── #264: en tangent, en mottagare, högst en dörr ──")
+do
+	local UIS = game:GetService("UserInputService")
+	local Players = game:GetService("Players")
+	N.stopp()
+	UIS.TouchEnabled = true
+	local tangentbordFore = UIS.KeyboardEnabled
+	UIS.KeyboardEnabled = true
+	N.start()
+	local spelare = Players.LocalPlayer
+	local rot = spelare.Character:FindFirstChild("HumanoidRootPart")
+	rot.Position = Vector3.new(0, 0, 0)
+
+	local function forrad(hastId, namn, handling, lage, tangent, hall)
+		local m = Instance.new("Model")
+		m.Name = "Forrad264_" .. namn
+		m:SetAttribute("ForHast", hastId)
+		m.Parent = workspace
+		local del = Instance.new("Part")
+		del.Name = namn
+		del.Position = lage
+		del.Parent = m
+		local pr = Instance.new("ProximityPrompt")
+		pr.Name = namn .. "Prompt"
+		pr.ActionText = handling
+		pr.ObjectText = ""
+		pr.MaxActivationDistance = 8
+		pr.HoldDuration = hall or 0
+		pr.RequiresLineOfSight = false
+		pr.KeyboardKeyCode = tangent
+		pr.Parent = del
+		return pr, m
+	end
+	local function dorr(namn, lage)
+		local del = Instance.new("Part")
+		del.Name = namn
+		del.Position = lage
+		del.Parent = workspace
+		local pr = Instance.new("ProximityPrompt")
+		pr.Name = "DorrPrompt"
+		pr.ActionText = "Open"
+		pr.ObjectText = "Door"
+		pr.MaxActivationDistance = 8
+		pr.HoldDuration = 0
+		pr.RequiresLineOfSight = false
+		pr.KeyboardKeyCode = Enum.KeyCode.X
+		pr.Parent = del
+		return pr, del
+	end
+	local function iRader(p)
+		for i, q in ipairs(N._prompter()) do if q == p then return i end end
+		return nil
+	end
+
+	--[[ Grannens sadel NÄRMAST och med samma tangent — speltestets läge. ]]
+	local granne, gM = forrad("marabou", "GrannSadel", "Take the saddle",
+		Vector3.new(1, 0, 0), Enum.KeyCode.G)
+	local egen, eM = forrad("trixie", "EgenSadel", "Take the saddle",
+		Vector3.new(3, 0, 0), Enum.KeyCode.G)
+	--[[ En andra egen handling som delar tangent med den första. ]]
+	local egen2, e2M = forrad("trixie", "EgenFilt", "Take the pad",
+		Vector3.new(3.5, 0, 0), Enum.KeyCode.G)
+	local dorrNara, dNDel = dorr("Dörr nära", Vector3.new(2, 0, 0))
+	local dorrLangt, dLDel = dorr("Dörr längre", Vector3.new(5, 0, 0))
+
+	PreparationController._satHastIdForProv("trixie")
+	N.satRider(false)
+
+	check("dagens hästs första handling ÄGER sin tangent",
+		egen.KeyboardKeyCode == Enum.KeyCode.G, tostring(egen.KeyboardKeyCode))
+	check("GRANNENS SADEL ÄR TYST — ett G når den inte",
+		granne.KeyboardKeyCode == Enum.KeyCode.Unknown,
+		tostring(granne.KeyboardKeyCode))
+	check("och grannens bild är släckt", granne.Style == Enum.ProximityPromptStyle.Custom)
+	check("och grannen har ingen rad", iRader(granne) == nil)
+	check("en andra egen handling med samma tangent behåller sin RAD",
+		iRader(egen2) ~= nil)
+	check("men inte tangenten — ett G har exakt en mottagare",
+		egen2.KeyboardKeyCode == Enum.KeyCode.Unknown,
+		tostring(egen2.KeyboardKeyCode))
+	local etikettEgen2 = N._rader()[iRader(egen2) or 0] or ""
+	check("och dess rad lovar ingen tangent den inte har",
+		etikettEgen2:find("%[G%]") == nil, etikettEgen2)
+
+	local dorrRader = 0
+	for _, q in ipairs(N._prompter()) do if q.Name == "DorrPrompt" then dorrRader += 1 end end
+	check("HÖGST EN DÖRR i listan", dorrRader == 1, ("%d dörrar"):format(dorrRader))
+	check("och det är den närmaste", iRader(dorrNara) ~= nil and iRader(dorrLangt) == nil)
+	check("den närmaste dörren äger X",
+		dorrNara.KeyboardKeyCode == Enum.KeyCode.X, tostring(dorrNara.KeyboardKeyCode))
+	check("den andra dörren är tyst och släckt",
+		dorrLangt.KeyboardKeyCode == Enum.KeyCode.Unknown
+			and dorrLangt.Style == Enum.ProximityPromptStyle.Custom,
+		("%s %s"):format(tostring(dorrLangt.KeyboardKeyCode), tostring(dorrLangt.Style)))
+
+	--[[ ── DÖRRMÅLET BYTS UNDER HÅLLET ─────────────────────────────────
+		Hon håller på den närmaste dörren och går så att den andra blir
+		närmast. Hållet ska släppas: målet under fingret är inte längre det
+		hon började på, och exakt en dörr ska stå kvar. ]]
+	local iD = iRader(dorrNara)
+	N._hallNed(iD)
+	check("hållet på dörren pågår", N._hallsNu() == dorrNara)
+	rot.Position = Vector3.new(6, 0, 0)
+	N.satRider(false)
+	check("NÄR DÖRRMÅLET BYTS SLÄPPS HÅLLET", N._hallsNu() == nil,
+		tostring(N._hallsNu() and N._hallsNu().Name))
+	local dorrar2 = 0
+	for _, q in ipairs(N._prompter()) do if q.Name == "DorrPrompt" then dorrar2 += 1 end end
+	check("och fortfarande exakt en dörr, nu den andra",
+		dorrar2 == 1 and iRader(dorrLangt) ~= nil, ("%d dörrar"):format(dorrar2))
+	check("tangenten följde med till den nya dörren",
+		dorrLangt.KeyboardKeyCode == Enum.KeyCode.X
+			and dorrNara.KeyboardKeyCode == Enum.KeyCode.Unknown)
+	rot.Position = Vector3.new(0, 0, 0)
+
+	--[[ ── TILLDELNINGEN ANLÄNDER SENT ──────────────────────────────────
+		Innan hästen är känd vet spelet inte bättre än spelaren, och
+		grannens sadel är en handling bland andra — närmast, så den äger G.
+		När tilldelningen landar blir den tyst och dagens häst tar G. ]]
+	PreparationController._satHastIdForProv(nil)
+	N.satRider(false)
+	check("utan tilldelning äger den närmaste sadeln G",
+		granne.KeyboardKeyCode == Enum.KeyCode.G
+			and egen.KeyboardKeyCode == Enum.KeyCode.Unknown,
+		("granne %s egen %s"):format(tostring(granne.KeyboardKeyCode),
+			tostring(egen.KeyboardKeyCode)))
+	PreparationController._satHastIdForProv("trixie")
+	N.satRider(false)
+	check("TILLDELNINGEN LANDAR: grannen tyst, dagens häst tar G",
+		granne.KeyboardKeyCode == Enum.KeyCode.Unknown
+			and egen.KeyboardKeyCode == Enum.KeyCode.G)
+
+	--[[ ── FÖRKANTEN ────────────────────────────────────────────────────
+		Strax utanför räckvidd: släckt och tyst innan motorn hinner visa
+		den. Inom räckvidd: rad och tangent. ]]
+	local fore, fM = forrad("trixie", "Forkant", "Groom", Vector3.new(11, 0, 0),
+		Enum.KeyCode.V)
+	N.satRider(false)
+	check("en prompt i förkanten är släckt och tyst, utan rad",
+		fore.Style == Enum.ProximityPromptStyle.Custom
+			and fore.KeyboardKeyCode == Enum.KeyCode.Unknown and iRader(fore) == nil,
+		("%s %s"):format(tostring(fore.Style), tostring(fore.KeyboardKeyCode)))
+	rot.Position = Vector3.new(6, 0, 0)
+	N.satRider(false)
+	check("inom räckvidd får den rad och sin tangent tillbaka",
+		iRader(fore) ~= nil and fore.KeyboardKeyCode == Enum.KeyCode.V,
+		tostring(fore.KeyboardKeyCode))
+	rot.Position = Vector3.new(0, 0, 0)
+
+	--[[ ── HÅLL-GRINDEN SÄGS I RADEN ────────────────────────────────── ]]
+	local hallp, hM = forrad("trixie", "Leda", "Lead", Vector3.new(0.5, 0, 0),
+		Enum.KeyCode.L, 0.2)
+	N.satRider(false)
+	local hallOrd = Sprak.t("interaktion.hall_inne")
+	local etikettHall = N._rader()[iRader(hallp) or 0] or ""
+	check("en prompt med håll-grind säger det i raden",
+		etikettHall:find("[" .. hallOrd .. " L]", 1, true) ~= nil, etikettHall)
+	local etikettEgen = N._rader()[iRader(egen) or 0] or ""
+	check("en utan håll-grind gör det inte",
+		etikettEgen:find(hallOrd, 1, true) == nil, etikettEgen)
+
+	--[[ ── RUTAN I SKÄRMENS RUM ───────────────────────────────────────────
+		Mätt i Studio: panelens ruta stod i en yta med IgnoreGuiInset
+		(0, -58) och lästes i listans yta (0, 0). Listans golv hamnade
+		58 px för lågt, över instruktionen. Rutan lämnas nu i skärmens
+		absoluta rum, och listan räknar om till sitt eget. ]]
+	do
+		local yta = spelare:FindFirstChildOfClass("PlayerGui"):FindFirstChild("UBRFNaromrade")
+		local forePos, foreStorlek = yta.AbsolutePosition, yta.AbsoluteSize
+		yta.AbsolutePosition = Vector2.new(0, 58)
+		yta.AbsoluteSize = Vector2.new(1179, 761)
+		PreparationController._satRutaForProv({ x0 = 12, y0 = 697, x1 = 328, y1 = 807 })
+		check("RUTAN RÄKNAS OM TILL LISTANS RUM — golvet är panelens överkant",
+			N.blockgolv() == 697 - 58, ("golv %s"):format(tostring(N.blockgolv())))
+		PreparationController._satRutaForProv(nil)
+		yta.AbsolutePosition, yta.AbsoluteSize = forePos, foreStorlek
+	end
+
+	--[[ ── OCH ALLT ÅTERSTÄLLS NÄR HON GÅR ─────────────────────────────── ]]
+	rot.Position = Vector3.new(200, 0, 0)
+	N.satRider(false)
+	local orort = egen.KeyboardKeyCode == Enum.KeyCode.G
+		and granne.KeyboardKeyCode == Enum.KeyCode.G
+		and egen2.KeyboardKeyCode == Enum.KeyCode.G
+		and dorrLangt.KeyboardKeyCode == Enum.KeyCode.X
+		and granne.Style == Enum.ProximityPromptStyle.Default
+		and dorrLangt.Style == Enum.ProximityPromptStyle.Default
+	check("utom räckhåll får varje prompt tillbaka sin tangent och sin bild",
+		orort and N._slackta() == 0, ("släckta %d"):format(N._slackta()))
+
+	for _, x in ipairs({ gM, eM, e2M, dNDel, dLDel, fM, hM }) do x:Destroy() end
+	rot.Position = Vector3.new(0, 0, 0)
+	PreparationController._satHastIdForProv(nil)
+	UIS.KeyboardEnabled = tangentbordFore
 	N.stopp()
 end
 

@@ -41,6 +41,10 @@ Sprak.text = {
 		sv = "Anvand",
 		en = "Use",
 	},
+	["interaktion.hall_inne"] = {
+		sv = "Håll inne",
+		en = "Hold",
+	},
 	["interaktion.sitt_av"] = {
 		sv = "SITT AV",
 		en = "DISMOUNT",

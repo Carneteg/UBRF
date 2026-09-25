@@ -266,6 +266,37 @@ function KontrollHjalp.inmatning(): string
 	return "okand"
 end
 
+--[[ ── RIDNINGENS KÄRNA, FÖR VÄNSTERMENYN (#264 ROBLOX_HUMAN_PLAYTEST_FIX) ──
+
+	Tobias speltest 2026-09-25: uppsutten fanns en spak och ingenting som
+	sa hur man driver, bromsar eller sitter av. Panelen här är släckt av
+	PO-beslutet `MINIMAL_UI` (ren skärm, 2026-09-17), och den ska inte
+	tillbaka — ordern förbjuder den gamla tioknappspanelen.
+
+	Vänstermenyn (`Naromrade`) bär i stället de fyra raderna som behövs för
+	att rida, ur SAMMA tabell och med samma reglagetext som panelen skulle
+	ha visat. Ingen andra sanning: raderna väljs med nyckel ur `RADER`, och
+	en rad utan reglage på den här inmatningen hoppas över precis som i
+	`rader()`. Hjälperna (tygel, halvhalt, sits, hopp) är inte med — de är
+	inte vad en förstagångsryttare behöver för att komma igång. ]]
+local RIDKARNA = { "hjalp.hogre_gangart", "hjalp.lagre_gangart",
+	"hjalp.styr", "hjalp.sitt_upp_av" }
+
+function KontrollHjalp.ridrader(): { { vad: string, reglage: string } }
+	local alla = KontrollHjalp.rader()
+	local ut = {}
+	for _, nyckel in ipairs(RIDKARNA) do
+		local text = Sprak.t(nyckel)
+		for _, r in ipairs(alla) do
+			if r.vad == text then
+				table.insert(ut, r)
+				break
+			end
+		end
+	end
+	return ut
+end
+
 --[[ Raderna som text, för panelen och för provet. Ren avläsning. ]]
 function KontrollHjalp.rader(): { { vad: string, reglage: string } }
 	local sort = KontrollHjalp.inmatning()
