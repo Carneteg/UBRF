@@ -2320,6 +2320,70 @@ do
 	N.satRider(false)
 end
 
+--[[ ══ #264 PLAYER_FLOW_CLOSURE_R5: RADEN FÖLJER MOTORNS VISNING ══════
+
+	Mätt i Studio på kandidat 304f531: `portbla (intern)` på 6,25 av 8 studs,
+	panelen visade «Open — Gate [X]», men motorn hade dolt prompten (bladet
+	bakom kameran) och varken X eller radklick gav Triggered. Motorn
+	aktiverar bara en visad prompt. En rad får därför inte lova en prompt
+	som motorn uttryckligen dolt. ]]
+print("\n── R5: raden följer motorns visning ──")
+do
+	local UIS = game:GetService("UserInputService")
+	local PPS = game:GetService("ProximityPromptService")
+	local Players = game:GetService("Players")
+	N.stopp()
+	UIS.TouchEnabled = true
+	UIS.KeyboardEnabled = true
+	N.start()
+	local spelare = Players.LocalPlayer
+	local rot = spelare.Character:FindFirstChild("HumanoidRootPart")
+	local yta = spelare:FindFirstChildOfClass("PlayerGui"):FindFirstChild("UBRFNaromrade")
+	local foreStorlek = yta.AbsoluteSize
+	yta.AbsoluteSize = Vector3.new(1080, 810, 0)
+	PreparationController._satRutaForProv(nil)
+	rot.Position = Vector3.new(4000, 0, 0)
+	local port = nyPrompt("R5Port", "Open", "Gate", Vector3.new(4006.25, 0, 0))
+	port.Name = "DorrPrompt"
+	port.KeyboardKeyCode = Enum.KeyCode.X
+	local function iRad(q)
+		for i, r in ipairs(N._prompter()) do if r == q then return i end end
+		return nil
+	end
+
+	N.satRider(false)
+	check("R5 KONTROLL: utan besked från motorn har porten sin rad (som förut)",
+		iRad(port) ~= nil and port.KeyboardKeyCode == Enum.KeyCode.X)
+
+	PPS.PromptHidden:Fire(port)
+	N.satRider(false)
+	check("R5: DOLD AV MOTORN — INGEN RAD LOVAR PORTEN", iRad(port) == nil,
+		tostring(iRad(port)))
+	check("R5: och tangenten X är tyst", port.KeyboardKeyCode == N.DODTANGENT,
+		tostring(port.KeyboardKeyCode))
+	check("R5: men bubblan är fortfarande släckt (ingen blinkning vid visning)",
+		port.Style == Enum.ProximityPromptStyle.Custom, tostring(port.Style))
+
+	PPS.PromptShown:Fire(port)
+	N.satRider(false)
+	check("R5: VISAD IGEN — raden och X är tillbaka",
+		iRad(port) ~= nil and port.KeyboardKeyCode == Enum.KeyCode.X,
+		("rad %s tangent %s"):format(tostring(iRad(port)), tostring(port.KeyboardKeyCode)))
+
+	--[[ Räckviddsgränsen är oförändrad: båda sidor. ]]
+	port.Parent.Position = Vector3.new(4007.9, 0, 0)
+	N.satRider(false)
+	check("R5: 7,9 av 8 studs, visad: rad", iRad(port) ~= nil)
+	port.Parent.Position = Vector3.new(4008.1, 0, 0)
+	N.satRider(false)
+	check("R5: 8,1 av 8 studs: ingen rad (räckvidden är inte höjd)", iRad(port) == nil)
+
+	port.Parent:Destroy()
+	yta.AbsoluteSize = foreStorlek
+	rot.Position = Vector3.new(0, 0, 0)
+	N.satRider(false)
+end
+
 if fails > 0 then
 	print(string.format("\n%d mätning(ar) föll.", fails))
 	local avsluta = (os :: any).exit

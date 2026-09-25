@@ -373,6 +373,30 @@ end
 	gångfart (16 studs/s × 0,2 s ≈ 3,2 studs per takt). ]]
 local FORKANT = 8
 
+--[[ ══ #264 PLAYER_FLOW_CLOSURE_R5: MOTORNS EGET BESKED OM VISNING ══════
+
+	Mätt i Studio på kandidat 304f531, `portbla (intern)` 6,25 av 8 studs:
+	panelen visade «Open — Gate [X]», men X och ett klick på raden gav
+	ingen Triggered. `RequiresLineOfSight` är falsk och alla prompter har
+	`Exclusivity = AlwaysShow`. Det som skilde var motorns eget besked:
+
+	    TRIGGERED portbla (intern)       porten stängs
+	    kameran trycks in i bladets plan (x 429,1), bladet bakom kameran
+	    HIDDEN    portbla (intern)       0,08 s efter
+	    X, radklick                      ingenting — prompten är dold
+
+	Med bladet i bild gick samma X och samma radklick igenom varje gång.
+	Motorn aktiverar alltså bara en VISAD prompt, och panelen räknade bara
+	avstånd. Menyn lovade en handling som inte gick att göra där hon stod.
+
+	Rättelsen tar motorns besked som sant: en prompt som motorn uttryckligen
+	har dolt får ingen rad. Den läggs i förkanten — släckt i förväg, utan
+	rad och utan tangent — så att den inte blinkar fram med Robloxs egen
+	bubbla när den visas igen. Okänt läge (inget besked ännu) och modulens
+	egna stilbyte (`dolda`) räknas som förut. Ingen räckvidd ändras, och
+	ingenting går förbi motorn eller servern. ]]
+local motornVisar: { [ProximityPrompt]: boolean } = {}
+
 local function skanna(fran: Vector3, sok: { Instance }, kant: number):
 	({ ProximityPrompt }, { ProximityPrompt }, { [ProximityPrompt]: number })
 	local ut: { ProximityPrompt } = {}
@@ -386,9 +410,12 @@ local function skanna(fran: Vector3, sok: { Instance }, kant: number):
 				local p = varldslage(d)
 				if p then
 					local a = (p - fran).Magnitude
-					if a <= d.MaxActivationDistance then
+					if a <= d.MaxActivationDistance and (dolda[d] or motornVisar[d] ~= false) then
 						table.insert(ut, d)
 						avstand[d] = a
+					elseif a <= d.MaxActivationDistance then
+						--[[ Inom räckvidd men dold av motorn: se `motornVisar`. ]]
+						table.insert(fore, d)
 					elseif a <= d.MaxActivationDistance + kant then
 						table.insert(fore, d)
 					end
@@ -2207,6 +2234,13 @@ function Naromrade.start()
 	table.clear(hallKopplingar)
 	pcall(function()
 		local PPS = game:GetService("ProximityPromptService")
+		--[[ #264 R5: motorns besked om visning, se `motornVisar`. ]]
+		table.insert(hallKopplingar, PPS.PromptShown:Connect(function(p)
+			motornVisar[p] = true
+		end))
+		table.insert(hallKopplingar, PPS.PromptHidden:Connect(function(p)
+			motornVisar[p] = false
+		end))
 		table.insert(hallKopplingar, PPS.PromptButtonHoldBegan:Connect(function(p)
 			fyllPrompt = p
 			fyllStart = os.clock()
@@ -2264,6 +2298,7 @@ function Naromrade.stopp()
 	for _, k in ipairs(inmatning) do k:Disconnect() end
 	table.clear(inmatning)
 	table.clear(pekare)
+	table.clear(motornVisar)
 	frystPlats = nil
 	vantandeTangent = nil
 	tangentHall = nil

@@ -739,6 +739,8 @@ local __services = {
 		PromptButtonHoldBegan = __signal(),
 		PromptButtonHoldEnded = __signal(),
 		PromptTriggered = __signal(),
+		PromptShown = __signal(),
+		PromptHidden = __signal(),
 	},
 	UserInputService = {
 		_pad = {},
