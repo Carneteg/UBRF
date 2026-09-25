@@ -2268,6 +2268,39 @@ do
 		N._hallsNu() == nil, tostring(N._hallsNu() and N._hallsNu().Name))
 	slapp(L3)
 
+	--[[ d) MOTORN AVBRYTER HÅLLET vid lägesbytet (mätt i Studio: holdEnded
+	     20 ms efter NED, ingen Triggered, fingret fortfarande nere). Hållet
+	     är fortfarande vårt och startas om EN gång. ]]
+	local PPS = game:GetService("ProximityPromptService")
+	yta.AbsoluteSize = STOR
+	rot.Position = Vector3.new(3000, 0, 0)
+	N.satRider(false)
+	local iL = iRad(led)
+	check("R4 d KONTROLL: ledraden syns", iL ~= nil)
+	N._hallNed(iL)
+	check("R4 d KONTROLL: hållet på ledraden pågår", N._hallsNu() == led)
+	rawset(led, "_hallSedan", nil)
+	PPS.PromptButtonHoldEnded:Fire(led)
+	check("R4: MOTORNS AVBROTT STARTAR OM VÅRT HÅLL",
+		rawget(led, "_hallSedan") ~= nil and N._hallsNu() == led)
+	rawset(led, "_hallSedan", nil)
+	PPS.PromptButtonHoldEnded:Fire(led)
+	check("R4: men bara en gång", rawget(led, "_hallSedan") == nil)
+	N._slappHall()
+
+	N._hallNed(iL)
+	PPS.PromptTriggered:Fire(led)
+	rawset(led, "_hallSedan", nil)
+	PPS.PromptButtonHoldEnded:Fire(led)
+	check("R4: ett UTLÖST håll startas aldrig om", rawget(led, "_hallSedan") == nil)
+	N._slappHall()
+
+	N._hallNed(iL)
+	N._slappHall()
+	rawset(led, "_hallSedan", nil)
+	PPS.PromptButtonHoldEnded:Fire(led)
+	check("R4: ett håll vi själva släppt startas aldrig om", rawget(led, "_hallSedan") == nil)
+
 	dorr.Parent:Destroy()
 	led.Parent:Destroy()
 	yta.AbsoluteSize = foreStorlek

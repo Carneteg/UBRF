@@ -686,6 +686,10 @@ local hallsPrompt: ProximityPrompt? = nil
      prompt», och raden under fingret kan bytas ut medan hållet pågår —
      se `provaHallet`. ]]
 local hallRad: number? = nil
+--[[ #264 R4: har hållet redan utlösts, och har det startats om en gång?
+     Se `motornSlutadeHall`. ]]
+local hallUtlost = false
+local hallOmstartad = false
 
 --[[ Vilken prompt som laddas just nu, och sedan när — för fyllningen i
      raden. Sätts av radens eget håll OCH av motorns hållhändelser, så att
@@ -753,6 +757,34 @@ local function provaHallet()
 	end
 end
 
+--[[ ══ #264 R4: MOTORN AVBRYTER ETT HÅLL NÄR INMATNINGSLÄGET BYTS ══════
+
+	Mätt i Studio på kandidat 3eee32c (iPhone 13-emulering), musen nere på
+	ledraden som första pekarinmatning efter tangentbordet:
+
+	    holdBegan LedPrompt · LastInputType -> Touch · holdEnded LedPrompt
+	    20 ms efter NED, ingen Triggered — medan `hallsPrompt` fortfarande
+	    var LedPrompt och varken UPP eller MouseLeave hade kommit.
+
+	Det var alltså motorn och inte raden som släppte: promptsystemet
+	avslutar pågående håll när inmatningsläget byts. I pekläge utan byte
+	gick samma håll igenom på 0,2 s.
+
+	Är hållet fortfarande VÅRT — ingen UPP, ingen MouseLeave, inget byte
+	av rad — och har det inte redan utlösts, startas det om EN gång.
+	`slappHall` nollställer `hallsPrompt` innan den avslutar, så ett släpp
+	vi själva gjort startas aldrig om. ]]
+local function motornSlutadeHall(p: ProximityPrompt)
+	if p ~= hallsPrompt or hallUtlost or hallOmstartad then return end
+	if p.Parent == nil or not p.Enabled then return end
+	hallOmstartad = true
+	if (p.HoldDuration or 0) > 0 then
+		fyllPrompt = p
+		fyllStart = os.clock()
+	end
+	pcall(function() p:InputHoldBegin() end)
+end
+
 --[[ Släpp bara det håll som började på DEN HÄR raden. ]]
 local function slappHallFran(rad: number)
 	if hallRad ~= rad then return end
@@ -766,6 +798,8 @@ local function borjaHall(p: ProximityPrompt, rad: number)
 	slappHall()
 	hallsPrompt = p
 	hallRad = rad
+	hallUtlost = false
+	hallOmstartad = false
 	if (p.HoldDuration or 0) > 0 then
 		fyllPrompt = p
 		fyllStart = os.clock()
@@ -2165,9 +2199,11 @@ function Naromrade.start()
 		end))
 		table.insert(hallKopplingar, PPS.PromptButtonHoldEnded:Connect(function(p)
 			if fyllPrompt == p then fyllPrompt = nil end
+			motornSlutadeHall(p)
 		end))
 		table.insert(hallKopplingar, PPS.PromptTriggered:Connect(function(p)
 			if fyllPrompt == p then fyllPrompt = nil end
+			if p == hallsPrompt then hallUtlost = true end
 		end))
 	end)
 	--[[ #264 R4: pekare och tangenter, se noten vid `pekare`. ]]

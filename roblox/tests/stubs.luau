@@ -733,6 +733,13 @@ local __services = {
 	},
 	--[[ Spaken sätts av testet när gamepad ska mätas. TouchEnabled är falskt:
 	     bänken mäter kontraktet, inte gesterna — GUI:t byggs bara i Studio. ]]
+	--[[ #264 R4: promptsystemets egna hållhändelser. Ingen stub fyrar dem
+	     själv — det gör bara det prov som vill modellera motorn. ]]
+	ProximityPromptService = {
+		PromptButtonHoldBegan = __signal(),
+		PromptButtonHoldEnded = __signal(),
+		PromptTriggered = __signal(),
+	},
 	UserInputService = {
 		_pad = {},
 		GetGamepadState = function(self) return self._pad end,
