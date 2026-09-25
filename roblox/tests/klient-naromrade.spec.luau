@@ -2467,7 +2467,7 @@ do
 	N.satRider(false)
 	check("R5 KONTROLL: hjälpen är utfälld med lång text", hjalp.Visible == true
 		and #hjalp.Text > 1000, tostring(hjalp.Visible) .. " " .. #hjalp.Text)
-	local LUFT = 8
+	local LUFT = 6 -- samma som modulens
 	local kroppH = kropp.Size.Y.Offset
 	check("R5: hjälpens etikett får hela sin texthöjd, så att kroppen rullar i stället för att klippa",
 		hjalp.Size.Y.Offset >= 30 * 14, tostring(hjalp.Size.Y.Offset))
@@ -2494,10 +2494,21 @@ do
 	check("R5: LÅSNINGEN — tvåradig instruktion får 28 px fast layouten säger 14",
 		kropp.Size.Y.Offset == 28 and steg.Size.Y.Offset == 28,
 		("kropp %s, steg %s"):format(tostring(kropp.Size.Y.Offset), tostring(steg.Size.Y.Offset)))
+	for i, b in ipairs(pg._barn) do if b == tg then table.remove(pg._barn, i) break end end
+
+	--[[ Instruktion och återkoppling samtidigt, i desktopens bildyta där
+	     taket inte klämmer: två etiketter och ett mellanrum mellan dem,
+	     som kroppens egen layout lägger dit. ]]
+	yta.AbsoluteSize = Vector3.new(1980, 954, 0)
+	fejk.aterkoppling = "ok"
+	fejk.text = "Bra."
+	N.satRider(false)
+	check("R5: instruktion + återkoppling = 28 + mellanrum + 14",
+		ater.Visible == true and steg.Visible == true and kropp.Size.Y.Offset == 28 + LUFT + 14,
+		("kropp %s steg %s ater %s"):format(tostring(kropp.Size.Y.Offset),
+			tostring(steg.Size.Y.Offset), tostring(ater.Size.Y.Offset)))
 
 	PreparationController.panel, PreparationController.hastId = gamlaPanel, gamlaHast
-
-	for i, b in ipairs(pg._barn) do if b == tg then table.remove(pg._barn, i) break end end
 	yta.AbsoluteSize = foreStorlek
 	N.satRider(false)
 end
