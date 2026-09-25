@@ -351,6 +351,61 @@ do
 		end)())
 end
 
+--[[ ══ 7c. KLIENTENS GAMLA LÄGE VINNER EFTER ÅTERLÄMNINGEN ══════════════
+
+	Mätt i Studio (kandidat c1946fe, loggat på server OCH klient): i de
+	felande avsittningarna tog klienten aldrig emot serverns placering. Hon
+	hoppade ur sitsen och blev stående på ryggen på klienten, och när
+	ägarskapet lämnats tillbaka replikerades det läget — 17–26 hjärtslag
+	efter återlämningen. Kontrollen vid hjärtslag 10 hade då redan sagt ja.
+
+	Här spelas förloppet upp med samma takt. Bänkens låtsasspelare hittas
+	inte av `GetPlayerFromCharacter`, så själva återlämningen sker inte
+	här; provet ankrar därför på serverns ÖVERTAGANDE, som varje placering
+	gör. Efter det andra (den sena placeringens) skriver "klienten" henne
+	upp på ryggen vid hjärtslag 8 + 17 = 25. Bänkens trådar körs synkront,
+	så provet räknar vidare med egna hjärtslag efteråt — felet slår till
+	även om koden hunnit ge upp. ]]
+do
+	krot.CFrame = CFrame.new(rotJ.Position.X + 3, rotJ.Position.Y, rotJ.Position.Z)
+	check("uppsuttet igen inför 7c", HorseService.tryMount(spelare, jack) == true)
+
+	local hb = RunService.Heartbeat
+	local egenWait = hb.Wait
+	local egenAgare = krot.SetNetworkOwner
+	local overtag, efter, slog = 0, nil :: number?, false
+	krot.SetNetworkOwner = function(self, agare)
+		if agare == nil then
+			overtag += 1
+			if overtag == 2 then efter = 0 end
+		end
+		return egenAgare(self, agare)
+	end
+	hb.Wait = function(self)
+		if efter ~= nil and not slog then
+			efter += 1
+			if efter == 25 then
+				slog = true
+				egenPivot(kar, rotJ.CFrame * CFrame.new(0, 4.2, 0))
+			end
+		end
+		return egenWait(self)
+	end
+
+	HorseService.dismount(spelare)
+	for _ = 1, 30 do hb:Wait() end
+	hb.Wait = egenWait
+	krot.SetNetworkOwner = egenAgare
+
+	check("7c: klientens läge skrev henne upp på ryggen efter återlämningen", slog,
+		string.format("övertaganden %d", overtag))
+	check("7c: BEVAKNINGEN SÅG DET OCH PLACERADE IGEN",
+		not HorseService._paHastrygg(jack, kar),
+		string.format("höjd över hästroten %+.2f", krot.Position.Y - rotJ.Position.Y))
+	check("7c: och den nya placeringen gick samma väg som de andra",
+		overtag == 3, string.format("%d övertaganden", overtag))
+end
+
 --[[ ══ 8. ETT NEJ ÅTERFÖRENAR, OCH DAGSFORMEN REPLIKERAS ════════════
 
 	ChatGPT-re-review av `269bec5`, båda punkterna, genom de RIKTIGA

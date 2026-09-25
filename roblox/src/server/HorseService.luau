@@ -875,9 +875,19 @@ function HorseService._avsittningsplats(modell: Model, karaktar: Model): (CFrame
 end
 
 --[[ #264 R2: hur många hjärtslag efter den sena placeringen utfallet
-	kontrolleras, och vad "på hästryggen" betyder: roten inom hästens
-	fotavtryck i sidled och tydligt över hennes rot i höjd. ]]
-local AVSITT_KONTROLL = 10
+	bevakas, och vad "på hästryggen" betyder: roten inom hästens
+	fotavtryck i sidled och tydligt över hennes rot i höjd.
+
+	FÖNSTRET MÅSTE RÄCKA FÖRBI ÅTERLÄMNINGEN. Mätt i Studio (kandidat
+	c1946fe, loggat på både server och klient): i de felande fallen tog
+	klienten aldrig emot serverns placering. Hon hoppade ur sitsen och
+	blev stående på ryggen PÅ KLIENTEN medan servern ägde kroppen. När
+	ägarskapet lämnades tillbaka (hjärtslag 8) vann klientens läge och
+	replikerades hjärtslag 26–34 efter avsittningen. En kontroll vid
+	hjärtslag 10 kom alltså före felet. En ny placering när klienten väl
+	äger kroppen fastnar (mätt: 2 s utan återfall). ]]
+local AVSITT_KONTROLL = 90
+local AVSITT_OMPLACERINGAR = 2
 local AVSITT_RYGGHOJD = 1.5
 
 function HorseService._paHastrygg(modell: Model, karaktar: Model): boolean
@@ -1136,19 +1146,22 @@ function HorseService.dismount(player: Player): (boolean, string?)
 				Mätt i Studio (kandidat e5881dc, ren väg, mitt på banan):
 				1 av 5 avsittningar lämnade henne STÅENDE PÅ HÄSTRYGGEN —
 				servern såg roten 4,2 studs över hästens rot och
-				`FloorMaterial` = hästen, i minst 3 s. Orsaken är INTE
-				fastställd (det felande fallet hann inte loggas). I stället
-				för en gissning om orsaken prövas utfallet: står hon ovanpå
-				hästen en stund efter placeringen placeras hon en gång till,
-				och det loggas så att nästa körning ger belägg. ]]
+				`FloorMaterial` = hästen, i minst 3 s. Orsaken står vid
+				`AVSITT_KONTROLL`: klientens eget läge vinner när ägarskapet
+				lämnas tillbaka. Utfallet bevakas därför varje hjärtslag
+				genom hela fönstret, och står hon ovanpå hästen placeras hon
+				igen — högst `AVSITT_OMPLACERINGAR` gånger. ]]
+			local omplacerad = 0
 			for _ = 1, AVSITT_KONTROLL do
 				RunService.Heartbeat:Wait()
 				if not (character.Parent and modell.Parent) then return end
 				if (humanoid and humanoid.Sit) or byRider[player] then return end
-			end
-			if HorseService._paHastrygg(modell, character) then
-				warn(("[Horse] avsittningen landade på %s — placeras igen"):format(modell.Name))
-				stallAv(modell, character)
+				if HorseService._paHastrygg(modell, character) then
+					warn(("[Horse] avsittningen landade på %s — placeras igen"):format(modell.Name))
+					stallAv(modell, character)
+					omplacerad += 1
+					if omplacerad >= AVSITT_OMPLACERINGAR then return end
+				end
 			end
 		end)
 	end
