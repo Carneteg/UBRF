@@ -1462,6 +1462,20 @@ local function placera(pn: Frame)
 	if ledigt < b then b = math.max(ledigt, 120) end
 	pn.Size = UDim2.fromOffset(b, 0)
 	local botten = math.min(golv or hojd, hojd) - KANT
+	--[[ #264 R2, MÄTT I STUDIO: panelen får aldrig gå ovanför skärmen.
+	     I pekläge ligger den dynamiska spakens aktiveringsyta från ungefär
+	     en tredjedel av höjden och nedåt; med verkliga radhöjder och en
+	     fråga uppe var panelen 300 px men bara ~195 fanns ovanför, och
+	     överkanten hamnade på −89. Panelen står då uppe till vänster med sin
+	     egen höjd (högst 40 %) och får gå ned i den övre delen av den
+	     osynliga aktiveringsytan — den synliga spaken i nedre hörnet täcks
+	     inte, och panelen ligger över spakytan i ritordningen. ]]
+	local egenH = 0
+	local as = (pn :: any).AbsoluteSize
+	if as ~= nil and type(as.Y) == "number" then egenH = as.Y end
+	if hojd > 0 then
+		botten = math.max(botten, math.min(egenH, hojd * 0.4))
+	end
 	pn.Position = UDim2.fromOffset(x or KANT, math.max(0, botten))
 	--[[ LISTANS HÖJD: det som blir kvar av 40 % när rubrik, nästa steg,
 	     återkoppling och en utfälld hjälp tagit sitt. Innehållet mäts ur
@@ -1490,7 +1504,7 @@ local function placera(pn: Frame)
 		--[[ #264 R2: taket är det som FINNS — 40 % av höjden, men aldrig mer
 		     än utrymmet ovanför golvet (spaken i pekläge). Panelen stannar
 		     till vänster och frågan rullar i stället. ]]
-		local takH = math.min(hojd * 0.4, math.max(botten, 0))
+		local takH = hojd * 0.4
 		local budget = math.max(KNAPP_H, takH - fast)
 		--[[ Minst två alternativ syns när det finns plats: en fråga med ett
 		     synligt svar ser ut som en ensam knapp. Är ytan trång syns ett

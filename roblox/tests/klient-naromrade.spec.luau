@@ -632,6 +632,16 @@ do
 				check("HÖG PANEL: den står kvar till vänster, ovanför spaken",
 					hx == 16 and hgolv == ytaY0,
 					("x=%s golv=%s"):format(tostring(hx), tostring(hgolv)))
+				--[[ MÄTT I STUDIO: med verkliga radhöjder var panelen 300 px men
+				     bara ~200 fanns ovanför spaken, och överkanten hamnade på −89.
+				     Den ritade panelen ska ligga helt på skärmen: överkanten ≥ 0. ]]
+				pn.AbsoluteSize = Vector3.new(300, 300, 0)
+				N.satRider(false)
+				local nederkant = pn.Position and pn.Position.Y and pn.Position.Y.Offset or -1
+				check("DEN RITADE PANELEN går aldrig ovanför skärmen (överkant ≥ 0)",
+					nederkant - 300 >= 0 and pn.Position.X.Offset == 16,
+					("nederkant %d, höjd 300, x %d"):format(nederkant, pn.Position.X.Offset))
+				pn.AbsoluteSize = Vector3.new(300, 322, 0)
 				local platser = N.radplatser()
 				check("och det som inte ryms bläddras: raderna ryms under golvet",
 					platser >= 1 and 150 + platser * (44 + 6) <= ytaY0 - 16,
