@@ -2226,31 +2226,44 @@ do
 	slapp(L)
 	check("R4: släppt tangent släpper hållet", N._hallsNu() == nil)
 
-	--[[ b) Radantalet ändras inte, men raden BLIR synlig ändå — hon går
-	     in i räckhåll för ledningen strax efter trycket. Ett tryck som inte
-	     bytte läget hör inte till någon rad och ska förbli ingenting;
-	     annars hade vilken tangent som helst kunnat laddas i förväg. ]]
-	yta.AbsoluteSize = STOR
-	rot.Position = Vector3.new(2960, 0, 0)
-	N.satRider(false)
-	check("R4 b KONTROLL: ledningen är utom räckhåll", iRad(led) == nil)
-	local L2 = tryck(Enum.UserInputType.Keyboard, Enum.KeyCode.L)
+	--[[ b) Radantalet ändras inte, men raden BLIR synlig ändå: ledningen
+	     står redan i räckhåll på sida 2, och dörren glider ur räckhåll så
+	     att ledningen blir rad 1. Ett tryck som inte bytte läget hör inte
+	     till någon rad och ska förbli ingenting — annars hade vilken
+	     tangent som helst kunnat laddas i förväg. ]]
+	yta.AbsoluteSize = LITEN
 	rot.Position = Vector3.new(3000, 0, 0)
 	N.satRider(false)
-	check("R4 b KONTROLL: nu syns ledraden med L",
-		iRad(led) ~= nil and led.KeyboardKeyCode == Enum.KeyCode.L)
+	check("R4 b KONTROLL: dörren på rad 1, ledningen på sida 2",
+		iRad(dorr) == 1 and iRad(led) == nil)
+	local L2 = tryck(Enum.UserInputType.Keyboard, Enum.KeyCode.L)
+	rot.Position = Vector3.new(2992, 0, 0)
+	N.satRider(false)
+	check("R4 b KONTROLL: samma radantal, nu är ledningen rad 1 med L",
+		iRad(led) == 1 and led.KeyboardKeyCode == Enum.KeyCode.L and led.Enabled ~= false,
+		("rad %s tangent %s"):format(tostring(iRad(led)), tostring(led.KeyboardKeyCode)))
 	check("R4: UTAN LÄGESBYTE startar ett gammalt tryck ingenting",
 		N._hallsNu() == nil, tostring(N._hallsNu() and N._hallsNu().Name))
 	slapp(L2)
 
-	--[[ c) Äger en synlig rad redan tangenten är trycket motorns. ]]
+	--[[ c) Äger en synlig rad redan tangenten är trycket motorns. Radantalet
+	     ändras efteråt (tre rader -> två) medan ledraden står kvar. ]]
+	rot.Position = Vector3.new(3000, 0, 0)
+	local MEDEL = nil
+	for h = 330, 800, 5 do
+		yta.AbsoluteSize = Vector3.new(1080, h, 0)
+		if N.radplatser() == 2 then MEDEL = yta.AbsoluteSize break end
+	end
+	check("R4 c KONTROLL: det finns en storlek med två rader", MEDEL ~= nil)
 	yta.AbsoluteSize = STOR
 	N.satRider(false)
+	check("R4 c KONTROLL: ledraden syns och äger L",
+		iRad(led) ~= nil and led.KeyboardKeyCode == Enum.KeyCode.L)
 	local L3 = tryck(Enum.UserInputType.Keyboard, Enum.KeyCode.L)
-	yta.AbsoluteSize = LITEN
+	if MEDEL then yta.AbsoluteSize = MEDEL end
 	N.satRider(false)
-	yta.AbsoluteSize = STOR
-	N.satRider(false)
+	check("R4 c KONTROLL: färre rader, ledraden syns fortfarande med L",
+		iRad(led) ~= nil and led.KeyboardKeyCode == Enum.KeyCode.L)
 	check("R4: en tangent som redan ägdes spelas inte upp en gång till",
 		N._hallsNu() == nil, tostring(N._hallsNu() and N._hallsNu().Name))
 	slapp(L3)
