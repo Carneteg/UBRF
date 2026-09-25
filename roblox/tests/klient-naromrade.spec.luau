@@ -2226,13 +2226,20 @@ do
 	slapp(L)
 	check("R4: släppt tangent släpper hållet", N._hallsNu() == nil)
 
-	--[[ b) Radantalet ändras inte: ett tryck som ingen rad äger förblir
-	     ingenting. ]]
-	yta.AbsoluteSize = LITEN
+	--[[ b) Radantalet ändras inte, men raden BLIR synlig ändå — hon går
+	     in i räckhåll för ledningen strax efter trycket. Ett tryck som inte
+	     bytte läget hör inte till någon rad och ska förbli ingenting;
+	     annars hade vilken tangent som helst kunnat laddas i förväg. ]]
+	yta.AbsoluteSize = STOR
+	rot.Position = Vector3.new(2960, 0, 0)
 	N.satRider(false)
+	check("R4 b KONTROLL: ledningen är utom räckhåll", iRad(led) == nil)
 	local L2 = tryck(Enum.UserInputType.Keyboard, Enum.KeyCode.L)
+	rot.Position = Vector3.new(3000, 0, 0)
 	N.satRider(false)
-	check("R4: utan lägesbyte når tangenten inte en rad utanför sidan",
+	check("R4 b KONTROLL: nu syns ledraden med L",
+		iRad(led) ~= nil and led.KeyboardKeyCode == Enum.KeyCode.L)
+	check("R4: UTAN LÄGESBYTE startar ett gammalt tryck ingenting",
 		N._hallsNu() == nil, tostring(N._hallsNu() and N._hallsNu().Name))
 	slapp(L2)
 

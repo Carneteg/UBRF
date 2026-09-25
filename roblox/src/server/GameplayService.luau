@@ -606,13 +606,11 @@ end
 	genom den vanliga momentvägen: `harLamnatBox`, `harNattMal` och
 	närvaron prövas precis som för ett tryck. `utforare` lämnas tom — det
 	var spelaren som ledde henne, inte stallet. Står något annat än `leda`
-	på tur görs ingenting; ett nej här är tyst, för spelaren har inte bett
-	om något. ]]
+	på tur nekar momentvägen själv (`forb.fel_tur`); ett nej här är tyst,
+	för spelaren har inte bett om något. ]]
 function GameplayService.kvitteraLedning(player: Player): boolean
 	local s = state[player]
 	if not s then return false end
-	local fas = Preparation.nasta(s)
-	if not fas or fas.id ~= "leda" then return false end
 	local kvitterat = false
 	while true do
 		local m = Preparation.nastaMoment(s, "leda")
