@@ -1,6 +1,6 @@
 # PRE_TOBIAS_FIRST_PLAYABLE_GATE — release evidence bundle
 
-> **PASS** — genererad 2026-09-25 11:57 UTC av `tools/pre-tobias-grind.py`.
+> **PASS** — genererad 2026-09-25 12:42 UTC av `tools/pre-tobias-grind.py`.
 
 > ⚠️ Arbetsträdet har ocommittade ändringar — rapporten gäller alltså inte källkommiten ensam.
 
@@ -9,7 +9,7 @@
 
 | | |
 |---|---|
-| source SHA | `abcd3cb140c6cbfe210fc5051be99196ab09d35b` |
+| source SHA | `a3bcff1b44cc7c47b7a6fe66f2cc51edad53d072` |
 | gren | `claude/gate2a-first-ride-20260919` |
 | release commit | ingen ny release byggd i den här körningen |
 | `.rbxlx` SHA256 | — ingen fil mätt, kör med `--place` |
