@@ -450,6 +450,92 @@ do
 		promptar().LedPrompt == nil,
 		if promptar().LedPrompt then "LedPrompt kvar" else "(borta)")
 
+	--[[ ══ #264 PLAYER_INTERACTION_CONSOLIDATION: SAMMA LÄGE, I PANELEN ══
+
+		Kontraktet: i eftervården förklarar panelen det faktiska steget och
+		erbjuder dess handling; en orelaterad Mount-rekommendation står inte
+		bredvid. En giltig efterritt läses i panelen och avfärdas där, och
+		FÖRST DÄREFTER tar eftervården över. Mätt genom produktionens väg —
+		passets vy, skötselns adapter, panelens egen ritning. ]]
+	local NR = Naromrade
+	NR.satRider(false)
+	game:GetService("RunService").Heartbeat:Fire(1 / 60)
+	local pnl = NR._panel()
+	local valText = {}
+	for _, v in pairs(NR._val()) do table.insert(valText, tostring(v.text)) end
+	local pgui = game:GetService("Players").LocalPlayer:FindFirstChildOfClass("PlayerGui")
+	local skotselYta = pgui and pgui:FindFirstChild("UBRFForberedelse")
+	prova("EN YTA: panelen bär eftervården, skötselns egen yta är släckt",
+		pnl.synlig and #valText > 0
+			and (skotselYta == nil or skotselYta.Enabled == false),
+		("panel %s · %d val: %s"):format(tostring(pnl.synlig), #valText,
+			table.concat(valText, " | ")))
+	local mountRad = false
+	for _, t in ipairs(NR._rader()) do
+		if string.find(t, Sprak.t("interaktion.sitt_upp"), 1, true) then mountRad = true end
+	end
+	prova("och ingen Mount-rad står bredvid eftervårdens instruktion",
+		not mountRad, table.concat(NR._rader(), " | "))
+
+	--[[ EFTERRITTEN GÅR FÖRE. Lektionens summering visas genom sin egen väg
+		(`UgnetaController.efterritt`); panelen ska bära dess knapp i stället
+		för eftervårdens val tills spelaren avfärdat den. ]]
+	UgnetaController.efterritt({ { dim = "rytm", sort = "bra" } })
+	NR.satRider(false)
+	local efterVal = {}
+	for _, v in pairs(NR._val()) do table.insert(efterVal, tostring(v.text)) end
+	prova("EN GILTIG EFTERRITT LÄSES I PANELEN FÖRE EFTERVÅRDEN",
+		#efterVal == 1 and string.find(efterVal[1],
+			Sprak.t("ugneta.efterritt.stang"), 1, true) ~= nil
+			and NR._panel().ater ~= "",
+		("val: %s · återkoppling %q"):format(table.concat(efterVal, " | "),
+			NR._panel().ater))
+	--[[ Avfärdad genom panelens egen rad — samma handling som knappen. ]]
+	local forsta = NR._val()[1]
+	if forsta and forsta.skicka then forsta.skicka() end
+	NR.satRider(false)
+	local efterAvfard = {}
+	for _, v in pairs(NR._val()) do table.insert(efterAvfard, tostring(v.text)) end
+	prova("och när den avfärdats tar eftervården över igen",
+		UgnetaController.vantar() == false and #efterAvfard == #valText,
+		("%d val: %s"):format(#efterAvfard, table.concat(efterAvfard, " | ")))
+
+	--[[ ETT SENT SVAR ERSÄTTER INTE PANELEN. En äldre vy — ett helt annat
+		tillstånd, en tidigare revision — kommer fram efter den aktuella.
+		Skötseln kastar den (krav 10), och panelen läser skötselns
+		tillstånd, inte vyn: rubrik och val ska stå orörda. ]]
+	local rubrikFore = NR._panel().rubrik
+	local valFore = #efterAvfard
+	PC.tillampa(Preparation.vy(Preparation.nyState(HAST_ID, 1),
+		Preparation.STATUS.FORBEREDER, rev - 3, "Trixie"))
+	NR.satRider(false)
+	local valEfter = 0
+	for _ in pairs(NR._val()) do valEfter += 1 end
+	--[[ ETT NEJ EFTER VYN SYNS I PANELEN. Mätt i Studio: servern nekade ett
+		skötselmoment och panelens återkopplingsfält var tomt, för nejet
+		skrevs bara i skötselns egna, släckta etiketter. ]]
+	PC.visaAvslagFor("hud.gick_inte_nu")
+	NR.satRider(false)
+	prova("ETT NEJ SOM KOMMER EFTER VYN STÅR I PANELENS ÅTERKOPPLING",
+		NR._panel().ater == Sprak.t("hud.gick_inte_nu"),
+		("återkoppling %q"):format(NR._panel().ater))
+	prova("och nästa steg står kvar ovanför nejet",
+		NR._panel().steg ~= "" and NR._panel().steg ~= NR._panel().ater,
+		("steg %q"):format(NR._panel().steg))
+	--[[ Samma väg för ett JA: en kvittens utifrån (ledningen lånar den)
+		kommer efter vyn och ska också nå panelen, inte bara skötselns
+		släckta etiketter. ]]
+	local kvitto = "KVITTENS EFTER VYN"
+	PC.visaBekraftelseFor(kvitto)
+	NR.satRider(false)
+	prova("EN KVITTENS SOM KOMMER EFTER VYN STÅR I PANELENS ÅTERKOPPLING",
+		string.find(NR._panel().ater, kvitto, 1, true) ~= nil,
+		("återkoppling %q"):format(NR._panel().ater))
+	prova("ETT SENT SVAR FRÅN EN TIDIGARE VY ERSÄTTER INTE PANELEN",
+		NR._panel().rubrik == rubrikFore and valEfter == valFore,
+		("rubrik %q → %q · val %d → %d"):format(rubrikFore, NR._panel().rubrik,
+			valFore, valEfter))
+
 	--[[ ANDRA LEDET AV PUNKT 3: «When no care step is waiting / ride is
 		the relevant next action — Mount may return.» Eftervården görs klar
 		genom passets egen modul, och knapparna ska komma tillbaka av sig
@@ -472,6 +558,108 @@ do
 		mäter ledningen mot skötseln, inte mot en eftervård. ]]
 	PC.tillampaPass(Pass.vy(Pass.nyState(HAST_ID, Pass.byggId(1, HAST_ID, 2)),
 		9002))
+	state = Preparation.nyState(HAST_ID, 1)
+	for _, fas in ipairs(Preparation.stegFaser()) do
+		if fas.id ~= "leda" then gorFas(fas.id) end
+	end
+	visa(Preparation.STATUS.FORBEREDER)
+end
+
+print("\n── 3e. Stegets verkliga handling står först (#264) ──")
+
+--[[ Mätt i Studio, två gånger: momentet stod på tur men handlingen som
+	utför det låg bakom overflow, för den enda fasta platsen gick till Rida
+	nu. Kontraktet: förberedelsen visar det aktuella steget OCH dess
+	verkliga handling. Steget känns igen på momentets kanoniska id.
+
+	  ledsteget     dörren först (den ska öppnas), sedan ledningen
+	  utrustningen  sadeln först, tränset sist (kanon: «Träns på sist») ]]
+do
+	local NR = Naromrade
+	local function sakMed(namn, promptNamn, lage, forHast)
+		local del = Instance.new("Part")
+		del.Name = namn
+		del.Size = Vector3.new(1, 1, 1)
+		del.CFrame = CFrame.new(lage)
+		if forHast then del:SetAttribute("ForHast", forHast) end
+		local p = Instance.new("ProximityPrompt")
+		p.Name = promptNamn
+		p.ActionText = promptNamn
+		p.KeyboardKeyCode = Enum.KeyCode.X
+		p.MaxActivationDistance = 10
+		p.Enabled = true
+		p.Parent = del
+		del.Parent = workspace
+		return del, p
+	end
+	local function namnIPanelen()
+		local ut = {}
+		for _, p in ipairs(NR._prompter()) do table.insert(ut, p.Name) end
+		return ut
+	end
+	local function paTur()
+		for _, v in ipairs(NR._val()) do
+			if v.paTur then return tostring(v.id) end
+		end
+		return "-"
+	end
+	local bas = kropp.CFrame.Position
+
+	-- Ledsteget: skötseln är gjord, `leda` står på tur (slutet av 3d).
+	local dorr = sakMed("Grind", "DorrPrompt", bas + Vector3.new(2, 0, 0))
+	NR.satRider(false)
+	local ordning = namnIPanelen()
+	prova("LEDSTEGET: dörren och ledningen står först, i den ordningen",
+		paTur() == "leda" and ordning[1] == "DorrPrompt"
+			and ordning[2] == "LedPrompt",
+		("på tur %s · %s"):format(paTur(), table.concat(ordning, " | ")))
+	dorr:Destroy()
+
+	-- Utrustningen: allt före `iordning` gjort, och hovarna i den.
+	local forrad = Instance.new("Model")
+	forrad.Name = "Boxfront"
+	forrad:SetAttribute("ForHast", HAST_ID)
+	local sadel = sakMed("Sadelhylla", "SadelPrompt", bas + Vector3.new(1.5, 0, 0))
+	local trans = sakMed("Transkrok", "TransPrompt", bas + Vector3.new(1.0, 0, 0))
+	sadel.Parent = forrad
+	trans.Parent = forrad
+	forrad.Parent = workspace
+	state = Preparation.nyState(HAST_ID, 1)
+	for _, fas in ipairs(Preparation.stegFaser()) do
+		if fas.id == "iordning" then break end
+		gorFas(fas.id)
+	end
+	local function gorTill(stopp)
+		while true do
+			local m = Preparation.nastaMoment(state, "iordning")
+			if not m or stopp(m.id) then break end
+			if not Preparation.utforMoment(state, "iordning", m.id, HAST_ID) then break end
+		end
+	end
+	gorTill(function(id) return string.sub(id, 1, 4) == "utr:" end)
+	visa(Preparation.STATUS.FORBEREDER)
+	NR.satRider(false)
+	local forst = namnIPanelen()
+	prova("UTRUSTNINGEN: sadeln först, tränset efter — inte Rida nu",
+		paTur() == "utr:1" and forst[1] == "SadelPrompt"
+			and forst[2] == "TransPrompt",
+		("på tur %s · %s"):format(paTur(), table.concat(forst, " | ")))
+
+	local antal = 0
+	for _, m in ipairs(Preparation.moment and Preparation.moment("iordning") or {}) do
+		if string.sub(m.id, 1, 4) == "utr:" then antal += 1 end
+	end
+	gorTill(function(id) return id == "utr:" .. antal end)
+	visa(Preparation.STATUS.FORBEREDER)
+	NR.satRider(false)
+	local sist = namnIPanelen()
+	prova("och i sista utrustningssteget står tränset först",
+		antal > 1 and paTur() == "utr:" .. antal and sist[1] == "TransPrompt",
+		("%d utr-moment · på tur %s · %s"):format(antal, paTur(),
+			table.concat(sist, " | ")))
+	forrad:Destroy()
+
+	-- Tillbaka till utgångsläget för avsnitt 4: `leda` står på tur.
 	state = Preparation.nyState(HAST_ID, 1)
 	for _, fas in ipairs(Preparation.stegFaser()) do
 		if fas.id ~= "leda" then gorFas(fas.id) end

@@ -1617,6 +1617,18 @@ end
 	knapp som bara betyder "jag har läst" är en handling till per uppgift.
 	Nedräkningen ritar om samma vy utan kvittensen, och då står nästa
 	instruktion där av sig själv. ]]
+--[[ #264 PLAYER_INTERACTION_CONSOLIDATION: en kvittens eller ett nej som kommer
+     EFTER vyn skrevs direkt i skötselns etiketter och nådde aldrig värden —
+     mätt i Studio: servern sa «Saddle and bridle hang on the stall front» och
+     panelens återkopplingsfält var tomt. Samma text, till värden. ]]
+local function berattaForVarden(sort: string, text: string)
+	if panelData then
+		panelData.aterkoppling = sort
+		panelData.text = text
+	end
+	if vard then vard() end
+end
+
 local function visaBekraftelse(text: string?)
 	if type(text) ~= "string" or text == "" then return end
 	--[[ Ett JA släcker ett nej som står kvar: gjorde hon om momentet och
@@ -1629,6 +1641,7 @@ local function visaBekraftelse(text: string?)
 	if instruktion then instruktion.Text = text end
 	if hjalp then hjalp.Text = text end
 	PreparationController.tillampaLayout()
+	berattaForVarden("ok", text)
 	task.delay(PreparationController.BEKRAFTELSE_TID, function()
 		--[[ En andra kvittens hinner före den förstas nedräkning när
 			spelaren trycker snabbt. Numret gör att bara den SENASTE
@@ -1656,6 +1669,7 @@ local function visaAvslag(text: string?)
 	if instruktion then instruktion.Text = text end
 	if hjalp then hjalp.Text = text end
 	PreparationController.tillampaLayout()
+	berattaForVarden("nej", text)
 	task.delay(PreparationController.AVSLAG_TID, function()
 		if avslagNr ~= nr then return end
 		avslag = nil

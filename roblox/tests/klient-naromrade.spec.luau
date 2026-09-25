@@ -614,6 +614,36 @@ do
 		check("blocket står kvar i vänsterkanten när det ryms ovanför",
 			x1b == 16, ("x=%d"):format(x1b))
 
+		--[[ HELA PANELEN, INTE RADERNA (#264, mätt i Studio): raderna ovan
+		     ryms, men panelen med rubrik, nästa steg och en fråga var 322 px
+		     hög — ankrad i golvet hamnade överkanten ovanför skärmen. Här
+		     får den ritade panelen samma höjd, och då ska den väja i sidled
+		     med nederkanten tillbaka i stället för att sticka upp. ]]
+		do
+			local pn
+			for _, b in ipairs(yta._barn or {}) do
+				if b.Name == "Panel" then pn = b end
+			end
+			check("PANELEN finns att ge en höjd", pn ~= nil)
+			if pn then
+				local gammal = pn.AbsoluteSize
+				pn.AbsoluteSize = Vector3.new(300, 322, 0)
+				local hx, hgolv = N.blockplats()
+				check("HÖG PANEL: den ligger inte ovanför spaken när den inte ryms där",
+					hx ~= nil and hx >= 472 and hgolv == GUI_H,
+					("x=%s golv=%s"):format(tostring(hx), tostring(hgolv)))
+				check("och hela panelen ligger då innanför skärmen",
+					hgolv ~= nil and hgolv - 16 - 322 >= 0,
+					("överkant %s"):format(tostring(hgolv and hgolv - 16 - 322)))
+				pn.AbsoluteSize = Vector3.new(300, 200, 0)
+				local lx, lgolv = N.blockplats()
+				check("LÅG PANEL: den som ryms ovanför spaken står kvar där",
+					lx == 16 and lgolv == ytaY0,
+					("x=%s golv=%s"):format(tostring(lx), tostring(lgolv)))
+				pn.AbsoluteSize = gammal
+			end
+		end
+
 		--[[ NÄR DET INTE RYMS UPPÅT ska blocket väja i sidled i stället
 		     för att försvinna. Kontrollen får här nästan hela höjden. ]]
 		local hog = knapp("HogRorelseYta", 0, 40, 472, 721)
@@ -1260,6 +1290,9 @@ do
 	for i = 1, 9 do
 		local p = nyPrompt("Sak" .. i, "Öppna", "Dörr " .. i,
 			Vector3.new(i * 0.3, 0, 0))
+		--[[ Motorns standardtangent. Utan den finns inget att dela ut, och
+		     provet om tangenten följer raden mäter ingenting. ]]
+		p.KeyboardKeyCode = Enum.KeyCode.E
 		table.insert(flock, p)
 	end
 	N.satRider(false)
@@ -1310,6 +1343,33 @@ do
 	end
 	check("OCH INGEN ANDRA YTA: noll infödda bubblor kvar",
 		kvarNativeFlock == 0, ("%d kvar"):format(kvarNativeFlock))
+
+	--[[ TANGENTEN FÖLJER RADEN (#264, mätt i Studio): en port på sida 2
+	     bar X och öppnades av ett tryck som ingen rad visade. På varje
+	     sida ska det som inte står i panelen vara tystat, och det som
+	     står där ha sin tangent. ]]
+	do
+		local fel = {}
+		for s = 1, sidor do
+			local synliga: { [any]: boolean } = {}
+			for _, p in ipairs(N._prompter()) do synliga[p] = true end
+			local medTangent = 0
+			for _, p in ipairs(flock) do
+				local dod = p.KeyboardKeyCode == N.DODTANGENT
+				if not synliga[p] and not dod then
+					table.insert(fel, ("sida %d: %s bär %s utan rad"):format(
+						s, p.Name, tostring(p.KeyboardKeyCode)))
+				end
+				if synliga[p] and not dod then medTangent += 1 end
+			end
+			if medTangent < 1 then
+				table.insert(fel, ("sida %d: ingen synlig rad har en tangent"):format(s))
+			end
+			N._bladdra()
+		end
+		check("TANGENTEN FÖLJER RADEN — ingen handling bakom overflow bär en tangent",
+			#fel == 0, table.concat(fel, " | "))
+	end
 
 	--[[ ── SIDAN MÅSTE KLAMPAS NÄR LISTAN KRYMPER ──────────────────
 
@@ -1826,14 +1886,27 @@ do
 	check("dagens hästs första handling ÄGER sin tangent",
 		egen.KeyboardKeyCode == Enum.KeyCode.G, tostring(egen.KeyboardKeyCode))
 	check("GRANNENS SADEL ÄR TYST — ett G når den inte",
-		granne.KeyboardKeyCode == Enum.KeyCode.Unknown,
+		granne.KeyboardKeyCode == N.DODTANGENT,
 		tostring(granne.KeyboardKeyCode))
+	--[[ Jämförelsen ovan följer konstanten och kan därför inte fånga ett
+	     fel VÄRDE. Mätt i motorn: en prompt med `Unknown` svarar på VILKEN
+	     inmatning som helst — ett pektryck i 3D-vyn utlöste den. Den döda
+	     tangenten måste vara en riktig tangent som inte går att trycka. ]]
+	check("DEN DÖDA TANGENTEN ÄR INTE Unknown — den svarar på allt",
+		N.DODTANGENT ~= Enum.KeyCode.Unknown and N.DODTANGENT ~= nil,
+		tostring(N.DODTANGENT))
 	check("och grannens bild är släckt", granne.Style == Enum.ProximityPromptStyle.Custom)
+	--[[ #264 CONSOLIDATION, mätt i Studio: ett pektryck aktiverade en
+	     släckt, tangentlös grannsadel genom `ClickablePrompt`. ]]
+	check("OCH FINGRET NÅR DEN INTE — grannsadeln är inte klickbar",
+		granne.ClickablePrompt == false, tostring(granne.ClickablePrompt))
+	check("inte heller den bortvalda dörren",
+		dorrLangt.ClickablePrompt == false, tostring(dorrLangt.ClickablePrompt))
 	check("och grannen har ingen rad", iRader(granne) == nil)
 	check("en andra egen handling med samma tangent behåller sin RAD",
 		iRader(egen2) ~= nil)
 	check("men inte tangenten — ett G har exakt en mottagare",
-		egen2.KeyboardKeyCode == Enum.KeyCode.Unknown,
+		egen2.KeyboardKeyCode == N.DODTANGENT,
 		tostring(egen2.KeyboardKeyCode))
 	local etikettEgen2 = N._rader()[iRader(egen2) or 0] or ""
 	check("och dess rad lovar ingen tangent den inte har",
@@ -1846,7 +1919,7 @@ do
 	check("den närmaste dörren äger X",
 		dorrNara.KeyboardKeyCode == Enum.KeyCode.X, tostring(dorrNara.KeyboardKeyCode))
 	check("den andra dörren är tyst och släckt",
-		dorrLangt.KeyboardKeyCode == Enum.KeyCode.Unknown
+		dorrLangt.KeyboardKeyCode == N.DODTANGENT
 			and dorrLangt.Style == Enum.ProximityPromptStyle.Custom,
 		("%s %s"):format(tostring(dorrLangt.KeyboardKeyCode), tostring(dorrLangt.Style)))
 
@@ -1867,7 +1940,7 @@ do
 		dorrar2 == 1 and iRader(dorrLangt) ~= nil, ("%d dörrar"):format(dorrar2))
 	check("tangenten följde med till den nya dörren",
 		dorrLangt.KeyboardKeyCode == Enum.KeyCode.X
-			and dorrNara.KeyboardKeyCode == Enum.KeyCode.Unknown)
+			and dorrNara.KeyboardKeyCode == N.DODTANGENT)
 	rot.Position = Vector3.new(0, 0, 0)
 
 	--[[ ── TILLDELNINGEN ANLÄNDER SENT ──────────────────────────────────
@@ -1878,13 +1951,13 @@ do
 	N.satRider(false)
 	check("utan tilldelning äger den närmaste sadeln G",
 		granne.KeyboardKeyCode == Enum.KeyCode.G
-			and egen.KeyboardKeyCode == Enum.KeyCode.Unknown,
+			and egen.KeyboardKeyCode == N.DODTANGENT,
 		("granne %s egen %s"):format(tostring(granne.KeyboardKeyCode),
 			tostring(egen.KeyboardKeyCode)))
 	PreparationController._satHastIdForProv("trixie")
 	N.satRider(false)
 	check("TILLDELNINGEN LANDAR: grannen tyst, dagens häst tar G",
-		granne.KeyboardKeyCode == Enum.KeyCode.Unknown
+		granne.KeyboardKeyCode == N.DODTANGENT
 			and egen.KeyboardKeyCode == Enum.KeyCode.G)
 
 	--[[ ── FÖRKANTEN ────────────────────────────────────────────────────
@@ -1895,7 +1968,7 @@ do
 	N.satRider(false)
 	check("en prompt i förkanten är släckt och tyst, utan rad",
 		fore.Style == Enum.ProximityPromptStyle.Custom
-			and fore.KeyboardKeyCode == Enum.KeyCode.Unknown and iRader(fore) == nil,
+			and fore.KeyboardKeyCode == N.DODTANGENT and iRader(fore) == nil,
 		("%s %s"):format(tostring(fore.Style), tostring(fore.KeyboardKeyCode)))
 	rot.Position = Vector3.new(6, 0, 0)
 	N.satRider(false)
@@ -1947,11 +2020,64 @@ do
 		and dorrLangt.Style == Enum.ProximityPromptStyle.Default
 	check("utom räckhåll får varje prompt tillbaka sin tangent och sin bild",
 		orort and N._slackta() == 0, ("släckta %d"):format(N._slackta()))
+	check("och sin klickbarhet",
+		granne.ClickablePrompt == true and dorrLangt.ClickablePrompt == true,
+		("granne %s dörr %s"):format(tostring(granne.ClickablePrompt),
+			tostring(dorrLangt.ClickablePrompt)))
 
 	for _, x in ipairs({ gM, eM, e2M, dNDel, dLDel, fM, hM }) do x:Destroy() end
 	rot.Position = Vector3.new(0, 0, 0)
 	PreparationController._satHastIdForProv(nil)
 	UIS.KeyboardEnabled = tangentbordFore
+	N.stopp()
+end
+
+--[[ ══ #264 PLAYER_INTERACTION_CONSOLIDATION: LYSSNARE OCH LÅNG TEXT ══════ ]]
+print("\n── #264: lyssnarna städas, och lång text ryms ──")
+do
+	local UIS = game:GetService("UserInputService")
+	local Players = game:GetService("Players")
+	UIS.TouchEnabled = true
+	--[[ BYTE AV YTA FÅR INTE DUBBLERA LYSSNARE. Tre starter i rad — som när
+	     inmatningen byter förmåga — ska ge samma antal som en. ]]
+	N.stopp()
+	N.start()
+	local en = N._lyssnare()
+	N.start()
+	N.start()
+	check("tre starter i rad ger inga dubblerade lyssnare",
+		N._lyssnare() == en and en > 0, ("%d mot %d"):format(N._lyssnare(), en))
+	N.stopp()
+	check("och stopp lämnar inga kvar", N._lyssnare() == 0,
+		("%d kvar"):format(N._lyssnare()))
+	N.start()
+
+	--[[ LÅNG TEXT: en översättning som är dubbelt så lång som den svenska
+	     får inte spräcka panelen. Raden radbryter i fast storlek — ingen
+	     skalad text — och panelen håller sin bredd. ]]
+	local rot = Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+	rot.Position = Vector3.new(0, 0, 0)
+	local lang = nyPrompt("LangText",
+		"Lift the numnah into the gullet so that the withers stay completely free",
+		"A very long object name for the localisation test", Vector3.new(1, 0, 0))
+	N.satRider(false)
+	local rad = nil
+	for i, p in ipairs(N._prompter()) do if p == lang then rad = i end end
+	local pnl = N._panel()
+	local bredd = pnl.ram and pnl.ram.Size and pnl.ram.Size.X and pnl.ram.Size.X.Offset or -1
+	check("den långa handlingen får en rad", rad ~= nil)
+	check("och panelen håller kontraktets bredd", bredd >= 120 and bredd <= 320,
+		("%d px"):format(bredd))
+	local knapp = nil
+	for _, b in ipairs((pnl.ram and pnl.ram:FindFirstChild("Lista") or {} :: any)._barn or {}) do
+		if b.Visible and b.Text and string.find(b.Text, "numnah", 1, true) then knapp = b end
+	end
+	check("raden radbryter i fast storlek — ingen skalad text",
+		knapp ~= nil and knapp.TextWrapped == true and knapp.TextScaled == false
+			and knapp.TextSize == 14,
+		knapp and ("wrap %s scaled %s size %s"):format(tostring(knapp.TextWrapped),
+			tostring(knapp.TextScaled), tostring(knapp.TextSize)) or "ingen rad")
+	if lang.Parent then lang.Parent:Destroy() end
 	N.stopp()
 end
 

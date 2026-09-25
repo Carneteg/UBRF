@@ -65,6 +65,8 @@ local UgnetaController = {}
 local player = Players.LocalPlayer
 
 local gui: ScreenGui? = nil
+--[[ Den enhetliga panelen, när den är värd. Se `satVard`. ]]
+local vard: (() -> ())? = nil
 local chip: TextLabel? = nil
 --[[ Knappraden. Ramlös och utan bakgrund: den är en rad val, inte en
      panel. Frame:en finns bara för att layouten ska ha något att ankra
@@ -262,6 +264,7 @@ local function bygg()
 	     läser den, och utan tilldelningen byggde varje anrop en ny HUD
 	     ovanpå den förra. Specen fångade två "Live" i samma ScreenGui. ]]
 	gui = g
+	if vard then g.Enabled = false end
 	--[[ ── OCH OM YTAN ÄNDRAR STORLEK (#206) ─────────────────────────
 
 		Vridning, delad skärm och fönsterändring. Knappraden ligger i
@@ -708,6 +711,61 @@ end
 
 function UgnetaController.start()
 	bygg()
+	if vard and gui then gui.Enabled = false end
+end
+
+--[[ ══ EN PANEL (#264 PLAYER_INTERACTION_CONSOLIDATION) ════════════════
+
+	Lektionens röst — bannern, live-chipet — och dess val (Prova igen, Se
+	ritten, Gå vidare) ritades i en egen yta bredvid spelarens panel.
+	Kontraktet: uppsutten visar panelen lektionens vägledning, kort coachning
+	står i dess återkopplingsfält, och en giltig efterritt läses i panelen
+	och avfärdas där.
+
+	`panel()` lämnar det här modulen redan ritar, som data. Knapparna bär sina
+	befintliga handlingar (`fortsatt`, `replay`, `gaVidare`) — samma väg som
+	tangenten och knappen gick, med samma vakt (`vantarPa`). Med en värd
+	(`satVard`) är den egna ytan släckt; elementens eget tillstånd, och alltså
+	varje prov som läser det, är orört. ]]
+function UgnetaController.satVard(fn: (() -> ())?)
+	vard = fn
+	if gui then gui.Enabled = fn == nil end
+end
+
+function UgnetaController.panel(): any
+	local knappar = {}
+	local v = valrad
+	if v and v.Visible then
+		local kn = kortKnapp
+		if kn and kn.Visible then
+			table.insert(knappar, { text = kn.Text, aktiv = true, paTur = true,
+				skicka = function() UgnetaController.fortsatt() end })
+		end
+		local rk = replayKnapp
+		if rk and rk.Visible then
+			table.insert(knappar, { text = rk.Text, aktiv = true,
+				skicka = function() UgnetaController.replay() end })
+		end
+		local vk = vidareKnapp
+		if vk and vk.Visible then
+			table.insert(knappar, { text = vk.Text, aktiv = true,
+				skicka = function() UgnetaController.gaVidare() end })
+		end
+	end
+	local text: string? = nil
+	local c = chip
+	if c and c.Visible and c.Text ~= "" then
+		text = c.Text
+	elseif CoachBanner.synlig() then
+		local m, d = CoachBanner.text()
+		text = if d ~= "" then (m .. " — " .. d) else m
+	end
+	--[[ ÖVNINGEN står kvar i bannerns etiketter även när bannern tonat ut.
+	     Den är lektionens VÄGLEDNING, inte en kort coachning, och panelen
+	     visar den så länge lektionen pågår. ]]
+	local m, d = CoachBanner.text()
+	local ovning = if m ~= "" and d ~= "" then (m .. " — " .. d) else (m .. d)
+	return { text = text, knappar = knappar, vantar = vantarPa, ovning = ovning }
 end
 
 return UgnetaController

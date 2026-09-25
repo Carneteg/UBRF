@@ -71,6 +71,10 @@ local PreparationController = require(script.Parent.PreparationController)
 local InteractionController = require(script.Parent.InteractionController)
 --[[ #264: ridningens kärnrader när man sitter upp. Se `ritaRidhjalp`. ]]
 local KontrollHjalp = require(script.Parent.KontrollHjalp)
+--[[ #264: lektionens röst och val, som data. Se `UgnetaController.panel`. ]]
+local UgnetaController = require(script.Parent.UgnetaController)
+--[[ #264: pågår en lektion? Då står övningen i panelen uppsutten. ]]
+local LektionController = require(script.Parent.LektionController)
 
 local Naromrade = {}
 
@@ -220,7 +224,11 @@ end
 local function tangenttext(p: ProximityPrompt): string?
 	if not UserInputService.KeyboardEnabled then return nil end
 	local ok, kod = pcall(function() return p.KeyboardKeyCode end)
+	--[[ F15 är den döda tangenten — se `DODTANGENT`. Den står aldrig i en
+	     etikett. Jämförs med namnet, för modulens konstant står längre ned. ]]
 	if not ok or kod == nil or kod == Enum.KeyCode.Unknown then return nil end
+	if typeof(kod) == "EnumItem" and kod.Name == "F15" then return nil end
+	if kod == "F15" then return nil end
 	--[[ NAMNET LÄSES FÖRSIKTIGT. I motorn är `KeyboardKeyCode` ett
 	     `EnumItem` med `.Name`; provbänken modellerar `Enum.KeyCode.E`
 	     som strängen «E». `tostring` på ett EnumItem ger
@@ -817,11 +825,39 @@ local function lasTangent(p: ProximityPrompt, falt: string): Enum.KeyCode
 	return Enum.KeyCode.Unknown
 end
 
+--[[ ══ ETT TRYCK PÅ SKÄRMEN, EN MOTTAGARE (#264 PLAYER_INTERACTION_CONSOLIDATION) ══
+
+	Mätt i Studio, iPad-emulering, med tangenterna redan tysta: ETT tryck på
+	panelens rad utlöste tre prompter samtidigt —
+
+	    SadelPrompt @Bränntomts Lydia   Custom  key=None  ClickablePrompt=true
+	    DorrPrompt  @Anläggning         Custom  key=None  ClickablePrompt=true
+	    SadelPrompt @Garnit Parasido    Custom  key=None  ClickablePrompt=true
+
+	— och servern loggade två grannsadlar som nekades, precis det tangent-
+	rättelsen skulle ha stoppat.
+
+	ORSAKEN VAR INTE KLICKBARHETEN. Med `ClickablePrompt = false` utlöstes
+	de fortfarande. Det som öppnade vägen var tangenten `Unknown`, som motorn
+	behandlar som «vilken inmatning som helst» — se `DODTANGENT`. Klick-
+	barheten stängs ändå, som ett andra lager: en släckt prompt har ingen
+	bild att klicka på, och panelens rader aktiverar med `InputHoldBegin`,
+	som klickbarheten inte rör. Originalet sparas och sätts tillbaka. ]]
+local function satKlickbar(p: ProximityPrompt, v: boolean)
+	pcall(function()
+		if p.ClickablePrompt ~= v then p.ClickablePrompt = v end
+	end)
+end
+
 local function slack(p: ProximityPrompt)
 	if slackta[p] ~= nil then return end
+	local klick = true
+	pcall(function() klick = p.ClickablePrompt ~= false end)
 	slackta[p] = { stil = p.Style,
 		tangent = lasTangent(p, "KeyboardKeyCode"),
-		knapp = lasTangent(p, "GamepadKeyCode") }
+		knapp = lasTangent(p, "GamepadKeyCode"),
+		klick = klick }
+	satKlickbar(p, false)
 	bytStil(p, Enum.ProximityPromptStyle.Custom)
 end
 
@@ -829,6 +865,7 @@ local function aterstall(p: ProximityPrompt, post: any)
 	--[[ En prompt som lämnat världen ska inte skrivas på. ]]
 	if p.Parent == nil then return end
 	satTangenter(p, post.tangent, post.knapp)
+	satKlickbar(p, post.klick ~= false)
 	bytStil(p, post.stil)
 end
 
@@ -851,6 +888,23 @@ end
      Det som inte är relevant alls — andra hästars saker, dörrar utöver den
      närmaste, förkanten — blir tyst på alla. Allt som släckts har en post
      i `slackta`, och originalet läses därifrån. ]]
+--[[ ══ DEN DÖDA TANGENTEN (#264 PLAYER_INTERACTION_CONSOLIDATION) ═══════
+
+	Tyst betydde först `Unknown`. Mätt i Studio, iPad-emulering: en prompt
+	med `KeyboardKeyCode = Unknown` svarar på VILKEN inmatning som helst —
+	ett pektryck mitt i 3D-vyn, utan någon GUI under, utlöste dörren E 5.
+	Samma prompt med F15 lät trycket passera. Tystnaden öppnade alltså en
+	väg för fingret, och panelens egna rader slog igenom till grannens sadel.
+
+	Tyst är därför en tangent ingen trycker: F15. Den står aldrig i en
+	etikett (`tangenttext`), och originalet sätts tillbaka som förut. ]]
+local DOD = Enum.KeyCode.F15
+Naromrade.DODTANGENT = DOD
+
+local function harTangent(k: Enum.KeyCode?): boolean
+	return k ~= nil and k ~= Enum.KeyCode.Unknown and k ~= DOD
+end
+
 local function delaUtTangenter(ordning: { ProximityPrompt },
 	tysta: { [ProximityPrompt]: boolean })
 	local tagnaT: { [Enum.KeyCode]: boolean } = {}
@@ -860,22 +914,22 @@ local function delaUtTangenter(ordning: { ProximityPrompt },
 		if post then
 			local t = post.tangent
 			local k = post.knapp
-			if t ~= Enum.KeyCode.Unknown and not tagnaT[t] then
+			if harTangent(t) and not tagnaT[t] then
 				tagnaT[t] = true
 			else
-				t = Enum.KeyCode.Unknown
+				t = DOD
 			end
-			if k ~= Enum.KeyCode.Unknown and not tagnaK[k] then
+			if harTangent(k) and not tagnaK[k] then
 				tagnaK[k] = true
 			else
-				k = Enum.KeyCode.Unknown
+				k = DOD
 			end
 			satTangenter(p, t, k)
 		end
 	end
 	for p in pairs(tysta) do
 		if slackta[p] then
-			satTangenter(p, Enum.KeyCode.Unknown, Enum.KeyCode.Unknown)
+			satTangenter(p, DOD, DOD)
 		end
 	end
 end
@@ -1332,8 +1386,19 @@ function Naromrade.blockplats(): (number?, number?)
 	local ytaX1, ytaY0 = Naromrade.rorelseytan()
 	if ytaY0 >= h then return KANT, panelgolv end
 
+	--[[ OVANFÖR KRÄVER HELA PANELEN, inte en rad (#264, mätt i Studio).
+	     Villkoret var «ryms en knapp ovanför spaken». Panelen är ankrad i
+	     nederkanten och var 322 px hög med eftervårdens fråga; golvet låg
+	     på 212 — överkanten hamnade på −110, och rubrik, nästa steg och
+	     frågans första alternativ låg under toppfältet. Behovet är panelens
+	     uppmätta höjd; innan den är ritad den minsta panel som går att
+	     använda (fast del plus en rad). Ryms den inte gäller sidledsvalet. ]]
+	local behov = PANEL_FAST + KNAPP_H + LUFT
+	local ram = panelRam
+	local rs = ram and (ram :: any).AbsoluteSize
+	if rs ~= nil and type(rs.Y) == "number" and rs.Y > behov then behov = rs.Y end
 	local tak = math.min(ytaY0, panelgolv)
-	if tak - KANT - LUFT >= KNAPP_H + LUFT then return KANT, tak end
+	if tak - KANT >= behov then return KANT, tak end
 
 	local x = math.max(KANT, ytaX1 + LUFT)
 	if b > 0 and x + KNAPP_B <= b - KANT then return x, panelgolv end
@@ -1523,11 +1588,35 @@ rita = function()
 		for _, r in ipairs(KontrollHjalp.ridrader()) do
 			table.insert(rader2, r.vad .. "  [" .. r.reglage .. "]")
 		end
-		if stegEtikett then
-			stegEtikett.Text = table.concat(rader2, "\n")
-			stegEtikett.Visible = #rader2 > 0
+		--[[ Övningen överst, reglagen under: lektionens vägledning och hur
+		     man driver, styr, bromsar och sitter av, i samma panel. ]]
+		local ugNu = UgnetaController.panel()
+		local kropp = table.concat(rader2, "\n")
+		if LektionController.pagar() and ugNu.ovning and ugNu.ovning ~= "" then
+			kropp = ugNu.ovning .. "\n\n" .. kropp
 		end
-		visaAterkoppling(nil)
+		if stegEtikett then
+			stegEtikett.Text = kropp
+			stegEtikett.Visible = kropp ~= ""
+		end
+		--[[ LEKTIONEN I SAMMA PANEL: coachningen i återkopplingsfältet, och
+		     lektionens val (Prova igen, Se ritten, Gå vidare) i valsektionen —
+		     med sina befintliga handlingar och sin befintliga vakt. ]]
+		local ug = UgnetaController.panel()
+		visaAterkoppling(ug.text)
+		for j, k in ipairs(ug.knappar) do
+			if j <= MAX_VAL then valRader[j] = k end
+		end
+		for j, vb in ipairs(valKnappar) do
+			local k = valRader[j]
+			vb.Visible = k ~= nil
+			if k then
+				vb.Text = tostring(k.text)
+				vb.BackgroundColor3 = if k.paTur then Color3.fromRGB(92, 76, 38)
+					else Color3.fromRGB(38, 41, 47)
+			end
+		end
+		if valYta then valYta.Visible = #ug.knappar > 0 end
 		local alla = {}
 		for _, r in ipairs(KontrollHjalp.rader()) do
 			table.insert(alla, r.vad .. "  [" .. r.reglage .. "]")
@@ -1611,7 +1700,14 @@ rita = function()
 	     högst två, «Rida nu» först enligt produktordningen, resten genom
 	     overflow. Utan val gäller en primär och två sekundära. ]]
 	local valen: { any } = {}
-	if data and data.harVal then
+	--[[ EN GILTIG EFTERRITT GÅR FÖRE: den läses i panelen och avfärdas där,
+	     och först sedan tar skötselns eftervård över (kontraktet). ]]
+	local ug = UgnetaController.panel()
+	if #ug.knappar > 0 then
+		for _, k in ipairs(ug.knappar) do
+			if #valen < MAX_VAL then table.insert(valen, k) end
+		end
+	elseif data and data.harVal then
 		for _, v in ipairs(data.val) do
 			if v.aktiv and #valen < MAX_VAL then table.insert(valen, v) end
 		end
@@ -1619,6 +1715,59 @@ rita = function()
 	--[[ Under en fråga står EN sekundär handling fast — Rida nu, enligt
 	     produktordningen — så att frågans alternativ får plats att synas. ]]
 	local promptPlatser = if #valen > 0 then 1 else platser
+	--[[ ── UTRUSTNINGSSTEGET BEHÖVER SIN VERKLIGA HANDLING ────────────────
+
+		Mätt i Studio: momentet «Tacking up 1/5» stod på tur, servern sa
+		«Saddle and bridle hang on the stall front — fetch them first» — och
+		handlingen som hämtar dem låg bakom overflow, för den enda fasta
+		platsen gick till Rida nu. Kontraktet: förberedelsen visar det
+		aktuella steget OCH dess verkliga handling.
+
+		Steget känns igen på momentets kanoniska id (`utr:`), aldrig på
+		text. Då får dagens hästs sadel- och tränshandlingar de sekundära
+		platserna, och Rida nu står kvar efter dem. ]]
+	--[[ ORDNINGEN FÖLJER KANONEN, inte avståndet: «Träns på sist» —
+	     `sadelfaser` 1–4 är underlägg, sadel och gjord, den sista är
+	     tränset. Numret ur momentets id (`utr:N`) mot antalet utr-moment. ]]
+	--[[ LEDSTEGET likadant (mätt i Studio): momentet `leda` stod på tur, ett
+	     tryck på det gav «She is still in her stall» — och handlingen som
+	     faktiskt leder henne ut låg bakom overflow. Dörren först, den måste
+	     öppnas; sedan ledningen. ]]
+	local utrustningNr: number? = nil
+	local utrustningAntal = 0
+	local ledaPaTur = false
+	for _, v in ipairs(data and data.val or {}) do
+		if type(v.id) == "string" and string.sub(v.id, 1, 4) == "utr:" then
+			utrustningAntal += 1
+			if v.paTur then utrustningNr = tonumber(string.sub(v.id, 5)) end
+		end
+		if v.paTur and v.id == "leda" then ledaPaTur = true end
+	end
+	if (utrustningNr ~= nil or ledaPaTur) and #valen > 0 then
+		local transet = utrustningNr ~= nil and utrustningNr >= utrustningAntal
+		local FORST = if ledaPaTur
+			then { DorrPrompt = 1, LedPrompt = 2 }
+			elseif transet
+			then { TransPrompt = 1, TransaPrompt = 1, SadelPrompt = 2, SadlaPrompt = 2 }
+			else { SadelPrompt = 1, SadlaPrompt = 1, TransPrompt = 2, TransaPrompt = 2 }
+		local rang: { [ProximityPrompt]: number } = {}
+		for i, p in ipairs(ordnade) do rang[p] = i end
+		local function klass(p: ProximityPrompt): number
+			local k = FORST[p.Name]
+			if k == nil then return 3 end
+			--[[ En dörr hör inte till någon häst; allt annat måste vara
+			     dagens hästs. ]]
+			if arDorr(p) then return k end
+			if minHast ~= nil and Naromrade.hastFor(p) == minHast then return k end
+			return 3
+		end
+		table.sort(ordnade, function(a, b)
+			local ka, kb = klass(a), klass(b)
+			if ka ~= kb then return ka < kb end
+			return rang[a] < rang[b]
+		end)
+		promptPlatser = math.min(2, platser)
+	end
 	antalHandlingar = #ordnade
 	local sidor = math.max(1, math.ceil(#ordnade / promptPlatser))
 	--[[ Sidan klampas varje ritning: listan krymper när hon går därifrån,
@@ -1650,7 +1799,16 @@ rita = function()
 		if not slacks[p] then tandIgen(p) end
 	end
 	for p in pairs(slacks) do slack(p) end
-	delaUtTangenter(ordnade, tysta)
+	--[[ TANGENTEN FÖLJER RADEN (#264, mätt i Studio): porten låg på sida 2
+	     av 3 men bar ändå X, och ett X-tryck öppnade en port som inte stod
+	     i panelen. En handling bakom overflow nås genom att bläddra; först
+	     när dess rad syns får den sin tangent. ]]
+	local paSidan: { [ProximityPrompt]: boolean } = {}
+	for _, p in ipairs(senaste) do paSidan[p] = true end
+	for _, p in ipairs(ordnade) do
+		if not paSidan[p] then tysta[p] = true end
+	end
+	delaUtTangenter(senaste, tysta)
 
 	--[[ Den varma accenten bara på den primära handlingen: med en fråga det
 	     alternativ som står på tur — samma markering som skötselns egen yta
@@ -1688,6 +1846,16 @@ rita = function()
 	end
 
 	fyllText(data, minHast, hastnamn)
+	--[[ PRIORITET (kontraktet): ett nej från uppgiften går före lektionens
+	     coachning — mätt i bänken: en kvarliggande efterritt-text skrev över
+	     skötselns «hämta sadeln först». ]]
+	--[[ Och ett JA likaså (mätt i bänken): en kvittens som kom efter vyn
+	     skrevs över av en kvarliggande efterritt-text. Båda svaren är
+	     tidsbegränsade i skötseln, så coachningen tar tillbaka fältet när
+	     de runnit ut. ]]
+	local svarFranUppgiften = data ~= nil
+		and (data.aterkoppling == "nej" or data.aterkoppling == "ok")
+	if ug.text and not svarFranUppgiften then visaAterkoppling(ug.text) end
 	placera(pn)
 	pn.Visible = true
 end
@@ -1724,6 +1892,11 @@ function Naromrade._prompter(): { ProximityPrompt }
 		if p then table.insert(ut, p) end
 	end
 	return ut
+end
+
+--[[ Provets fönster in: hur många motorlyssnare modulen håller just nu. ]]
+function Naromrade._lyssnare(): number
+	return #hallKopplingar + (if koppling then 1 else 0)
 end
 
 --[[ #264 PLAYER_INTERACTION_CONSOLIDATION: provets fönster in i panelen. ]]
@@ -1834,6 +2007,7 @@ function Naromrade.start()
 	--[[ EN PANEL (#264 PLAYER_INTERACTION_CONSOLIDATION): skötselns egna
 	     ytor släcks och deras innehåll kommer hit. Varje ny vy ritar om. ]]
 	PreparationController.satVard(function() rita() end)
+	UgnetaController.satVard(function() rita() end)
 	if koppling then koppling:Disconnect() end
 	koppling = RunService.RenderStepped:Connect(function(dt)
 		--[[ Fyllningen varje bildruta — ett håll på 0,2 s ryms annars
@@ -1869,6 +2043,7 @@ function Naromrade.stopp()
 	slappHall()
 	tandAllaIgen()
 	PreparationController.satVard(nil)
+	UgnetaController.satVard(nil)
 	fyllPrompt = nil
 	for _, k in ipairs(hallKopplingar) do k:Disconnect() end
 	table.clear(hallKopplingar)
