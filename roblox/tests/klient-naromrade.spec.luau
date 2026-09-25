@@ -2384,6 +2384,90 @@ do
 	N.satRider(false)
 end
 
+--[[ ══ #264 PLAYER_FLOW_CLOSURE_R5: HELA PANELEN INOM BILDYTAN ══════════
+
+	R4 mätte hjälpknappen på y = −1, och ett R2-prov på 941ffeb gav en
+	överkant på −17,6 (viewport 1179×761, rörelseytan från 254, panel 322).
+	Bara frågan hade en budget. Här mäts hela panelens: med en lång, utfälld
+	hjälp ska rubrik, kropp, fråga och handlingsrader rymmas mellan
+	överkanten och rörelseytan, och kroppen ska rulla i stället för att växa. ]]
+print("\n── R5: hela panelen inom bildytan ──")
+do
+	local UIS = game:GetService("UserInputService")
+	local Players = game:GetService("Players")
+	N.stopp()
+	UIS.TouchEnabled = true
+	UIS.KeyboardEnabled = true
+	N.start()
+	local spelare = Players.LocalPlayer
+	local pg = spelare:FindFirstChildOfClass("PlayerGui")
+	local yta = pg:FindFirstChild("UBRFNaromrade")
+	local foreStorlek = yta.AbsoluteSize
+	PreparationController._satRutaForProv(nil)
+	local function v2(x, y) return { X = x, Y = y } end
+	local spak = { Name = "RorelseYta", Visible = true, _barn = {},
+		AbsolutePosition = v2(0, 254), AbsoluteSize = v2(472, 507),
+		IsA = function(_, k) return k == "GuiButton" end,
+		GetDescendants = function() return {} end }
+	local tg = { Name = "TouchGui", _barn = { spak },
+		GetDescendants = function(self) return self._barn end,
+		FindFirstChild = function(self, sokt)
+			for _, b in ipairs(self._barn) do if b.Name == sokt then return b end end
+			return nil
+		end }
+	table.insert(pg._barn, tg)
+	yta.AbsoluteSize = Vector3.new(1179, 761, 0)
+
+	local pn, kropp, lista, rubrikRad
+	for _, d in ipairs(yta:GetDescendants()) do
+		if d.Name == "Panel" then pn = d end
+		if d.Name == "Kropp" then kropp = d end
+		if d.Name == "Lista" then lista = d end
+		if d.Name == "RubrikRad" then rubrikRad = d end
+	end
+	check("R5 KONTROLL: panelen har en rullbar kropp", kropp ~= nil and kropp.ClassName == "ScrollingFrame")
+	local _, golv = N.blockplats()
+	check("R5 KONTROLL: panelen står ovanför rörelseytan", golv == 254, tostring(golv))
+
+	--[[ Uppmätta storlekar (bänken har ingen layoutmotor): rubrik 44 px,
+	     två handlingsrader, och en kropp med lång, utfälld hjälp. ]]
+	--[[ Stubbens ramar har `Visible = nil`; i Roblox är standard `true`. ]]
+	rubrikRad.Visible = true
+	lista.Visible = true
+	rubrikRad.AbsoluteSize = Vector3.new(300, 44, 0)
+	lista.AbsoluteSize = Vector3.new(300, 2 * 56 + 8, 0)
+	local krLay = kropp:FindFirstChildOfClass("UIListLayout")
+	krLay.AbsoluteContentSize = Vector3.new(280, 420, 0)
+	pn.AbsoluteSize = Vector3.new(300, 150, 0)
+	N.satRider(false)
+	local LUFT = 8
+	local kroppH = kropp.Size.Y.Offset
+	--[[ Utfyllnad 20 + barnen + ett mellanrum MELLAN varje par av barn. ]]
+	local hojd = 20 + 44 + LUFT + kroppH + LUFT + (2 * 56 + 8)
+	local tak = math.min(254 - 16 - 16, 761 * 0.4)
+	check("R5: LÅNG HJÄLP — HELA PANELEN RYMS UNDER TAKET",
+		hojd <= tak + 0.5, ("panel %.1f, tak %.1f"):format(hojd, tak))
+	check("R5: och kroppen rullar i stället för att växa",
+		kroppH < 420 and kropp.AutomaticCanvasSize == Enum.AutomaticSize.Y,
+		("kropp %.1f av 420"):format(kroppH))
+	local nederkant = pn.Position.Y.Offset
+	check("R5: överkanten ligger på skärmen", nederkant - hojd >= 0,
+		("överkant %.1f"):format(nederkant - hojd))
+	check("R5: och nederkanten ovanför rörelseytan", nederkant <= 254,
+		("nederkant %.1f"):format(nederkant))
+
+	--[[ Kort kropp och en rad: den tar bara sin egen höjd. ]]
+	lista.AbsoluteSize = Vector3.new(300, 56, 0)
+	krLay.AbsoluteContentSize = Vector3.new(280, 40, 0)
+	N.satRider(false)
+	check("R5: en kort kropp tar bara sin egen höjd", kropp.Size.Y.Offset == 40,
+		tostring(kropp.Size.Y.Offset))
+
+	for i, b in ipairs(pg._barn) do if b == tg then table.remove(pg._barn, i) break end end
+	yta.AbsoluteSize = foreStorlek
+	N.satRider(false)
+end
+
 if fails > 0 then
 	print(string.format("\n%d mätning(ar) föll.", fails))
 	local avsluta = (os :: any).exit

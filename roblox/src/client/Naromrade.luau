@@ -160,6 +160,8 @@ local hjalpUt = false
 local valRader: { [number]: any } = {}
 local valKnappar: { TextButton } = {}
 local valYta: ScrollingFrame? = nil
+--[[ #264 R5: den rullbara kroppen — instruktion, återkoppling, hjälp. ]]
+local kroppYta: ScrollingFrame? = nil
 local antalHandlingar = 0
 local sistaInstruktion = ""
 --[[ #264 GAIT_READABILITY_AND_UGNETA: den ridna hästens eget läge — gångart,
@@ -1182,6 +1184,35 @@ local function bygg()
 	rub.Parent = rr
 	rubrikEtikett = rub
 	stegEtikett = etikettYta("Steg", 2, 14, false)
+	--[[ ══ #264 PLAYER_FLOW_CLOSURE_R5: HELA PANELEN INOM BILDYTAN ══════════
+
+	     R4 mätte hjälpknappen på y = −1, och ett R2-prov på 941ffeb gav en
+	     överkant på −17,6 (viewport 1179×761, rörelseytan från 254, panel
+	     322 px). Bara frågan hade en budget; instruktion, återkoppling och en
+	     utfälld hjälp växte fritt, och panelen är ankrad i nederkanten.
+
+	     Texten som kan växa bor därför i en rullbar KROPP. Rubriken och
+	     handlingsraderna står fast och syns alltid; `placera` ger kroppen det
+	     som blir kvar under panelens tak. ]]
+	local kr = Instance.new("ScrollingFrame")
+	kr.Name = "Kropp"
+	kr.LayoutOrder = 2
+	kr.BackgroundTransparency = 1
+	kr.BorderSizePixel = 0
+	kr.ScrollBarThickness = 4
+	kr.ScrollingDirection = Enum.ScrollingDirection.Y
+	kr.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	kr.CanvasSize = UDim2.new(0, 0, 0, 0)
+	kr.Size = UDim2.new(1, 0, 0, 0)
+	kr.Parent = pn
+	local krLista = Instance.new("UIListLayout")
+	krLista.FillDirection = Enum.FillDirection.Vertical
+	krLista.SortOrder = Enum.SortOrder.LayoutOrder
+	krLista.Padding = UDim.new(0, LUFT)
+	krLista.Parent = kr
+	kroppYta = kr
+	stegEtikett.LayoutOrder = 1
+	stegEtikett.Parent = kr
 
 	--[[ SKÖTSELNS FRÅGA RULLAR I SIN EGEN SEKTION när den inte ryms inom
 	     40 % av höjden — kontraktet: långa svarslistor rullar utan att
@@ -1275,6 +1306,8 @@ local function bygg()
 	aterEtikett = etikettYta("Aterkoppling", 5, 14, false)
 	aterEtikett.TextColor3 = Color3.fromRGB(236, 196, 92)
 	aterEtikett.Visible = false
+	aterEtikett.LayoutOrder = 2
+	aterEtikett.Parent = kr
 
 	--[[ HJÄLPEN FÄLLS UT I PANELEN, inte i ett eget fönster. ]]
 	local hk = Instance.new("TextButton")
@@ -1299,6 +1332,8 @@ local function bygg()
 	hjalpText = etikettYta("HjalpText", 6, 14, false)
 	hjalpText.TextColor3 = Color3.fromRGB(190, 192, 196)
 	hjalpText.Visible = false
+	hjalpText.LayoutOrder = 3
+	hjalpText.Parent = kr
 end
 
 --[[ ── HUR MÅNGA RADER RYMS? (#246 E) ──────────────────────────────────
@@ -1587,6 +1622,8 @@ local function placera(pn: Frame)
 	if ledigt < b then b = math.max(ledigt, 120) end
 	pn.Size = UDim2.fromOffset(b, 0)
 	local botten = math.min(golv or hojd, hojd) - KANT
+	--[[ #264 R5: nederkanten ovanför rörelseytan, före R2:s nedflyttning. ]]
+	local ovanfor = botten
 	--[[ #264 R2, MÄTT I STUDIO: panelen får aldrig gå ovanför skärmen.
 	     I pekläge ligger den dynamiska spakens aktiveringsyta från ungefär
 	     en tredjedel av höjden och nedåt; med verkliga radhöjder och en
@@ -1610,32 +1647,57 @@ local function placera(pn: Frame)
 	--[[ Svarssektionens höjd: det som blir kvar av 40 % när rubriken, nästa
 	     steg, de fasta handlingsraderna, återkopplingen och en utfälld hjälp
 	     tagit sitt. Handlingsraderna står fast — de rullar aldrig bort. ]]
+	--[[ #264 R5: HELA PANELEN HAR ETT TAK, inte bara frågan. Taket är det
+	     som finns mellan skärmens överkant (med KANT) och panelens
+	     nederkant — ovanför rörelseytan — och högst 40 % av höjden, som
+	     frågans tak var förut. Fördelningen, i den ordning spelaren behöver
+	     det: rubriken och handlingsraderna står alltid fast; frågan får
+	     minst sitt golv (ett och ett halvt alternativ); kroppen (instruktion,
+	     återkoppling, hjälp) får resten och rullar; det som blir över går
+	     till frågan. ]]
+	if hojd <= 0 then return end
+	local function h(o: any): number
+		if o and o.Visible and o.AbsoluteSize then return o.AbsoluteSize.Y + LUFT end
+		return 0
+	end
+	local function innehall(yta: any): number
+		local lay = yta and yta:FindFirstChildOfClass("UIListLayout")
+		local c = lay and (lay :: any).AbsoluteContentSize
+		return if c and c.Y then c.Y else 0
+	end
+	local tak = math.max(0, math.min(math.max(0, ovanfor) - KANT, hojd * 0.4))
+	local rr = rubrikEtikett and rubrikEtikett.Parent
+	local fast = 20 + h(rr) + h(ram)
 	local vl = valYta
-	if vl and vl.Visible and hojd > 0 then
-		local function h(o: any): number
-			if o and o.Visible and o.AbsoluteSize then return o.AbsoluteSize.Y + LUFT end
-			return 0
-		end
-		local rr = rubrikEtikett and rubrikEtikett.Parent
-		local fast = 20 + h(rr) + h(stegEtikett) + h(ram) + h(aterEtikett) + h(hjalpText)
-		local lay = vl:FindFirstChildOfClass("UIListLayout")
-		local innehall = lay and (lay :: any).AbsoluteContentSize
-		local behov = if innehall and innehall.Y then innehall.Y else 0
-		if behov <= 0 then
+	local fragaBehov, fragaGolv = 0, 0
+	if vl and vl.Visible then
+		fragaBehov = innehall(vl)
+		if fragaBehov <= 0 then
 			local n = 0
 			for _, vb in ipairs(valKnappar) do if vb.Visible then n += 1 end end
-			behov = n * (KNAPP_H + LUFT)
+			fragaBehov = n * (KNAPP_H + LUFT)
 		end
-		--[[ #264 R2: taket är det som FINNS — 40 % av höjden, men aldrig mer
-		     än utrymmet ovanför golvet (spaken i pekläge). Panelen stannar
-		     till vänster och frågan rullar i stället. ]]
-		local takH = hojd * 0.4
-		local budget = math.max(KNAPP_H, takH - fast)
 		--[[ Minst två alternativ syns när det finns plats: en fråga med ett
 		     synligt svar ser ut som en ensam knapp. Är ytan trång syns ett
 		     och ett halvt — halvan visar att sektionen rullar. ]]
-		local golvVal = math.min(behov, 2 * KNAPP_H + LUFT, math.max(math.floor(KNAPP_H * 1.5), budget))
-		vl.Size = UDim2.new(1, 0, 0, math.clamp(behov, golvVal, math.max(golvVal, budget)))
+		fragaGolv = math.min(fragaBehov, 2 * KNAPP_H + LUFT,
+			math.max(math.floor(KNAPP_H * 1.5), tak - fast))
+	end
+	local kr = kroppYta
+	local kroppH = 0
+	if kr then
+		local behov = innehall(kr)
+		if behov <= 0 then
+			behov = h(stegEtikett) + h(aterEtikett) + h(hjalpText)
+		end
+		local rum = tak - fast - fragaGolv - (if vl and vl.Visible then LUFT else 0) - LUFT
+		kroppH = math.clamp(behov, 0, math.max(0, rum))
+		kr.Size = UDim2.new(1, 0, 0, kroppH)
+		kr.Visible = behov > 0
+	end
+	if vl and vl.Visible then
+		local budget = tak - fast - kroppH - (if kroppH > 0 then LUFT else 0) - LUFT
+		vl.Size = UDim2.new(1, 0, 0, math.clamp(fragaBehov, fragaGolv, math.max(fragaGolv, budget)))
 	end
 end
 
@@ -2325,6 +2387,7 @@ function Naromrade.stopp()
 	table.clear(valRader)
 	table.clear(valKnappar)
 	valYta = nil
+	kroppYta = nil
 	rader = {}
 	bladdra = nil
 	senaste = {}
