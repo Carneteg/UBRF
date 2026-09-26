@@ -136,7 +136,13 @@ snart `default.project.json` mappar modellen.
 **Kvarvarande blockerare:** själva filen. `k3` finns bara i startplacen,
 och den vägen ut kräver Studio. Se `[REFERENCE GAP]` nedan.
 
-- `[REFERENCE GAP]` `roblox/assets/hastvisualer-k3.rbxmx` saknas —
+- **LÖST, verifierat 2026-09-26 (INFRA-4A):** `roblox/assets/hastvisualer-k3.rbxmx`
+  finns i repot sedan `e9c28d5`: 238 888 byte, SHA256
+  `43652860a758aa86d1f03dcf55a466755e8616d3de098258e3d4d6c6aff0b6f6`, XML (`<roblox `),
+  40 `MeshPart` och 40 `Motor6D`, samma som inventeringen ovan. Gäller
+  K3-mallen, INTE den valda assetten Horse Rigged All Gaits (se nästa avsnitt).
+  Texten nedan är historisk.
+- *(historiskt)* `[REFERENCE GAP]` `roblox/assets/hastvisualer-k3.rbxmx` saknades —
   **numera av EXPORTFORMAT, inte av åtkomst.**
 
   Studio är anslutet sedan 2026-09-24 (place `106030782437053`,
@@ -156,3 +162,116 @@ och den vägen ut kräver Studio. Se `[REFERENCE GAP]` nedan.
   **Save to File…** → spara som `hastvisualer-k3.rbxmx` i
   `C:\Users\Tobias Carneteg\Desktop\UBRF\roblox\assets\`. Ändelsen `.rbxmx` är det som gör filen till XML.
   Det ändrar ingenting i placen.
+
+## Horse Rigged All Gaits — vald asset, källkedja och gap (2026-09-26, INFRA-4A)
+
+Beslutet är att den valda hästmodellen är **Horse Rigged All Gaits**, INTE `k3`
+(PR #264, kommentar `5843082008`; grinden G-ASSET i `docs/LEVERANSMATRIS.md`).
+`k3` förblir produktionens nuvarande rigg tills en granskad väg ersätter den.
+Nuvarande roster och ID:n bevaras. Det här avsnittet dokumenterar källan. Det
+är inte en implementerad rigg, en render eller ett spelbevis.
+
+### Primärkällor, lästa 2026-09-26 cirka 06:18 UTC
+
+| uppgift | källa | status |
+|---|---|---|
+| titel "Horse Rigged All Gaits", uppladdare `fdoss001`, sidans licensetikett **CC0**, "Blender 2.9x · Eevee", 584 MB, "Uploaded about 5 years ago" | https://blendswap.com/blend/28627 | VERIFIED (sidans etikett) |
+| beskrivningen: "I was tired of not being able to find a good horse online so I made this." — nämner ingen annan upphovsperson | samma sida | VERIFIED (sidans text) |
+| **tredjepartskommentar** av `Ailuros`: "The original horse mesh is by Tarnyloo. https://blendswap.com/blend/17172" (upprepad) | samma sida, kommentarsfältet | VERIFIED att kommentaren finns — INTE att påståendet stämmer |
+| titel "Horse", uppladdare `Tarnyloo`, licensetikett **CC-BY**, "Blender 2.7x · Blender Internal", "Uploaded over 10 years ago"; **ingen licensversion och ingen attributionstext visas** | https://blendswap.com/blend/17172 | VERIFIED (sidans etikett); licensversion `[REFERENCE GAP]` |
+| #247 anger källfilen `C:\Users\Tobias Carneteg\Downloads\Horse Rigged All Gaits.blend`, cirka 613 MB | issue #247 | en uppgift, inte ett filbevis |
+
+584 MB på sidan och cirka 613 MB i #247 är förenliga (613·10⁶ byte ≈ 584,6 MiB).
+Det bevisar ändå inte att en lokal fil är just den filen.
+
+### Vad som INTE är belagt
+
+1. **Att hela paketet är CC0.** Sidans etikett är CC0, men en kommentar pekar
+   ut originalnätet som Tarnyloo:s CC-BY-modell. Kommentaren bevisar inte en
+   härledning, men den gör att CC0 för hela paketet inte kan antas.
+   `[REFERENCE GAP]` per beståndsdel: nät, rigg, animationer (actions),
+   material och eventuell utrustning har okänd upphovsperson tills det finns en
+   jämförelse eller ett uttalande.
+2. **Vilken CC-BY-version Tarnyloo upplåtit.** Sidan visar ingen version, och en
+   generell länk till CC BY 4.0 får inte tas som bevis. `[REFERENCE GAP]`
+3. **Den lokala filens identitet.** Filen finns inte (se inventeringen), så
+   ingen SHA256 kan anges. `BLOCKED`
+4. **Rättsligt klartecken.** Det ges inte här. Beslutet att använda en
+   beståndsdel under oklar licens är Tobias, och det kräver underlag.
+
+### Inventering (en gång, avgränsad), 2026-09-26 06:17 UTC
+
+**Sökta rötter:**
+- `C:\Users\Tobias Carneteg\Downloads`, två nivåer: `*.blend`, `*.blend1`,
+  `*horse*`, `*hast*`, `*gait*` och `*blendswap*`. Innehållsförteckningarna för
+  de fyra arkiven över 50 MB listades, utan uppackning.
+- `C:\Users\Tobias Carneteg\Desktop`, tre nivåer: `*.blend`, `*horse rigged*`
+  och `*all gaits*`.
+- Repots spårade filer: `*.blend`, `all gaits` och `rigged`.
+
+**Resultat:**
+- `Downloads\Horse Rigged All Gaits.blend` **finns inte**. Ingen `.blend`-fil
+  finns någonstans i Downloads.
+- `Downloads\UBRF-20260828T143052Z-1-001.zip` (Drive-export, 297 304 470 byte)
+  innehåller `UBRF/Models/Blends/Horse.blend` (2 850 084 byte),
+  `Horse_White.blend` och tio andra djur, med `UBRF/Models/License.txt`:
+  "LowPoly Models by @Quaternius … CC0 1.0 Universal".
+  - **Det är ett annat material** (Quaternius lågpolygonpaket), inte Horse
+    Rigged All Gaits.
+  - Arkivet är inte uppackat, och ingen SHA256 är tagen eftersom det inte är
+    den valda filen.
+- `download.zip`, `OneDrive_2026-08-03.zip` och `UBRF-main.zip` innehåller ingen
+  `.blend`-fil och inget material från BlendSwap.
+- Desktop och repot innehåller ingen `.blend`-fil.
+
+Sökningen är avslutad. Ingen ny sökning görs utan en ny ledtråd.
+
+### Offlineverktyg
+
+Blender är inte installerat. Python saknar `bpy` och `blender_asset_tracer`.
+Ingen installation har gjorts, så verktyget är `BLOCKED` tills filen finns.
+
+När filen finns ska en säker statisk läsning göras i en egen granskningsmapp.
+Filen får inte öppnas i ett Blender-läge som kör inbäddade skript: använd till
+exempel `--factory-startup` med avstängd autorun, eller en ren blend-parser.
+
+### Status per område
+
+| område | status |
+|---|---|
+| källsida och etikett 28627 (CC0) | VERIFIED (etikett) |
+| kommentaren om Tarnyloo | VERIFIED att den finns; påståendet `[REFERENCE GAP]` |
+| licens 17172 (CC-BY, version okänd) | etiketten VERIFIED; versionen `[REFERENCE GAP]` |
+| rättigheter för paketet per beståndsdel | `[REFERENCE GAP]` |
+| lokal fil och dess identitet | `BLOCKED` (saknas) |
+| offlineverktyg | `BLOCKED` (inget installerat, ingen installation i 4A) |
+| skala, ben, actions, klipplängder, rottranslation, fästpunkter | `BLOCKED` — inte uppmätt, och inte uppfunnet |
+
+### Vad som kan fortsätta utan assetten
+
+- Allt gameplay- och infrastrukturarbete som inte beror på hästens nät eller
+  rigg, till exempel instruktören (på 2A/2B1/2B2) och tävlingens datalager.
+- Fästpunktskontraktet som **gränssnitt**: vilka punkter som ska finnas (sadel,
+  träns, tyglar, ryttare) och hur `Riggprofiler` bär dem. Det görs utan mätta
+  värden, och `k3` fortsätter som produktionsrigg.
+
+### Vad som kräver underlag från Tobias
+
+1. **Filen:** `Horse Rigged All Gaits.blend` (eller BlendSwap-zipen) på en
+   angiven plats. Nedladdningen, cirka 584 MB och med konto, görs inte i 4A.
+2. **Rättsunderlag:** ett beslut om hur den oklara kedjan CC0/CC-BY ska
+   hanteras. Till exempel att attribuera Tarnyloo, att bara använda
+   animationerna efter en jämförelse, eller att avstå.
+3. **Verktyget:** tillåtelse att installera Blender (gratis) eller ett
+   parserbibliotek för den statiska läsningen.
+
+### Minsta nästa offlinepaket (4B), när 1 och 3 finns
+1. SHA256 och storlek för filen, jämförda med sidans 584 MB.
+2. En statisk läsning i en isolerad mapp, utan autorun:
+   - filversion och enheter;
+   - objekt, nät, armatur och ben (deformben mot kontrollben);
+   - actions med ramintervall och fps;
+   - rottranslation per action;
+   - befintlig sadel, träns och tyglar samt ryttarfästen.
+3. Uppmätt data hålls isär från fästpunktsförslag. Ingen export och ingen
+   integration.
