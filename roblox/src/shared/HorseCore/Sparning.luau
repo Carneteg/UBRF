@@ -555,8 +555,11 @@ function Sparning.slaIhopV2(till: Save, fran: Save)
 	for id, r in pairs(fran.resultat) do
 		if till.resultat[id] == nil then till.resultat[id] = table.clone(r) end
 	end
-	--[[ Karantänen först: ett id som är karantänsatt i någon av de två är
-		förbrukat och får inte komma in som giltigt pris. ]]
+	--[[ FÖRETRÄDET, exakt (granskning R1-PASS): det som står i lagret
+		vinner. Ett giltigt kvitto i lagret karantänsätts inte av en
+		inkommande karantän, och en karantän i lagret blockerar ett
+		inkommande kvitto. Ett id som finns i ingen av lagrets kartor tas in
+		i den form det har i minnet. I inget fall blir ett id återanvändbart. ]]
 	for id, k in pairs(fran.karantan) do
 		if till.karantan[id] == nil and till.priser[id] == nil then
 			till.karantan[id] = { orsak = k.orsak, pris = if k.pris then table.clone(k.pris) else nil }

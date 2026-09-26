@@ -169,6 +169,7 @@ FORBEREDELSE = SPEL + [
     #   FORE tjansterna: HorseService, StallService, LedService och
     #   GameplayService require:ar den alla fyra. ]]
     ("Skopa",        "src/server/Skopa.luau"),
+    ("RidLogg",      "src/server/RidLogg.luau"),  # #264 INFRA-2A: HorseService require:ar den
     # AKTOREN (#252 DEL C) FORE tjansterna: GameplayService, HorseService
     # och LedService fragar den om aktoren har en klient att skicka till.
     ("Aktor",        "src/shared/HorseCore/Aktor.luau"),
@@ -421,6 +422,7 @@ KOHERENS = GEOMETRI + [
     #   FORE tjansterna: HorseService, StallService, LedService och
     #   GameplayService require:ar den alla fyra. ]]
     ("Skopa",        "src/server/Skopa.luau"),
+    ("RidLogg",      "src/server/RidLogg.luau"),  # #264 INFRA-2A: HorseService require:ar den
     # AKTOREN (#252 DEL C) FORE tjansterna: GameplayService, HorseService
     # och LedService fragar den om aktoren har en klient att skicka till.
     ("Aktor",        "src/shared/HorseCore/Aktor.luau"),
@@ -724,6 +726,10 @@ def valjBunt(spec_rel: str):
     #[[ #233 Fas 4b. Samma bank som statesync och av samma skal: den
     #   auktoritativa vagen gar genom HorseService pa en RIKTIG rigg, och
     #   reconcile-matningen behover MovementController ur samma bunt. ]]
+    #[[ #264 INFRA-2A: ridloggen mats genom HorseService pa en riktig rigg,
+    #   samma bank som ridinput. ]]
+    elif "ridlogg" in spec_rel:
+        moduler, stubbar = INTEGRATION, "tests/stubs.luau"
     elif "ridinput" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
     elif "hasthojd" in spec_rel or "avsittning" in spec_rel:

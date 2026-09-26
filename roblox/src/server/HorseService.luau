@@ -31,6 +31,7 @@ local Aktor = require(game:GetService("ReplicatedStorage").HorseCore.Aktor)
 	`StateSync` och `RidingIntent` har sina EGNA skopor nedan — de ar
 	RemoteEvents och deras tal speglas av klientens prediktion. ]]
 local Skopa = require(script.Parent.Skopa)
+local RidLogg = require(script.Parent.RidLogg)
 
 local HorseService = {}
 
@@ -278,6 +279,13 @@ local function unregister(model: Model)
 	if session.rider then
 		byRider[session.rider] = nil
 	end
+	--[[ En häst som avregistreras under en ritt: posten stängs som avbruten
+		här, annars står den öppen för alltid. `logga` deklareras längre
+		ned, därför går stängningen direkt och i egen pcall. ]]
+	if session.rittId then
+		local ok, fel = pcall(RidLogg.avsluta, session.rittId, "avbruten", "hast_avregistrerad", os.clock())
+		if not ok then warn("[Horse] ridloggen kastade: " .. tostring(fel)) end
+	end
 	sessions[model] = nil
 end
 
@@ -372,6 +380,35 @@ local function nyttRittId(): string
 		math.random(0, 0xffffff))
 end
 
+--[[ ══ RIDLOGGEN (#264 INFRA-2A) ═════════════════════════════════════
+	Serverns egen logg per ritt, skriven BARA där en övergång redan har
+	accepterats: i `setRider` (upp och av), efter ett accepterat steg i
+	`onRidingIntent`, när trötthetstaket drar ned trappan, och när
+	`stannaHast` stoppar en häst som fortfarande rids.
+
+	`replikera` är INTE en krok för loggen. Den körs också för nekade
+	hjälper och för rättelser utan ändring, så en logg där hade skrivit
+	övergångar som aldrig accepterades.
+
+	Varje anrop går genom `logga`, i pcall: loggen får aldrig hindra en
+	uppsittning, en avsittning eller ett steg. ]]
+local function logga(fn: (...any) -> any, ...: any)
+	local ok, fel = pcall(fn, ...)
+	if not ok then warn("[Horse] ridloggen kastade: " .. tostring(fel)) end
+end
+
+local function loggaSteg(session: Session, franIndex: number, orsak: string, handling: string?)
+	if session.rittId == nil or franIndex == session.stegIndex then return end
+	logga(RidLogg.gangart, session.rittId, {
+		fran = Ridtrappa.gangart(franIndex),
+		franRyggar = Ridtrappa.ryggar(franIndex),
+		till = Ridtrappa.gangart(session.stegIndex),
+		tillRyggar = Ridtrappa.ryggar(session.stegIndex),
+		orsak = orsak,
+		handling = handling,
+	}, os.clock())
+end
+
 local function replikera(session: Session)
 	local model = session.rig.model
 	local gangart = Ridtrappa.gangart(session.stegIndex)
@@ -418,8 +455,13 @@ local function nollstallRitt(session: Session)
 	session.intentSenast = os.clock()
 end
 
-local function setRider(session: Session, player: Player?)
+--[[ `orsak` gäller bara när en ryttare lämnar: "avsittning" är en
+	avsittning hon själv bad om, allt annat är ett avbrott. ]]
+local function setRider(session: Session, player: Player?, orsak: string?)
 	local previous = session.rider
+	--[[ Märket fångas FÖRE nollställningen nedan, annars finns ingen
+		identitet kvar att stänga ridloggen med. ]]
+	local gammalRitt = session.rittId
 	session.rider = player
 
 	if previous then
@@ -475,6 +517,19 @@ local function setRider(session: Session, player: Player?)
 	     utgångsläge i stället för att den förra får ett sista svar. ]]
 	nollstallRitt(session)
 	session.rittId = if player then nyttRittId() else nil
+	--[[ Ridloggen: den gamla ritten stängs (en gång — `avsluta` är ett
+		nej andra gången) och en ny öppnas för den nya ryttaren. ]]
+	local logNu = os.clock()
+	if gammalRitt then
+		local vanlig = orsak == nil or orsak == "avsittning"
+		logga(RidLogg.avsluta, gammalRitt, if vanlig then "avslutad" else "avbruten",
+			orsak or "avsittning", logNu)
+	end
+	if player and session.rittId then
+		logga(RidLogg.starta, session.rittId,
+			tostring(session.rig.model:GetAttribute("HorseId") or session.rig.model.Name),
+			player.UserId, Ridtrappa.gangart(session.stegIndex), logNu)
+	end
 	--[[ ── MÄRKET REPLIKERAS, OCH DET ÄR INTE EN BEKVÄMLIGHET ──────────
 	     Första utkastet lämnade märket ENBART i `tryMount`-returen. Det
 	     var en trasig leverans, och felet är värt att stå kvar:
@@ -719,10 +774,10 @@ function HorseService.tryMount(player: Player, model: Model): (boolean, string?,
 	slappStadning(player)
 	local kopplingar = {}
 	table.insert(kopplingar, player.CharacterRemoving:Connect(function()
-		HorseService.dismount(player)
+		HorseService.dismount(player, "karaktar_borta")
 	end))
 	table.insert(kopplingar, humanoid.Died:Connect(function()
-		HorseService.dismount(player)
+		HorseService.dismount(player, "dog")
 	end))
 	if seat then
 		--[[ Roblox kan lossa ryttaren utan att någon av ovanstående fyrar —
@@ -730,7 +785,7 @@ function HorseService.tryMount(player: Player, model: Model): (boolean, string?,
 			enda källan som alltid säger sanningen om sitsen. ]]
 		table.insert(kopplingar, seat:GetPropertyChangedSignal("Occupant"):Connect(function()
 			if seat.Occupant ~= humanoid then
-				HorseService.dismount(player)
+				HorseService.dismount(player, "sitsen_slappte")
 			end
 		end))
 	end
@@ -951,7 +1006,11 @@ local function stannaHast(session: Session)
 	     attribut. Skrevs attributen direkt här hade sessionen fortsatt
 	     tro att hon travade, och nästa BROMS hade stegat ned från trav
 	     till skritt på en häst som redan stod still. ]]
+	local franIndex = session.stegIndex
 	session.stegIndex = Gaits.index("halt")
+	--[[ Loggas bara om ritten fortfarande är öppen. Efter en avsittning
+		är märket redan nil och ritten stängd. ]]
+	loggaSteg(session, franIndex, "stopp", nil)
 	replikera(session)
 	session.rig.model:SetAttribute("Speed", 0)
 	task.spawn(function()
@@ -1092,7 +1151,12 @@ function HorseService.aterforena(player: Player): boolean
 	return true
 end
 
-function HorseService.dismount(player: Player): (boolean, string?)
+--[[ `orsak` sätts bara av tjänstens egna städvägar (död, karaktären
+	borta, sitsen, spelaren lämnar) och avgör om ridloggen stängs som
+	avslutad eller avbruten. `DismountRequest` skickar den aldrig vidare —
+	klientens argument når inte hit — så en begärd avsittning är alltid
+	"avsittning". ]]
+function HorseService.dismount(player: Player, orsak: string?): (boolean, string?)
 	local model = byRider[player]
 	if not model then return false, "pass.rider_inte" end
 	local session = sessions[model]
@@ -1137,7 +1201,7 @@ function HorseService.dismount(player: Player): (boolean, string?)
 		Ordningen är dessutom den riktigare: vem som rider vad är ett
 		LOGISKT tillstånd, var kroppen står är ett fysiskt. Det logiska ska
 		vara sant först. ]]
-	setRider(session, nil)
+	setRider(session, nil, orsak or "avsittning")
 	stannaHast(session)
 
 	if character then
@@ -1329,7 +1393,9 @@ local function stepStamina(session: Session, dt: number)
 	     att hon hämtat andan. ]]
 	local underTak = Ridtrappa.underTak(session.stegIndex, ceiling)
 	if underTak ~= session.stegIndex then
+		local franIndex = session.stegIndex
 		session.stegIndex = underTak
+		loggaSteg(session, franIndex, "trotthet", nil)
 		replikera(session)
 	end
 
@@ -1481,9 +1547,14 @@ local function onRidingIntent(player: Player, rittId: any, handling: any, sekven
 		return
 	end
 
+	local franIndex = session.stegIndex
 	session.stegIndex = nyttIndex
 	session.sisteHjalp = nu
 	if sekvens ~= nil then session.sekvens = sekvens end
+	--[[ Loggas HÄR och bara här i den här handlaren: efter ritten,
+		skopan, payloaden, sekvensen, spärren och steget. Varje tidigare
+		`return` är ett nej, och ett nej loggas inte. ]]
+	loggaSteg(session, franIndex, "hjalp", handling)
 	replikera(session)
 end
 
@@ -1597,7 +1668,7 @@ end
 	runtime-grinden ska kunna falla pa, och den maste da kunna koras
 	genom produktionens EGEN handlare i stallet for genom en kopia. ]]
 function HorseService.lamnar(player: Player)
-	HorseService.dismount(player)
+	HorseService.dismount(player, "lamnar")
 	slappStadning(player)
 end
 
@@ -1673,6 +1744,13 @@ end
 
 function HorseService.horseOf(player: Player): Model?
 	return byRider[player]
+end
+
+--[[ Ridloggens post för en ritt som fryst djupkopia, eller nil när den
+	aldrig fanns eller redan gallrats. Bara läsning; se `RidLogg`. Ingen
+	konsument ännu (INFRA-2A). ]]
+function HorseService.ridlogg(rittId: string?): any
+	return RidLogg.ogonblick(rittId)
 end
 
 return HorseService
