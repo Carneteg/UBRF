@@ -33,10 +33,10 @@
 	är smutsig: ett barn har lagts till i eller tagits bort ur ridhusets
 	modell, eller en av de två cachade delarnas avtryck (läge, axlar, mått)
 	har ändrats — det senare kontrolleras per steg på två delar, inget
-	svep. Även METADATA följs (granskning R1): de två cachade delarnas
-	`PlatsId` och `Forankring` prövas per steg, och en `PlatsId`-lyssnare
-	per barn i modellen fångar en sent tilldelad markering på en annan del
-	(t.ex. en dubblett). En ny eller ändrad ram får ett NYTT ram-id och bryter
+	svep. Även METADATA följs (granskning R1): en lyssnare per barn och
+	attribut (`PlatsId`, `Forankring`) i modellen fångar en ändrad, sent
+	tilldelad eller återställd markering — också en dubblett på en annan
+	befintlig del. En ny eller ändrad ram får ett NYTT ram-id och bryter
 	kontinuiteten; en oförändrad ram behåller sitt id. Är platsen ogiltig
 	prövas den om högst var FORSOK_VANTA:e steg.
 
@@ -150,13 +150,10 @@ end
 local function aktuellRam(): (any, number?, string?)
 	if ram.delar and not ram.smutsig then
 		local d = ram.delar
-		--[[ Metadata på de två cachade delarna prövas också per steg (tre
-			attributläsningar): en ändrad förankring eller ett ändrat id gör
-			platsen ogiltig även om geometrin är densamma. ]]
+		--[[ Metadata (PlatsId, Forankring) följs av barnlyssnarna nedan,
+			också för de två cachade delarna; här prövas bara att de sitter
+			kvar och att deras geometri är densamma. ]]
 		if d.bana.Parent ~= ram.modell or d.dressyr.Parent ~= ram.modell
-			or d.bana:GetAttribute("PlatsId") ~= Ridhusplats.ID.bana
-			or d.dressyr:GetAttribute("PlatsId") ~= Ridhusplats.ID.dressyr
-			or d.dressyr:GetAttribute("Forankring") ~= "A"
 			or avtryckFor(d) ~= ram.avtryck then
 			ram.smutsig = true
 		end
@@ -268,7 +265,9 @@ function RidPlatsObservation.sampla(rittId: string?, status: string?, fran: Vect
 	if not plats then
 		b.status = "ingen_plats"
 		b.skal = skal
-		r.sistaLage, r.sistaRam = nil, nil
+		--[[ Kontinuiteten behöver inte rensas här: när platsen blir giltig
+			igen får ramen alltid ett NYTT id (den ogiltiga ramen har ingen
+			plats att vara "samma" som), så inget segment kan brygga brottet. ]]
 	else
 		if posOk then
 			b.punkt = lokal(plats, pos :: Vector3)
@@ -341,10 +340,13 @@ function RidPlatsObservation._losningarForProv(): number
 end
 
 --[[ Hur många barnlyssnare som är kopplade, och på vilken modell. ]]
-function RidPlatsObservation._lyssnareForProv(): (number, Instance?)
-	local n = 0
-	for _ in pairs(lyssnare.per) do n += 1 end
-	return n, lyssnare.modell
+function RidPlatsObservation._lyssnareForProv(): (number, Instance?, number)
+	local barn, kopplingar = 0, 0
+	for _, ks in pairs(lyssnare.per) do
+		barn += 1
+		kopplingar += #ks
+	end
+	return barn, lyssnare.modell, kopplingar
 end
 
 function RidPlatsObservation._glomRitterForProv()

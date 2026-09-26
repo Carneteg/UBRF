@@ -264,9 +264,10 @@ do
 
 	--[[ Lyssnarnas livscykel: en per barn, inga dubbletter, rivs vid
 		modellbyte. ]]
-	local n0, m0 = RidPlatsObservation._lyssnareForProv()
-	check("en lyssnare per barn i ridhusets modell", m0 == hus and n0 == #hus:GetChildren(),
-		("%d lyssnare, %d barn"):format(n0, #hus:GetChildren()))
+	local n0, m0, k0 = RidPlatsObservation._lyssnareForProv()
+	check("lyssnare på varje barn i ridhusets modell, två kopplingar per barn", m0 == hus
+		and n0 == #hus:GetChildren() and k0 == 2 * n0,
+		("%d barn med lyssnare, %d kopplingar, %d barn"):format(n0, k0, #hus:GetChildren()))
 	local tillagd = Instance.new("Part")
 	tillagd.Name = "Provdel"
 	tillagd.Parent = hus
@@ -276,10 +277,20 @@ do
 	check("ett nytt barn får EN lyssnare", n1 == n0 + 1, ("%d → %d"):format(n0, n1))
 	workspace.DescendantAdded:Fire(tillagd)
 	steg(hastA, lage(RP, 0, 32))
-	check("samma barn igen ger ingen dubbel lyssnare", RidPlatsObservation._lyssnareForProv() == n0 + 1)
+	local nD, _, kD = RidPlatsObservation._lyssnareForProv()
+	check("samma barn igen ger inga dubbla kopplingar", nD == n0 + 1 and kD == k0 + 2,
+		("%d kopplingar, väntat %d"):format(kD, k0 + 2))
+	--[[ Bänkmått: räkna direkt på delens signal (stubbens `_lyssnare`),
+		så att en kvarlämnad koppling syns även om registret skrivits över. ]]
+	check("och delens egen signal har exakt en lyssnare per attribut",
+		#tillagd:GetAttributeChangedSignal("PlatsId")._lyssnare == 1
+			and #tillagd:GetAttributeChangedSignal("Forankring")._lyssnare == 1,
+		tostring(#tillagd:GetAttributeChangedSignal("PlatsId")._lyssnare))
 	tillagd:Destroy()
 	steg(hastA, lage(RP, 0, 34))
-	check("ett borttaget barn rivs", RidPlatsObservation._lyssnareForProv() == n0)
+	local nR, _, kR = RidPlatsObservation._lyssnareForProv()
+	check("ett borttaget barn rivs", nR == n0 and kR == k0
+		and #tillagd:GetAttributeChangedSignal("PlatsId")._lyssnare == 0)
 end
 
 print("\n── 37° vriden och flyttad ram ──")
