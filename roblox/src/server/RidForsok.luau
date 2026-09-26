@@ -47,6 +47,12 @@
 	  · Bevisar: att avsnittet inte innehåller något segment från före
 	    starten (avsnitt numreras strikt stigande och ett avsnitt som
 	    pågick vid starten har ett nr ≤ `voltHogsta`).
+	  · SLUTGRÄNSEN (R1): ett stängt försöks underlag läses ur voltbilden
+	    som den såg ut VID stängningen (fryst, samma ritt), aldrig ur den
+	    levande. Ett avsnitt som pågick vid slutet ingår med sitt tillstånd
+	    just då — inga segment efter slutet, ingen klippning av aggregat.
+	    Ett aktivt försök läses ur den levande bilden. Ögonblicksbilden
+	    gallras med försöket (samma retention).
 	  · Bevisar INTE: att övningen är gjord, att avsnittet är komplett,
 	    att det var ryttarens avsikt, eller att historiken finns kvar —
 	    voltobservationen sparar bara sina senaste avsnitt. Saknas ett
@@ -74,7 +80,7 @@ type Markor = { t: number, voltHogsta: number }
 type Forsok = {
 	forsokId: string, rittId: string, hastId: string, userId: number,
 	ovning: string, definition: string, tillstand: string, orsak: string?,
-	start: Markor, slut: Markor?, bild: any,
+	start: Markor, slut: Markor?, bild: any, slutVolt: any,
 }
 type Utfall = { ok: boolean, skal: string?, forsokId: string? }
 type Ritt = {
@@ -127,6 +133,10 @@ local function stang(r: Ritt, orsak: string, rittTid: number, volt: any): boolea
 	f.tillstand = "stangt"
 	f.orsak = orsak
 	f.slut = markor(t, volt)
+	--[[ R1: voltbilden VID stängningen, fryst i sin helhet. Ett stängt
+		försöks underlag läses bara ur den — ett avsnitt som fortsätter
+		efter slutet (samma nr) får inte ge det gamla försöket senare data. ]]
+	f.slutVolt = if type(volt) == "table" and volt.rittId == f.rittId then volt else nil
 	r.aktivt = nil
 	bygg(f)
 	return true
@@ -203,7 +213,7 @@ function RidForsok.starta(rittId: string, sekvens: any, ovning: any, definition:
 		rittId = r.rittId, hastId = r.hastId, userId = r.userId,
 		ovning = ovning :: string, definition = definition :: string,
 		tillstand = "aktivt", orsak = nil,
-		start = markor(rittTid, volt), slut = nil, bild = nil,
+		start = markor(rittTid, volt), slut = nil, bild = nil, slutVolt = nil,
 	}
 	bygg(f)
 	r.aktivt = f
@@ -257,6 +267,8 @@ end
 function RidForsok.voltUnderlag(forsokId: string?, volt: any): (any, string?)
 	local f = forsokId and perId[forsokId]
 	if not f then return nil, "forsok.okant" end
+	--[[ Stängt: bara ögonblicksbilden från stängningen, aldrig den levande. ]]
+	if f.slut then volt = f.slutVolt end
 	if type(volt) ~= "table" or volt.rittId ~= f.rittId then return nil, "forsok.ingen_observation" end
 	local fran = f.start.voltHogsta + 1
 	local till = if f.slut then f.slut.voltHogsta else math.huge

@@ -347,6 +347,99 @@ do
 	check("MODUL: en stängd ritt tar inte emot ett avbryt", okA == false and skalA == "forsok.inaktuell_ritt")
 end
 
+print("\n── R1: slutgränsen — ett stängt försök får inga data efter slutet ──")
+do
+	local function punkt(a) return lage(CU + R * math.cos(a), CV + R * math.sin(a)) end
+	local function summa(lista)
+		local tid, varvS, seg = 0, 0, 0
+		for _, a in ipairs(lista) do tid += a.tid; varvS += (a.varv or 0); seg += a.segment end
+		return tid, varvS, seg
+	end
+	--[[ Codex reproduktion (#5847334845), båda hållen: halvvolt, avbryt,
+		nytt försök, andra halvan i SAMMA avsnitt utan lucka. ]]
+	for _, rikt in ipairs({ 1, -1 }) do
+		local namn = if rikt > 0 then "positiv" else "negativ"
+		local m = sitUpp(anna, hastA, lage(CU + R, CV))
+		steg(hastA, lage(CU + R, CV))
+		local _, _, gammal = HorseService.startaForsok(anna, m, 1, "storvolt", "server-referens-1")
+		for i = 1, 18 do steg(hastA, punkt(rikt * TAU * i / N)) end
+		HorseService.avbrytForsok(anna, m, 2, gammal)
+		local fore, felF = HorseService.forsokVolt(gammal)
+		local tid0, varv0, seg0 = summa(fore)
+		check(namn .. ": KONTROLL halvvolten vid avbrottet", felF == nil and #fore == 1 and seg0 == 18
+			and tid0 == 4.5 and varv0 == 0, ("%s tid %s"):format(tostring(felF), tostring(tid0)))
+		local _, _, nytt = HorseService.startaForsok(anna, m, 3, "storvolt", "server-referens-1")
+		for i = 19, N do steg(hastA, punkt(rikt * TAU * i / N)) end
+		check(namn .. ": KONTROLL avsnittet fortsatte till ett helt varv", HorseService.volt(m).pagar.varv == 1
+			and HorseService.volt(m).pagar.nr == fore[1].nr)
+		local efter = HorseService.forsokVolt(gammal)
+		local tid1, varv1, seg1 = summa(efter)
+		check(namn .. ": det gamla försöket har kvar halvvolten — tid 4,5, varv 0, 18 segment", tid1 == 4.5
+			and varv1 == 0 and seg1 == 18 and efter[1] == fore[1], ("tid %s varv %s"):format(tostring(tid1), tostring(varv1)))
+		check(namn .. ": det nya försöket får inte avsnittet som pågick vid dess start",
+			#HorseService.forsokVolt(nytt) == 0)
+		--[[ Gamla läsningar efter retry, arkivering och rittavslut. ]]
+		HorseService.avbrytForsok(anna, m, 2, gammal)
+		check(namn .. ": efter retry av avbrottet: oförändrat", HorseService.forsokVolt(gammal)[1] == fore[1])
+		for _ = 1, VoltObservation.MAX_AVSNITT + 2 do
+			steg(hastA, lage(0, 11), 5); steg(hastA, lage(0, 12)); steg(hastA, lage(0, 13))
+		end
+		check(namn .. ": KONTROLL avsnittet är arkiverat och gallrat ur den levande bilden",
+			HorseService.volt(m).avslutade[1].nr > fore[1].nr)
+		check(namn .. ": efter arkivering: oförändrat", HorseService.forsokVolt(gammal)[1] == fore[1])
+		HorseService.dismount(anna)
+		check(namn .. ": efter rittavslut: oförändrat", HorseService.forsokVolt(gammal)[1] == fore[1]
+			and HorseService.forsok(gammal).orsak == "avbrutet")
+	end
+
+	--[[ Ett helt inneslutet avsnitt: börjar efter starten och slutar före
+		slutet. Det tillskrivs, helt. ]]
+	local m = sitUpp(anna, hastA)
+	local _, _, id = HorseService.startaForsok(anna, m, 1, "storvolt", "server-referens-1")
+	varv(hastA, 1)
+	steg(hastA, nil, 5)
+	HorseService.avbrytForsok(anna, m, 2, id)
+	local inn = HorseService.forsokVolt(id)
+	check("helt inneslutet avsnitt: ett helt varv tillskrivs", #inn == 1 and inn[1].varv == 1
+		and inn[1].status == "avslutat" and inn[1].slut == "brott")
+
+	--[[ Slut under en provlucka: inget pågår; underlaget är det avslutade. ]]
+	local _, _, idL = HorseService.startaForsok(anna, m, 3, "storvolt", "server-referens-1")
+	varv(hastA, -1)
+	steg(hastA, nil, 5)
+	HorseService.avbrytForsok(anna, m, 4, idL)
+	varv(hastA, -1)
+	local luck = HorseService.forsokVolt(idL)
+	check("slut under provlucka: bara avsnittet före slutet", #luck == 1 and luck[1].varv == 1
+		and luck[1].riktning == "negativ")
+
+	--[[ Slut under okänd vinkel (vid centrum): det okända avsnittet ingår
+		som det var, och ritten ut efteråt ger det inget. ]]
+	local _, _, idO = HorseService.startaForsok(anna, m, 5, "storvolt", "server-referens-1")
+	steg(hastA, lage(CU, CV - 3), 5)
+	for i = 1, 3 do steg(hastA, lage(CU, CV - 3 + 1.5 * i)) end
+	check("KONTROLL: ett okänt avsnitt pågår vid centrum", HorseService.volt(m).pagar.underlag == "okant")
+	HorseService.avbrytForsok(anna, m, 6, idO)
+	local okFore = HorseService.forsokVolt(idO)
+	for i = 4, 12 do steg(hastA, lage(CU, CV - 3 + 1.5 * i)) end
+	local okEfter = HorseService.forsokVolt(idO)
+	check("slut under okänd vinkel: samma avsnitt, samma tillstånd efter fortsatt ridning", #okEfter == #okFore
+		and okEfter[#okEfter] == okFore[#okFore] and okEfter[#okEfter].underlag == "okant")
+
+	--[[ Ett AKTIVT försök läser fortfarande den levande bilden. ]]
+	local _, _, idA = HorseService.startaForsok(anna, m, 7, "storvolt", "server-referens-1")
+	steg(hastA, nil, 5)
+	for i = 1, 6 do steg(hastA, punkt(TAU * i / N)) end
+	local a1 = HorseService.forsokVolt(idA)
+	steg(hastA, punkt(TAU * 7 / N))
+	local a2 = HorseService.forsokVolt(idA)
+	check("aktivt försök: följer den levande bilden", a1[#a1].segment + 1 == a2[#a2].segment)
+	HorseService.dismount(anna)
+	local a3 = HorseService.forsokVolt(idA)
+	check("rittens slut stänger med ögonblicksbilden (det pågående avsnittet ingår som det var)",
+		a3[#a3].segment == a2[#a2].segment and HorseService.forsok(idA).orsak == "ritt_slut:avsittning")
+end
+
 print("\n── Gallrad historik, minnestak och ring ──")
 do
 	local m = sitUpp(anna, hastA)
