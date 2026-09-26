@@ -11,7 +11,7 @@ reviewer med produktions-STOPP, inte builder. Historiska uppdrag återstartas in
 1. `docs/PRODUCT-CANON.md`
 2. `docs/DELIVERY-PROTOCOL.md`
 3. `docs/ASSET-SOURCE-OF-TRUTH.md`
-4. `docs/ENVIRONMENT-DELIVERY.md` (senaste rollbeslut, verktyg och två spelplattformar)
+4. `docs/ENVIRONMENT-DELIVERY.md` (miljöleverans, verktyg och två spelplattformar; roller: `docs/WORKING-AGREEMENT.md`)
 5. `docs/AI-COLLABORATION.md`
 6. `docs/ACTIVE-GATE.md`
 7. relevant implementation-/referensdokumentation

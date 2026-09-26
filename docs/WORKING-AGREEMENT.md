@@ -55,6 +55,8 @@ limitations and reproducible environment requirements.
 
 ## Permission boundaries
 
+Never commit or print secrets, API keys or `.env` files.
+
 PR #264's push/merge and existing automatic web and Roblox CI-place runs were
 explicitly authorized and are complete. That exception is not blanket
 permission for future push, PR-triggered publication, merge or CI reruns.

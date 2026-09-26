@@ -79,6 +79,9 @@ Målet är maximal verklighetstrohet i:
 
 "100 % likt" är ett fidelity-mål, inte tillåtelse att hitta på. Om underlag saknas ska delen markeras som `[REFERENCE GAP]` eller `[antagande]` och inte presenteras som verifierad verklighet. När nytt källmaterial kommer ska antagandet ersättas.
 
+Regel mot falsk precision: exakt kodvärde får inte beskrivas som exakt verklighetsmått
+om källan bara stödjer proportion eller intervall.
+
 ## Hästen är spelets kärna
 
 Hästen får aldrig kännas som ett fordon med hästmodell ovanpå.
