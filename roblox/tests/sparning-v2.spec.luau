@@ -478,6 +478,20 @@ do
 		and Sparning.harPris(om, "avvisat") == false)
 	check("och fortfarande förbrukade", Sparning.registreraPris(om, "saknas", { typ = "deltagare", nar = 9 }) == false)
 	SparService._glomForProv(spelare)
+
+	--[[ Sammanslagningen bär karantänen: står den bara i minnet (lagrets
+		rad saknar den) ska den ändå med, och id:t får inte komma in som
+		giltigt pris från någon av sidorna. ]]
+	local minnet = Sparning.migrera({ v = 2, priser = { k = { typ = "placering", resultatId = "borta", nar = 1 } } })
+	local lagret = Sparning.tom()
+	lagret.priser.k2 = { typ = "deltagare", nar = 1 }
+	minnet.karantan.k2 = { orsak = "saknat_resultat", pris = nil }
+	Sparning.slaIhopV2(lagret, minnet)
+	check("karantän i minnet följer med in i lagrets rad", lagret.karantan.k ~= nil)
+	check("och id:t är förbrukat efter sammanslagningen",
+		Sparning.registreraPris(lagret, "k", { typ = "deltagare", nar = 2 }) == false)
+	check("ett id som redan är giltigt pris i lagret karantänsätts inte i efterhand",
+		lagret.priser.k2 ~= nil and lagret.karantan.k2 == nil)
 end
 
 if fails > 0 then
