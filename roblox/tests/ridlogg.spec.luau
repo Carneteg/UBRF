@@ -8,8 +8,10 @@
 	borta, spelaren lämnar), trötthetstaket via `Heartbeat` och
 	avregistreringen via taggen. Loggen läses genom `HorseService.ridlogg`.
 
-	Ingen mätning anropar `RidLogg` för att SKRIVA. Den enda direkta
-	användningen är `_glomForProv` mellan block.
+	Alla block utom det sista skriver loggen enbart genom produktionen; de
+	använder `RidLogg` direkt bara för `_glomForProv` mellan block. Det
+	sista blocket, MODULKONTRAKT, anropar modulen direkt och är
+	uttryckligen ett modulbevis (se noten där).
 
 	EVIDENSNIVÅ: BANK_ONLY. Syntetiska sekvenser i stubbvärlden. Ingen motor,
 	ingen klient, ingen riktig tid på nätet.
@@ -300,6 +302,26 @@ do
 	check("en ÖPPEN post gallras aldrig", HorseService.ridlogg(pagaende) ~= nil
 		and HorseService.ridlogg(pagaende).oppen == true)
 	HorseService.dismount(anna)
+end
+
+print("\n── MODULKONTRAKT (inte produktionsväg): en stängd post är stängd ──")
+do
+	--[[ De här två vakterna kan INTE nås genom HorseService i dag: tjänsten
+		skickar alltid sessionens AKTUELLA märke, och det är nil efter
+		avslutet. De mäts därför direkt mot modulen, och det är uttryckligen
+		ett modulbevis — inte ett bevis om produktionsvägen. Vakterna finns
+		kvar som försvar mot en framtida anropare. ]]
+	RidLogg._glomForProv()
+	RidLogg.starta("kontrakt", "cosmo", 1, "halt", 10)
+	check("KONTROLL: en öppen post tar emot en gångart",
+		RidLogg.gangart("kontrakt", { fran = "halt", till = "walk" }, 11) == true)
+	check("KONTROLL: första avslutet stänger", RidLogg.avsluta("kontrakt", "avslutad", "avsittning", 12) == true)
+	check("en stängd post tar inte emot en gångart",
+		RidLogg.gangart("kontrakt", { fran = "walk", till = "trot" }, 13) == false)
+	check("och stängs inte en andra gång", RidLogg.avsluta("kontrakt", "avbruten", "dog", 14) == false)
+	local p = RidLogg.ogonblick("kontrakt")
+	check("posten är oförändrad efter båda nejen", #p.handelser == 3 and p.satt == "avslutad",
+		("%d händelser, %s"):format(#p.handelser, tostring(p.satt)))
 end
 
 if fails > 0 then
