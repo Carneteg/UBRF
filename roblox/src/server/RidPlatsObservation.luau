@@ -66,6 +66,7 @@ local ram = {
 	id = 0,
 	smutsig = true,
 	vanta = 0,
+	losningar = 0,
 }
 local ritter: { [string]: Ritt } = {}
 local avslutade: { string } = {}
@@ -114,6 +115,7 @@ local function aktuellRam(): (any, number?, string?)
 	end
 	if ram.smutsig then
 		ram.smutsig = false
+		ram.losningar += 1
 		local plats, skal, delar = Ridhusplats.los(ram.modell)
 		if not plats then
 			ram.plats, ram.delar, ram.avtryck = nil, nil, nil
@@ -273,6 +275,12 @@ end
 
 function RidPlatsObservation._ramForProv(): (number, boolean)
 	return ram.id, ram.plats ~= nil
+end
+
+--[[ Hur många gånger platsen lösts om — ska inte växa medan ramen är
+	oförändrad (inget svep per hjärtslag). ]]
+function RidPlatsObservation._losningarForProv(): number
+	return ram.losningar
 end
 
 function RidPlatsObservation._glomRitterForProv()

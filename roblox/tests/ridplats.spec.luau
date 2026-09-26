@@ -112,7 +112,10 @@ do
 		and nara(b1.segment.fran.v, 10, 1e-6) and nara(b1.segment.till.v, 12, 1e-6), b1.status)
 	check("i layouten och på banan", b1.iBana == true and b1.iDressyr == true)
 	local ram0 = b1.ramId
+	local losFore = RidPlatsObservation._losningarForProv()
 	for i = 1, 5 do steg(hastA, lage(RP, 0, 12 + i * 2)) end
+	check("en oförändrad ram löses inte om per steg", RidPlatsObservation._losningarForProv() == losFore,
+		("%d → %d"):format(losFore, RidPlatsObservation._losningarForProv()))
 	check("en oförändrad ram behåller sitt id över flera segment", bild(marke1).ramId == ram0
 		and bild(marke1).status == "segment")
 	check("tiden följer ridobservationen", bild(marke1).t ~= nil and bild(marke1).t > b1.t)
