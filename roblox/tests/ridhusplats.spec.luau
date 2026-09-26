@@ -187,6 +187,81 @@ do
 	prova("och Ugneta placeras inte på en ofullständig byggnad", UgnetaGestalt.plats(m7) == nil)
 end
 
+print("\n── R1: underlag som modellen inte stödjer ger otillgängligt ──")
+do
+	--[[ Granskningens fyra fall, genom samma produktionsmodul och Ugnetas väg. ]]
+	local m1, lb1 = syntetisk(Vector3.new(0, 0, 0), 0, true)
+	lb1.CFrame = CFrame.new(0, 0.09, -8.295) * CFrame.Angles(0, math.rad(45), 0)
+	local s1, k1 = Ridhusplats.los(m1)
+	prova("R1-1a: bara banan vriden 45°: inte samriktade", s1 == nil and k1 == "ej_samriktade", k1)
+	prova("R1-1a: och Ugneta placeras inte", UgnetaGestalt.plats(m1) == nil)
+
+	local m2, lb2 = syntetisk(Vector3.new(0, 0, 0), 0, true)
+	lb2.CFrame = CFrame.new(300, 0.09, -8.295)
+	local s2, k2 = Ridhusplats.los(m2)
+	prova("R1-1b: banans mitt flyttad i sidled: layouten utanför banan", s2 == nil and k2 == "layout_utanfor_bana", k2)
+	prova("R1-1b: och Ugneta placeras inte utanför banan", UgnetaGestalt.plats(m2) == nil)
+
+	local m3, _, ll3 = syntetisk(Vector3.new(0, 0, 0), 0, true)
+	ll3.CFrame = CFrame.new(0, 0.12, 0) * CFrame.Angles(0, 0 / 0, 0)
+	local s3, k3 = Ridhusplats.los(m3)
+	prova("R1-2a: layoutens rotation NaN: ogiltig bas", s3 == nil and k3 == "ogiltig_bas:ridhus_dressyr", k3)
+	prova("R1-2a: och ingen NaN-plats för Ugneta", UgnetaGestalt.plats(m3) == nil)
+
+	local m4, lb4 = syntetisk(Vector3.new(0, 0, 0), 0, true)
+	lb4.CFrame = CFrame.new(0, 0.09, -8.295, 1, 0, 0 / 0, 0, 1, 0, 0, 0, 0 / 0)
+	local s4, k4 = Ridhusplats.los(m4)
+	prova("R1-2b: banans rotationsmatris med NaN: ogiltig bas", s4 == nil and k4 == "ogiltig_bas:ridhus_bana", k4)
+	prova("R1-2b: och ingen NaN-plats för Ugneta", UgnetaGestalt.plats(m4) == nil)
+
+	--[[ Fler fall inom samma validering. ]]
+	local m5, lb5 = syntetisk(Vector3.new(0, 0, 0), 0, true)
+	lb5.CFrame = CFrame.new(0, 0.09, 30)
+	local s5, k5 = Ridhusplats.los(m5)
+	prova("banan förskjuten längs: inte A-förankrad", s5 == nil and k5 == "ej_a_forankrad", k5)
+	local m6, lb6 = syntetisk(Vector3.new(0, 0, 0), 0, true)
+	lb6.Size = Vector3.new(60, 0, 196.59)
+	local s6, k6 = Ridhusplats.los(m6)
+	prova("banan med höjd 0: ogiltig geometri", s6 == nil and k6 == "ogiltig_geometri:ridhus_bana", k6)
+	local m7, lb7 = syntetisk(Vector3.new(0, 0, 0), 0, true)
+	lb7.Size = Vector3.new(40, 0.18, 196.59)
+	local s7, k7 = Ridhusplats.los(m7)
+	prova("banan smalare än layouten: layouten utanför banan", s7 == nil and k7 == "layout_utanfor_bana", k7)
+
+	print("\n── R1: positiva kontroller ──")
+	local th = math.rad(37)
+	local m8 = syntetisk(Vector3.new(-512, 3, 77), th, true)
+	local s8, k8 = Ridhusplats.los(m8)
+	prova("KONTROLL: hela byggnaden vriden 37° och flyttad löses", s8 ~= nil, k8)
+	if s8 then
+		prova("KONTROLL: A → C följer den gemensamma girningen",
+			naraV(s8.motC, Vector3.new(-math.sin(th), 0, -math.cos(th)), 1e-6), v3(s8.motC))
+		local ok = true
+		for _, l in ipairs({ Vector3.new(0, 0, 0), Vector3.new(-9.9, 0, 5), Vector3.new(4, 2, 64) }) do
+			if not naraV(Ridhusplats.tillLokal(s8, Ridhusplats.tillVarld(s8, l)), l, 1e-6) then ok = false end
+		end
+		prova("KONTROLL: lokalt ↔ värld i den vridna byggnaden", ok)
+		prova("KONTROLL: banmarginalen bortom C (63 m) är bana, inte layout",
+			Ridhusplats.inom(s8, "bana", Ridhusplats.tillVarld(s8, Vector3.new(0, 0, 63)))
+				and not Ridhusplats.inom(s8, "dressyr", Ridhusplats.tillVarld(s8, Vector3.new(0, 0, 63))))
+		prova("KONTROLL: gränspunkten på layoutens långsida (u = 10 m) är inom",
+			Ridhusplats.inom(s8, "dressyr", Ridhusplats.tillVarld(s8, Vector3.new(10, 0, 30))))
+		prova("KONTROLL: Ugneta i den vridna byggnaden står mitt på, 1,4 m bortom C",
+			UgnetaGestalt.plats(m8) ~= nil and naraV(Ridhusplats.tillLokal(s8, UgnetaGestalt.plats(m8).pos),
+				Vector3.new(0, 0, 61.4), 1e-6))
+	end
+	local m9, lb9 = syntetisk(Vector3.new(0, 0, 0), 0, true)
+	local ersattare = Instance.new("Part")
+	ersattare.Name = "Ridbanan"
+	ersattare.Size = lb9.Size
+	ersattare.CFrame = lb9.CFrame
+	ersattare:SetAttribute("PlatsId", "ridhus_bana")
+	ersattare.Parent = m9
+	prova("KONTROLL: en dubblett avvisas", select(2, Ridhusplats.los(m9)) == "dubbelt_id:ridhus_bana")
+	lb9:Destroy()
+	prova("KONTROLL: en ensam ersättare godtas", Ridhusplats.los(m9) ~= nil)
+end
+
 print("\n── Bilden går inte att skriva om ──")
 if rp then
 	prova("platsen är fryst", pcall(function() rp.golvY = 0 end) == false

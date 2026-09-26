@@ -109,6 +109,12 @@ prova("utan byggd bana placeras hon inte alls",
 
 if fel > 0 then
 	print(("\n%d mätningar föll."):format(fel))
+	--[[ #264 INFRA-PLATS1 R1: specen gav förut exit 0 även när en mätning
+		föll, så en grön svit bevisade inte att den var grön. Nu fälls
+		körningen, som i de andra specarna. ]]
+	local avsluta = (os :: any).exit
+	if avsluta then avsluta(1) end
+	error(("%d mätningar föll."):format(fel), 0)
 else
 	print("\nAlla mätningar gick igenom.")
 end

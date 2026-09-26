@@ -39,7 +39,9 @@
 	dubbel identitet, icke-ändliga mått, degenererad riktning eller fel
 	förankring ger (nil, skäl) — aldrig en gissad reserv. Skälen:
 	"ingen_byggnad", "saknas:<id>", "feltyp:<id>", "dubbelt_id:<id>",
-	"ogiltig_geometri:<id>", "degenererad_riktning", "fel_forankring".
+	"ogiltig_geometri:<id>", "ogiltig_bas:<id>", "lutande_yta:<id>",
+	"ej_samriktade", "ej_a_forankrad", "layout_utanfor_bana",
+	"degenererad_riktning", "fel_forankring".
 
 	Allt returnerat är fryst. ]]
 
@@ -73,17 +75,54 @@ local function vektorOk(p: any): boolean
 	return ok and andligt(x) and andligt(y) and andligt(z)
 end
 
---[[ Delens utsträckning längs en världsriktning: projektionen av dess egen
-	låda, så att en vriden del mäts rätt. ]]
-local function halvUtstrackning(del: BasePart, riktning: Vector3): number
+--[[ ── DEN BEGRÄNSADE MODELLENS FÖRUTSÄTTNINGAR (granskning R1) ────────
+	Modellen stödjer EN sorts underlag: två horisontella, samriktade,
+	rektangulära ytor, där layouten är A-förankrad i banans A-ände och
+	ligger helt inom banan. En gemensam godtycklig girning och flytt av hela
+	byggnaden är giltig. Allt annat ger ett uttryckligt nej — ingen
+	omskrivande ruta får maskera en vriden eller förskjuten yta.
+
+	Toleranser (spelantaganden, i dagens byggda bana uppfyllda med marginal):
+	  · TOL_AXEL     basaxlarnas längd och inbördes vinkelräthet (1e-3),
+	  · TOL_RIKTNING |cos| för horisontell yta och samriktade längdaxlar
+	                 (1 − 1e-4, alltså under ~0,8°),
+	  · TOL_LAGE     A-förankring och "inom banan", i studs (0,1). ]]
+Ridhusplats.TOL_AXEL = 1e-3
+Ridhusplats.TOL_RIKTNING = 1e-4
+Ridhusplats.TOL_LAGE = 0.1
+
+type Ram = { p: Vector3, langs: Vector3, tvarsAxel: Vector3, halvLangs: number, halvTvars: number, halvHojd: number }
+
+--[[ En dels ram: ändliga basaxlar som är enhetsvektorer och vinkelräta,
+	positiva mått, och uppaxeln längs världens upp. Längdaxeln är den längre
+	av de två horisontella axlarna. (ram, nil) eller (nil, skäl). ]]
+local function ram(del: BasePart, id: string): (Ram?, string?)
 	local cf, s = del.CFrame, del.Size
 	local p = cf.Position
+	if not (vektorOk(p) and vektorOk(s)) then return nil, "ogiltig_geometri:" .. id end
+	if not (s.X > 0 and s.Y > 0 and s.Z > 0) then return nil, "ogiltig_geometri:" .. id end
 	local function axel(x: number, y: number, z: number): Vector3
 		return (cf * CFrame.new(x, y, z)).Position - p
 	end
 	local ax, ay, az = axel(1, 0, 0), axel(0, 1, 0), axel(0, 0, 1)
-	return (math.abs(dot(ax, riktning)) * s.X + math.abs(dot(ay, riktning)) * s.Y
-		+ math.abs(dot(az, riktning)) * s.Z) / 2
+	if not (vektorOk(ax) and vektorOk(ay) and vektorOk(az)) then return nil, "ogiltig_bas:" .. id end
+	for _, v in ipairs({ ax, ay, az }) do
+		if math.abs(v.Magnitude - 1) > Ridhusplats.TOL_AXEL then return nil, "ogiltig_bas:" .. id end
+	end
+	if math.abs(dot(ax, ay)) > Ridhusplats.TOL_AXEL or math.abs(dot(ay, az)) > Ridhusplats.TOL_AXEL
+		or math.abs(dot(ax, az)) > Ridhusplats.TOL_AXEL then
+		return nil, "ogiltig_bas:" .. id
+	end
+	if dot(ay, UPP) < 1 - Ridhusplats.TOL_RIKTNING then return nil, "lutande_yta:" .. id end
+	local langsX = s.X >= s.Z
+	return {
+		p = p,
+		langs = if langsX then ax else az,
+		tvarsAxel = if langsX then az else ax,
+		halvLangs = (if langsX then s.X else s.Z) / 2,
+		halvTvars = (if langsX then s.Z else s.X) / 2,
+		halvHojd = s.Y / 2,
+	}, nil
 end
 
 local function hitta(ridhus: Instance): ({ [string]: BasePart }?, string?)
@@ -124,29 +163,46 @@ function Ridhusplats.los(ridhus: Instance?): (any, string?)
 	local ok, forankring = pcall(function() return dressyr:GetAttribute("Forankring") end)
 	if not ok or forankring ~= "A" then return nil, "fel_forankring" end
 
-	--[[ Riktningen A → C: layoutens längsta horisontella axel, med tecknet
-		ur banans mitt (som ligger mot C, eftersom banan fortsätter bortom
-		C-linjen). För liten förskjutning = tecknet är inte belagt. ]]
-	local cf, sz = dressyr.CFrame, dressyr.Size
-	local p0 = cf.Position
-	local ax = (cf * CFrame.new(1, 0, 0)).Position - p0
-	local az = (cf * CFrame.new(0, 0, 1)).Position - p0
-	local axel = if sz.Z >= sz.X then az else ax
-	local plan = Vector3.new(axel.X, 0, axel.Z)
-	if plan.Magnitude < 1e-3 then return nil, "degenererad_riktning" end
-	local langsAxel = plan.Unit
-	local fors = bana.Position - dressyr.Position
+	local rb, fb = ram(bana, Ridhusplats.ID.bana)
+	if not rb then return nil, fb end
+	local rd, fd = ram(dressyr, Ridhusplats.ID.dressyr)
+	if not rd then return nil, fd end
+
+	--[[ Samriktade längdaxlar (tecknet spelar ingen roll här). ]]
+	if math.abs(dot(rb.langs, rd.langs)) < 1 - Ridhusplats.TOL_RIKTNING then
+		return nil, "ej_samriktade"
+	end
+
+	--[[ Riktningen A → C: layoutens längdaxel, med tecknet ur banans mitt
+		(som ligger mot C, eftersom banan fortsätter bortom C-linjen). För
+		liten förskjutning = tecknet är inte belagt. ]]
+	local langsAxel = Vector3.new(rd.langs.X, 0, rd.langs.Z).Unit
+	local fors = rb.p - rd.p
 	local proj = dot(Vector3.new(fors.X, 0, fors.Z), langsAxel)
 	if math.abs(proj) < Ridhusplats.MIN_FORSKJUTNING then return nil, "degenererad_riktning" end
 	local motC = if proj > 0 then langsAxel else -langsAxel
 	local tvars = cross(motC, UPP)
-	local golvY = bana.Position.Y + halvUtstrackning(bana, UPP)
 
-	local dLangs = halvUtstrackning(dressyr, motC)
-	local dTvars = halvUtstrackning(dressyr, tvars)
-	local dC = dressyr.Position
+	--[[ A-förankring: layoutens A-kant och banans A-ände sammanfaller längs
+		banan. Inom banan: layoutens tvärsläge och C-kant ryms i banan. ]]
+	local banaA = rb.p - motC * rb.halvLangs
+	local layoutA = rd.p - motC * rd.halvLangs
+	if math.abs(dot(layoutA - banaA, motC)) > Ridhusplats.TOL_LAGE then return nil, "ej_a_forankrad" end
+	local tvarsFors = math.abs(dot(fors, tvars))
+	if tvarsFors + rd.halvTvars > rb.halvTvars + Ridhusplats.TOL_LAGE
+		or rd.halvLangs * 2 > rb.halvLangs * 2 + Ridhusplats.TOL_LAGE then
+		return nil, "layout_utanfor_bana"
+	end
+
+	local golvY = rb.p.Y + rb.halvHojd
+	local dLangs, dTvars = rd.halvLangs, rd.halvTvars
+	local dC = rd.p
 	local aKant = Vector3.new(dC.X, golvY, dC.Z) - motC * dLangs
 	local cKant = Vector3.new(dC.X, golvY, dC.Z) + motC * dLangs
+	--[[ Sista vakten: inget härlett värde får vara icke-ändligt. ]]
+	if not (vektorOk(motC) and vektorOk(tvars) and andligt(golvY) and vektorOk(aKant) and vektorOk(cKant)) then
+		return nil, "ogiltig_bas:harlett"
+	end
 
 	return table.freeze({
 		v = Ridhusplats.VERSION,
@@ -157,8 +213,8 @@ function Ridhusplats.los(ridhus: Instance?): (any, string?)
 		golvY = golvY,
 		origo = aKant,
 		bana = table.freeze({
-			id = Ridhusplats.ID.bana, centrum = bana.Position,
-			halvLangs = halvUtstrackning(bana, motC), halvTvars = halvUtstrackning(bana, tvars),
+			id = Ridhusplats.ID.bana, centrum = rb.p,
+			halvLangs = rb.halvLangs, halvTvars = rb.halvTvars,
 		}),
 		dressyr = table.freeze({
 			id = Ridhusplats.ID.dressyr, centrum = dC, forankring = "A",

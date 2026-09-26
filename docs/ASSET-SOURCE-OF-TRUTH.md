@@ -230,7 +230,9 @@ Sökningen är avslutad. Ingen ny sökning görs utan en ny ledtråd.
 
 ### Offlineverktyg
 
-Blender är inte installerat. Python saknar `bpy` och `blender_asset_tracer`.
+Blender hittades inte på de kontrollerade platserna (`PATH` och
+`C:\Program Files\Blender Foundation`); andra platser är inte sökta. Python
+saknar `bpy` och `blender_asset_tracer`.
 Ingen installation har gjorts, så verktyget är `BLOCKED` tills filen finns.
 
 När filen finns ska en säker statisk läsning göras i en egen granskningsmapp.
