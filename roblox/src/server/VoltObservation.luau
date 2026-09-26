@@ -268,14 +268,14 @@ function VoltObservation.sampla(rittId: string?, plats: any): boolean
 	if avv > av.maxAvvikelse then av.maxAvvikelse = avv end
 
 	--[[ Ett stillastående segment (a = b) behöver ingen egen gren:
-		a × b = 0 och a · b = |a|² > 0 ger atan2 exakt 0. ]]
-	if obestamt then
-		av.obestamda += 1
-	else
-		local d = math.atan2(au * bvc - avc * bu, au * bu + avc * bvc)
-		av.netto += d
-		if d > 0 then av.positiv += d else av.negativ -= d end
-	end
+		a × b = 0 och a · b = |a|² > 0 ger atan2 exakt 0. Vinkeln summeras
+		även i ett obestämt avsnitt, men där visas den aldrig: ett avsnitt
+		blandar aldrig bestämda och obestämda segment, och ett okänt
+		avsnitt har inga mått (atan2 är ändlig även vid centrum). ]]
+	if obestamt then av.obestamda += 1 end
+	local d = math.atan2(au * bvc - avc * bu, au * bu + avc * bvc)
+	av.netto += d
+	if d > 0 then av.positiv += d else av.negativ -= d end
 	av.sistU, av.sistV = tu, tv
 
 	bygg(r, "segment")
