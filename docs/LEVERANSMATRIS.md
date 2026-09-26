@@ -18,8 +18,11 @@ ordning, scope eller status kräver en ny order; ingen annan agent skriver här.
 7. Häst
 8. Samlat slutspeltest
 
-Nödvändiga delade beroenden byggs före den komponent som behöver dem, som
-kontrakt utan beteendeändring. Det gör dem inte till en ny produktprioritet.
+Nödvändiga delade beroenden byggs före den komponent som behöver dem. Det gör
+dem inte till en ny produktprioritet. De är inte bara kontrakt utan
+beteende: den faktiska observationen av ridväg, rytm och hinder (B3, B4)
+måste finnas och mätas innan en konsument (instruktörens råd, domaren)
+bygger på den.
 
 **Scope:** hela anläggningen och alla 22 arbetspaket i #266 (A1–F3),
 inklusive NPC-medtävlare och multiplayer. Inga nya webbfeatures; Roblox PC
@@ -33,6 +36,7 @@ Varje rad har exakt en av dessa. En nivå kräver alla nivåer före den.
 | Nivå | Betyder | Vem sätter den |
 |---|---|---|
 | `EJ_PÅBÖRJAD` | inget byggt i denna ordning | — |
+| `UPPSKJUTEN` | medvetet flyttad till slutspeltestet; NOT_TESTED, inte PASS | ordern |
 | `BYGGT` | kod och fokuserade prov lokalt, falsifierat | Claude |
 | `GRANSKAT` | oberoende review av diff och prov | Codex/ChatGPT |
 | `INTEGRERAT` | inkopplad i spelvägen, regressionssviten grön | Claude, efter review |
@@ -83,6 +87,20 @@ implementationsorder. Officiella program kräver rättigheter. Annars används
 egna träningsprogram med tydligt egna namn. Ett blockerat officiellt program
 kopieras eller felmärks aldrig.
 
+**D4-RÄTT — varaktig, servervaliderad rätt till ett pris (KRÄVS, pending
+konsument).** `Sparning.registreraPris` är lokal förberedelse. `true` betyder
+bara att posten ligger i en sessions minne:
+- två sessioner kan båda få true för samma id,
+- en skrivskyddad session får true fast inget kan sparas.
+
+Före varje pris, rosett eller belöning i spel (D4, deltagarminne, lärandemärke)
+krävs en egen servervaliderad rätt som härleds ur en **bekräftad** skrivning.
+Den ska hantera tvetydiga skrivningar (landade men kastade), omförsök och
+samtidiga sessioner. Presentationen härleds ur den bekräftade rätten. Ingen
+oåterkallelig utdelning får ske på det lokala svaret eller inifrån
+`UpdateAsync`-callbacken. Hela belöningssystemet byggs först i D4, inte i
+INFRA-1.
+
 **G-REFERENS.** Referensluckor förblir uttryckligen markerade arbetsantaganden
 (`[REFERENCE GAP]`, `[antagande]`), aldrig påhittade fakta.
 
@@ -100,7 +118,7 @@ Kolumner:
 
 | Paket | Källor | Finns | Gap | Beror på | Teknisk acceptans | Slutprov | Status |
 |---|---|---|---|---|---|---|---|
-| INFRA-1 Sparning v2 | denna order, #266 §5/§8 | `Sparning` v1 med `rev` och `passId`-kvitton; `SparService` med UpdateAsync, omförsök, fail-closed läsning | framsteg, resultat och priskvitton | — | v1→v2 förlustfritt; trasigt och oändligt nekas; kvitton idempotenta även vid omförsök och omkörd transformator; inaktuell skrivare skriver inte över; framtida rad orörd; 10 mutationer röda (`sparning-v2.spec`, BANK_ONLY) | framsteg och pris finns kvar efter riktig återanslutning | `BYGGT` (lokalt) |
+| INFRA-1 Sparning v2 | denna order, #266 §5/§8, granskning R1 | `Sparning` v1 med `rev` och `passId`-kvitton; `SparService` med UpdateAsync, omförsök, fail-closed läsning | framsteg, resultat och sparade priskvitton — **lokal förberedelse, ingen utdelning** | — | v1→v2 förlustfritt; trasigt och oändligt nekas; kvitton idempotenta även vid omförsök och omkörd transformator; taket prövas mot lagrets rad (hel skrivning nekas); pris utan giltigt resultat karantänsätts; inaktuell skrivare skriver inte över; framtida rad orörd; 19 mutationer röda (`sparning-v2.spec`, BANK_ONLY) | framsteg och kvitton finns kvar efter riktig återanslutning | `BYGGT` (lokalt) |
 | INFRA-2 Händelselogg (serverägd) | #266 §6–7, B3/B4 | `Inspelning.handelse` finns men anropas aldrig; klientägd | deterministisk logg `{t, typ, data}` som bara läggs till; delad av instruktör (observationer) och domare (protokoll) med skilda uppgifter | INFRA-1 | samma händelser ger samma utfall; serialiserbar; klient kan inte skriva poäng | — | `EJ_PÅBÖRJAD` |
 | INFRA-3 Regelprofilformat | #266 D1/E1, G-REGEL | inget | schema och validering: gren, klass, bedömning, version, feltabell, olydnad, tid, lika resultat, placeringstabell, rosetter | INFRA-2 | ogiltig profil nekas; ingen klass får innehåll före G-REGEL | — | `EJ_PÅBÖRJAD` |
 | INFRA-4 Hästens assetkontrakt | G-ASSET | K3-mesh och procedurella ben | källa och rättigheter för HRAG, skala, ben, fästpunkter | — | kontraktet dokumenterat och statiskt kontrollerat; ingen uppladdning | — | `EJ_PÅBÖRJAD` |
@@ -138,7 +156,7 @@ touch bevaras.
 | D1 klass och regelprofil | #266 D1 | — | profiler för clear round, A, A:0 | INFRA-3, G-REGEL | räkneprov per profil | — | `EJ_PÅBÖRJAD` |
 | D2 tävlingsdagen | #266 D2, §6 | — | tillstånd på servern: anmälan → bangång → framridning → startlista → signal → ritt → resultat → prisutdelning → eftervård; UI för PC och touch | D1, Hus/Byggnader (platser) | ingen klient kan hoppa ett steg | hela dagen | `EJ_PÅBÖRJAD` |
 | D3 domare och protokoll | #266 D3, §7 | webbens `domaRitt` som referens | deterministisk domare på servern ur händelser | INFRA-2, B4 | samma händelser ger samma resultat; fel, vägran, tid, lika resultat | protokollet begripligt | `EJ_PÅBÖRJAD` |
-| D4 placering, rosett och persistens | #266 D4, §8 | kvitton i INFRA-1 | placering efter startfält; rosettordning 1 blågul, 2 blå, 3 gul, 4 röd, 5 grön, 6+ vit; clear round och deltagarminne åtskilda | INFRA-1, D3 | inga dubbla priser vid återanslutning | pris finns kvar | `EJ_PÅBÖRJAD` |
+| D4 placering, rosett och persistens | #266 D4, §8 | kvitton i INFRA-1 | placering efter startfält; rosettordning 1 blågul, 2 blå, 3 gul, 4 röd, 5 grön, 6+ vit; clear round och deltagarminne åtskilda | INFRA-1, D3, D4-RÄTT | inga dubbla priser vid återanslutning, omförsök, tvetydig skrivning eller samtidiga sessioner | pris finns kvar | `EJ_PÅBÖRJAD` |
 | D5 tävlingskläder | #248, #266 D5 | `TavlingskladerService` utan anropare | på/av inom tävlingssammanhanget | D2 | fail-closed återställning | kläder på och av | `EJ_PÅBÖRJAD` |
 | NPC-medtävlare | order 5843082008 | webbens simulering som referens | deterministiska, märkta, samma regelmodell | D3 | resultat ändras inte i efterhand | — | `EJ_PÅBÖRJAD` |
 | E1–E3 dressyr: LC:1, LC:2, LB:1 | #266 E | webbens "Dressyr LC" (eget) | program, protokoll, domarantal, avdrag | INFRA-3, G-REGEL (rättigheter) | räkneprov; inget felmärkt program | — | `EJ_PÅBÖRJAD` |
@@ -147,12 +165,14 @@ touch bevaras.
 
 ### 4 · Hus och 5 · Byggnader och området
 
-Ordern använder orden *hus* och *byggnader/området*. Begreppen ska mappas mot
-projektets egna termer innan något byggs:
-- *hus* har Stallhuset (Tobias Drive-mapp) som starkaste hypotes,
-- *byggnader* har mappen Byggnaden, och området i övrigt.
+Mappningen är redan beslutad i den godkända planen (granskning R1,
+`5843188384`):
+- **Hus** betyder stallhusets interiörer.
+- **Byggnader och området** betyder ridhuset och resten av anläggningen.
 
-Ingen ny konstruktion hittas på.
+Det som återstår är en detaljerad, källstyrd mappning mot kort, SITEPLAN och
+referenser, samt den kontrollerade överlämningen G-MILJÖ. Ingen ny
+konstruktion hittas på.
 
 | Paket | Källor | Finns | Gap | Beror på | Teknisk acceptans | Slutprov | Status |
 |---|---|---|---|---|---|---|---|
@@ -185,7 +205,10 @@ Ingen ny konstruktion hittas på.
 
 | Paket | Källor | Finns | Gap | Beror på | Teknisk acceptans | Slutprov | Status |
 |---|---|---|---|---|---|---|---|
-| A1–A3 | #264 R4/R5 | R5-rättelserna finns i `ecb2f2e`, men runtime är NOT_TESTED | — | — | bänk och falsifiering klara | se listan nedan | `BYGGT` (overifierad runtime) |
+| A1–A2 tekniska rättelser | #264 R4/R5 | R5-rättelserna (port, panel, avsittning) finns i `ecb2f2e` | runtime obekräftad | — | bänk och falsifiering klara | port, layout, avsittning och ledning nedan | `BYGGT` (overifierad runtime) |
+| A3 sammanhängande spelverifiering | #264 R5, #266 A3 | — | hela vägen i spel | alla komponenter integrerade och granskade, Tobias omstart | — | hela vägen nedan | `UPPSKJUTEN` (NOT_TESTED) |
+
+Fysisk iPad och iPhone är uttryckligen uppskjutet och blockerar inte PC.
 
 ## Samlat slutspeltest (uppskjutna fall)
 

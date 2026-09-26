@@ -135,7 +135,7 @@ do
 	check("en placeringsrosett utan känt resultat nekas", okP == false and skalP == "ogiltig")
 	local p1 = Sparning.registreraPris(s, "pris-r1", { typ = "placering", resultatId = "r1", farg = "blagul", nar = 1 })
 	local p2, skalP2 = Sparning.registreraPris(s, "pris-r1", { typ = "placering", resultatId = "r1", farg = "blagul", nar = 1 })
-	check("priset delas ut en gång", p1 == true and p2 == false and skalP2 == "finns")
+	check("samma pris-id förbereds bara en gång lokalt", p1 == true and p2 == false and skalP2 == "finns")
 	check("en post, inte två", antal(s.priser) == 1)
 
 	local ogiltig, skalO = Sparning.registreraResultat(s, "r2", resultatPost({ datum = math.huge }))
@@ -151,7 +151,7 @@ do
 	check("vid taket nekas ett nytt pris med «fullt»", fullt == false and skalF == "fullt", tostring(skalF))
 	check("och det äldsta kvittot finns kvar", t.priser.d1 ~= nil and antal(t.priser) == Sparning.MAX_PRISER)
 	local igen = Sparning.registreraPris(t, "d1", { typ = "deltagare", nar = 1 })
-	check("så det äldsta priset kan inte delas ut igen", igen == false)
+	check("så det äldsta priskvittot kan inte förberedas igen", igen == false)
 
 	local fr = Sparning.tom()
 	Sparning.noteraForsok(fr, "volt", false, 0.4, 10)
@@ -199,7 +199,7 @@ do
 
 	--[[ SAMMA PRIS IGEN efter omladdningen: kvittot ligger nu i lagret. ]]
 	local dubbel = Sparning.registreraPris(igen, "cr-r1", { typ = "clear_round", resultatId = "r1", nar = 3 })
-	check("samma pris-id efter återanslutning delas inte ut", dubbel == false)
+	check("samma pris-id efter återanslutning kan inte förberedas igen", dubbel == false)
 	SparService.skriv(spelare)
 	check("och lagret har fortfarande ETT pris", antal(__datastore._data[NYCKEL].priser) == 1)
 	SparService._glomForProv(spelare)
@@ -406,7 +406,7 @@ end
 
 print("\n── R1 fynd 2: registreraPris är lokal förberedelse, inte utdelning ──")
 do
-	--[[ MOTEXEMPEL, inte en utdelning: två sessioner som laddat samma nyckel
+	--[[ MOTEXEMPEL, inte en utdelning (ingen finns ännu): två sessioner som laddat samma nyckel
 		får BÅDA true för samma pris-id. Det visar varför en framtida
 		konsument aldrig får ge ett pris på det svaret (D4-RÄTT). ]]
 	__datastore.nollstall()
