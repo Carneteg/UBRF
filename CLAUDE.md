@@ -4,6 +4,10 @@ Spel om Upplands-Bro Ryttarförening (ubrf.se), Husbyvägen 1A, Bro. Man rider, 
 
 ## Läsordning före arbete
 
+Läs först [WORKING-AGREEMENT](docs/WORKING-AGREEMENT.md). Det är huvudkällan
+för nuvarande roller, behörigheter och testpolicy. Claude är oberoende
+reviewer med produktions-STOPP, inte builder. Historiska uppdrag återstartas inte.
+
 1. `docs/PRODUCT-CANON.md`
 2. `docs/DELIVERY-PROTOCOL.md`
 3. `docs/ASSET-SOURCE-OF-TRUTH.md`
@@ -12,7 +16,9 @@ Spel om Upplands-Bro Ryttarförening (ubrf.se), Husbyvägen 1A, Bro. Man rider, 
 6. `docs/ACTIVE-GATE.md`
 7. relevant implementation-/referensdokumentation
 
-`docs/DELIVERY-PROTOCOL.md` är bindande för status, evidens, falsifiering, review, human acceptance och merge. Om äldre dokument antyder att implementerande agent själv kan slutgodkänna sitt arbete gäller leveransprotokollet. Tobias senaste uttryckliga produktbeslut har högst prioritet. `docs/ENVIRONMENT-DELIVERY.md` förtydligar den nuvarande ansvarsfördelningen: Replit bygger miljön, Claude bygger gameplay och integration, ChatGPT orkestrerar och granskar, Tobias godkänner. Äldre rolluppdrag som motsäger detta gäller inte.
+`docs/DELIVERY-PROTOCOL.md` styr evidens och acceptans. Tobias senaste
+uttryckliga beslut har högst prioritet. Miljökällor och tidigare arbete bevaras;
+`docs/ENVIRONMENT-DELIVERY.md` ger inga nya parallella skrivaruppdrag.
 
 ## Låst produktkärna
 
@@ -66,62 +72,22 @@ Vid konflikt gäller denna ordning:
 6. Drive-original endast som upstream/proveniens när materialet ännu inte migrerats.
 7. antaganden — endast minimalt och tydligt markerade.
 
-**Google Drive är inte en build-dependency.** Claude ska kunna genomföra en implementation även om Drive är helt otillgängligt. Om ett viktigt material bara finns där är det `[DRIVE-ONLY]` och arbetet stoppas för just den detaljen tills materialet finns i GitHub/Supabase eller ett verifierat derivat har skapats.
+**Google Drive är inte en build-dependency.** Implementeraren ska kunna genomföra en implementation även om Drive är helt otillgängligt. Om ett viktigt material bara finns där är det `[DRIVE-ONLY]` och arbetet stoppas för just den detaljen tills materialet finns i GitHub/Supabase eller ett verifierat derivat har skapats.
 
-## Roller och samarbete
+## Roller, review och leverans
 
-### Tobias — Product Owner
-- bestämmer scope och prioritering,
-- godkänner större designförändringar,
-- avgör subjektiv game feel,
-- håller projektet på Roblox-spelsnivå snarare än simulatornivå.
+Följ [WORKING-AGREEMENT](docs/WORKING-AGREEMENT.md) och
+[AI-COLLABORATION](docs/AI-COLLABORATION.md); upprepa inte en alternativ
+rollfördelning här. Granska faktisk diff, källor och tester på exakt SHA.
+Utvecklarens summary och busy process är inte bevis.
+Egna reviewerprov sker endast i isolerad kopia. Ingen produktion, installation,
+extra agent eller kostnad följer automatiskt av ett granskningsuppdrag.
 
-### ChatGPT — Senior Game Director / Game Systems Architect / Reviewer
-- diagnostiserar systemsamband och root causes,
-- skriver acceptance criteria och gates,
-- förvaltar produkt-/referenskanon,
-- reviewar faktisk diff, testbevis, scope, regressioner och plattformsparitet,
-- skriver normalt inte parallellt i samma kärnfiler som aktiva builders arbetar i.
-
-### Replit — Lead Environment & World Builder
-- bygger hela den verklighetstrogna UBRF-miljön: området, byggnader, interiörer, skyltar, material och rekvisita,
-- äger tilldelad miljöimplementation och dess webb-/Roblox-export,
-- använder befintliga GitHub-, Supabase-, Google Drive- och Vercel-anslutningar enligt `docs/ENVIRONMENT-DELIVERY.md`,
-- lämnar källkopplade visuella bevis och tester utan att själv slutgodkänna.
-
-### Claude — Lead Gameplay & Integration Engineer
-- implementerar aktiv gameplay-/integrationsgate på feature branch,
-- verifierar observationer mot aktuell kod före ändring,
-- testar gameplay, inte bara lint/compile,
-- använder Sonnet-subagenter om det hjälper men en huvudagent äger integrationen,
-- lämnar bevis, kända begränsningar och commit-SHA,
-- expanderar inte scope på eget initiativ,
-- använder den gemensamma verktygskedjan och ändrar inte Replits aktiva miljöfiler utan samordning.
-
-### Arbetsloop
-1. Tobias anger mål/problem.
-2. ChatGPT diagnos + brief + acceptance criteria och filägarskap.
-3. Tilldelad builder (Replit för miljö, Claude för gameplay/integration) implementerar och testar.
-4. Builder lämnar audit/evidence.
-5. ChatGPT gör senior review av diff, källor, spelproblem och båda plattformarna.
-6. Tobias avgör accept/ny iteration.
-
-Ingen agent får både införa en större förändring och ensam slutgodkänna den.
-
-## Leveransauktoritet — hårda regler
-
-**TILLDELAD BUILDER BYGGER → CHATGPT REVIEWS → TOBIAS ACCEPTS.**
-
-- Claude eller Replit får aldrig själv sätta slutstatus `APPROVED`, `ACCEPTED`, `DONE`, `CLOSED` eller `FINAL` på sin egen större leverans.
-- Builders högsta normala status är `READY_FOR_CHATGPT_REVIEW`.
-- ChatGPT kan efter oberoende review sätta `READY_FOR_PRODUCT_ACCEPTANCE`.
-- Endast Tobias får sätta `PRODUCT_ACCEPTED` när human acceptance krävs.
-- Merge, grön CI eller grön lokal testsvit är **inte** i sig produktacceptans.
-- Varje icke-trivial leverans ska ha Acceptance Contract enligt `docs/DELIVERY-PROTOCOL.md` innan implementationen expanderar.
-- Builders ska aktivt falsifiera centrala tester; ett test som aldrig visats kunna bli rött är otillräcklig evidens för en kritisk gate.
-- Builders ska uttryckligen redovisa `Not tested`; frånvaro av tillgång till Studio/runtime får aldrig omskrivas till PASS.
-- ChatGPT-review ska utgå från faktisk diff och relevanta källor, inte en builders summary.
-- Visuell fidelity, game feel och målmiljöflöden kräver Tobias uttryckliga PASS där Acceptance Contract säger det.
+Lämna konsoliderade reproducerbara fynd, allvar, prov och begränsningar, sedan
+STOPP. Oberoende teknisk review är aldrig Tobias produktacceptans.
+Skydda källfidelity, accepterat beteende, gränser mellan ryttare/session/försök
+och giltig start-/slutevidens. Begär inte att implementeraren provar det
+uppskjutna hela spelarflödet mellan paket.
 
 ## Plattformskontrakt
 
@@ -195,7 +161,7 @@ Förbättra befintlig arkitektur innan du uppfinner en ny.
 3. Kontrollera relevant råfilm i `references/video/` innan en visuell/interiör detalj deklareras `REFERENCE GAP`; en panorering kan innehålla evidens som saknas i extraherade stillbilder.
 4. Uppdatera byggnadskort/SITEPLAN först när ny evidens ändrar facit.
 5. Koden följer kortet; kortet följer verifierat originalmaterial.
-6. Verifiera visuellt från motsvarande vinkel innan "klart" — och rapportera då `READY_FOR_CHATGPT_REVIEW`, inte egen acceptans.
+6. Verifiera visuellt från motsvarande vinkel innan "klart" — och rapportera då `READY_FOR_REVIEW`, inte egen acceptans.
 7. Stiliserat betyder förenklat — inte påhittat.
 8. Saknas evidens efter full källkontroll: märk `[REFERENCE GAP]`.
 9. Placering på tomten styrs av verifierad `references/SITEPLAN.md`.
@@ -212,7 +178,7 @@ Använd:
 - `docs/ASSET-SOURCE-OF-TRUTH.md` för källpolicy,
 - Supabase `public.reference_assets` för sökbart manifest.
 
-Ingen builder ska instrueras att "gå till Drive" som enda väg till en build-kritisk källa. Både Claude och Replit ska känna till GitHub, Supabase, Google Drive och Vercel och verifiera faktisk åtkomst i sin egen session enligt `docs/ENVIRONMENT-DELIVERY.md`.
+Ingen builder ska instrueras att "gå till Drive" som enda väg till en build-kritisk källa. Faktisk åtkomst verifieras bara när uppgiften behöver den och inom gällande mandat; tidigare anslutningar är inte nya arbetsorder.
 
 ## Aktiv gate
 

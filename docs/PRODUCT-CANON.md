@@ -2,6 +2,10 @@
 
 Det här dokumentet är den överordnade produktvisionen för UBRF-spelet. Vid konflikt mellan en bekväm implementation och den här visionen vinner visionen, om inte Product Owner uttryckligen beslutar något annat.
 
+Nuvarande roller, behörigheter och testpolicy: se
+[WORKING-AGREEMENT](WORKING-AGREEMENT.md). Daterade beslut nedan bevarar
+produktens historia, men äldre personuppdrag eller testordrar återstartas inte.
+
 ## North Star
 
 **Bygg ett rid- och hästspel där spelaren har roligt samtidigt som hon lär sig hur hästar faktiskt fungerar, hur man rider och vilket ansvar och vilka plikter som följer med hästlivet. Allt utspelar sig på UBRF, som ska återskapas så verklighetstroget som det tillgängliga källmaterialet tillåter.**

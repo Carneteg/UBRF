@@ -3,11 +3,18 @@
 **Beslut:** Tobias, förmedlat i PR #264, kommentar `5843082008`
 (COMPLETION_FIRST_INFRA1_20260926), som ersätter planeringsstoppet i
 `5842944422`. Planen som den bygger på: `5842982274`.
-**Skrivande ägare av filen:** Claude (ägarsession `3695fbae`). Ändringar i
-ordning, scope eller status kräver en ny order; ingen annan agent skriver här.
+**Nuvarande ansvar:** se [WORKING-AGREEMENT](WORKING-AGREEMENT.md).
+Codex uppdaterar verifierad status; Claude granskar oberoende. Ändrad
+produktordning eller scope kräver Tobias beslut, inte en statusstädning.
 **Bas när matrisen låstes:** `ecb2f2e11d63dbc3e325a6b1d70c8d48136c0869`.
 
 ## Ordning
+
+**Ändring 2026-09-26 18:01 UTC:** Tobias har godkänt nästa sammanhängande
+voltlektion före mer grundinfrastruktur. VOLT1/FORSOK1 återanvänds; INFRA-3
+och andra nya grundpaket är inte nästa uppgift. Se senaste beslutet i
+[WORKING-AGREEMENT](WORKING-AGREEMENT.md). Katalogen nedan bevaras som
+omfattning/beroenden, inte som en konkurrerande omedelbar arbetsorder.
 
 1. Infrastruktur
 2. Instruktör
@@ -37,9 +44,9 @@ Varje rad har exakt en av dessa. En nivå kräver alla nivåer före den.
 |---|---|---|
 | `EJ_PÅBÖRJAD` | inget byggt i denna ordning | — |
 | `UPPSKJUTEN` | medvetet flyttad till slutspeltestet; NOT_TESTED, inte PASS | ordern |
-| `BYGGT` | kod och fokuserade prov lokalt, falsifierat | Claude |
-| `GRANSKAT` | oberoende review av diff och prov | Codex/ChatGPT |
-| `INTEGRERAT` | inkopplad i spelvägen, regressionssviten grön | Claude, efter review |
+| `BYGGT` | kod och fokuserade prov lokalt, falsifierat | implementeraren |
+| `GRANSKAT` | oberoende review av diff och prov | oberoende granskaren |
+| `INTEGRERAT` | inkopplad i spelvägen, regressionssviten grön | implementeraren, efter review |
 | `SPELVERIFIERAT` | provad i det samlade slutspeltestet | Tobias |
 
 `BYGGT` är aldrig spelbarhet. Bänkbevis märks `BANK_ONLY`. Slutspeltestet
@@ -60,7 +67,7 @@ Tobias uttryckliga omstart.
 
 ## Grindar som måste passeras före beroende arbete
 
-**G-MILJÖ — överlämning av miljön.** Claude äger miljöimplementationen först
+**G-MILJÖ — historisk överlämningsgrind.** Den ursprungliga ordern gav Claude miljöimplementationen först
 efter en kontrollerad överlämning:
 1. inventera Replits befintliga miljöarbete (PR #131/#132, gren
    `replit/pr-131-theory-fidelity`), accepterat innehåll och referenser,
@@ -69,6 +76,10 @@ efter en kontrollerad överlämning:
 
 Till dess görs inga miljöändringar och ingen andra skrivare startas. Tills
 vidare gäller `docs/ENVIRONMENT-DELIVERY.md` för allt som inte är överlämnat.
+
+Aktuellt skrivansvar följer arbetsöverenskommelsen. Nedan bevaras belägg för
+filspecifika överlämningar; de ger inte tillstånd att skriva över annan
+skrivares kvarvarande arbete.
 
 **G-MILJÖ, begränsad överlämning för INFRA-2B2 (2026-09-26).** Tre filer rördes, bara för hindrens
 metadata. Före ändringen var alla tre rena i arbetsträdet:
@@ -148,10 +159,10 @@ Kolumner:
 | INFRA-PLATS1 Platsgrund för ridhuset | order `5843903636` | `UgnetaGestalt.plats` mätte från en sågad bit av "Sarg syd" (redovisad motsägelse) | gemensam plats för bana och dressyrlayout | — | `Ridhusplats` (HorseCore, server och klient) ur de byggda delarna via `PlatsId`: enheter (studs, 3/m), rektanglar, A-kant, A → C ur layoutens längdaxel med tecknet ur banans mitt, lokal/värld i meter, uttryckligt otillgängligt; fail-closed för underlag modellen inte stödjer (ortonormal ändlig bas, horisontella samriktade ytor, layout A-förankrad och inom banan; R1; relativ girning godtas bara om småvinkelkriteriet sin θ · banans halva diagonal ≤ 0,1 studs (exakt punktförflyttning 2·sin(θ/2)·r), och varje yta prövas i sina egna axlar; R2); inkopplad i `UgnetaGestalt.plats` (produktionskonsument); 10 + R1 6 + R2 4 mutationer röda (`ridhusplats.spec`, GESTALT-bänken, BANK_ONLY) | Ugneta mitt på, 1,4 m bortom C (flyttad från den felaktiga platsen) | `GRANSKAT` (CODE_REVIEW_PASS `7221d8f`) + `INTEGRERAT` i Ugnetas väg (ej spelverifierat) |
 | INFRA-OBS-PLATS1 Observerat ridläge i ridhusets ram | order `5844174376`, #266 B3/C | `RidObservation` (segment) och `Ridhusplats` (ram), var för sig | bryggan mellan dem | INFRA-2B1, INFRA-PLATS1 | `RidPlatsObservation` matad i samma uthållighetssteg: aktuell punkt (u, h, v) i meter, planärt medlemskap i bana och layout (inte markkontakt), plats- och ram-id, tid, status, och bara för ett giltigt sammanhängande segment i samma ram båda ändpunkterna; ramen i cache, omlöst bara vid barnändring, ändrat avtryck eller ändrad metadata (lyssnare per barn på `PlatsId`/`Forankring`, avgränsad livscykel; R1), ny ram bryter kontinuiteten; läsväg `HorseService.ridplats`; 9 + R1 5 mutationer röda (`ridplats.spec`, KOHERENS-bänken, BANK_ONLY) | — | `GRANSKAT` (CODE_REVIEW_PASS `039aa66`) + `INTEGRERAT` i HorseService (ej spelverifierat); övningsspecifik mätning: INFRA-VOLT1 |
 | INFRA-VOLT1 Serverobserverad referensmätning för `storvolt` | order `5846331811` | klientens `storvolt` v1 (`RidKanon.INSPELNING`, `Lektion.kvalitet`), orörd; `RidPlatsObservation` | mätning mot en referens på sin plats | INFRA-OBS-PLATS1 | `VoltObservation`, egen version `server-referens-1`, matad bara med ridplatsbildens giltiga segment i samma ritt och ram (samma uthållighetssteg, ingen egen sampling); referens = dressyrlayoutens mitt i platsramen och `RidKanon.UGNETA.KVALITET.VOLT_RADIE` (10, tolkad som meter — antagande, inget officiellt program); sträckviktad radialavvikelse i kordans mittpunkt (medel, RMS, max, meter), signerad vinkel per segment (atan2, omslag ±π), varv bara på nettot, motriktning och återkomst; obestämd vinkel innanför 1,0 m (ändpunkter eller närmaste punkt) bryter vinkelkedjan — okänd vinkel är inte noll, varv bara i en obruten kedja av bestämda segment, centrumstycket blir ett eget okänt avsnitt och återhämtning kräver ett nytt helt varv (R1); avsnitt bryts av varje brott, ogiltig plats, ram- eller referensbyte och avslutad ritt; otillräckligt/okänt underlag ger inga mått; frysta bilder via `HorseService.volt`, 8 avsnitt per ritt, ring om 32 ritter; ingen poäng, lektion eller belöning; 37 mutationer röda mot slutlig R1-kod (varav 11 för kontinuitetsvakten), överlevare åtgärdade (nya prov, två döda grenar borttagna); nya R1-prov 12 FEL mot modulen på `5e95b2c` (`volt.spec`, 91 OK, KOHERENS-bänken, BANK_ONLY) | — | `GRANSKAT` (CODE_REVIEW_PASS `13a366b`) + `INTEGRERAT` i HorseService (ej spelverifierat); ingen konsument |
-| INFRA-FORSOK1 Serverägd försökslivscykel | order `5847195010` | ritten (`HorseService`, `rittId`), `VoltObservation` | försök som serverägd post före instruktörens konsumenter | INFRA-VOLT1 | `RidForsok` + server-API i HorseService (`startaForsok`, `avbrytForsok`, `forsok`, `forsokVolt`; ingen RemoteEvent): servergenererat `forsokId`, ritt/häst/ryttare ur sessionen, övning `storvolt` med bara serverdefinitionen `server-referens-1` (klientens v1 nekas); ägare och AKTUELL accepterad ritt härleds ur `byRider`/sessionen (saknad, stängd, gammal och annan spelares ritt nekas utan mutation; ägarkontrollen `session.rider == player` provad mot en INJICERAD inaktuell bokföring via provkrokar — ingen reproducerad produktionsbugg); ett aktivt per ritt; sekvensbaserad dublett/retry (samma sekvens → samma utfall, äldre okänd → `inaktuell_begaran`), 16 utfall per ritt; stängs exakt en gång med ritten (avsittning, död, lämnande, avregistrering), nekad avsittning bevarar, uppsittning startar inget; start-/slutmarkörer (ritt-tid, voltens högsta avsnitts-nr) så att voltavsnitt som pågick vid starten aldrig tillskrivs; ett STÄNGT försök läser bara voltbilden fryst vid stängningen, aldrig den levande — inga data efter slutet (R1); `forsok.historik_gallrad` när underlaget gallrats; frysta bilder utan resultatfält (`bedomning = "ingen"`), 8 försök per ritt, ring om 32 ritter; ingen sparning (mätt), ingen poäng, ingen klient; 31 mutationer röda (varav 7 för slutgränsen) + 1 ekvivalent; R1-proven röda mot modulen på `ae1016c` (`ridforsok.spec`, 96 OK, KOHERENS-bänken, BANK_ONLY) | — | `BYGGT` + `INTEGRERAT` i HorseService (servergrund, lokalt, R1-rättelse; ej granskat). Bredare `dismount`/`aterforena`-risk vid inaktuell `byRider`: produktionsnåbarhet ej verifierad. PENDING: instruktörskonsument, klient/UI, uppgiftsbaserat lektionsavslut, bedömning och progression |
+| INFRA-FORSOK1 Serverägd försökslivscykel | order `5847195010` | ritten (`HorseService`, `rittId`), `VoltObservation` | försök som serverägd post före instruktörens konsumenter | INFRA-VOLT1 | `RidForsok` + server-API i HorseService (`startaForsok`, `avbrytForsok`, `forsok`, `forsokVolt`; ingen RemoteEvent): servergenererat `forsokId`, ritt/häst/ryttare ur sessionen, övning `storvolt` med bara serverdefinitionen `server-referens-1` (klientens v1 nekas); ägare och AKTUELL accepterad ritt härleds ur `byRider`/sessionen (saknad, stängd, gammal och annan spelares ritt nekas utan mutation; ägarkontrollen `session.rider == player` provad mot en INJICERAD inaktuell bokföring via provkrokar — ingen reproducerad produktionsbugg); ett aktivt per ritt; sekvensbaserad dublett/retry (samma sekvens → samma utfall, äldre okänd → `inaktuell_begaran`), 16 utfall per ritt; stängs exakt en gång med ritten (avsittning, död, lämnande, avregistrering), nekad avsittning bevarar, uppsittning startar inget; start-/slutmarkörer (ritt-tid, voltens högsta avsnitts-nr) så att voltavsnitt som pågick vid starten aldrig tillskrivs; ett STÄNGT försök läser bara voltbilden fryst vid stängningen, aldrig den levande — inga data efter slutet (R1); `forsok.historik_gallrad` när underlaget gallrats; frysta bilder utan resultatfält (`bedomning = "ingen"`), 8 försök per ritt, ring om 32 ritter; ingen sparning (mätt), ingen poäng, ingen klient; 31 mutationer röda (varav 7 för slutgränsen) + 1 ekvivalent; R1-proven röda mot modulen på `ae1016c` (`ridforsok.spec`, 96 OK, KOHERENS-bänken, BANK_ONLY) | — | `GRANSKAT` + `INTEGRERAT` i HorseService (servergrund; CODE_REVIEW_PASS på `49a4ca2`, 96 originalprov + 32 reviewerassertions + 10 regressionsspecar, BANK_ONLY; ej spelverifierat). Bredare `dismount`/`aterforena`-risk vid inaktuell `byRider`: produktionsnåbarhet ej verifierad. PENDING: instruktörskonsument, klient/UI, uppgiftsbaserat lektionsavslut, bedömning och progression |
 | INFRA-4B Statisk offlineinventering | nästa offlinepaket | — | kräver filen, BELAGDA rättigheter per beståndsdel (ett riskbeslut eller en attribution ersätter inte belägg) och tillåtelse att installera verktyg | INFRA-4A, underlag från Tobias | SHA256 och storlek; filversion, enheter, ben, actions, rottranslation och fästen, i en isolerad mapp utan autorun; mätt data åtskild från förslag | — | `BLOCKED` |
 | INFRA-5 Bänk mot runtime (#252 DEL D) | #252 | runtime-grinden fungerar (CI-place `121231609290409`) | 0 av 76 specar märkta `BANK_ONLY` eller med runtime-motsvarighet | — | varje spec märkt; ingen kritisk grind vilar bara på bänken | — | `EJ_PÅBÖRJAD` |
-| INFRA-6 Inaktuella dokument | inventering `5842982274` | — | `ASSET-SOURCE-OF-TRUTH.md:139` (rbxmx "saknas"), BESLUT-162 och `Svar.luau:306` ("ingen dagsform") | — | rättat med källa | — | `EJ_PÅBÖRJAD` |
+| INFRA-6 Inaktuella dokument | inventering `5842982274`, Tobias städuppdrag 2026-09-26 | K3-filens gamla frånvaropåstående är redan märkt historiskt/löst i ASSET-SOURCE-OF-TRUTH; återöppnas inte | roll-/gate-/push-motsägelser rättade i separat lokal dokumentkandidat, oberoende review pending; BESLUT-162 och Svar-kommentaren om dagsform återstår att verifiera mot produktionsvägen | — | [städregister](CLEANUP-20260926.md), inga nya produktpåståenden utan källa | — | `BYGGT` (endast dokumentdelmängden ovan; resten pending, inte spelacceptans) |
 
 ### 2 · Instruktör — tio lektionsområden
 
