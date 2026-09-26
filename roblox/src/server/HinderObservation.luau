@@ -221,12 +221,9 @@ local function prova(id: string)
 		avvisade[id] = "ogiltig_geometri"
 		return false, "ogiltig_geometri"
 	end
-	local fore = hinder[id]
-	if fore and fore._del ~= del then
-		--[[ En annan del har tagit över id:t: det gamla försöket hör till
-			den gamla bommen. ]]
-		stangAktiva(id, "hinder_ogiltigt")
-	end
+	--[[ Ingen egen gren för "en annan del tar över": det kan bara ske
+		efter en dubblett eller en borttagning, och båda har redan stängt
+		de gamla försöken (en sådan gren var död och överlevde sin mutation). ]]
 	h.id = id
 	hinder[id] = h
 	avvisade[id] = nil
