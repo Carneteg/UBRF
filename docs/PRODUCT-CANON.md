@@ -181,6 +181,33 @@ Beskriv aldrig en saknad webbimplementation som genomförd paritet. Under
 etappen redovisas den som en **medveten, tidsbegränsad avvikelse** med
 hänvisning hit.
 
+### Produktbeslut 2026-09-26: completion first
+
+Beslutet är Tobias, förmedlat i PR #264, kommentar `5843082008`.
+
+**Ordning:**
+1. infrastruktur
+2. instruktör
+3. tävling
+4. hus
+5. byggnader och området
+6. utrustning
+7. häst
+8. ett samlat slutspeltest
+
+**Scope:** hela anläggningen och alla arbetspaket i #266, inklusive F1–F3,
+NPC-medtävlare och multiplayer.
+
+**Ersätter:**
+- punkt 3–4 ovan, som krävde upprepade speltest inför varje steg,
+- kravet att #264 ska vara accepterad och mergad innan #266 påbörjas. Det
+  gäller för implementation, inte för release.
+
+**Gäller fortfarande:** pausen för webbfeatures och undantaget i punkt 2.
+
+Status, grindar och slutprovfall per komponent finns i den låsta
+leveransmatrisen, `docs/LEVERANSMATRIS.md`.
+
 Se även `docs/ASSET-SOURCE-OF-TRUTH.md` för material- och datakällor.
 
 ## Beslutsfilter

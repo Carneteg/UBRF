@@ -13,6 +13,16 @@ UBRF är ett lätt, roligt ridspel där spelaren lär sig hästkunskap och ansva
 > genomförd paritet. Webben bevaras i befintligt skick. Se
 > `docs/PRODUCT-CANON.md`, «Tidsbegränsat produktbeslut 2026-09-22».
 
+> **Produktbeslut 2026-09-26 — miljöansvaret flyttar till Claude efter
+> överlämning.** Tobias beslut, PR #264 kommentar `5843082008`. Claude äger
+> miljöimplementationen **först efter** en kontrollerad överlämning:
+> inventering av Replits befintliga miljöarbete, fastställt filägarskap och
+> kvittens. Överlämningsgrinden står i `docs/LEVERANSMATRIS.md` (G-MILJÖ).
+>
+> Till dess gäller Replits ansvar och Claudes begränsning nedan för allt som
+> inte är överlämnat. Accepterat innehåll och referenser bevaras, och ingen
+> andra skrivare startas.
+
 En miljöleverans är inte färdig för oberoende review förrän samma källstyrda miljöändring finns i båda spelbara versionerna, eller en uttryckligt godkänd plattformsspecifik avvikelse är dokumenterad. Webbscreenshots eller grön CI bevisar inte Roblox Studio-funktionalitet.
 
 ## Ansvar och arbetsfördelning
