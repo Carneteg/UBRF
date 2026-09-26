@@ -36,6 +36,7 @@ local RidObservation = require(script.Parent.RidObservation)
 local HinderObservation = require(script.Parent.HinderObservation)
 local RidPlatsObservation = require(script.Parent.RidPlatsObservation)
 local VoltObservation = require(script.Parent.VoltObservation)
+local RidForsok = require(script.Parent.RidForsok)
 
 local HorseService = {}
 
@@ -287,6 +288,12 @@ local function unregister(model: Model)
 		här, annars står den öppen för alltid. `logga` deklareras längre
 		ned, därför går stängningen direkt och i egen pcall. ]]
 	if session.rittId then
+		--[[ INFRA-FORSOK1: ett aktivt försök stängs med ritten, före
+			observationerna (markören läser deras sista läge). ]]
+		local obs = RidObservation.ogonblick(session.rittId)
+		local ok0, fel0 = pcall(RidForsok.rittSlut, session.rittId, "hast_avregistrerad",
+			if obs then obs.tid else 0, VoltObservation.ogonblick(session.rittId))
+		if not ok0 then warn("[Horse] försöken kastade: " .. tostring(fel0)) end
 		local ok, fel = pcall(RidLogg.avsluta, session.rittId, "avbruten", "hast_avregistrerad", os.clock())
 		if not ok then warn("[Horse] ridloggen kastade: " .. tostring(fel)) end
 		local ok2, fel2 = pcall(RidObservation.avsluta, session.rittId, "avbruten")
@@ -534,6 +541,10 @@ local function setRider(session: Session, player: Player?, orsak: string?)
 	local logNu = os.clock()
 	if gammalRitt then
 		local vanlig = orsak == nil or orsak == "avsittning"
+		--[[ INFRA-FORSOK1: försöket stängs exakt en gång, med orsaken. ]]
+		local obs = RidObservation.ogonblick(gammalRitt)
+		logga(RidForsok.rittSlut, gammalRitt, orsak or "avsittning", if obs then obs.tid else 0,
+			VoltObservation.ogonblick(gammalRitt))
 		logga(RidLogg.avsluta, gammalRitt, if vanlig then "avslutad" else "avbruten",
 			orsak or "avsittning", logNu)
 		logga(RidObservation.avsluta, gammalRitt, if vanlig then "avslutad" else "avbruten")
@@ -552,6 +563,9 @@ local function setRider(session: Session, player: Player?, orsak: string?)
 		logga(HinderObservation.starta, session.rittId, hastId, player.UserId)
 		logga(RidPlatsObservation.starta, session.rittId, hastId, player.UserId)
 		logga(VoltObservation.starta, session.rittId, hastId, player.UserId)
+		--[[ INFRA-FORSOK1: ritten kan bära försök, men inget startas här —
+			fri ridning är fri. ]]
+		logga(RidForsok.rittStart, session.rittId, hastId, player.UserId)
 	end
 	--[[ ── MÄRKET REPLIKERAS, OCH DET ÄR INTE EN BEKVÄMLIGHET ──────────
 	     Första utkastet lämnade märket ENBART i `tryMount`-returen. Det
@@ -1847,6 +1861,56 @@ end
 	se VoltObservation). Fryst bild; ingen poäng, lektion eller belöning. ]]
 function HorseService.volt(rittId: string?): any
 	return VoltObservation.ogonblick(rittId)
+end
+
+--[[ ── INFRA-FORSOK1: SERVERNS FÖRSÖK (se RidForsok) ───────────────────
+	Bara serverkod, ingen RemoteEvent. Ryttare, häst och ritt härleds ur
+	HorseService: spelaren ska sitta på en registrerad häst, och `rittId`
+	ska vara hennes AKTUELLA accepterade ritt. En saknad, stängd, gammal
+	eller annan spelares ritt nekas utan mutation. ]]
+local function forsokRitt(player: any, rittId: any): (Session?, string?)
+	local model = player ~= nil and byRider[player] or nil
+	local session = model and sessions[model]
+	if not session or session.rider ~= player or session.rittId == nil then
+		return nil, "forsok.ingen_ritt"
+	end
+	if type(rittId) ~= "string" or rittId ~= session.rittId then
+		return nil, "forsok.fel_ritt"
+	end
+	return session, nil
+end
+
+local function rittTidFor(rittId: string): number
+	local obs = RidObservation.ogonblick(rittId)
+	return if obs then obs.tid else 0
+end
+
+function HorseService.startaForsok(player: any, rittId: any, sekvens: any, ovning: any,
+	definition: any): (boolean, string?, string?)
+	local session, fel = forsokRitt(player, rittId)
+	if not session then return false, fel, nil end
+	local id = session.rittId :: string
+	return RidForsok.starta(id, sekvens, ovning, definition, rittTidFor(id), VoltObservation.ogonblick(id))
+end
+
+function HorseService.avbrytForsok(player: any, rittId: any, sekvens: any,
+	forsokId: any): (boolean, string?, string?)
+	local session, fel = forsokRitt(player, rittId)
+	if not session then return false, fel, nil end
+	local id = session.rittId :: string
+	return RidForsok.avbryt(id, sekvens, forsokId, rittTidFor(id), VoltObservation.ogonblick(id))
+end
+
+--[[ Fryst bild av ett försök, nil om det är okänt eller gallrat. ]]
+function HorseService.forsok(forsokId: string?): any
+	return RidForsok.ogonblick(forsokId)
+end
+
+--[[ Voltavsnitten som kan tillskrivas försöket — urval, ingen bedömning. ]]
+function HorseService.forsokVolt(forsokId: string?): (any, string?)
+	local f = RidForsok.ogonblick(forsokId)
+	if not f then return nil, "forsok.okant" end
+	return RidForsok.voltUnderlag(forsokId, VoltObservation.ogonblick(f.rittId))
 end
 
 return HorseService
