@@ -39,7 +39,20 @@
 	    avsnittets startläge.
 	  · Obestämd vinkel: ett segment vars ändpunkter, eller närmaste punkt,
 	    ligger närmare centrum än `R_MIN` (1,0 m) ger ingen vinkel och
-	    räknas som `obestamda`. Stillastående (längd 0) ger vinkel 0.
+	    räknas som `obestamda`. Stillastående (längd 0) utanför R_MIN ger
+	    en OBSERVERAD vinkel 0.
+
+	── OBRUTEN VINKELEVIDENS (R1) ────────────────────────────────────
+	Okänd vinkel är inte noll vinkel. Nettot och varven gäller därför bara
+	en OBRUTEN kedja av segment med bestämd vinkel: ett segment med
+	obestämd vinkel avslutar avsnittet (`obestamd_vinkel`). Obestämda
+	segment i följd bildar ett eget avsnitt med underlaget "okant" och
+	utan vinkel-, varv- eller radialmått, och det första bestämda
+	segmentet efter dem avslutar det (`vinkel_bestamd_igen`) och startar
+	en ny kedja från noll. Ett avsnitt blandar alltså aldrig bestämda och
+	obestämda segment, och ingen andel eller procentgräns avgör varvet.
+	Återhämtning kräver ny giltig evidens: ett helt varv måste ridas
+	obrutet efter centrum.
 
 	── AVSNITT OCH GILTIGHET ──────────────────────────────────────────
 	Ett avsnitt pågår så länge varje steg är ett giltigt segment i samma
@@ -48,9 +61,9 @@
 	referens avslutar avsnittet med sitt skäl, och nästa segment börjar ett
 	nytt. Inget bryggas.
 
-	Underlag per avsnitt: "otillrackligt" (under MIN_TID s, MIN_SEGMENT
-	segment eller MIN_STRACKA m), "okant" (obestämda över MAX_OBESTAMD av
-	segmenten), annars "tillrackligt". Bara vid "tillrackligt" finns
+	Underlag per avsnitt: "okant" (ett avsnitt av obestämda segment),
+	"otillrackligt" (under MIN_TID s, MIN_SEGMENT segment eller
+	MIN_STRACKA m), annars "tillrackligt". Bara vid "tillrackligt" finns
 	avvikelse, vinkel, riktning, varv och återkomst i bilden; annars är de
 	nil. Saknat underlag är okänt — varken perfekt eller dålig ridning.
 	Tid, sträcka, segment och obestämda redovisas alltid. Inget här är poäng, godkänd övning eller belöning.
@@ -71,7 +84,6 @@ VoltObservation.R_MIN = 1.0
 VoltObservation.MIN_TID = 1.0
 VoltObservation.MIN_SEGMENT = 4
 VoltObservation.MIN_STRACKA = 2.0
-VoltObservation.MAX_OBESTAMD = 0.25
 VoltObservation.TOL_VARV = 1e-6
 VoltObservation.MAX_AVSNITT = 8
 VoltObservation.MAX_AVSLUTADE = 32
@@ -79,7 +91,7 @@ VoltObservation.MAX_AVSLUTADE = 32
 type Avsnitt = {
 	nr: number, ramId: number, cu: number, cv: number,
 	tid: number, stracka: number,
-	segment: number, obestamda: number,
+	segment: number, obestamda: number, obestamt: boolean,
 	viktAbs: number, viktKvad: number, maxAvvikelse: number,
 	netto: number, positiv: number, negativ: number,
 	startU: number, startV: number, sistU: number, sistV: number,
@@ -102,15 +114,15 @@ local function sammanfatta(a: Avsnitt): any
 	local R = VoltObservation.RADIE
 	local skal = {}
 	local underlag = "tillrackligt"
-	if a.tid < VoltObservation.MIN_TID or a.segment < VoltObservation.MIN_SEGMENT then
+	if a.obestamt then
+		underlag = "okant"
+		table.insert(skal, "for_nara_centrum")
+	elseif a.tid < VoltObservation.MIN_TID or a.segment < VoltObservation.MIN_SEGMENT then
 		underlag = "otillrackligt"
 		table.insert(skal, "for_kort")
 	elseif a.stracka < VoltObservation.MIN_STRACKA then
 		underlag = "otillrackligt"
 		table.insert(skal, "for_lite_rorelse")
-	elseif a.obestamda / a.segment > VoltObservation.MAX_OBESTAMD then
-		underlag = "okant"
-		table.insert(skal, "for_nara_centrum")
 	end
 	--[[ Okänt är okänt: utan tillräckligt underlag finns inga mått som en
 		konsument kan läsa som noll avvikelse eller noll varv. ]]
@@ -206,12 +218,31 @@ function VoltObservation.sampla(rittId: string?, plats: any): boolean
 		bygg(r, "ogiltigt_segment")
 		return true
 	end
+	--[[ Vinkeln kring centrum avgörs FÖRE avsnittet: obestämd nära
+		centrum — ändpunkter eller segmentets närmaste punkt innanför R_MIN. ]]
+	local du, dv = tu - fu, tv - fv
+	local langd = math.sqrt(du * du + dv * dv)
+	local au, avc = fu - cu, fv - cv
+	local bu, bvc = tu - cu, tv - cv
+	local narmast = math.min(math.sqrt(au * au + avc * avc), math.sqrt(bu * bu + bvc * bvc))
+	if langd > 0 then
+		local k = math.clamp(-(au * du + avc * dv) / (langd * langd), 0, 1)
+		local nu, nv = au + du * k, avc + dv * k
+		narmast = math.min(narmast, math.sqrt(nu * nu + nv * nv))
+	end
+	local obestamt = narmast < VoltObservation.R_MIN
+	--[[ R1: kedjan bryts vid varje växling mellan bestämd och obestämd
+		vinkel, så att ett oobserverat stycke aldrig binder ihop två bågar. ]]
+	if a and a.obestamt ~= obestamt then
+		avsluta(r, if obestamt then "obestamd_vinkel" else "vinkel_bestamd_igen")
+		a = nil
+	end
 	if not a then
 		r.nr += 1
 		a = {
 			nr = r.nr, ramId = ramId, cu = cu, cv = cv,
 			tid = 0, stracka = 0,
-			segment = 0, obestamda = 0,
+			segment = 0, obestamda = 0, obestamt = obestamt,
 			viktAbs = 0, viktKvad = 0, maxAvvikelse = 0,
 			netto = 0, positiv = 0, negativ = 0,
 			startU = fu, startV = fv, sistU = fu, sistV = fv,
@@ -227,8 +258,6 @@ function VoltObservation.sampla(rittId: string?, plats: any): boolean
 	end
 	av.segment += 1
 
-	local du, dv = tu - fu, tv - fv
-	local langd = math.sqrt(du * du + dv * dv)
 	av.stracka += langd
 
 	--[[ Radialavvikelse i segmentets mittpunkt, sträckviktad. ]]
@@ -238,21 +267,9 @@ function VoltObservation.sampla(rittId: string?, plats: any): boolean
 	av.viktKvad += avv * avv * langd
 	if avv > av.maxAvvikelse then av.maxAvvikelse = avv end
 
-	--[[ Vinkel kring centrum. Obestämd nära centrum — ändpunkter eller
-		segmentets närmaste punkt innanför R_MIN. ]]
-	local au, avc = fu - cu, fv - cv
-	local bu, bvc = tu - cu, tv - cv
-	local ra = math.sqrt(au * au + avc * avc)
-	local rb = math.sqrt(bu * bu + bvc * bvc)
-	local narmast = math.min(ra, rb)
-	if langd > 0 then
-		local k = math.clamp(-(au * du + avc * dv) / (langd * langd), 0, 1)
-		local nu, nv = au + du * k, avc + dv * k
-		narmast = math.min(narmast, math.sqrt(nu * nu + nv * nv))
-	end
 	--[[ Ett stillastående segment (a = b) behöver ingen egen gren:
 		a × b = 0 och a · b = |a|² > 0 ger atan2 exakt 0. ]]
-	if narmast < VoltObservation.R_MIN then
+	if obestamt then
 		av.obestamda += 1
 	else
 		local d = math.atan2(au * bvc - avc * bu, au * bu + avc * bvc)

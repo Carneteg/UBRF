@@ -258,10 +258,19 @@ do
 		bestämd vinkel och får ingen påhittad kurs. ]]
 	nytt(hastA, CU, CV - 10)
 	for i = 1, 20 do steg(hastA, lage(CU, CV - 10 + i)) end
-	local genom = pagar(marke)
-	check("genom centrum: obestämda segment räknas, nettot 0", genom.obestamda == 2
-		and nara(genom.netto, 0, 1e-9) and genom.varv == 0, ("%d obestämda, netto %s"):format(genom.obestamda, f(genom.netto)))
-	check("genom centrum: få obestämda — underlaget räcker", genom.underlag == "tillrackligt")
+	--[[ R1: kedjan bryts vid centrum. Tre avsnitt: före (bestämd vinkel,
+		netto 0), vid centrum (okänt, två obestämda segment) och efter (en
+		ny kedja från noll). Inget av dem har en vinkel som spänner över
+		centrum. ]]
+	local av = bild(marke).avslutade
+	local fore, vid, efter = av[#av - 1], av[#av], pagar(marke)
+	check("genom centrum: kedjan före slutar vid centrum, netto 0", fore.slut == "obestamd_vinkel"
+		and fore.obestamda == 0 and nara(fore.netto, 0, 1e-9) and fore.varv == 0, tostring(fore.slut))
+	check("genom centrum: två obestämda segment i ett eget okänt avsnitt utan mått", vid.obestamda == 2
+		and vid.segment == 2 and vid.underlag == "okant" and vid.slut == "vinkel_bestamd_igen"
+		and vid.netto == nil and vid.varv == nil and vid.medelAvvikelse == nil, vid.underlag)
+	check("genom centrum: efteråt en ny kedja från noll", efter.obestamda == 0 and efter.nr == vid.nr + 1
+		and nara(efter.netto, 0, 1e-9) and efter.underlag == "tillrackligt")
 
 	--[[ Ett segment vars ändpunkter ligger utanför R_MIN men som passerar
 		genom mitten: närmaste punkten avgör. ]]
@@ -293,6 +302,94 @@ do
 		and nara(gles.medelAvvikelse, R * (1 - math.cos(math.pi / 24)), 1e-6), f(gles.medelAvvikelse))
 	check("KONTROLL: inga teleportsteg i proven ovan", HorseService.ridobservation(marke).giltighet.teleporter == 0,
 		tostring(HorseService.ridobservation(marke).giltighet.teleporter))
+end
+
+print("\n── R1: obruten vinkelevidens — okänd vinkel är inte noll vinkel ──")
+do
+	--[[ Codex reproduktioner (#5847071180), genom HorseService. Varje
+		bestämd båge är högst ett halvt varv; ett helt varv har aldrig
+		ridits obrutet. Inget avsnitt får alltså rapportera ett varv. ]]
+	local function punkt(r, a) return lage(CU + r * math.cos(a), CV + r * math.sin(a)) end
+	local function ingetVarv(namn, forsta)
+		local b = bild(marke)
+		local maxVarv, maxNetto = 0, 0
+		for _, a in ipairs(b.avslutade) do
+			if a.nr >= forsta then
+				maxVarv = math.max(maxVarv, a.varv or 0)
+				maxNetto = math.max(maxNetto, math.abs(a.netto or 0))
+			end
+		end
+		if b.pagar then
+			maxVarv = math.max(maxVarv, b.pagar.varv or 0)
+			maxNetto = math.max(maxNetto, math.abs(b.pagar.netto or 0))
+		end
+		check(namn .. ": inget avsnitt har ett varv, inget netto över π", maxVarv == 0
+			and maxNetto <= math.pi + 1e-6, ("varv %d, netto %s"):format(maxVarv, f(maxNetto)))
+	end
+	--[[ Numret som nästa avsnitt får: ett mer än det högsta hittills. ]]
+	local function forstaNr()
+		local b, hog = bild(marke), 0
+		for _, a in ipairs(b.avslutade) do hog = math.max(hog, a.nr) end
+		if b.pagar then hog = math.max(hog, b.pagar.nr) end
+		return hog + 1
+	end
+
+	--[[ 1 och 2: halvcirkel (18 steg à 10°) och tillbaka längs diametern i
+		1 m-steg, två gånger, åt båda hållen. ]]
+	for _, rikt in ipairs({ 1, -1 }) do
+		nytt(hastA, CU + R, CV)
+		local nr0 = forstaNr()
+		for _ = 1, 2 do
+			for i = 1, 18 do steg(hastA, punkt(R, rikt * math.pi * i / 18)) end
+			for x = -R + 1, R do steg(hastA, lage(CU + x, CV)) end
+		end
+		steg(hastA, nil, 5)
+		ingetVarv(("halvcirkel + diameter (%s)"):format(if rikt > 0 then "positiv" else "negativ"), nr0)
+		local b = bild(marke)
+		local okanda = 0
+		for _, a in ipairs(b.avslutade) do if a.nr >= nr0 and a.underlag == "okant" then okanda += 1 end end
+		check(("halvcirkel + diameter (%s): varje centrumpassage är ett okänt avsnitt"):format(
+			if rikt > 0 then "positiv" else "negativ"), okanda == 2, tostring(okanda))
+	end
+
+	--[[ 3: yttre positiv halvcirkel, radiellt in till 0,5 m, inre negativ
+		halvcirkel (R 0,5) i 18 steg, radiellt ut, 100 stillaprov; två
+		gånger. Den geometriska nettovinkeln är 0. ]]
+	nytt(hastA, CU + R, CV)
+	local nr3 = forstaNr()
+	for _ = 1, 2 do
+		for i = 1, 18 do steg(hastA, punkt(R, math.pi * i / 18)) end
+		for x = R - 1, 1, -1 do steg(hastA, lage(CU - x, CV)) end
+		steg(hastA, lage(CU - 0.5, CV))
+		for i = 1, 18 do steg(hastA, punkt(0.5, math.pi - math.pi * i / 18)) end
+		for x = 1, R do steg(hastA, lage(CU + x, CV)) end
+		for _ = 1, 100 do steg(hastA, lage(CU + R, CV)) end
+	end
+	ingetVarv("yttre + inre halvcirkel + stillhet", nr3)
+
+	--[[ Stillhet späder inte: 200 stillaprov på volten efter ett halvvarv
+		ger inte ett varv, och stillaprov vid centrum är okänt. ]]
+	cirkel(hastA, CU, CV, R, N, 0.5, 1)
+	for _ = 1, 200 do steg(hastA, lage(CU - R, CV)) end
+	local still = pagar(marke)
+	check("stillhet på volten: fortfarande π, inget varv", still.varv == 0 and nara(still.netto, math.pi, 1e-6)
+		and still.segment == 18 + 200, f(still.netto))
+	nytt(hastA, CU + 0.3, CV)
+	for _ = 1, 20 do steg(hastA, lage(CU + 0.3, CV)) end
+	check("stillhet vid centrum: okänt, inga mått", pagar(marke).underlag == "okant" and pagar(marke).netto == nil)
+
+	--[[ Verklig återhämtning: efter centrum ut till volten och ett helt,
+		obrutet varv — då och först då ett varv, i en ny kedja. ]]
+	for x = 1, R do steg(hastA, lage(CU + x, CV)) end
+	local nrUt = pagar(marke).nr
+	for i = 1, N - 1 do steg(hastA, punkt(R, TAU * i / N)) end
+	check("återhämtning: ett steg före helt varv — inget varv", pagar(marke).varv == 0)
+	steg(hastA, punkt(R, TAU))
+	local ater = pagar(marke)
+	check("återhämtning: helt obrutet varv efter centrum räknas i den nya kedjan", ater.varv == 1
+		and ater.nr == nrUt and ater.obestamda == 0 and ater.riktning == "positiv", f(ater.netto))
+	check("återhämtning: centrumstycket stängdes som okänt", senast(marke).underlag == "okant"
+		and senast(marke).slut == "vinkel_bestamd_igen")
 end
 
 print("\n── Brott mitt i bågen: inget bryggas ──")
