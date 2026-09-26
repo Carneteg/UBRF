@@ -808,6 +808,11 @@ def valjBunt(spec_rel: str):
     #   bunt som takt, av samma skal. ]]
     elif "forstaritten" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
+    #[[ #264 INFRA-1: sparschemat v2 och SparService mot den stubbade
+    #   DataStore. FORBEREDELSE ar minsta bunt med bade Sparning och
+    #   SparService; ingen tjanstestack eller rigg behovs. ]]
+    elif "sparning" in spec_rel:
+        moduler, stubbar = FORBEREDELSE, "tests/stubs.luau"
     elif "forberedelse" in spec_rel:
         moduler, stubbar = FORBEREDELSE, "tests/stubs.luau"
     #[[ FORE "spel": strangen "spelbarhet" INNEHALLER "spel", sa den hamnar

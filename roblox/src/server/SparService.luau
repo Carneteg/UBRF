@@ -385,6 +385,12 @@ function SparService.skriv(player: Player, andra: ((Sparning.Save) -> ())?): boo
 				end
 			end
 
+			--[[ v2: framsteg, resultat och priser ur minnet. Union för
+				resultat och priser (det som redan ligger i lagret vinner),
+				högsta talet för framsteg. Samma på båda vägarna: ingen av
+				dem kan sänka något eller dela ut ett pris två gånger. ]]
+			Sparning.slaIhopV2(bas, minnet)
+
 			if andra then andra(bas) end
 
 			--[[ Ny revision, räknad från den rad som FAKTISKT ligger i

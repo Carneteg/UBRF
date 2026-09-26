@@ -1057,6 +1057,8 @@ __datastore = {
 	fordrojLas = false,
 	--[[ Opt-in krok fore varje `UpdateAsync`. Se noten dar. ]]
 	foreSkriv = nil :: ((string) -> ())?,
+	efterSkriv = nil :: ((string) -> ())?,
+	omkorTransform = false,
 	forsok = { las = 0, skriv = 0 },
 }
 
@@ -1067,6 +1069,8 @@ function __datastore.nollstall()
 	__datastore.felButik = false
 	__datastore.fordrojLas = false
 	__datastore.foreSkriv = nil
+	__datastore.efterSkriv = nil
+	__datastore.omkorTransform = false
 	__datastore.forsok = { las = 0, skriv = 0 }
 end
 
@@ -1096,6 +1100,16 @@ function __butik:UpdateAsync(nyckel, fn)
 	     precis som forut. ]]
 	if __datastore.foreSkriv then __datastore.foreSkriv(nyckel) end
 	if __datastore.felSkriv then error("DataStore: skrivning misslyckades (stub)") end
+	--[[ #264 INFRA-1, OPT-IN: Roblox får köra transformatorn MER än en gång
+	     (API-referensen för GlobalDataStore:UpdateAsync: "will call the
+	     function again, discarding the result of the previous call").
+	     `omkorTransform` kör den en extra gång och kastar det första
+	     svaret — en sammanslagning med sidoeffekter som inte är idempotent
+	     syns då som en dubblett. Stubben kör om på SAMMA lagrade värde; i
+	     motorn sker omkörningen när en annan server hunnit skriva. ]]
+	if __datastore.omkorTransform then
+		fn(__datastore._data[nyckel])
+	end
 	local nytt = fn(__datastore._data[nyckel])
 	--[[ NIL UR TRANSFORMATORN AVBRYTER SKRIVNINGEN och lämnar det lagrade
 	     värdet ORÖRT. Så gör Roblox, och stubben gjorde det inte: den skrev
@@ -1107,6 +1121,13 @@ function __butik:UpdateAsync(nyckel, fn)
 		return __datastore._data[nyckel]
 	end
 	__datastore._data[nyckel] = nytt
+	--[[ #264 INFRA-1, OPT-IN: skrivningen LANDADE, men anropet kastar ändå
+	     (nätet tappar svaret). Det är ett BÄNKANTAGANDE om nätet, inte ett
+	     citat ur API-referensen — samma fall som `Sparning.registreraPass`
+	     redan är skriven för. `SparService` gör då om skrivningen, och
+	     omförsöket möter sin egen redan skrivna rad. Kroken sätts av provet
+	     och kastar när den vill. ]]
+	if __datastore.efterSkriv then __datastore.efterSkriv(nyckel) end
 	return nytt
 end
 
