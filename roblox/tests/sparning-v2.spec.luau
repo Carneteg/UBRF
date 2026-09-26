@@ -112,8 +112,10 @@ do
 		s.resultat.infFel ~= nil and s.resultat.infFel.fel == nil)
 	check("resultat: ett icke-sträng-id tas bort", antal(s.resultat) == 2, tostring(antal(s.resultat)))
 	check("priser: giltiga finns kvar", s.priser.p1 ~= nil and s.priser.cr ~= nil)
-	check("priser: placering utan resultat, okänd typ och oändlig tid tas bort",
+	check("priser: placering utan resultat, okänd typ och oändlig tid är INTE giltiga",
 		s.priser.utanResultat == nil and s.priser.felTyp == nil and s.priser.infNar == nil)
+	check("men deras id karantänsätts i stället för att raderas (R1 fynd 3)",
+		s.karantan.utanResultat ~= nil and s.karantan.felTyp ~= nil and s.karantan.infNar ~= nil)
 
 	local f, fn = Sparning.migrera({ v = 3, pass = 50, priser = { x = { typ = "deltagare", nar = 1 } } })
 	check("en FRAMTIDA rad (v3) förstås inte", fn == "spar.framtida_sparfil", tostring(fn))
@@ -270,7 +272,7 @@ do
 	SparService._glomForProv(b)
 end
 
-print("\n── Läsfel och framtida rad: ingenting skrivs, ingenting delas ut ──")
+print("\n── Läsfel och framtida rad: ingenting sparas ──")
 do
 	__datastore.nollstall()
 	__datastore._data[NYCKEL] = { v = 3, pass = 9, framtidaFalt = "okänt" }
@@ -293,6 +295,188 @@ do
 	check("och den skrivs inte", SparService.skriv(spelare) == false)
 	check("lagret är orört", __datastore._data[NYCKEL].pass == 4
 		and __datastore._data[NYCKEL].priser.d1.nar == 1)
+	SparService._glomForProv(spelare)
+end
+
+--[[ ══ GRANSKNING R1 ════════════════════════════════════════════════ ]]
+
+--[[ En rad i lagret med `nR` resultat, `nP` priser och `nF` områden. ]]
+local function fylldRad(nR, nP, nF)
+	local rad = { v = 2, rev = 1, pass = 0, passId = {}, forstaDagen = { klar = false },
+		hastar = {}, resultat = {}, priser = {}, framsteg = {} }
+	for i = 1, nR do rad.resultat["r" .. i] = resultatPost() end
+	for i = 1, nP do rad.priser["p" .. i] = { typ = "deltagare", nar = i } end
+	for i = 1, nF do rad.framsteg["f" .. i] = { forsok = 1, klarade = 1, senast = 1 } end
+	return rad
+end
+
+local function antalIRad()
+	local r = __datastore._data[NYCKEL]
+	return antal(r.resultat), antal(r.priser), antal(r.framsteg)
+end
+
+print("\n── R1 fynd 1: taket prövas mot den auktoritativa raden ──")
+do
+	local MR, MP, MF = Sparning.MAX_RESULTAT, Sparning.MAX_PRISER, Sparning.MAX_FRAMSTEG
+	--[[ ALLA TRE TILLSAMMANS: A och B laddar samma nyckel på 499/499/63.
+		Var för sig ryms en post till; tillsammans ryms de inte. ]]
+	__datastore.nollstall()
+	__datastore._data[NYCKEL] = fylldRad(MR - 1, MP - 1, MF - 1)
+	local a = { Name = "A", UserId = 7001 }
+	local b = { Name = "B", UserId = 7001 }
+	local sa, sb = SparService.ladda(a), SparService.ladda(b)
+	check("A förbereder lokalt (under sitt tak)", Sparning.registreraResultat(sa, "ra", resultatPost()) == true
+		and Sparning.registreraPris(sa, "pa", { typ = "placering", resultatId = "ra", nar = 1 }) == true
+		and Sparning.noteraForsok(sa, "fa", true, 0.5, 1) == true)
+	check("B förbereder lokalt (under sitt tak)", Sparning.registreraResultat(sb, "rb", resultatPost()) == true
+		and Sparning.registreraPris(sb, "pb", { typ = "deltagare", nar = 1 }) == true
+		and Sparning.noteraForsok(sb, "fb", true, 0.5, 1) == true)
+	check("KONTROLL: B skriver och når exakt taket", SparService.skriv(b) == true)
+	local r1, p1, f1 = antalIRad()
+	check("lagret står på exakt 500/500/64", r1 == MR and p1 == MP and f1 == MF,
+		("%d/%d/%d"):format(r1, p1, f1))
+	local revFore = __datastore._data[NYCKEL].rev
+	check("den inaktuella A:s skrivning NEKAS", SparService.skriv(a) == false)
+	check("med skälet fullt", string.sub(SparService.senasteNej(a) or "", 1, 6) == "fullt_",
+		tostring(SparService.senasteNej(a)))
+	local r2, p2, f2 = antalIRad()
+	check("lagret gick INTE över taket", r2 == MR and p2 == MP and f2 == MF, ("%d/%d/%d"):format(r2, p2, f2))
+	check("ingen delcommit: revisionen står still", __datastore._data[NYCKEL].rev == revFore)
+	check("B:s poster finns kvar", __datastore._data[NYCKEL].resultat.rb ~= nil
+		and __datastore._data[NYCKEL].priser.pb ~= nil)
+	check("inget föräldralöst pris: A:s placering landade inte utan sitt resultat",
+		__datastore._data[NYCKEL].priser.pa == nil and __datastore._data[NYCKEL].resultat.ra == nil)
+	check("A:s väntande poster ligger kvar i minnet", SparService.save(a).resultat.ra ~= nil
+		and SparService.save(a).priser.pa ~= nil and SparService.save(a).framsteg.fa ~= nil)
+	check("och A får fortfarande spara (inget läsfel)", SparService.kanSpara(a) == true)
+	check("omförsök nekas igen, lika tydligt", SparService.skriv(a) == false
+		and string.sub(SparService.senasteNej(a) or "", 1, 6) == "fullt_")
+	SparService._glomForProv(a)
+	local om = SparService.ladda(a)
+	check("efter omladdning ser A lagrets sanning, inga föräldralösa poster",
+		om.resultat.ra == nil and om.priser.pa == nil and antal(om.priser) == MP)
+	check("och kan inte förbereda en post till lokalt", Sparning.registreraResultat(om, "ra", resultatPost()) == false)
+	SparService._glomForProv(a)
+	SparService._glomForProv(b)
+
+	--[[ VAR KARTA FÖR SIG. ]]
+	local function enKarta(namn, forbered, forvantat)
+		__datastore.nollstall()
+		__datastore._data[NYCKEL] = fylldRad(MR - 1, MP - 1, MF - 1)
+		local x, y = { Name = "X", UserId = 7001 }, { Name = "Y", UserId = 7001 }
+		local sx, sy = SparService.ladda(x), SparService.ladda(y)
+		forbered(sx, "x")
+		forbered(sy, "y")
+		local okY = SparService.skriv(y)
+		local okX = SparService.skriv(x)
+		check(namn .. ": första skrivaren når taket, den andra nekas",
+			okY == true and okX == false and SparService.senasteNej(x) == forvantat,
+			tostring(SparService.senasteNej(x)))
+		SparService._glomForProv(x)
+		SparService._glomForProv(y)
+	end
+	enKarta("resultat", function(sv, t) Sparning.registreraResultat(sv, "r-" .. t, resultatPost()) end, "fullt_resultat")
+	enKarta("priser", function(sv, t) Sparning.registreraPris(sv, "p-" .. t, { typ = "deltagare", nar = 1 }) end, "fullt_priser")
+	enKarta("framsteg", function(sv, t) Sparning.noteraForsok(sv, "f-" .. t, true, 0.5, 1) end, "fullt_framsteg")
+
+	--[[ KONTROLL: en enda session som fyller upp till exakt taket skriver. ]]
+	__datastore.nollstall()
+	__datastore._data[NYCKEL] = fylldRad(MR - 1, MP - 1, MF - 1)
+	local e = SparService.ladda(spelare)
+	Sparning.registreraResultat(e, "sista", resultatPost())
+	Sparning.registreraPris(e, "sista", { typ = "deltagare", nar = 1 })
+	Sparning.noteraForsok(e, "sista", true, 0.5, 1)
+	check("KONTROLL: exakt taket i en session skrivs", SparService.skriv(spelare) == true)
+	local r3, p3, f3 = antalIRad()
+	check("och lagret står på 500/500/64", r3 == MR and p3 == MP and f3 == MF, ("%d/%d/%d"):format(r3, p3, f3))
+
+	--[[ En rad som REDAN ligger över taket gallras inte, och en skrivning
+		utan nya v2-poster (t.ex. ett pass) går fortfarande igenom. ]]
+	SparService._glomForProv(spelare)
+	__datastore.nollstall()
+	__datastore._data[NYCKEL] = fylldRad(MR + 3, MP + 3, MF + 3)
+	local o = SparService.ladda(spelare)
+	Sparning.registreraPass(o, "p-over", 1)
+	check("en rad över taket: skrivning utan nya v2-poster går fram", SparService.skriv(spelare) == true)
+	local r4, p4, f4 = antalIRad()
+	check("och ingenting gallrades", r4 == MR + 3 and p4 == MP + 3 and f4 == MF + 3,
+		("%d/%d/%d"):format(r4, p4, f4))
+	SparService._glomForProv(spelare)
+end
+
+print("\n── R1 fynd 2: registreraPris är lokal förberedelse, inte utdelning ──")
+do
+	--[[ MOTEXEMPEL, inte en utdelning: två sessioner som laddat samma nyckel
+		får BÅDA true för samma pris-id. Det visar varför en framtida
+		konsument aldrig får ge ett pris på det svaret (D4-RÄTT). ]]
+	__datastore.nollstall()
+	local a = { Name = "A", UserId = 7001 }
+	local b = { Name = "B", UserId = 7001 }
+	local sa, sb = SparService.ladda(a), SparService.ladda(b)
+	local ta = Sparning.registreraPris(sa, "samma", { typ = "deltagare", nar = 1 })
+	local tb = Sparning.registreraPris(sb, "samma", { typ = "deltagare", nar = 2 })
+	check("MOTEXEMPEL: båda sessionerna får lokalt true för samma id", ta == true and tb == true)
+	SparService.skriv(b)
+	SparService.skriv(a)
+	check("lagret har ett kvitto — men två lokala true har redan givits",
+		antal(__datastore._data[NYCKEL].priser) == 1)
+	check("och det kvitto som står är det som skrevs först (B)", __datastore._data[NYCKEL].priser.samma.nar == 2)
+	SparService._glomForProv(a)
+	SparService._glomForProv(b)
+
+	--[[ MOTEXEMPEL: en session som inte får spara förbereder ändå lokalt. ]]
+	__datastore.nollstall()
+	__datastore._data[NYCKEL] = { v = 3, pass = 1 }
+	local f = SparService.ladda(spelare)
+	local lokal = Sparning.registreraPris(f, "ro", { typ = "deltagare", nar = 1 })
+	check("MOTEXEMPEL: en skrivskyddad session får lokalt true", lokal == true)
+	check("fast den inte får spara och ingenting skrivs",
+		SparService.kanSpara(spelare) == false and SparService.skriv(spelare) == false
+			and __datastore._data[NYCKEL].priser == nil)
+	SparService._glomForProv(spelare)
+end
+
+print("\n── R1 fynd 3: ett pris utan giltigt resultat karantänsätts ──")
+do
+	__datastore.nollstall()
+	__datastore._data[NYCKEL] = {
+		v = 2, rev = 1, pass = 0,
+		resultat = {
+			bad = resultatPost({ datum = math.huge }),
+			ok = resultatPost(),
+		},
+		priser = {
+			avvisat = { typ = "placering", resultatId = "bad", farg = "blagul", nar = 1 },
+			saknas = { typ = "clear_round", resultatId = "finnsInte", nar = 2 },
+			giltigt = { typ = "placering", resultatId = "ok", farg = "bla", nar = 3 },
+			trasig = { typ = "placering", nar = "inte ett tal" },
+		},
+	}
+	local s = SparService.ladda(spelare)
+	check("det avvisade resultatet är borta", s.resultat.bad == nil)
+	check("pris vars resultat avvisades är INTE ett giltigt pris", Sparning.harPris(s, "avvisat") == false)
+	check("pris vars resultat saknas är INTE ett giltigt pris", Sparning.harPris(s, "saknas") == false)
+	check("KONTROLL: pris med giltigt resultat är giltigt", Sparning.harPris(s, "giltigt") == true)
+	check("de ogiltiga ligger i karantän med orsak",
+		s.karantan.avvisat and s.karantan.avvisat.orsak == "saknat_resultat"
+			and s.karantan.saknas and s.karantan.saknas.orsak == "saknat_resultat"
+			and s.karantan.trasig and s.karantan.trasig.orsak == "ogiltig_post")
+	local igen, skal = Sparning.registreraPris(s, "avvisat",
+		{ typ = "placering", resultatId = "ok", farg = "blagul", nar = 9 })
+	check("samma pris-id kan INTE förberedas igen", igen == false and skal == "karantan", tostring(skal))
+	check("inte heller det trasiga", Sparning.registreraPris(s, "trasig", { typ = "deltagare", nar = 9 }) == false)
+
+	check("skrivningen går fram", SparService.skriv(spelare) == true)
+	local rad = __datastore._data[NYCKEL]
+	check("karantänen bevaras i lagret", rad.karantan and rad.karantan.avvisat and rad.karantan.saknas
+		and rad.karantan.trasig)
+	check("och de karantänsatta står inte som priser", rad.priser.avvisat == nil and rad.priser.saknas == nil
+		and rad.priser.giltigt ~= nil)
+	SparService._glomForProv(spelare)
+	local om = SparService.ladda(spelare)
+	check("efter omladdning är de fortfarande karantänsatta", om.karantan.avvisat ~= nil
+		and Sparning.harPris(om, "avvisat") == false)
+	check("och fortfarande förbrukade", Sparning.registreraPris(om, "saknas", { typ = "deltagare", nar = 9 }) == false)
 	SparService._glomForProv(spelare)
 end
 

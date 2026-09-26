@@ -51,8 +51,11 @@
 	                sammanslagning mellan två servrar aldrig kan sänka dem.
 	  · `resultat`  tävlingsresultat, ett per resultat-id. SKRIVS EN GÅNG:
 	                ett id som redan finns skrivs aldrig över.
-	  · `priser`    utdelade priser, ett per pris-id. Pris-id:t ÄR kvittot;
-	                samma id två gånger ger ett pris, inte två.
+	  · `priser`    SPARADE priskvitton, ett per pris-id. Pris-id:t ÄR
+	                kvittot; samma id två gånger ger en post, inte två.
+	                En post här är ingen utdelning — se `registreraPris`.
+	  · `karantan`  förbrukade pris-id:n som inte kan visas som giltiga
+	                (oläsbar post, saknat eller avvisat resultat).
 
 	Kompatibilitet:
 	  · en v1-rad läses som v2 med tomma kartor. Inget v1-fält ändras.
@@ -67,12 +70,17 @@
 	Resultat och priser GALLRAS ALDRIG. `passId` gallras (de äldsta faller
 	av vid `MAX_KVITTON`), men ett gallrat priskvitto vore ett pris som kan
 	delas ut igen. I stället har kartorna ett TAK: är det nått nekas nya
-	poster med "fullt", och ingenting gammalt tas bort. Taket är långt över
+	poster med "fullt", och ingenting gammalt tas bort. Taket prövas både
+	lokalt och mot den auktoritativa raden i `SparService.skriv` (`ryms`):
+	går den sammanslagna raden över taket nekas HELA skrivningen, utan
+	delcommit, och det som väntar ligger kvar i minnet. Taket är långt över
 	vad ett familjespel hinner (se `MAX_RESULTAT`), och en nekad post är ett
 	synligt nej i stället för en tyst dubblett.
 
-	Ogiltiga poster i en lagrad rad (fel typ, tomma id, tal som inte är
-	ändliga) tas bort vid läsningen. De ger aldrig progression eller pris.
+	Ogiltiga framsteg och resultat i en lagrad rad (fel typ, tomma id, tal
+	som inte är ändliga) tas bort vid läsningen. Ogiltiga PRISER tas inte
+	bort utan karantänsätts, så att deras id förblir förbrukade. Ingenting
+	av detta ger progression eller pris.
 ]]
 
 local Sparning = {}
@@ -137,6 +145,13 @@ export type Pris = {
 	nar: number,
 }
 
+--[[ Ett pris-id som inte kan visas som giltigt pris men som är FÖRBRUKAT.
+	`orsak`: "ogiltig_post" | "saknat_resultat" | vad en lagrad rad bar. ]]
+export type Karantan = {
+	orsak: string,
+	pris: Pris?,
+}
+
 export type Save = {
 	v: number,
 	--[[ REVISIONEN. Monoton räknare som ökar vid varje lyckad skrivning,
@@ -163,6 +178,7 @@ export type Save = {
 	framsteg: { [string]: Framsteg },
 	resultat: { [string]: Resultat },
 	priser: { [string]: Pris },
+	karantan: { [string]: Karantan },
 }
 
 function Sparning.tom(): Save
@@ -176,6 +192,7 @@ function Sparning.tom(): Save
 		framsteg = {},
 		resultat = {},
 		priser = {},
+		karantan = {},
 	}
 end
 
@@ -358,11 +375,35 @@ function Sparning.migrera(rad: any): (Save, string?)
 			end
 		end
 	end
+	--[[ PRISER EFTER RESULTATEN, och ingenting raderas tyst (granskning
+		R1, fynd 3). Ett pris vars post inte går att läsa, eller vars
+		resultat saknas eller just avvisades, är INTE ett giltigt pris —
+		men dess id får inte heller försvinna, för då vore samma pris
+		utdelningsbart igen. Det flyttas till `karantan` med sin orsak, och
+		ligger kvar där (och skrivs tillbaka) tills associationen lösts.
+		`harPris` svarar nej för det, `registreraPris` nekar id:t. ]]
+	if type(rad.karantan) == "table" then
+		for id, k in pairs(rad.karantan) do
+			if giltigtId(id) then
+				local orsak = if type(k) == "table" then kortText(k.orsak) else nil
+				ut.karantan[id] = {
+					orsak = orsak or "okand",
+					pris = if type(k) == "table" then tvattPris(k.pris) else nil,
+				}
+			end
+		end
+	end
 	if type(rad.priser) == "table" then
 		for id, p in pairs(rad.priser) do
-			if giltigtId(id) then
+			if giltigtId(id) and ut.karantan[id] == nil then
 				local ren = tvattPris(p)
-				if ren then ut.priser[id] = ren end
+				if not ren then
+					ut.karantan[id] = { orsak = "ogiltig_post", pris = nil }
+				elseif ren.resultatId and ut.resultat[ren.resultatId] == nil then
+					ut.karantan[id] = { orsak = "saknat_resultat", pris = ren }
+				else
+					ut.priser[id] = ren
+				end
 			end
 		end
 	end
@@ -376,11 +417,11 @@ end
 	Inga spelvägar anropar dessa ännu (INFRA-1). De är grunden som
 	lektionernas framsteg och tävlingsdagens resultat och priser ska
 	skrivas genom, och de har samma form som `registreraPass`: returnerar
-	(true) när posten var NY och räknades, annars (false, skäl). Ett
-	false är aldrig ett fel — det är skyddet som gör ett omsänt pris till
-	ett pris.
+	(true) när posten var NY i DEN HÄR sessionens minne, annars (false,
+	skäl). Ett true är lokal förberedelse — varken sparat eller beviljat;
+	det avgörs först av en bekräftad `SparService.skriv`.
 
-	Skälen är nycklar, inte text: "ogiltig", "finns", "fullt". ]]
+	Skälen är nycklar, inte text: "ogiltig", "finns", "fullt", "karantan". ]]
 
 --[[ Noterar ett försök i ett område. `klar` räknar det som klarat, och
 	`kvalitet` (0–1) höjer bästa värdet om det är bättre. Idempotens är
@@ -424,23 +465,80 @@ function Sparning.registreraResultat(save: Save, id: string, post: any): (boolea
 	return true, nil
 end
 
+--[[ Sant bara för ett GILTIGT pris i den här saven. Ett karantänsatt id
+	räknas inte — men det är ändå förbrukat, se `registreraPris`. ]]
 function Sparning.harPris(save: Save, id: string): boolean
 	return giltigtId(id) and save.priser[id] ~= nil
 end
 
---[[ Delar ut ett pris EN gång. Pris-id:t är kvittot; den som delar ut
-	ska ge spelaren priset bara när svaret är true. En placeringsrosett
-	kräver att dess resultat redan finns i saven. ]]
+--[[ LOKAL FÖRBEREDELSE AV ETT PRIS — INTE en utdelning.
+
+	`true` betyder bara att posten lades till i DEN HÄR sessionens minne.
+	Det är inte ett beviljat pris och inte ett bevis på att något sparats:
+	  · två sessioner som laddat samma nyckel innan någon av dem skrivit får
+	    BÅDA true för samma pris-id (sammanslagningen behåller sedan ett
+	    kvitto — men två lokala true har redan givits),
+	  · en session som inte får spara (framtida rad, läsfel) får true fast
+	    ingenting kan skrivas,
+	  · en skrivning kan nekas, misslyckas eller vara tvetydig efteråt.
+
+	Ett riktigt pris kräver därför en serverns egen, varaktig rätt som
+	härleds ur en BEKRÄFTAD skrivning (#266 D4, grinden «D4-RÄTT» i
+	`docs/LEVERANSMATRIS.md`). Ingen konsument får ge ett oåterkalleligt
+	pris på det här svaret eller inifrån `UpdateAsync`-callbacken.
+
+	Karantänsatta id:n (se `migrera`) är förbrukade: de nekas med
+	"karantan", så att ett oläsbart gammalt pris aldrig blir utdelningsbart
+	igen. En placeringsrosett kräver att dess resultat finns i saven. ]]
 function Sparning.registreraPris(save: Save, id: string, pris: any): (boolean, string?)
 	if not giltigtId(id) then return false, "ogiltig" end
 	if save.priser[id] ~= nil then return false, "finns" end
+	if save.karantan[id] ~= nil then return false, "karantan" end
 	local ren = tvattPris(pris)
 	if not ren then return false, "ogiltig" end
 	if ren.resultatId and save.resultat[ren.resultatId] == nil then
 		return false, "ogiltig"
 	end
-	if antal(save.priser) >= MAX_PRISER then return false, "fullt" end
+	if antal(save.priser) + antal(save.karantan) >= MAX_PRISER then return false, "fullt" end
 	save.priser[id] = ren
+	return true, nil
+end
+
+--[[ RYMS DET SOM SKA SLÅS IHOP? Kontrollen mot den AUKTORITATIVA raden.
+
+	`registreraResultat`, `registreraPris` och `noteraForsok` prövar taket
+	mot sessionens eget minne. Två sessioner som laddat samma nyckel kan
+	då var för sig hålla sig under taket och tillsammans gå över det
+	(granskningen R1: 499 + 1 + 1 blev 501). Taket måste därför prövas
+	igen mot den rad som faktiskt ligger i lagret, i `UpdateAsync`.
+
+	Räknar de poster i `fran` som är NYA för `till` och prövar varje karta
+	för sig. Poster som redan ligger över taket i `till` rörs aldrig; bara
+	NYA poster kan få skrivningen nekad. Returnerar (true) eller (false,
+	"fullt_resultat" | "fullt_priser" | "fullt_framsteg"). ]]
+function Sparning.ryms(till: Save, fran: Save): (boolean, string?)
+	local nyaR, nyaP, nyaF = 0, 0, 0
+	for id in pairs(fran.resultat) do
+		if till.resultat[id] == nil then nyaR += 1 end
+	end
+	for id in pairs(fran.priser) do
+		if till.priser[id] == nil and till.karantan[id] == nil then nyaP += 1 end
+	end
+	for id in pairs(fran.karantan) do
+		if till.karantan[id] == nil and till.priser[id] == nil then nyaP += 1 end
+	end
+	for id in pairs(fran.framsteg) do
+		if till.framsteg[id] == nil then nyaF += 1 end
+	end
+	if nyaR > 0 and antal(till.resultat) + nyaR > MAX_RESULTAT then
+		return false, "fullt_resultat"
+	end
+	if nyaP > 0 and antal(till.priser) + antal(till.karantan) + nyaP > MAX_PRISER then
+		return false, "fullt_priser"
+	end
+	if nyaF > 0 and antal(till.framsteg) + nyaF > MAX_FRAMSTEG then
+		return false, "fullt_framsteg"
+	end
 	return true, nil
 end
 
@@ -457,8 +555,15 @@ function Sparning.slaIhopV2(till: Save, fran: Save)
 	for id, r in pairs(fran.resultat) do
 		if till.resultat[id] == nil then till.resultat[id] = table.clone(r) end
 	end
+	--[[ Karantänen först: ett id som är karantänsatt i någon av de två är
+		förbrukat och får inte komma in som giltigt pris. ]]
+	for id, k in pairs(fran.karantan) do
+		if till.karantan[id] == nil and till.priser[id] == nil then
+			till.karantan[id] = { orsak = k.orsak, pris = if k.pris then table.clone(k.pris) else nil }
+		end
+	end
 	for id, p in pairs(fran.priser) do
-		if till.priser[id] == nil then till.priser[id] = table.clone(p) end
+		if till.priser[id] == nil and till.karantan[id] == nil then till.priser[id] = table.clone(p) end
 	end
 	for id, f in pairs(fran.framsteg) do
 		local t = till.framsteg[id]
@@ -619,10 +724,13 @@ function Sparning.tillRad(save: Save): any
 	end
 	local passId = {}
 	for id, t in pairs(save.passId) do passId[id] = t end
-	local framsteg, resultat, priser = {}, {}, {}
+	local framsteg, resultat, priser, karantan = {}, {}, {}, {}
 	for id, f in pairs(save.framsteg) do framsteg[id] = table.clone(f) end
 	for id, r in pairs(save.resultat) do resultat[id] = table.clone(r) end
 	for id, p in pairs(save.priser) do priser[id] = table.clone(p) end
+	for id, k in pairs(save.karantan) do
+		karantan[id] = { orsak = k.orsak, pris = if k.pris then table.clone(k.pris) else nil }
+	end
 	return {
 		v = save.v,
 		rev = save.rev,
@@ -633,6 +741,7 @@ function Sparning.tillRad(save: Save): any
 		framsteg = framsteg,
 		resultat = resultat,
 		priser = priser,
+		karantan = karantan,
 	}
 end
 

@@ -94,6 +94,9 @@ local skriver: { [Player]: boolean } = {}
 local laddadRev: { [Player]: number } = {}
 -- Identiteten gör ett sent nätverkssvar ogiltigt när sessionen avslutas.
 local laddningar: { [Player]: {} } = {}
+--[[ Varför den senaste skrivningen nekades, eller nil. Läsbart så att en
+	anropare kan skilja "fullt" från "nätet föll" (granskning R1, fynd 1). ]]
+local senasteNej: { [Player]: string? } = {}
 
 --[[ Studio utan API-åtkomst, och alla lokala prov, ska INTE krascha på
 	rad ett. `GetDataStore` kastar då, och resultatet är nil — vilket
@@ -198,6 +201,14 @@ end
 
 function SparService.anmarkning(player: Player): string?
 	return anmarkning[player]
+end
+
+--[[ Skälet till att den SENASTE `skriv` nekades avsiktligt: "fullt_resultat",
+	"fullt_priser", "fullt_framsteg" eller "framtida sparfil i lagret". Nil
+	efter en lyckad skrivning. Ett nätfel är inte ett avsiktligt nej och
+	lämnar det tidigare värdet. ]]
+function SparService.senasteNej(player: Player): string?
+	return senasteNej[player]
 end
 
 --[[ ── ÄR LÄSNINGEN BETRODD? (#263 re-review, P1-1) ─────────────────
@@ -385,10 +396,24 @@ function SparService.skriv(player: Player, andra: ((Sparning.Save) -> ())?): boo
 				end
 			end
 
+			--[[ v2-TAKET MOT DEN AUKTORITATIVA RADEN (granskning R1, fynd 1).
+				Varje session prövar taket mot sitt eget minne; två sessioner
+				kan då var för sig hålla sig under och tillsammans gå över.
+				Här prövas det mot det som FAKTISKT ligger i lagret. Går
+				sammanslagningen över nekas HELA skrivningen — ingen delcommit,
+				inget gammalt kvitto kastas och ingen ny post tappas tyst — och
+				det som väntar ligger kvar i minnet. `bas` är en färsk kopia ur
+				lagret, så inget av det som gjorts med den ovan når någonstans. ]]
+			local ryms, full = Sparning.ryms(bas, minnet)
+			if not ryms then
+				konflikt = full
+				return nil
+			end
+
 			--[[ v2: framsteg, resultat och priser ur minnet. Union för
 				resultat och priser (det som redan ligger i lagret vinner),
 				högsta talet för framsteg. Samma på båda vägarna: ingen av
-				dem kan sänka något eller dela ut ett pris två gånger. ]]
+				dem kan sänka något eller spara samma priskvitto två gånger. ]]
 			Sparning.slaIhopV2(bas, minnet)
 
 			if andra then andra(bas) end
@@ -411,6 +436,7 @@ function SparService.skriv(player: Player, andra: ((Sparning.Save) -> ())?): boo
 	end))
 
 	skriver[player] = false
+	if ok and not konflikt then senasteNej[player] = nil end
 	if konflikt then
 		--[[ Ingenting skrevs, och det var avsiktligt. Framstegen ligger kvar
 			i minnet. Den framtida sparfilen gör dessutom sessionen
@@ -420,6 +446,10 @@ function SparService.skriv(player: Player, andra: ((Sparning.Save) -> ())?): boo
 			kanSpara[player] = false
 			anmarkning[player] = "spar.framtida_sparfil"
 		end
+		--[[ Ett fullt tak (`fullt_*`) lämnar `kanSpara` sann: lagret är
+			läsbart och rätt version, det är bara de väntande posterna som
+			inte ryms. Utfallet är läsbart för anroparen via `senasteNej`. ]]
+		senasteNej[player] = konflikt
 		warn(("[Spar] %s sparades INTE: %s. Inget skrevs över.")
 			:format(player.Name, konflikt))
 		return false
@@ -594,6 +624,7 @@ local function glom(player: Player)
 	skriver[player] = nil
 	redo[player] = nil
 	laddadRev[player] = nil
+	senasteNej[player] = nil
 end
 
 --[[ ── LIVSCYKEL ──────────────────────────────────────────────────── ]]
