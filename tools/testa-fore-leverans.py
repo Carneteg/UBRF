@@ -2,9 +2,10 @@
 """Local delivery runner: contract tests with real Bash and isolated files."""
 import copy
 import importlib.util
+import contextlib
+import io
 import os
 from pathlib import Path
-import shutil
 import sys
 import tempfile
 import unittest
@@ -14,7 +15,7 @@ SPEC = importlib.util.spec_from_file_location('fore_leverans', Path(__file__).wi
 RUNNER = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = RUNNER
 SPEC.loader.exec_module(RUNNER)
-BASH = shutil.which(os.environ.get('UBRF_TEST_BASH', 'bash'))
+BASH = RUNNER.select_bash(os.environ.get('UBRF_TEST_BASH'))
 
 
 def check(name='check', command='echo checked', required='input.txt'):
@@ -37,6 +38,21 @@ def workflow():
 
 
 class Planning(unittest.TestCase):
+    def test_known_installation_and_download_forms_rejected(self):
+        commands = ('npm ci', 'npm i left-pad', 'npm add left-pad',
+                    'yarn add left-pad', 'pnpm add left-pad', 'npx -y cowsay hej',
+                    'pip3 install requests', 'pip install requests',
+                    'wget -q https://example.invalid/file', 'apt-get install x',
+                    'apt install x', 'sudo apt-get install -y x',
+                    'python3 -m pip install -r req.txt', 'npm\tci',
+                    'curl https://example.invalid/file')
+        for command in commands:
+            with self.subTest(command=command):
+                data = workflow()
+                data['jobs']['grindar']['steps'].append(check('unknown setup', command))
+                with self.assertRaisesRegex(ValueError, 'installation'):
+                    RUNNER.build_plan(data)
+
     def test_only_exact_setup_is_removed(self):
         plan = RUNNER.build_plan(workflow())
         self.assertEqual(len(plan.checks), 4)
@@ -111,6 +127,28 @@ class Planning(unittest.TestCase):
                 RUNNER.build_plan(data)
 
 
+class ShellSelection(unittest.TestCase):
+    def test_windows_aliases_rejected_without_execution(self):
+        for executable in (r'C:\Users\test\AppData\Local\Microsoft\WindowsApps\bash.EXE',
+                           r'C:\Windows\System32\bash.exe', 'C:/WINDOWS/SYSTEM32/bash.exe'):
+            with self.subTest(executable=executable), \
+                 patch.object(RUNNER.sys, 'platform', 'win32'), \
+                 patch.object(RUNNER.shutil, 'which', return_value=executable), \
+                 patch.object(RUNNER.subprocess, 'run') as run:
+                with self.assertRaisesRegex(ValueError, 'alias'):
+                    RUNNER.select_bash()
+                run.assert_not_called()
+
+    def test_explicit_git_bash_posix_and_missing_selection(self):
+        for platform, executable in [('win32', r'C:\Program Files\Git\bin\bash.exe'),
+                                     ('linux', '/usr/bin/bash'), ('win32', None)]:
+            with self.subTest(platform=platform, executable=executable), \
+                 patch.object(RUNNER.sys, 'platform', platform), \
+                 patch.object(RUNNER.shutil, 'which', return_value=executable) as which:
+                self.assertEqual(RUNNER.select_bash('selected-bash'), executable)
+                which.assert_called_once_with('selected-bash')
+
+
 class Execution(unittest.TestCase):
     def setUp(self):
         self.assertIsNotNone(BASH, 'Bash required; missing tests are not PASS. Set UBRF_TEST_BASH.')
@@ -178,9 +216,66 @@ class Execution(unittest.TestCase):
 
 
 class EntryPoint(unittest.TestCase):
+    def test_known_installation_is_blocked_before_any_execution(self):
+        data = workflow()
+        data['jobs']['grindar']['steps'].append(check('unexpected install', 'npm ci'))
+        with patch.object(RUNNER, 'load_workflow', return_value=data), \
+             patch.object(RUNNER, 'identity', return_value={'head': 'fixture', 'status': '', 'workflow_sha256': 'digest'}), \
+             patch.object(RUNNER, 'preflight') as preflight, \
+             patch.object(RUNNER, 'run_checks') as run:
+            self.assertEqual(RUNNER.main(['--run']), 1)
+            preflight.assert_not_called()
+            run.assert_not_called()
+
+    def test_windows_alias_is_blocked_before_any_execution(self):
+        with patch.object(RUNNER, 'load_workflow', return_value=workflow()), \
+             patch.object(RUNNER, 'identity', return_value={'head': 'fixture', 'status': '', 'workflow_sha256': 'digest'}), \
+             patch.object(RUNNER.sys, 'platform', 'win32'), \
+             patch.object(RUNNER.shutil, 'which', return_value=r'C:\Windows\System32\bash.exe'), \
+             patch.object(RUNNER, 'preflight') as preflight, \
+             patch.object(RUNNER, 'run_checks') as run:
+            self.assertEqual(RUNNER.main(['--run']), 1)
+            preflight.assert_not_called()
+            run.assert_not_called()
+
+    def test_dirty_start_refused_before_preflight_or_checks(self):
+        for status in (' M another-writers-file', 'A  staged-file', '?? untracked-file'):
+            with self.subTest(status=status), \
+                 patch.object(RUNNER, 'load_workflow', return_value=workflow()), \
+                 patch.object(RUNNER, 'identity', return_value={'head': 'fixture', 'status': status, 'workflow_sha256': 'digest'}), \
+                 patch.object(RUNNER, 'preflight') as preflight, \
+                 patch.object(RUNNER, 'run_checks') as run:
+                self.assertEqual(RUNNER.main(['--run']), 1)
+                preflight.assert_not_called()
+                run.assert_not_called()
+
+    def test_pass_requires_stable_head_and_workflow(self):
+        initial = {'head': 'fixture', 'status': '', 'workflow_sha256': 'digest'}
+        for key, changed in [('head', 'new-head'), ('workflow_sha256', 'new-digest')]:
+            final = dict(initial, **{key: changed})
+            output = io.StringIO()
+            with self.subTest(key=key), \
+                 patch.object(RUNNER, 'load_workflow', return_value=workflow()), \
+                 patch.object(RUNNER, 'identity', side_effect=[initial, final]), \
+                 patch.object(RUNNER, 'preflight', return_value=[]), \
+                 patch.object(RUNNER, 'run_checks', return_value=0), \
+                 contextlib.redirect_stdout(output):
+                self.assertEqual(RUNNER.main(['--run']), 1)
+                self.assertNotIn('PASS:', output.getvalue())
+
+    def test_generated_reports_do_not_invalidate_stable_candidate(self):
+        initial = {'head': 'fixture', 'status': '', 'workflow_sha256': 'digest'}
+        final = dict(initial, status=' M qa/pre-tobias/RAPPORT.md')
+        with patch.object(RUNNER, 'load_workflow', return_value=workflow()), \
+             patch.object(RUNNER, 'identity', side_effect=[initial, final]), \
+             patch.object(RUNNER, 'preflight', return_value=[]), \
+             patch.object(RUNNER, 'run_checks', return_value=0) as run:
+            self.assertEqual(RUNNER.main(['--run']), 0)
+            run.assert_called_once()
+
     def test_default_plan_runs_nothing(self):
         with patch.object(RUNNER, 'load_workflow', return_value=workflow()), \
-             patch.object(RUNNER, 'identity', return_value={'head': 'fixture'}), \
+             patch.object(RUNNER, 'identity', return_value={'head': 'fixture', 'status': '', 'workflow_sha256': 'digest'}), \
              patch.object(RUNNER, 'preflight') as preflight, \
              patch.object(RUNNER, 'run_checks') as run:
             self.assertEqual(RUNNER.main([]), 0)
@@ -189,7 +284,7 @@ class EntryPoint(unittest.TestCase):
 
     def test_blocked_preflight_never_runs_checks(self):
         with patch.object(RUNNER, 'load_workflow', return_value=workflow()), \
-             patch.object(RUNNER, 'identity', return_value={'head': 'fixture'}), \
+             patch.object(RUNNER, 'identity', return_value={'head': 'fixture', 'status': '', 'workflow_sha256': 'digest'}), \
              patch.object(RUNNER, 'preflight', return_value=['missing dependency']), \
              patch.object(RUNNER, 'run_checks') as run:
             self.assertEqual(RUNNER.main(['--run']), 1)
@@ -197,7 +292,7 @@ class EntryPoint(unittest.TestCase):
 
     def test_preflight_only_never_runs_checks(self):
         with patch.object(RUNNER, 'load_workflow', return_value=workflow()), \
-             patch.object(RUNNER, 'identity', return_value={'head': 'fixture'}), \
+             patch.object(RUNNER, 'identity', return_value={'head': 'fixture', 'status': '', 'workflow_sha256': 'digest'}), \
              patch.object(RUNNER, 'preflight', return_value=[]), \
              patch.object(RUNNER, 'run_checks') as run:
             self.assertEqual(RUNNER.main(['--preflight']), 0)
@@ -205,6 +300,16 @@ class EntryPoint(unittest.TestCase):
 
 
 class Repository(unittest.TestCase):
+    def test_g8_inventory_rejects_unannounced_installation_step(self):
+        spec = importlib.util.spec_from_file_location('g8_review', RUNNER.ROOT / 'tools/testa-grindar-workflow.py')
+        g8 = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(g8)
+        data = RUNNER.load_workflow(RUNNER.ROOT / RUNNER.WORKFLOW)
+        data['jobs']['grindar']['steps'].append(check('unexpected', 'npm ci', 'tools/kolla-material.py'))
+        with contextlib.redirect_stdout(io.StringIO()):
+            g8.inventarie(data)
+        self.assertIn('inget oanmalt anrop har smugit in', g8.fel)
+
     def test_actual_workflow_scripts_and_inventory(self):
         data = RUNNER.load_workflow(RUNNER.ROOT / RUNNER.WORKFLOW)
         plan = RUNNER.build_plan(data)

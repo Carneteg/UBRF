@@ -14,6 +14,10 @@ ROOT = Path(__file__).resolve().parent.parent
 WORKFLOW = Path('.github/workflows/grindar.yml')
 JOBS = ('grindar', 'ridning')
 GUARD = re.compile(r'^test -f (\S+) \|\| .+$')
+# Known provisioning forms only, not a shell parser or security sandbox.
+INSTALLATION = re.compile(
+    r'\b(?:curl|wget|sudo|npx|yarn|pnpm|apt|apt-get)\b|'
+    r'\b(?:npm\s+(?:install|ci|i|add)|pip(?:3(?:\.\d+)?)?\s+install)\b')
 PIP = 'python3 -m pip install --quiet pyyaml'
 LUAU_SETUP = '''curl -sSfL -o /tmp/luau.zip \\
   https://github.com/luau-lang/luau/releases/latest/download/luau-ubuntu.zip
@@ -116,7 +120,7 @@ def build_plan(data):
                     raise ValueError('Andrad blandad setup/kontroll: ' + step['name'])
                 setup.append('pyyaml-preflight' if body.endswith('--forhandskoll') else 'pyyaml-selftest')
                 script = script.replace(PIP + '\n', '', 1)
-            if re.search(r'\b(curl|sudo|npm install|npx playwright install|pip install)\b', script):
+            if INSTALLATION.search(script):
                 raise ValueError('Okand installation i kontroll: ' + step['name'])
             checks.append(Check(job, step['name'], script, required))
         if len(checks) == count:
@@ -134,6 +138,15 @@ def build_plan(data):
     if sorted(setup) != ['luau', 'playwright', 'pyyaml-preflight', 'pyyaml-selftest'] or len(set(versions)) != 1:
         raise ValueError('Setup saknas, dubbleras eller versioner skiljer mellan jobben.')
     return Plan(tuple(checks), tuple(dict.fromkeys(inputs)), *versions[0])
+
+
+def select_bash(requested=None):
+    executable = shutil.which(requested or 'bash')
+    if executable and sys.platform == 'win32':
+        parts = executable.replace('\\', '/').lower().split('/')
+        if 'windowsapps' in parts or 'system32' in parts:
+            raise ValueError('Bash pekar pa Windows/WSL-alias. Ange --bash till befintlig Git Bash.')
+    return executable
 
 
 def shell(bash, script, root, capture=False):
@@ -198,16 +211,20 @@ def main(argv=None):
     parser.add_argument('--bash', help='Existing Bash executable; no installation.')
     args = parser.parse_args(argv)
     try:
+        initial = identity(ROOT)
         plan = build_plan(load_workflow(ROOT / WORKFLOW))
         print('SCOPE: Grindar/grindar + Grindar/ridning; INTE hela CI eller produktacceptans.')
         print('CI-setup kors INTE lokalt. Kontroller: %d.' % len(plan.checks))
-        print(json.dumps(identity(ROOT), ensure_ascii=True))
+        print(json.dumps(initial, ensure_ascii=True))
         if not args.run and not args.preflight:
             for check in plan.checks:
                 print('%s / %s' % (check.job, check.name))
             print('PLAN ONLY: inga kontroller korda.')
             return 0
-        bash = shutil.which(args.bash or 'bash')
+        if args.run and initial['status']:
+            raise ValueError('Smutsig arbetskopia: --run kraver en ren, isolerad checkout. Inga kontroller korda.')
+        bash = select_bash(args.bash)
+        print('BASH: ' + (bash or 'saknas'))
         errors = preflight(plan, ROOT, bash)
         if errors:
             print('BLOCKED: inga kontroller korda.\n' + '\n'.join(errors))
@@ -216,7 +233,10 @@ def main(argv=None):
             print('PREFLIGHT OK: inga kontroller korda.')
             return 0
         result = run_checks(plan, ROOT, bash)
-        print('SLUTIDENTITET: ' + json.dumps(identity(ROOT), ensure_ascii=True))
+        final = identity(ROOT)
+        print('SLUTIDENTITET: ' + json.dumps(final, ensure_ascii=True))
+        if any(initial[key] != final[key] for key in ('head', 'workflow_sha256')):
+            raise ValueError('HEAD eller workflow andrades under korningen. Resultatet ar inte PASS.')
         if result == 0:
             print('PASS: endast angivet kontrollscope, aktuell arbetskopia. Inte releaseacceptans.')
         return result
