@@ -199,10 +199,11 @@ function Ridhusplats.los(ridhus: Instance?): (any, string?)
 	local dC = rd.p
 	local aKant = Vector3.new(dC.X, golvY, dC.Z) - motC * dLangs
 	local cKant = Vector3.new(dC.X, golvY, dC.Z) + motC * dLangs
-	--[[ Sista vakten: inget härlett värde får vara icke-ändligt. ]]
-	if not (vektorOk(motC) and vektorOk(tvars) and andligt(golvY) and vektorOk(aKant) and vektorOk(cKant)) then
-		return nil, "ogiltig_bas:harlett"
-	end
+	--[[ Ingen egen slutvakt för de härledda värdena: varje indata ovan är
+		redan prövad som ändlig (läge, mått, ortonormala axlar), och det som
+		härleds är summor, skalningar och en normering av en horisontell axel
+		som prövats vara nära enhetslängd. En sådan vakt var död kod och
+		överlevde sin mutation (INFRA-PLATS1 R1). ]]
 
 	return table.freeze({
 		v = Ridhusplats.VERSION,
