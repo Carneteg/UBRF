@@ -17,6 +17,7 @@ local Players = game:GetService("Players")
 local Core = require(game:GetService("ReplicatedStorage").HorseCore)
 local Types = require(game:GetService("ReplicatedStorage").HorseCore.Types)
 local RigAdapter = Core.RigAdapter
+local Gangfas, RidKanon, Config = Core.Gangfas, Core.RidKanon, Core.Config
 
 local RiderController = {}
 RiderController.__index = RiderController
@@ -138,11 +139,106 @@ function RiderController:step(loco: Types.Locomotion, dt: number)
 	self.pitch = math.clamp(-(self.accel) * INERTIA_GAIN, -INERTIA_MAX, INERTIA_MAX)
 	self.roll = math.clamp(loco.lean * BALANCE_SHARE, -BALANCE_MAX, BALANCE_MAX)
 	RigAdapter.setRiderLean(self.rig, self.roll, self.pitch)
+	self:_gangartsSits(loco, dt)
+end
+
+--[[ ── SITSEN FÖLJER GÅNGARTEN (#264 GAIT_READABILITY_AND_UGNETA) ────────
+
+	Automatisk grundsits för nybörjaren: ingen knapp i takt. I skritt en
+	liten sidledes följning ur höften, i trav LÄTTRIDNING — EN uppresning
+	per hel travcykel, medan det yttre frambenet förs fram — och i galopp
+	en sittande ryttare som följer bålens rullning en gång per cykel.
+
+	VARFÖR SÄTETS SVETS OCH INTE `RiderJoint`: mätt i Studio har K3:s
+	`RiderJoint` ingen `Part1`, så den lutningen når ingen del. Sätets
+	`SeatWeld` (Part0 = sätet, Part1 = ryttarens rot) är den led som faktiskt
+	håller ryttaren, och C0 är ett lokalt värde: den ridna hästen ägs av
+	ryttarens klient. Kameran följer hästens rot och gungar inte med.
+
+	Fasen är hästens (`loco.phase`), densamma som ben och hovslag läser, och
+	tabellen är `RidKanon.GANGFAS`. Ingen egen klocka. ]]
+local SITS_TAU = 0.25
+
+function RiderController:_sitsSvets(): Weld?
+	local seat: any = self.rig.seat
+	local ok, w = pcall(function()
+		return if seat then seat:FindFirstChild("SeatWeld") else nil
+	end)
+	if ok and w and w:IsA("Weld") then
+		if self.svets ~= w then
+			self.svets = w
+			self.svetsBas = w.C0
+		end
+		return w
+	end
+	self.svets = nil
+	return nil
+end
+
+function RiderController:_gangartsSits(loco: Types.Locomotion, dt: number)
+	local namn = Gangfas.monsterNamn(loco.gait, loco.lead, loco.ryggar)
+	local monster = Gangfas.monster(namn)
+	local lyft, gung, vagg = 0, 0, 0
+	local sits = "seated"
+	local tpi = math.pi * 2
+	if monster and not loco.ryggar and loco.grounded and not loco.airborne then
+		if loco.gait == "trot" then
+			--[[ Okänt varv (utanför banan): behåll senast giltiga yttre ben.
+			     Det bedöms aldrig som rätt eller fel här. ]]
+			local yttre = Gangfas.yttreFram(loco.varv) or self.yttre or "LF"
+			self.yttre = yttre
+			lyft = Gangfas.lattridning(monster, loco.phase, yttre)
+			sits = "rising"
+		elseif loco.gait == "canter" or loco.gait == "gallop" then
+			gung = math.sin(tpi * loco.phase) * 0.035
+		elseif loco.gait == "walk" then
+			vagg = math.sin(tpi * loco.phase) * 0.015
+		end
+	end
+	--[[ IN I lättridningen: vikten växer mjukt, och uppresningen följer
+	     traven exakt (en per cykel) gånger vikten.
+
+	     UT UR den (#264 GAIT_UGNETA_REVIEW_R1): det FAKTISKA lyftet klingar
+	     av. Förut blev `lyft` noll i samma bildruta som gångarten byttes,
+	     och vikten multiplicerades med noll — mätt i bänken: 0,33 studs
+	     till 0 på en bildruta, så att ryttaren föll i sadeln. Nu går hon ned
+	     ur den höjd hon faktiskt hade, med samma tidskonstant. ]]
+	local vill = if sits == "rising" then 1 else 0
+	local mjuk = 1 - math.exp(-dt / SITS_TAU)
+	self.lyftVikt = (self.lyftVikt or 0) + (vill - (self.lyftVikt or 0)) * mjuk
+	self.sits = sits
+	if sits == "rising" then
+		self.uppe = lyft * self.lyftVikt
+	else
+		self.uppe = (self.uppe or 0) * (1 - mjuk)
+		if self.uppe < 1e-4 then self.uppe = 0 end
+	end
+	local w = self:_sitsSvets()
+	if w and self.svetsBas then
+		local dy = self.uppe * RidKanon.LATTRIDNING.hojd_m * Config.STUDS_PER_METRE
+		--[[ I SÄTETS RUM, alltså FÖRE basen. Mätt i Studio: K3:s SeatWeld.C0
+		     är vriden 90° kring X, och `bas * CFrame.new(0, dy, 0)` flyttade
+		     därför ryttaren längs svetsens lokala Y — i världens Z-led —
+		     medan hon skulle upp. Bänkens CFrame-stubbe har ingen riktig
+		     rotationsmatris och kunde inte se det. ]]
+		w.C0 = CFrame.new(0, dy, 0) * CFrame.Angles(gung, 0, vagg) * (self.svetsBas :: CFrame)
+	end
+end
+
+--[[ Provets och panelens fönster in: vilken sits, och hur högt hon står. ]]
+function RiderController:sitsLage(): (string, number)
+	return self.sits or "seated", self.uppe or 0
 end
 
 function RiderController:release()
 	self.accel, self.pitch, self.roll, self.lastSpeed = 0, 0, 0, nil
 	RigAdapter.setRiderLean(self.rig, 0, 0)
+	--[[ Sätets svets tillbaka till sitt utgångsläge, om den finns kvar. ]]
+	local w = self.svets
+	if w and self.svetsBas and w.Parent then
+		w.C0 = self.svetsBas :: CFrame
+	end
+	self.svets, self.svetsBas, self.sits, self.uppe, self.lyftVikt = nil, nil, nil, 0, 0
 	for _, control in self.controls do
 		control:Destroy()
 	end

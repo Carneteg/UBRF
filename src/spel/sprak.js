@@ -52,6 +52,57 @@ const SPRAK = {
      ska anda ga att trycka pa; raden far da det neutrala ordet i
      stallet for en tom knapp. */
   "interaktion.anvand": { sv: "Anvand", en: "Use" },
+  /* #264 ROBLOX_HUMAN_PLAYTEST_FIX: vänstermenyns rad når en prompt med
+     håll-grind. Motorns bubbla ritade en hållring; den bubblan är borta
+     när menyn ersätter den, så menyn säger det själv — medan hållet
+     pågår, och när någon släppt för tidigt. */
+  "interaktion.hall_inne": { sv: "Håll inne", en: "Hold" },
+  /* #264 PLAYER_INTERACTION_CONSOLIDATION: panelens rubrik uppsutten visar
+     den gångart servern säger att hästen går i. `Gaits.label` finns bara
+     på svenska och är kanonens identitet, inte spelartext. */
+  "gangart.halt": { sv: "Halt", en: "Halt" },
+  "gangart.walk": { sv: "Skritt", en: "Walk" },
+  "gangart.trot": { sv: "Trav", en: "Trot" },
+  "gangart.canter": { sv: "Galopp", en: "Canter" },
+  "gangart.gallop": { sv: "Fyrsprång", en: "Gallop" },
+  "panel.leder": { sv: "Leder", en: "Leading" },
+  "panel.fler": { sv: "Fler handlingar", en: "More actions" },
+  "panel.hjalp": { sv: "Hjälp", en: "Help" },
+  /* #264 GAIT_READABILITY_AND_UGNETA: gångartens läge i panelen. Sitsen
+     är assisterad och får inte låta som en prestation. */
+  "sits.lattridning": { sv: "lättridning (assisterad)", en: "rising trot (assisted)" },
+  "sits.sittande": { sv: "sittande", en: "seated" },
+  "galopp.hoger": { sv: "höger galopp", en: "right lead" },
+  "galopp.vanster": { sv: "vänster galopp", en: "left lead" },
+  "gangart.byte": { sv: "%s till %s", en: "%s to %s" },
+  /* Ugneta är ridinstruktören, hon/henne. Titeln står i hennes yta. */
+  /* #264 GAIT_UGNETA_REVIEW_R1: live-signalerna. Den svenska texten är
+     EXAKT kanonens (RidKanon.UGNETA.LIVE, ur src/larare.js) — provet
+     jämför dem — och signalens id är identiteten, aldrig texten. */
+  "ugneta.live.framat.fel": { sv: "Rid framåt", en: "Ride forward" },
+  "ugneta.live.framat.bra": { sv: "Bra rytm", en: "Good rhythm" },
+  "ugneta.live.hand.fel": { sv: "Mjukare hand", en: "Softer hands" },
+  "ugneta.live.hand.bra": { sv: "Mjuk hand", en: "Soft hands" },
+  "ugneta.live.lugn.fel": { sv: "Andas ut", en: "Breathe out" },
+  "ugneta.live.lugn.bra": { sv: "Fint lugn", en: "Nice and calm" },
+  "ugneta.live.sits.fel": { sv: "Sitt stilla", en: "Sit still" },
+  "ugneta.live.sits.bra": { sv: "Bra sits", en: "Good seat" },
+  "ugneta.live.timing.fel": { sv: "Vänta på svaret", en: "Wait for the answer" },
+  "ugneta.live.timing.bra": { sv: "Precis så", en: "Just like that" },
+  "ugneta.live.vagen.fel": { sv: "Titta dit du ska", en: "Look where you are going" },
+  "ugneta.live.vagen.bra": { sv: "Bra linje", en: "Good line" },
+  "ugneta.titel": { sv: "Ugneta · Ridinstruktör", en: "Ugneta · Riding instructor" },
+  /* Flaggan visar det språk som GÄLLER; trycket byter. */
+  "sprak.nuvarande": { sv: "Svenska", en: "English" },
+  "sprak.byt": { sv: "Byt språk till engelska", en: "Switch language to Swedish" },
+  /* Ugnetas ridrader utanför lektionen. Beröm pekar på något som faktiskt
+     hände; tangenten är den spelaren faktiskt har (%s). */
+  "ugneta.rad.borja_skritt": { sv: "Börja i skritt. Tryck på %s en gång.", en: "Start in walk. Press %s once." },
+  "ugneta.rad.bra_skritt": { sv: "Bra! Du håller en lugn skritt.", en: "Good! You're keeping a steady walk." },
+  "ugneta.rad.be_om_trav": { sv: "Be om trav med ett tryck på %s.", en: "Ask for trot by pressing %s once." },
+  "ugneta.rad.lattridning": { sv: "Nu rider du lätt. Ryttaren följer travens rytm automatiskt.", en: "You're rising to the trot. Your rider follows the rhythm automatically." },
+  "ugneta.rad.galopp": { sv: "Nu galopperar du. Rid en stor båge.", en: "You're cantering now. Ride a large curve." },
+  "ugneta.rad.fin_overgang": { sv: "Fint! Det blev en lugn övergång.", en: "Well done! That was a smooth transition." },
   "interaktion.sitt_av": { sv: "SITT AV", en: "DISMOUNT" },
 
   /* Utrustningsstegets namn är en RÄKNARE, inte kanon: "Utrustning 2/4"
@@ -202,6 +253,31 @@ const SPRAK = {
   /* SITT AV ar kvar nar de ovriga touch-etiketterna forsvann med panelen:
      den ar inget reglage utan enda vagen AV hasten pa en ren pekenhet
      (#162 blockerare 2). Den ar numera en ContextActionService-handling. */
+  /* ── Byggidentiteten (#263) ────────────────────────────────────────
+     Vilken build sitter jag i? Raderna läses av QA på en fysisk enhet,
+     där serverloggen inte är tillgänglig för ett vanligt testkonto.
+     "okänd" är inte en artighet utan ett krav: en saknad identitet får
+     aldrig se ut som en matchad. */
+  "bygg.rubrik": { sv: "Byggidentitet", en: "Build identity" },
+  "bygg.stang": { sv: "Stäng", en: "Close" },
+  "bygg.okand": { sv: "okänd", en: "unknown" },
+  "bygg.kallhash": { sv: "Källhash", en: "Source hash" },
+  "bygg.kallor": { sv: "Källfiler", en: "Source files" },
+  "bygg.lage": { sv: "Läge", en: "Mode" },
+  "bygg.genererad": { sv: "Genererad", en: "Generated" },
+  "bygg.plats": { sv: "Plats", en: "Place" },
+  "bygg.version": { sv: "Platsversion", en: "Place version" },
+  "bygg.miljo": { sv: "Miljö", en: "Environment" },
+  /* Motorn säger 0 för varje opublicerad upplevelse. Talet ensamt
+     förklarar inte varför, så raden skriver ut skälet. */
+  "bygg.opublicerad": { sv: "0 — opublicerad", en: "0 — unpublished" },
+  /* Mätt i motorn: Studio rapporterar den version .rbxl-filen öppnades
+     från, medan Rojo samtidigt synkat in annan kod. Talet är sant och
+     vilseledande på en gång, så det får aldrig stå ensamt. */
+  "bygg.studioversion": { sv: "%d — men Studio kör Rojos kod", en: "%d — but Studio runs Rojo's code" },
+  "bygg.studio": { sv: "Studio (lokalt)", en: "Studio (local)" },
+  "bygg.server": { sv: "Publicerad server", en: "Published server" },
+
   "touch.sitt_av": { sv: "SITT AV", en: "DISMOUNT" },
   "touch.lugnare": { sv: "▼ LUGNARE", en: "▼ SLOWER" },
   "touch.framat": { sv: "▲ FRAMÅT", en: "▲ FORWARD" },
@@ -254,6 +330,11 @@ const SPRAK = {
      `led.rider`, som ar att SPELAREN sitter upp — tva olika fel som
      hade blivit omojliga att skilja at med samma text. */
   "led.rids": { sv: "Hon rids just nu", en: "She is being ridden right now" },
+  // Speglingen av `led.rids`: den vagen ar stangd at bada hall. En hast
+  // som leds av nagon annan far ingen ryttare, for de tva systemen
+  // strids annars om samma nätverksagarskap.
+  "hast.leds_nu": { sv: "Hon leds av någon annan just nu",
+    en: "Someone else is leading her right now" },
   "led.upptagen": { sv: "Någon annan leder henne", en: "Someone else is leading her" },
   "led.tappade_bort": { sv: "Hon kom efter — gå tillbaka och ta henne igen",
     en: "She fell behind — go back and take her again" },
@@ -301,6 +382,12 @@ const SPRAK = {
   "tack.okand_utrustning": { sv: "Sådan utrustning finns inte", en: "There is no such equipment" },
   /* Ett bygge som inte gick fram ska SÄGA det, inte tyst lämna en häst
      som ser osadlad ut men räknas som sadlad. */
+  // Delen kom pa hasten men kopian i handerna gick inte att slappa.
+  // satPa svarade tidigare true anda, och spelaren stod kvar med
+  // sadeln i handen pa en sadlad hast (#264, Tobias playtest).
+  "tack.bars_kvar": {
+    sv: "Den kom på plats, men du bär fortfarande en — försök igen",
+    en: "It went on, but you are still carrying one — try again" },
   "tack.kunde_inte_byggas": { sv: "Utrustningen kom inte på plats — försök igen",
     en: "The tack did not go on — try again" },
   /* UTRUSTNINGEN PÅ BOXFRONTEN. De tre nycklarna lades vid blockerare 5
@@ -438,6 +525,15 @@ const SPRAK = {
   "ugneta.obs.kvar": { sv: "Fortsätt med %s.", en: "Keep working on %s." },
   "ugneta.obs.bra": { sv: "Bra %s.", en: "Good %s." },
   "ugneta.obs.jobba": { sv: "Jobba på %s.", en: "Work on %s." },
+  // Teaching Loop: efterrittens summering. Tva eller tre punkter, sedan
+  // tyst — kanon sager uttryckligen att det inte far bli en dashboard.
+  "ugneta.efterritt.rubrik": { sv: "Efter ritten", en: "After the ride" },
+  "ugneta.efterritt.stang": { sv: "Klar", en: "Done" },
+  // Hastens dag, inte ryttarens fel. Webbens `lararSteg` sager
+  // `Det dar kom fran ${n}.` nar hasten ar skygg eller i dalig dagsform;
+  // ryttaren ska inte fa en rattelse for nagot hon inte gjorde.
+  "ugneta.hastens_dag": { sv: "Det där kom från %s.", en: "That came from %s." },
+  "ugneta.hasten": { sv: "hästen", en: "the horse" },
 
   /* ── KORTET SOM PAUSAR RITTEN (produktbeslut 13:29) ──────────────────
      Ridloopen fryser hästen medan ett lektionskort väntar — med flit: hon

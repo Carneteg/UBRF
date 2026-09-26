@@ -742,4 +742,40 @@ RidKanon.INSPELNING = {
 	},
 }
 
+--[[ #264: gångarternas benföljd och lättridningens takt, ur
+     src/riding/gangfas.js. `td` = isättningsfas, `stod` = bärandel. ]]
+RidKanon.GANGFAS = {
+	galopp_hoger = { takt = 3, ben = {
+		LF = { td = 0.25, stod = 0.32 },
+		LH = { td = 0, stod = 0.3 },
+		RF = { td = 0.5, stod = 0.25 },
+		RH = { td = 0.25, stod = 0.32 },
+	} },
+	galopp_vanster = { takt = 3, ben = {
+		LF = { td = 0.5, stod = 0.25 },
+		LH = { td = 0.25, stod = 0.32 },
+		RF = { td = 0.25, stod = 0.32 },
+		RH = { td = 0, stod = 0.3 },
+	} },
+	rygga = { takt = 2, ben = {
+		LF = { td = 0.5, stod = 0.5 },
+		LH = { td = 0, stod = 0.5 },
+		RF = { td = 0, stod = 0.5 },
+		RH = { td = 0.5, stod = 0.5 },
+	} },
+	skritt = { takt = 4, ben = {
+		LF = { td = 0.25, stod = 0.65 },
+		LH = { td = 0, stod = 0.65 },
+		RF = { td = 0.75, stod = 0.65 },
+		RH = { td = 0.5, stod = 0.65 },
+	} },
+	trav = { takt = 2, ben = {
+		LF = { td = 0.5, stod = 0.42 },
+		LH = { td = 0, stod = 0.42 },
+		RF = { td = 0, stod = 0.42 },
+		RH = { td = 0.5, stod = 0.42 },
+	} },
+}
+RidKanon.LATTRIDNING = { upp_per_cykel = 1, hojd_m = 0.11 }
+
 return RidKanon

@@ -41,6 +41,146 @@ Sprak.text = {
 		sv = "Anvand",
 		en = "Use",
 	},
+	["interaktion.hall_inne"] = {
+		sv = "Håll inne",
+		en = "Hold",
+	},
+	["gangart.halt"] = {
+		sv = "Halt",
+		en = "Halt",
+	},
+	["gangart.walk"] = {
+		sv = "Skritt",
+		en = "Walk",
+	},
+	["gangart.trot"] = {
+		sv = "Trav",
+		en = "Trot",
+	},
+	["gangart.canter"] = {
+		sv = "Galopp",
+		en = "Canter",
+	},
+	["gangart.gallop"] = {
+		sv = "Fyrsprång",
+		en = "Gallop",
+	},
+	["panel.leder"] = {
+		sv = "Leder",
+		en = "Leading",
+	},
+	["panel.fler"] = {
+		sv = "Fler handlingar",
+		en = "More actions",
+	},
+	["panel.hjalp"] = {
+		sv = "Hjälp",
+		en = "Help",
+	},
+	["sits.lattridning"] = {
+		sv = "lättridning (assisterad)",
+		en = "rising trot (assisted)",
+	},
+	["sits.sittande"] = {
+		sv = "sittande",
+		en = "seated",
+	},
+	["galopp.hoger"] = {
+		sv = "höger galopp",
+		en = "right lead",
+	},
+	["galopp.vanster"] = {
+		sv = "vänster galopp",
+		en = "left lead",
+	},
+	["gangart.byte"] = {
+		sv = "%s till %s",
+		en = "%s to %s",
+	},
+	["ugneta.live.framat.fel"] = {
+		sv = "Rid framåt",
+		en = "Ride forward",
+	},
+	["ugneta.live.framat.bra"] = {
+		sv = "Bra rytm",
+		en = "Good rhythm",
+	},
+	["ugneta.live.hand.fel"] = {
+		sv = "Mjukare hand",
+		en = "Softer hands",
+	},
+	["ugneta.live.hand.bra"] = {
+		sv = "Mjuk hand",
+		en = "Soft hands",
+	},
+	["ugneta.live.lugn.fel"] = {
+		sv = "Andas ut",
+		en = "Breathe out",
+	},
+	["ugneta.live.lugn.bra"] = {
+		sv = "Fint lugn",
+		en = "Nice and calm",
+	},
+	["ugneta.live.sits.fel"] = {
+		sv = "Sitt stilla",
+		en = "Sit still",
+	},
+	["ugneta.live.sits.bra"] = {
+		sv = "Bra sits",
+		en = "Good seat",
+	},
+	["ugneta.live.timing.fel"] = {
+		sv = "Vänta på svaret",
+		en = "Wait for the answer",
+	},
+	["ugneta.live.timing.bra"] = {
+		sv = "Precis så",
+		en = "Just like that",
+	},
+	["ugneta.live.vagen.fel"] = {
+		sv = "Titta dit du ska",
+		en = "Look where you are going",
+	},
+	["ugneta.live.vagen.bra"] = {
+		sv = "Bra linje",
+		en = "Good line",
+	},
+	["ugneta.titel"] = {
+		sv = "Ugneta · Ridinstruktör",
+		en = "Ugneta · Riding instructor",
+	},
+	["sprak.nuvarande"] = {
+		sv = "Svenska",
+		en = "English",
+	},
+	["sprak.byt"] = {
+		sv = "Byt språk till engelska",
+		en = "Switch language to Swedish",
+	},
+	["ugneta.rad.borja_skritt"] = {
+		sv = "Börja i skritt. Tryck på %s en gång.",
+		en = "Start in walk. Press %s once.",
+	},
+	["ugneta.rad.bra_skritt"] = {
+		sv = "Bra! Du håller en lugn skritt.",
+		en = "Good! You're keeping a steady walk.",
+	},
+	["ugneta.rad.be_om_trav"] = {
+		sv = "Be om trav med ett tryck på %s.",
+		en = "Ask for trot by pressing %s once.",
+	},
+	["ugneta.rad.lattridning"] = {
+		sv = "Nu rider du lätt. Ryttaren följer travens rytm automatiskt.",
+		en = "You're rising to the trot. Your rider follows the rhythm automatically.",
+	},
+	["ugneta.rad.galopp"] = {
+		sv = "Nu galopperar du. Rid en stor båge.",
+		en = "You're cantering now. Ride a large curve.",
+	},
+	["ugneta.rad.fin_overgang"] = {
+		sv = "Fint! Det blev en lugn övergång.",
+		en = "Well done! That was a smooth transition.",
+	},
 	["interaktion.sitt_av"] = {
 		sv = "SITT AV",
 		en = "DISMOUNT",
@@ -397,6 +537,62 @@ Sprak.text = {
 		sv = "pek",
 		en = "touch",
 	},
+	["bygg.rubrik"] = {
+		sv = "Byggidentitet",
+		en = "Build identity",
+	},
+	["bygg.stang"] = {
+		sv = "Stäng",
+		en = "Close",
+	},
+	["bygg.okand"] = {
+		sv = "okänd",
+		en = "unknown",
+	},
+	["bygg.kallhash"] = {
+		sv = "Källhash",
+		en = "Source hash",
+	},
+	["bygg.kallor"] = {
+		sv = "Källfiler",
+		en = "Source files",
+	},
+	["bygg.lage"] = {
+		sv = "Läge",
+		en = "Mode",
+	},
+	["bygg.genererad"] = {
+		sv = "Genererad",
+		en = "Generated",
+	},
+	["bygg.plats"] = {
+		sv = "Plats",
+		en = "Place",
+	},
+	["bygg.version"] = {
+		sv = "Platsversion",
+		en = "Place version",
+	},
+	["bygg.miljo"] = {
+		sv = "Miljö",
+		en = "Environment",
+	},
+	["bygg.opublicerad"] = {
+		sv = "0 — opublicerad",
+		en = "0 — unpublished",
+	},
+	["bygg.studioversion"] = {
+		sv = "%d — men Studio kör Rojos kod",
+		en = "%d — but Studio runs Rojo's code",
+	},
+	["bygg.studio"] = {
+		sv = "Studio (lokalt)",
+		en = "Studio (local)",
+	},
+	["bygg.server"] = {
+		sv = "Publicerad server",
+		en = "Published server",
+	},
 	["touch.sitt_av"] = {
 		sv = "SITT AV",
 		en = "DISMOUNT",
@@ -497,6 +693,10 @@ Sprak.text = {
 		sv = "Hon rids just nu",
 		en = "She is being ridden right now",
 	},
+	["hast.leds_nu"] = {
+		sv = "Hon leds av någon annan just nu",
+		en = "Someone else is leading her right now",
+	},
 	["led.upptagen"] = {
 		sv = "Någon annan leder henne",
 		en = "Someone else is leading her",
@@ -588,6 +788,10 @@ Sprak.text = {
 	["tack.okand_utrustning"] = {
 		sv = "Sådan utrustning finns inte",
 		en = "There is no such equipment",
+	},
+	["tack.bars_kvar"] = {
+		sv = "Den kom på plats, men du bär fortfarande en — försök igen",
+		en = "It went on, but you are still carrying one — try again",
 	},
 	["tack.kunde_inte_byggas"] = {
 		sv = "Utrustningen kom inte på plats — försök igen",
@@ -784,6 +988,22 @@ Sprak.text = {
 	["ugneta.obs.jobba"] = {
 		sv = "Jobba på %s.",
 		en = "Work on %s.",
+	},
+	["ugneta.efterritt.rubrik"] = {
+		sv = "Efter ritten",
+		en = "After the ride",
+	},
+	["ugneta.efterritt.stang"] = {
+		sv = "Klar",
+		en = "Done",
+	},
+	["ugneta.hastens_dag"] = {
+		sv = "Det där kom från %s.",
+		en = "That came from %s.",
+	},
+	["ugneta.hasten"] = {
+		sv = "hästen",
+		en = "the horse",
 	},
 	["ugneta.borja_lektionen"] = {
 		sv = "Fortsätt för att börja lektionen",

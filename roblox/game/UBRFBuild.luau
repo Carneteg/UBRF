@@ -10,16 +10,26 @@
 	sitt eget commit-SHA, sa det faltet ligger alltid minst ett steg
 	efter. Gata aldrig pa det.
 
-	`kallor` ar antalet mappade kallfiler. Placen kan rakna om DET
+	`kallor` ar antalet mappade SKRIPTfiler. Placen kan rakna om DET
 	sjalv — instanser gar att rakna utan att lasa `Source`, vilket ett
-	spelskript inte far. Se Integritet.kallantal och punkt 9e. ]]
+	spelskript inte far. Se Integritet.kallantal och punkt 9e.
+
+	DET STOD 'kallfiler' HAR, OCH DET SLUTADE STAMMA (#264 R3). Nar
+	hastmallen mappades in blev antalet 79 medan placen bar 78
+	skriptobjekt, och punkt 9e foll i riktig motor: CRITICAL_STARTUP_
+	GATE gav FAIL och ingen spelare slapptes in. Grinden hade ratt —
+	talen gick isar — men den jamforde skript mot skript PLUS modell.
+
+	`modeller` ar de mappade filer som INTE ar Luau. De raknas for
+	sig, sa att en tappad modell fortfarande syns. Se punkt 9f. ]]
 return {
-	kallhash = "b9995f27e36889d4e0dd48d86662aa7926e18b3070dee9a8e992d9ff47a97dbe",
+	kallhash = "bad5f5554cafe973a21040cb32282f12fce546fa4a2ffc182f9831690ac38298",
 	lage = "rojo",
-	kallor = 73,
-	sha = "5fc0af6019e60e3b5cc007e9d7716e11270e9152",
-	miljo_sha = "5fc0af6019e60e3b5cc007e9d7716e11270e9152",
-	genererad = "2026-09-19T14:03:59Z",
+	kallor = 87,
+	modeller = 1,
+	sha = "0a4495f4d01444d5e5c9ad79ce4ace818c525103",
+	miljo_sha = "0a4495f4d01444d5e5c9ad79ce4ace818c525103",
+	genererad = "2026-09-26T15:12:35Z",
 	vag = "tools/bygg-identitet.py ur roblox/default.project.json",
 
 	--[[ Vad Rojo AGER per tjanst. Integritet.luau skiljer kallstyrt
@@ -27,6 +37,7 @@ return {
 	rojo = {
 		ReplicatedStorage = { "HorseCore", "Stallet", "UBRFBuild", "UBRFKomplex", "UBRFSkotsel", "UBRFSpel", "UBRFSpelData", "UBRFSprak" },
 		ServerScriptService = { "Horse", "Varld" },
+		ServerStorage = { "HastVisualer" },
 		StarterPlayer = { "StarterPlayerScripts" },
 	},
 
@@ -47,6 +58,7 @@ return {
 		"ServerScriptService.Varld.Anlaggningen",
 		"ServerScriptService.Varld.BuildKit",
 		"ServerScriptService.Varld.Geometri",
+		"ServerStorage.HastVisualer.k3",
 		"StarterPlayer.StarterPlayerScripts.Horse",
 	},
 }

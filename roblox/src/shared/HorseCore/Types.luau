@@ -59,6 +59,9 @@ export type Locomotion = {
 	targetGait: GaitName,
 	state: State,
 	phase: number,       -- 0..1 inom gångartens cykel, driver ljud och damm
+	--[[ #264: samma framsteg utan modulo (cykler + fas). Ljudet räknar
+	     slag ur den, så att en lång bildruta inte tappar hela cykler. ]]
+	fasLopande: number?,
 	--[[ Ryggar hon just nu? (#233, ryggningsljudet.)
 
 	     Rygga har ingen egen gångartsrad — hon ryggar i HALT, och `gait`
@@ -71,6 +74,12 @@ export type Locomotion = {
 	     den är i sin tur reconcilad mot serverns replikerade `Ryggar`.
 	     Ett ställe räknar, resten läser. ]]
 	ryggar: boolean,
+	--[[ #264 GAIT_READABILITY_AND_UGNETA: varvet på ridbanan ("left" /
+	     "right", nil utanför banan) och galoppens ledande sida, vald när
+	     galoppen började. Räknas i `MovementController`; ben, ljud och
+	     ryttare läser. ]]
+	varv: string?,
+	lead: string?,
 	airborne: boolean,
 	grounded: boolean,
 	slope: Vector3,      -- markens normal, utjämnad

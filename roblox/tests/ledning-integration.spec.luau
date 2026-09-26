@@ -597,23 +597,48 @@ do
 
 	print("  · Undantag 2 — den dynamiska målpunkten")
 
-	--[[ 2a. Spelaren är fortfarande den SEMANTISKA destinationen:
-		målpunkten får aldrig avvika mer än taket från henne. Provet
-		tvingar fram avvikelsen genom att fylla spåret och sedan mäta. ]]
+	--[[ 2a. Spelaren är fortfarande den SEMANTISKA destinationen.
+
+		VILLKORET ÄR OMFORMULERAT, INTE BORTTAGET (produktbeslut
+		2026-09-20). Det löd förut: målpunkten får aldrig avvika mer än
+		taket från spelaren. Mätt i Studio under M3 visade sig den
+		formuleringen vara det som körde hästen in i väggen — en smula
+		runt hindret drogs tillbaka längs linjen mot spelaren och hamnade
+		på fel sida. Se noten över `klampMal` i `LedService`.
+
+		En smula är en punkt spelaren SJÄLV gick på. Att gå dit är att gå
+		till henne, längs hennes egen väg, och destinationen byts inte.
+		Villkoret mäts därför nu som: målpunkten ligger inom taket ELLER
+		är en smula ur spelarens eget spår. Allt annat är fortfarande
+		förbjudet, och en godtycklig punkt långt bort faller lika hårt
+		som förr. ]]
 	do
-		local varst = 0
+		local varst, alltidGiltig = 0, true
 		for i = 1, 60 do
 			rot.CFrame = CFrame.new(MIN.PrimaryPart.Position
 				+ Vector3.new(math.cos(i * 0.4) * 5 * M, 0, math.sin(i * 0.4) * 5 * M))
 			LedService._steg(1 / 30)
 			if rigg and rigg.mal then
-				local d = rigg.mal.WorldPosition - rot.Position
+				local mp = rigg.mal.WorldPosition
+				local d = mp - rot.Position
 				local plan = math.sqrt(d.X * d.X + d.Z * d.Z) / M
 				if plan > varst then varst = plan end
+				if plan > 7.05 then
+					local sess = LedService.lage(spelare)
+					local paSpar = false
+					for _, sm in ipairs(sess and sess.spar or {}) do
+						local e = sm - mp
+						if math.sqrt(e.X * e.X + e.Z * e.Z) < 0.05 then
+							paSpar = true
+							break
+						end
+					end
+					if not paSpar then alltidGiltig = false end
+				end
 			end
 		end
-		check("målpunkten avviker aldrig mer än taket från spelaren",
-			varst <= 7.05, ("värst %.2f m, tak 7.00"):format(varst))
+		check("målpunkten är alltid inom taket ELLER en smula ur spelarens eget spår",
+			alltidGiltig, ("värst %.2f m, tak 7.00"):format(varst))
 
 		--[[ OCH TAKET PRÖVAS DIREKT, inte genom ett scenario.
 
@@ -646,39 +671,64 @@ do
 		check("en punkt innanför taket lämnas orörd",
 			(orord - Vector3.new(nara.X, 3, nara.Z)).Magnitude < 1e-6)
 
-		--[[ STALENESS: en smula bortom taket gallras ur spåret. Spårgrenen
-			kräver att hon lämnat boxen, så provet sätter den flaggan —
-			samma fält `_steg` själv sätter när hon fysiskt gått ut. ]]
+		--[[ SPELARENS AVSTÅND GALLRAR INTE LÄNGRE (reviewrond 1–3).
+
+			Mätningen hette förut «inaktuella smulor gallras ur spåret»
+			och krävde att allt bortom `MAL_AVVIK` försvann. Den regeln
+			är borttagen: en smula långt från spelaren är rutthistorik
+			hästen kanske inte gått än, och att kasta den var precis det
+			som lämnade henne med ett mål bakom en vägg.
+
+			DEN VAR DESSUTOM GRÖN AV FEL SKÄL. Det som tömde spåret här
+			var inte gallringen utan hoppvakten: den mätte avståndet till
+			SISTA SMULAN, och provet lägger en 40 m bort. När vakten
+			rättades till att mäta spelarens förra läge — vilket är vad
+			den menar — blev raden röd och visade vad den egentligen
+			mätte. Nu mäter den den regel som gäller. ]]
 		local l = LedService.lage(spelare)
 		if l then
 			l.lamnatBox = true
 			l.spar = { rot.Position + Vector3.new(2 * M, 0, 0),
 				rot.Position + Vector3.new(40 * M, 0, 0) }
 			LedService._steg(1 / 30)
-			local kvar = 0
+			local langtBort = 0
 			for _, sm in ipairs(l.spar) do
 				local dd = sm - rot.Position
-				if math.sqrt(dd.X * dd.X + dd.Z * dd.Z) / M > 7.05 then kvar += 1 end
+				if math.sqrt(dd.X * dd.X + dd.Z * dd.Z) / M > 7.05 then langtBort += 1 end
 			end
-			check("inaktuella smulor gallras ur spåret",
-				kvar == 0, ("%d kvar bortom taket"):format(kvar))
+			check("en smula långt från spelaren är rutthistorik och ligger kvar",
+				langtBort >= 1, ("%d kvar bortom gamla taket"):format(langtBort))
 
 			--[[ OCH REGELN PRÖVAS DIREKT, av samma skäl som taket ovan:
 				spårgrenen kräver att hästen lämnat en box, och mutationen
 				som tog bort gallringen kom ut GRÖN när den bara mättes
-				genom ett scenario. ]]
+				genom ett scenario.
+
+				GALLRINGEN MÄTER NU HÄSTENS FRAMFART, inte spelarens
+				avstånd (produktbeslut 2026-09-20), och den är MONOTON i
+				ruttens ordning: den går framifrån och stannar vid den
+				första smula hon inte har nått. Referensen nedan är
+				alltså hästens läge. Hela regeln med sitt scenario, och
+				varför den inte får söka närmaste smula, ligger i
+				`ledspar.spec`. ]]
 			local ref = Vector3.new(0, 3, 0)
 			local trad = {
+				ref + Vector3.new(1 * M, 0, 0),    -- hon står på den
+				ref + Vector3.new(2 * M, 0, 0),    -- nästa, inte nådd
 				ref + Vector3.new(40 * M, 0, 0),
-				ref + Vector3.new(2 * M, 0, 0),
-				ref + Vector3.new(1 * M, 0, 0),
 			}
 			LedService._gallraSpar(trad, ref)
-			check("en smula bortom taket gallras ur spåret direkt",
+			check("den hon står på gallras, resten av rutten ligger kvar",
 				#trad == 2, ('%d kvar av 3'):format(#trad))
-			local narast = { ref + Vector3.new(2 * M, 0, 0) }
-			LedService._gallraSpar(narast, ref)
-			check("men en smula innanför taket rörs inte", #narast == 1)
+			--[[ Och en oförbrukad smula långt bort är rutthistorik — den
+				överlever, för spelarens avstånd äger den inte längre. ]]
+			local langtbortSpar = {
+				ref + Vector3.new(2 * M, 0, 0),
+				ref + Vector3.new(40 * M, 0, 0),
+			}
+			LedService._gallraSpar(langtbortSpar, ref)
+			check("men en oförbrukad smula 40 m bort ligger kvar", #langtbortSpar == 2,
+				('%d kvar av 2'):format(#langtbortSpar))
 		end
 	end
 
@@ -851,6 +901,274 @@ do
 end
 
 RunService._server = false
+
+print("\n── EN ÄGARE I TAGET: en ledd häst går inte att sitta upp på ──")
+
+--[[ Robustness Slice A.
+
+	`LedService` har alltid vägrat att börja LEDA en riden häst
+	(`led.rids`, mätt i blocket längre upp). Motsatta vägen stod öppen: A
+	ledde, B satte sig upp, och båda ägde henne.
+
+	Ledningen tar nätverksägarskapet till servern och sparar undan det
+	föregående; uppsittningen ger det till ryttaren. När A sedan släpper
+	lämnar `LedService` tillbaka det ägarskap den sparade INNAN B satte
+	sig — och rycker det från den aktiva ryttaren.
+
+	CHECKLISTAN STÄNGS AV MED FLIT i det här blocket. Provet mäter
+	ledningsregeln, inte skötseln, och att `setMountGate(nil)` inte
+	stänger av den nya grinden är hela skälet till att grinden sitter i
+	`tryMount` och inte i gameplaylagrets gate. Gaten sätts tillbaka
+	efteråt. ]]
+do
+	RunService._server = true
+	HorseService.setMountGate(nil)
+
+	--[[ Båda spelarna står INTILL hästen. Står de för långt bort nekas
+	     uppsittningen av avståndet och provet mäter fel regel — precis
+	     det felet som står dokumenterat i blocket om två ledare. ]]
+	local function intill(r)
+		r.CFrame = CFrame.new(MIN.PrimaryPart.Position + Vector3.new(1.0 * M, 0, 0))
+	end
+
+	local k3 = nyKaraktar(MIN.PrimaryPart.Position + Vector3.new(1.2 * M, 0, 0))
+	local rot3 = k3:FindFirstChild("HumanoidRootPart")
+	local spelareB = { Name = "RyttareB", UserId = 8803, Character = k3,
+		CharacterAdded = __signal_ny(), CharacterRemoving = __signal_ny() }
+	Players._spelare = { spelare, spelareB }
+
+	--[[ ── KONTROLLEN FÖRST ────────────────────────────────────────
+		Går uppsittningen igenom NÄR HON INTE LEDS? Utan den raden kan
+		varje nej nedan betyda «grinden höll» eller «uppsittningen gick
+		aldrig att göra i den här bänken», och de två får inte gå att
+		blanda ihop. ]]
+	LedService.slapp(spelare)
+	intill(rot3)
+	local okFri, skalFri = HorseService.tryMount(spelareB, MIN)
+	check("KONTROLL: en fri häst går att sitta upp på",
+		okFri == true, tostring(skalFri))
+	HorseService.dismount(spelareB)
+
+	--[[ ── A LEDER, B FÖRSÖKER SITTA UPP ──────────────────────────── ]]
+	intill(rot)
+	local okLed, skalLed = LedService.borja(spelare, MIN, MIN)
+	check("A leder henne", okLed == true, tostring(skalLed))
+	local agareUnderLedning = MIN.PrimaryPart:GetNetworkOwner()
+
+	intill(rot3)
+	local okB, skalB = HorseService.tryMount(spelareB, MIN)
+	check("EN LEDD HÄST GÅR INTE ATT SITTA UPP PÅ",
+		okB == false, tostring(okB))
+	check("och nejet är en namngiven nyckel spelaren kan få läst",
+		skalB == "hast.leds_nu" and Sprak.finns(skalB) == true,
+		("%s · finns=%s"):format(tostring(skalB), tostring(Sprak.finns(skalB))))
+
+	--[[ ── NEJET FÅR INTE HA RÖRT NÅGOT ────────────────────────────
+		Den här delen är avsiktligt skild från nejet ovan: en grind som
+		nekar men ändå hinner ändra tillstånd på vägen är inte en grind.
+		Mätt på tre oberoende ställen — ledaren, repet och ägarskapet. ]]
+	check("ledaren är fortfarande A",
+		LedService.ledsAv(MIN) == spelare, tostring(LedService.ledsAv(MIN)))
+	check("repet är kvar och B har inget eget",
+		LedService.repFor(spelare) ~= nil and LedService.repFor(spelareB) == nil)
+	check("och nätverksägarskapet är orört",
+		MIN.PrimaryPart:GetNetworkOwner() == agareUnderLedning,
+		("%s -> %s"):format(tostring(agareUnderLedning),
+			tostring(MIN.PrimaryPart:GetNetworkOwner())))
+	check("och hästen har ingen ryttare",
+		HorseService.sessionFor(MIN).rider == nil,
+		tostring(HorseService.sessionFor(MIN).rider))
+
+	--[[ ── MEN LEDAREN SJÄLV FÅR SITTA UPP ────────────────────────
+
+		Den här raden saknades i första versionen, och dess frånvaro
+		kostade en grön svit: grinden nekade VARJE ledd häst, och
+		`integration.spec` föll på «dagen går att räkna färdigt». Det var
+		rätt av den att falla — kärnloopen ÄR att leda sin häst till
+		banan och sitta upp där, utan att släppa repet först.
+
+		`LedService` har redan den vägen löst: sitter ledaren själv upp
+		släpper den kopplet nästa bildruta (`led.rider`). Regeln handlar
+		om två OLIKA ägare, inte om två roller hos samma spelare. ]]
+	do
+		intill(rot)
+		local okEget = HorseService.tryMount(spelare, MIN)
+		check("LEDAREN SJÄLV FÅR SITTA UPP PÅ SIN EGEN LEDDA HÄST",
+			okEget == true, tostring(okEget))
+		HorseService.dismount(spelare)
+		--[[ Ledningen står kvar — det är `LedService._steg` som släpper
+		     den, inte uppsittningen, och provet ska inte låtsas annat. ]]
+		check("och kopplet är fortfarande hennes tills tjänsten släpper det",
+			LedService.ledsAv(MIN) == spelare)
+	end
+
+	--[[ ── OCH SLÄPPET FÅR INTE RYCKA ÄGARSKAPET FRÅN HENNE ───────
+
+		Reviewblockerare på Slice A. Att ledaren får sitta upp räcker
+		inte: `steg` släpper kopplet nästa bildruta med skälet
+		`led.rider`, och släppet ÅTERSTÄLLER det nätverksägarskap som
+		sparades undan när ledningen började — alltså ett värde från
+		INNAN hon satt upp. Det skulle skriva över det ägarskap
+		`HorseService.setRider` just gav ryttaren, och hon skulle sitta
+		på en häst hon inte styr.
+
+		Det här är den vanligaste vägen i hela kärnloopen: leda sin häst
+		till banan och sitta upp där. ]]
+	do
+		--[[ Foregaende block lamnar ledningen aktiv med flit (kopplet ar
+		     hennes tills tjansten slapper det), sa den maste slappas har
+		     — annars nekas `borja` med `led.leder_redan` och provet mater
+		     ingenting. Forsta versionen gjorde precis det. ]]
+		LedService.slapp(spelare)
+		intill(rot)
+		local okLedEget, skalLedEget = LedService.borja(spelare, MIN, MIN)
+		check("A leder henne inför provet", okLedEget == true,
+			tostring(skalLedEget))
+		local foreUppsittning = MIN.PrimaryPart:GetNetworkOwner()
+
+		local okUppEget = HorseService.tryMount(spelare, MIN)
+		check("och sätter sig upp på sin egen ledda häst", okUppEget == true)
+		local ryttarAgare = MIN.PrimaryPart:GetNetworkOwner()
+		check("ägarskapet gick till RYTTAREN vid uppsittningen",
+			ryttarAgare == spelare,
+			("fore=%s  efter=%s"):format(tostring(foreUppsittning),
+				tostring(ryttarAgare)))
+
+		--[[ Och så släpper tjänsten kopplet SJÄLV, genom `steg` — inte
+		     genom ett direktanrop av `slapp`. Det är den vägen spelaren
+		     faktiskt går. ]]
+		local hum = spelare.Character:FindFirstChildOfClass("Humanoid")
+		if hum then hum.Sit = true end
+		LedService._steg(1 / 30)
+		check("tjänsten släppte kopplet själv", LedService.ledsAv(MIN) == nil)
+
+		check("OCH SLÄPPET RÖRDE INTE RYTTARENS ÄGARSKAP",
+			MIN.PrimaryPart:GetNetworkOwner() == spelare,
+			("%s"):format(tostring(MIN.PrimaryPart:GetNetworkOwner())))
+
+		if hum then hum.Sit = false end
+		HorseService.dismount(spelare)
+	end
+
+	--[[ ── EN LEDNING UTAN RYTTARE ÅTERSTÄLLER SOM FÖRUT ────────────
+
+		Den andra halvan av kontraktet, och den som gör den första
+		mätbar: ändrar man regeln till «återställ aldrig» blir DEN HÄR
+		raden röd i stället. Ett släpp utan ryttare ska lämna tillbaka
+		ägarskapet precis som det alltid gjort. ]]
+	do
+		MIN.PrimaryPart:SetNetworkOwner(spelare)
+		intill(rot)
+		local okLedUtan = LedService.borja(spelare, MIN, MIN)
+		check("A leder henne, utan att sitta upp", okLedUtan == true)
+		check("ledningen tog ägarskapet till servern",
+			MIN.PrimaryPart:GetNetworkOwner() == nil,
+			tostring(MIN.PrimaryPart:GetNetworkOwner()))
+		LedService.slapp(spelare)
+		check("OCH SLÄPPET LÄMNADE TILLBAKA DET SOM FÖRUT",
+			MIN.PrimaryPart:GetNetworkOwner() == spelare,
+			tostring(MIN.PrimaryPart:GetNetworkOwner()))
+	end
+
+	--[[ ── EN KROK SOM KASTAR FÅR INTE KLOTTRA ─────────────────────
+
+		Fail-riktningen, och den stod som ett påstående i en kommentar
+		tills den här raden fanns. Kan vi inte avgöra om någon rider
+		LÅTER VI ÄGARSKAPET VARA: en häst som blir kvar serversimulerad
+		rättas av nästa uppsittning, men en ryttare som får ägarskapet
+		bortryckt har ingen väg tillbaka utom att sitta av. ]]
+	do
+		local riktig = LedService.satRidenKrok
+		MIN.PrimaryPart:SetNetworkOwner(spelare)
+		intill(rot)
+		local okKast = LedService.borja(spelare, MIN, MIN)
+		check("A leder henne inför fail-provet", okKast == true)
+		LedService.satRidenKrok(function()
+			error("krokens egen krasch")
+		end)
+		LedService.slapp(spelare)
+		check("EN KROK SOM KASTAR LÄMNAR ÄGARSKAPET IFRED",
+			MIN.PrimaryPart:GetNetworkOwner() == nil,
+			tostring(MIN.PrimaryPart:GetNetworkOwner()))
+		--[[ Tillbaka till produktionens egen krok. ]]
+		LedService.satRidenKrok(function(modell)
+			local sess = HorseService.sessionFor(modell)
+			return sess ~= nil and sess.rider ~= nil
+		end)
+		local _ = riktig
+	end
+
+	--[[ ── A SLÄPPER → B FÅR SITTA UPP ─────────────────────────────
+		Utan den här armen vore grinden uppfylld av en server som aldrig
+		släpper igenom någon alls. ]]
+	LedService.slapp(spelare)
+	check("ledningen är släppt", LedService.ledsAv(MIN) == nil)
+	intill(rot3)
+	local okEfter, skalEfter = HorseService.tryMount(spelareB, MIN)
+	check("EFTER SLÄPPET GÅR UPPSITTNINGEN IGENOM",
+		okEfter == true, tostring(skalEfter))
+
+	--[[ ── DEN OMVÄNDA REGELN STÅR KVAR ────────────────────────────
+		`led.rids` mäts också i sitt eget block längre upp; den står med
+		här för att kontraktet ska gå att läsa på ett ställe. ]]
+	intill(rot)
+	local okLed2, skalLed2 = LedService.borja(spelare, MIN, MIN)
+	check("en RIDEN häst går fortfarande inte att leda",
+		okLed2 == false and skalLed2 == "led.rids",
+		("%s / %s"):format(tostring(okLed2), tostring(skalLed2)))
+
+	--[[ ── OCH DE TVÅ GAMLA REGLERNA, SOM ALDRIG PRÖVATS ───────────
+		`hast.upptagen` och `hast.rider_redan` har funnits i `tryMount`
+		hela tiden men står inte i någon spec — de förekommer bara i
+		kommentarer. Ledningen har haft sin motsvarighet sedan länge
+		(`led.upptagen`); uppsittningen har inte haft det. ]]
+	intill(rot)
+	local okTva, skalTva = HorseService.tryMount(spelare, MIN)
+	check("EN HÄST KAN INTE HA TVÅ RYTTARE",
+		okTva == false and skalTva == "hast.upptagen",
+		("%s / %s"):format(tostring(okTva), tostring(skalTva)))
+
+	local okAnnan, skalAnnan = HorseService.tryMount(spelareB, ANNAN)
+	check("OCH EN RYTTARE KAN INTE SITTA PÅ TVÅ HÄSTAR",
+		okAnnan == false and skalAnnan == "hast.rider_redan",
+		("%s / %s"):format(tostring(okAnnan), tostring(skalAnnan)))
+
+	HorseService.dismount(spelareB)
+
+	--[[ ── EN TRASIG KROK SÄGER NEJ, INTE JA ───────────────────────
+
+		Grinden är fail closed, och det stod som ett PÅSTÅENDE i en
+		kommentar tills falsifieringen visade att ingen arm kunde göra
+		det rött: kroken kastar aldrig i bänken av sig själv.
+
+		Skälet regeln finns: kroken går genom gameplaylagret, och ett
+		fel DÄR får inte kunna släppa igenom en uppsittning som
+		ledningsregeln säger nej till. Ett kastat anrop räknas därför
+		som «hon leds», inte som «hon är fri». ]]
+	do
+		intill(rot)
+		local okLed3 = LedService.borja(spelare, MIN, MIN)
+		check("A leder henne igen inför provet", okLed3 == true)
+
+		HorseService.setLedareHook(function()
+			error("krokens egen krasch")
+		end)
+		intill(rot3)
+		local okKrasch, skalKrasch = HorseService.tryMount(spelareB, MIN)
+		check("EN KROK SOM KASTAR GER NEJ — INTE JA",
+			okKrasch == false and skalKrasch == "hast.leds_nu",
+			("%s / %s"):format(tostring(okKrasch), tostring(skalKrasch)))
+
+		--[[ Tillbaka till den riktiga kroken, samma uttryck som
+		     `GameplayService.start` kopplar in. ]]
+		HorseService.setLedareHook(LedService.ledsAv)
+		LedService.slapp(spelare)
+	end
+
+	Players._spelare = { spelare }
+	HorseService.setMountGate(GameplayService.farSittaUpp)
+	RunService._server = false
+end
 
 if fails > 0 then
 	print(string.format("\n%d mätning(ar) föll.", fails))

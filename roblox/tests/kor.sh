@@ -20,7 +20,7 @@
 # beroende på vilken mutation som råkade ligga kvar i .build/. Bygget hör till
 # körningen och görs nu här, varje gång.
 cd "$(dirname "$0")/.." || exit 1
-SPECAR="geometri spel spelkanon forberedelse skotselpass integration ledning ledning-integration promptkonflikt roster sprak sprak-en bygge mark handighet spelbuild forstaplayable preflight integritet statesync ridinput ridefirst tack tack-fas1 tack-fas2 tack-fas3 buren-tack hasthojd avsittning spelbarhet varldskoherens varldshud topologi qa sikt movement camera rider touch ljud driv-broms blick genomsikt paritet ugneta ugneta-gestalt klient klient-reservzon klient-hjalpknapp klient-ledprompt klient-naromrade klient-burenstatus klient-ridhandlingar ridanu-avslag tavlingsklader tavlingsklader-session coachbanner takt"
+SPECAR="geometri spel spelkanon forberedelse skotselpass sparning-v2 ridlogg ridobservation hinderobservation integration ledning ledning-integration promptkonflikt roster sprak sprak-en bygge mark handighet spelbuild forstaplayable preflight integritet statesync ridinput ridefirst tack tack-fas1 tack-fas2 tack-fas3 buren-tack hasthojd avsittning spelbarhet varldskoherens varldshud topologi qa sikt movement camera rider touch ljud driv-broms blick genomsikt paritet ugneta ugnetatema ugneta-gestalt ridhusplats ridplats volt ridforsok klient klient-reservzon klient-hjalpknapp klient-ledprompt klient-naromrade klient-burenstatus klient-ridhandlingar ridanu-avslag tavlingsklader tavlingsklader-session coachbanner takt forstaritten klient-byggidentitet klient-lektionspaus klient-sessionskedja stubbsemantik fjarrdublett flerhast ledtakt ledspar ledvag klient-uikontext gangfas klient-ugnetayta klient-ugnetalive integration-flagga"
 # #252 DEL B: banken provar SIG SJALV forst, i bada riktningarna. En
 # require av en modul som inte ligger i bunten ska falla bygget — inte
 # bli ett tyst nil (DEL A). Faller provet bygger vi inte en enda spec.
@@ -77,6 +77,13 @@ if ! python3 ../tools/kolla-generisk-hast.py; then
 fi
 if ! python3 ../tools/testa-kolla-generisk-hast.py; then
   echo "GRINDPROVET FOR GENERISK HAST MISSLYCKADES"
+  exit 1
+fi
+# #264 FALSIFIER_REPORTING_FIX: falsifieraren raknade accepterat grona
+# mutationer som fangade, och siffran hamnade i en rapport. Provet kor
+# rakningen med stubbad korning -- ingen kallfil skrivs om, ingen luau.
+if ! python3 ../tools/testa-falsifiera-forstaritten.py; then
+  echo "FALSIFIERARPROVET MISSLYCKADES"
   exit 1
 fi
 # Grind 1 och 5 i kontraktet for Coach Banner (#244): Ugnetas gamla

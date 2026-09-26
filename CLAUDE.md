@@ -145,6 +145,17 @@ När logik delas mellan plattformarna: porta **avsikt, regler, parametrar och ac
 
 ### Paritetsregel
 
+> **Tidsbegränsat undantag 2026-09-22 — Roblox först.** Fram till verifierad
+> First Playable är Roblox enda aktiva leveransmålet. Nya webbfeatures och
+> kravet att samtidigt implementera varje ny Roblox-funktion på webben är
+> pausade. Webben bevaras i befintligt skick — pausen är inte tillstånd att
+> radera, avveckla eller försämra den, och befintliga tester och
+> regressionsskydd behålls. Delade källor, generering och export får ändras
+> när det behövs, utan att en andra Luau-sanning skapas. Fullständig text och
+> villkor: `docs/PRODUCT-CANON.md`, «Tidsbegränsat produktbeslut 2026-09-22».
+> Återstart kräver ett nytt produktägarbeslut. Stycket nedan gäller i övrigt
+> oförändrat och återfår full verkan när etappen är klar.
+
 Kärnloop, hästlogik, lärande, ansvar, UBRF-värld och centrala gameplayregler ska motsvara varandra. Rendering, UI och inputadapter får vara plattformsspecifika.
 
 Bygg inte en ny JS-only kärnfeature eller Roblox-only kärnfeature utan att aktivt redovisa hur motsvarande upplevelse hålls möjlig på den andra ytan. Miljöändringar ska levereras genom gemensam källstyrd miljösanning och båda plattformarnas implementation enligt `docs/ENVIRONMENT-DELIVERY.md`.

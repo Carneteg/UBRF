@@ -113,6 +113,16 @@ local function cframe(pos, look, yaw, pitch, roll)
 	     vinklarna, sa den svarar med dem i samma ordning. G02-D laser yaw
 	     har for att spela in at vilket hall hasten stod. ]]
 	c.ToOrientation = function(self) return self.Pitch or 0, self.Yaw or 0, self.Roll or 0 end
+	--[[ #264: `CFrame:Lerp(mål, alfa)` — motorns egen interpolation, som
+	     `HastGang` filtrerar varje led med. Stubben interpolerar positionen
+	     och de tre vinklar den bär linjärt; för små ledvinklar är det samma
+	     svar som motorns sfäriska interpolation. ]]
+	c.Lerp = function(self, mal, a)
+		local p0, p1 = self.Position or vec(), mal.Position or vec()
+		local function l(x0, x1) return (x0 or 0) + ((x1 or 0) - (x0 or 0)) * a end
+		return cframe(vec(l(p0.X, p1.X), l(p0.Y, p1.Y), l(p0.Z, p1.Z)), mal.LookVector,
+			l(self.Yaw, mal.Yaw), l(self.Pitch, mal.Pitch), l(self.Roll, mal.Roll))
+	end
 	--[[ ROTATIONSMATRISEN, sa langt bankan har en.
 
 	     `BuildKit.speglaCF` har tva grenar: en riktig matrisgren, som ar den
@@ -288,7 +298,7 @@ Enum = {
 	     varje nedslag pa `UserInputType`, och utan enumen jamforde banken
 	     mot nil — ett pekfinger och en mus var da samma sak. De tva
 	     mus-typerna finns for att kunna mata att en mus AVVISAS. ]]
-	UserInputType = { Gamepad1 = 1, Touch = 2, MouseButton1 = 3, MouseMovement = 4 },
+	UserInputType = { Gamepad1 = 1, Touch = 2, MouseButton1 = 3, MouseMovement = 4, Keyboard = 5 },
 	ContextActionResult = { Sink = 1 },
 	CameraType = { Scriptable = 1, Custom = 2 },
 	--[[ Front och Back tillkom med skyltarnas SurfaceGui: speglingen byter
@@ -326,6 +336,9 @@ Enum = {
 	HorizontalAlignment = { Left = 1, Center = 2, Right = 3 },
 	VerticalAlignment = { Top = 1, Center = 2, Bottom = 3 },
 	AutomaticSize = { None = 0, X = 1, Y = 2, XY = 3 },
+	--[[ #264 PLAYER_INTERACTION_CONSOLIDATION: panelens handlingslista rullar
+	     (`ScrollingFrame.ScrollingDirection`). Namn och värden är Robloxs. ]]
+	ScrollingDirection = { X = 1, Y = 2, XY = 4 },
 	--[[ #244: toningens enum. Uppraknade av samma skal som Material och de
 	     ovriga UI-enumen ovan — en __index som svarar pa allt hade latit
 	     `Enum.EasingStyle.Kvadratisk` passera hela sviten och falla forst i
@@ -481,7 +494,6 @@ workspace = {
 		ner(self)
 		return ut
 	end,
-	DescendantAdded = { Connect = function() return { Disconnect = function() end } end },
 }
 
 --[[ Signalfabriken låg förut nedanför tjänsterna. Den flyttades hit när
@@ -676,6 +688,25 @@ local __services = {
 			--[[ Karaktären kan försvinna mitt i en ritt. Klienten sitter av
 			     på den signalen, och det är också där lärarytan släcks. ]]
 			CharacterRemoving = __signal(),
+			--[[ #264: spelarens språkval bor i ett attribut (`UBRFSprak`).
+			     `Instance:GetAttribute`, `SetAttribute` och
+			     `GetAttributeChangedSignal` är motorns egna — en Player är en
+			     Instance. Signalen fyras när värdet faktiskt ändras. ]]
+			_attr = {},
+			_attrSignaler = {},
+			GetAttribute = function(self, namn) return rawget(self, "_attr")[namn] end,
+			SetAttribute = function(self, namn, varde)
+				local a = rawget(self, "_attr")
+				if a[namn] == varde then return end
+				a[namn] = varde
+				local sig = rawget(self, "_attrSignaler")[namn]
+				if sig then sig:Fire() end
+			end,
+			GetAttributeChangedSignal = function(self, namn)
+				local s = rawget(self, "_attrSignaler")
+				s[namn] = s[namn] or __signal()
+				return s[namn]
+			end,
 		},
 		_spelare = {},
 		GetPlayers = function(self) return self._spelare end,
@@ -702,6 +733,31 @@ local __services = {
 	},
 	--[[ Spaken sätts av testet när gamepad ska mätas. TouchEnabled är falskt:
 	     bänken mäter kontraktet, inte gesterna — GUI:t byggs bara i Studio. ]]
+	--[[ #264 R4: promptsystemets egna hållhändelser. Ingen stub fyrar dem
+	     själv — det gör bara det prov som vill modellera motorn. ]]
+	ProximityPromptService = {
+		PromptButtonHoldBegan = __signal(),
+		PromptButtonHoldEnded = __signal(),
+		PromptTriggered = __signal(),
+		PromptShown = __signal(),
+		PromptHidden = __signal(),
+	},
+	--[[ #264 R5: `TextService:GetTextSize(text, storlek, font, ram)` finns i
+	     motorn (API-referensen). Bänken har ingen typsättare: varje tecken
+	     är en halv textstorlek bred och raderna bryts vid ramens bredd.
+	     Provet mäter att kroppen frågar texten, inte vilket typsnitt. ]]
+	TextService = {
+		GetTextSize = function(_, text, storlek, _font, ram)
+			local rader, bredast = 0, 0
+			for rad in string.gmatch(text .. "\n", "([^\n]*)\n") do
+				local bredd = #rad * storlek * 0.5
+				rader += math.max(1, math.ceil(bredd / math.max(1, ram.X)))
+				bredast = math.max(bredast, math.min(bredd, ram.X))
+			end
+			if text == "" then rader = 0 end
+			return Vector2.new(bredast, rader * storlek)
+		end,
+	},
 	UserInputService = {
 		_pad = {},
 		GetGamepadState = function(self) return self._pad end,
@@ -888,6 +944,25 @@ function __rs:FindFirstChild(namn)
 	for _, b in ipairs(self._barn) do if b.Name == namn then return b end end
 	return nil
 end
+--[[ `GetChildren` SAKNADES på ReplicatedStorage, och hålet är samma klass
+	som det på `workspace` ovan: varje Instance i Roblox har metoden, så
+	produktionen är oberörd — men bänken kunde inte RÄKNA barnen, bara
+	slå upp ett.
+
+	Det spelade roll. `FindFirstChild` svarar med ETT även när det finns
+	två, och dubbletten som lät `MinHast:InvokeServer()` hänga för evigt
+	(ROBLOX_RUNTIME_ROUTING, mätt i Studio 2026-09-20) går bara att mäta
+	genom att räkna. Ingen spec kunde göra det förrän nu.
+
+	BARA `_barn` RETURNERAS. `HorseCore` ligger som ett direkt fält på
+	tabellen och är en vanlig modultabell, inte en Instance; att lämna ut
+	den hade gett anropare något utan `Name` och `ClassName` att snubbla
+	på. Listan är ny varje gång, av samma skäl som på `workspace`. ]]
+function __rs:GetChildren()
+	local ut = {}
+	for _, b in ipairs(self._barn or {}) do table.insert(ut, b) end
+	return ut
+end
 --[[ I produktionen SKAPAR servern fjärrmappen och dess objekt, och klienten
      väntar in dem. Bänken har ingen server, så den står in för den: ett
      efterfrågat barn som inte finns skapas här i stället för att klienten
@@ -896,10 +971,42 @@ end
      Det gäller bara uppslag klienten gör på vägen till ett fjärrobjekt.
      Ett prov som vill mäta att något SAKNAS ska använda FindFirstChild,
      som fortsatt svarar nil. ]]
+--[[ FJÄRROBJEKTETS KLASS KOMMER UR KONTRAKTET, INTE UR EN GISSNING.
+
+     Bänken skapade förut VARJE fjärrobjekt som `RemoteEvent`. Det är
+     inte sant: `Networking.DEFINITIONS` säger att `MountRequest` och
+     `DismountRequest` är `RemoteFunction`.
+
+     Skillnaden var inte kosmetisk. `RemoteEvent`-stubbens `InvokeServer`
+     svarar HÅRDKODAT `true` och rör aldrig `OnServerInvoke`. Alltså gick
+     det inte att mäta att servern NEKAR ett fjärranrop — bänken svarade
+     ja åt den, tyst, och varje prov som trodde sig mäta ett nej mätte
+     stubbens `return true`.
+
+     Det föll ut i QA-reviewen av `082062c`: summeringen efter ritten
+     visades på en nekad avsittning, och det första provet som skulle
+     fånga det kunde inte, av exakt det här skälet.
+
+     Klassen läses därför ur `Networking.definitioner()` — samma tabell
+     produktionen själv använder i `Networking.get`, inte en andra lista
+     här. Är modulen inte laddad än faller vi tillbaka på `RemoteEvent`,
+     som förut. ]]
+local function __fjarrklass(barnnamn: string): string
+	--[[ `__fjarrdefinitioner` sätts av `build.py` direkt efter att
+	     `Networking` emitterats — modulerna är lokaler i bunten, så det
+	     är den enda vägen från stubben (som ligger först) till
+	     kontraktet. Listan ägs fortfarande av `Networking`. ]]
+	local def = __fjarrdefinitioner
+	if type(def) == "table" and def[barnnamn] then
+		return def[barnnamn]
+	end
+	return "RemoteEvent"
+end
+
 function __rs:WaitForChild(namn)
 	local fanns = self:FindFirstChild(namn)
 	if fanns then return fanns end
-	local ny = Instance.new(if namn == "HorseRemotes" then "Folder" else "RemoteEvent")
+	local ny = Instance.new(if namn == "HorseRemotes" then "Folder" else __fjarrklass(namn))
 	ny.Name = namn
 	ny.Parent = self
 	--[[ Mappen måste kunna skapa sina egna barn på samma sätt; annars
@@ -908,7 +1015,7 @@ function __rs:WaitForChild(namn)
 		function ny:WaitForChild(barnnamn)
 			local b = self:FindFirstChild(barnnamn)
 			if b then return b end
-			local e = Instance.new("RemoteEvent")
+			local e = Instance.new(__fjarrklass(barnnamn))
 			e.Name = barnnamn
 			e.Parent = self
 			return e
@@ -948,6 +1055,10 @@ __datastore = {
 	     och fönstret där en annan `PlayerAdded`-lyssnare ser en halvladdad
 	     save existerar inte i bänken. ]]
 	fordrojLas = false,
+	--[[ Opt-in krok fore varje `UpdateAsync`. Se noten dar. ]]
+	foreSkriv = nil :: ((string) -> ())?,
+	efterSkriv = nil :: ((string) -> ())?,
+	omkorTransform = false,
 	forsok = { las = 0, skriv = 0 },
 }
 
@@ -957,6 +1068,9 @@ function __datastore.nollstall()
 	__datastore.felSkriv = false
 	__datastore.felButik = false
 	__datastore.fordrojLas = false
+	__datastore.foreSkriv = nil
+	__datastore.efterSkriv = nil
+	__datastore.omkorTransform = false
 	__datastore.forsok = { las = 0, skriv = 0 }
 end
 
@@ -979,7 +1093,23 @@ function __butik:SetAsync(nyckel, varde)
 end
 function __butik:UpdateAsync(nyckel, fn)
 	__datastore.forsok.skriv += 1
+	--[[ OPT-IN: en krok FORE skrivningen, satt av provet. Den enda vagen
+	     att gora en skrivning langsam pa ETT bestamt nyckel utan att
+	     rora produktionen — och det ar vad nedstangningens fan-out maste
+	     matas mot. `nil` som standard: rors den inte beter sig lagret
+	     precis som forut. ]]
+	if __datastore.foreSkriv then __datastore.foreSkriv(nyckel) end
 	if __datastore.felSkriv then error("DataStore: skrivning misslyckades (stub)") end
+	--[[ #264 INFRA-1, OPT-IN: Roblox får köra transformatorn MER än en gång
+	     (API-referensen för GlobalDataStore:UpdateAsync: "will call the
+	     function again, discarding the result of the previous call").
+	     `omkorTransform` kör den en extra gång och kastar det första
+	     svaret — en sammanslagning med sidoeffekter som inte är idempotent
+	     syns då som en dubblett. Stubben kör om på SAMMA lagrade värde; i
+	     motorn sker omkörningen när en annan server hunnit skriva. ]]
+	if __datastore.omkorTransform then
+		fn(__datastore._data[nyckel])
+	end
 	local nytt = fn(__datastore._data[nyckel])
 	--[[ NIL UR TRANSFORMATORN AVBRYTER SKRIVNINGEN och lämnar det lagrade
 	     värdet ORÖRT. Så gör Roblox, och stubben gjorde det inte: den skrev
@@ -991,6 +1121,13 @@ function __butik:UpdateAsync(nyckel, fn)
 		return __datastore._data[nyckel]
 	end
 	__datastore._data[nyckel] = nytt
+	--[[ #264 INFRA-1, OPT-IN: skrivningen LANDADE, men anropet kastar ändå
+	     (nätet tappar svaret). Det är ett BÄNKANTAGANDE om nätet, inte ett
+	     citat ur API-referensen — samma fall som `Sparning.registreraPass`
+	     redan är skriven för. `SparService` gör då om skrivningen, och
+	     omförsöket möter sin egen redan skrivna rad. Kroken sätts av provet
+	     och kastar när den vill. ]]
+	if __datastore.efterSkriv then __datastore.efterSkriv(nyckel) end
 	return nytt
 end
 
@@ -1123,6 +1260,49 @@ __signal_ny = __signal
      tystare an det ursprungliga felet och i en helt annan fil. ]]
 workspace.ChildAdded = __signal()
 workspace.ChildRemoved = __signal()
+--[[ ══ VARLDEN FAR EN LIVSCYKEL ═══════════════════════════
+
+	`DescendantAdded` var en INERT stub — `Connect` slangde sin callback.
+	Da gick den dynamiska halvan av `Prompttext.start()` inte att prova
+	alls: modulen kopplar nya prompter genom just den signalen, och i
+	banken hande ingenting.
+
+	`DescendantRemoving` fanns inte. Utan den finns ingen vag att saga
+	«en prompt lamnade varlden», och en modul som stadar efter sig kan
+	inte visas gora det.
+
+	Bada fyras ur `Parent`-sattaren och ur `Destroy` nedan. ]]
+workspace.DescendantAdded = __signal()
+workspace.DescendantRemoving = __signal()
+
+--[[ Noden OCH allt under den. `DescendantAdded`/`DescendantRemoving`
+     ar descendant-scopade i Roblox: flyttas en mapp med en prompt i
+     fyras signalen for prompten ocksa. Forsta versionen fyrade bara for
+     roten, och da kunde en dorr som revs med sin modell inte matas. ]]
+function __medBarn(nod: any): { any }
+	local ut = { nod }
+	local function ner(n)
+		for _, b in ipairs(rawget(n, "_barn") or {}) do
+			table.insert(ut, b)
+			ner(b)
+		end
+	end
+	ner(nod)
+	return ut
+end
+
+--[[ Ar noden under `workspace`? Signalerna galler tradet, inte varje
+     foralder — samma som i Roblox. ]]
+function __underWorkspace(nod: any): boolean
+	local n = nod
+	local djup = 0
+	while n ~= nil and djup < 64 do
+		if n == workspace then return true end
+		n = rawget(n, "_foralder")
+		djup += 1
+	end
+	return false
+end
 
 --[[ ── BEVAKADE EGENSKAPER ─────────────────────────────────────────────
      Egenskaper som koden både SKRIVER och LYSSNAR på. De ligger i en
@@ -1172,7 +1352,10 @@ local function __nyInstans(klass)
 		     modulens beslut. ]]
 		AbsoluteSize = vec(0, 0, 0),
 		AbsolutePosition = vec(0, 0, 0),
-		_barn = {}, _attr = {}, _p = {}, _sig = {}, _asig = {}, Parent = nil,
+		_barn = {}, _attr = {}, _p = {}, _sig = {}, _asig = {}, _foralder = nil,
+		--[[ Roblox fyrar den precis innan instansen rivs. Se noten vid
+		     `workspace.DescendantRemoving`. ]]
+		Destroying = __signal(),
 	}
 	--[[ `GetPropertyChangedSignal` finns på varje instans i Roblox. Den
 	     fyrar när egenskapen ÄNDRAS — inte vid varje skrivning av samma
@@ -1270,10 +1453,10 @@ local function __nyInstans(klass)
 	--[[ Klientloopen sitter av om riggen inte längre står i världen. Utan
 	     den här kunde den vägen aldrig köras i bänken. ]]
 	function inst:IsDescendantOf(mojligForfader)
-		local f = rawget(self, "Parent")
+		local f = rawget(self, "_foralder")
 		while f do
 			if f == mojligForfader then return true end
-			f = rawget(f, "Parent") or (type(f) == "table" and f.Parent) or nil
+			f = rawget(f, "_foralder") or (type(f) == "table" and f.Parent) or nil
 		end
 		return false
 	end
@@ -1293,12 +1476,40 @@ local function __nyInstans(klass)
 		return ut
 	end
 	function inst:Destroy()
-		local far = rawget(self, "Parent")
+		--[[ Signalerna FORE losskopplingen: en lyssnare ska kunna se var
+		     instansen satt, precis som i Roblox. ]]
+		local ivarlden = __underWorkspace(self)
+		local trad = __medBarn(self)
+		--[[ `Destroying` fyrar for varje nod som rivs, inte bara roten. ]]
+		for _, n in ipairs(trad) do
+			local d = rawget(n, "Destroying")
+			if d then d:Fire() end
+		end
+		if ivarlden then
+			for _, n in ipairs(trad) do
+				workspace.DescendantRemoving:Fire(n)
+			end
+		end
+		--[[ EN FORSTORD INSTANS AR TERMINAL. Roblox laser `Parent`; att
+		     lata banken sla tillbaka den hade gjort det mojligt att prova
+		     ett livscykelsteg som inte finns — och ett prov som vilar pa
+		     en omojlig overgang bevisar ingenting. ]]
+		for _, n in ipairs(trad) do
+			rawset(n, "_forstord", true)
+		end
+		local far = rawget(self, "_foralder")
 		if far and far._barn then
 			for i, b in ipairs(far._barn) do
 				if b == self then table.remove(far._barn, i) break end
 			end
 		end
+		--[[ EN FORSTORD INSTANS HAR `Parent = nil`. Stubben lamnade den
+		     kvar pekande pa sin gamla foralder, och det gjorde mer an att
+		     vara oprydligt: `__newindex` fyrar bara for en FRANVARANDE
+		     nyckel, sa en senare `x.Parent = ...` gick rakt forbi hooken
+		     och varken `DescendantAdded` eller barnlistan uppdaterades.
+		     En riven prompt gick alltsa inte att satta tillbaka. ]]
+		rawset(self, "_foralder", nil)
 	end
 	if klass == "TextButton" then
 		inst.Activated = __signal()
@@ -1312,6 +1523,12 @@ local function __nyInstans(klass)
 		     knappen; `TouchControls` kopplar den pa bada. ]]
 		inst.MouseLeave = __signal()
 		inst.MouseEnter = __signal()
+		--[[ #264: sprakflaggan visar sitt tips nar den far fokus med
+		     tangentbord eller handkontroll. `GuiObject.SelectionGained` och
+		     `SelectionLost` — namnen kontrollerade i Roblox API-referens
+		     (GuiObject, 2026-09-25). ]]
+		inst.SelectionGained = __signal()
+		inst.SelectionLost = __signal()
 	end
 	--[[ `GuiObject.InputBegan` — samma skäl som `Activated` ovan.
 
@@ -1478,7 +1695,7 @@ local function __nyInstans(klass)
 			if type(namn) ~= "string" or namn == "" then namn = rawget(nod, "ClassName") end
 			if type(namn) ~= "string" then break end
 			table.insert(led, 1, namn)
-			nod = rawget(nod, "Parent")
+			nod = rawget(nod, "_foralder")
 		end
 		return table.concat(led, ".")
 	end
@@ -1549,7 +1766,46 @@ local function __nyInstans(klass)
 	     de har metoderna kunde banken inte se skillnad pa en tjanst som gor
 	     det och en som inte gor det — och det var precis den skillnaden som
 	     holl hasten stilla. ]]
+	--[[ ══ ÄGARSKAPET GÅR ATT NEKA OCH ATT FÅ ATT KASTA ═════════
+
+	     Slice F. Utan de har knapparna gar felvagen i aterlamningen inte
+	     att mata: den galler bara nar agarskapet faktiskt inte far
+	     sattas, och i banken lyckades det alltid.
+
+	     STANDARD AR OFORANDRAD — `CanSetNetworkOwnership` svarar `true`
+	     och ingenting kastar, precis som forut. Ett prov satter
+	     `_agarskapNekas` (skalstrangen), `_agarskapKastar` eller
+	     `_satAgarskapKastar` pa DEN del det vill prova.
+
+	     Skalstrangen kommer fran PROVET, inte harifran: Roblox
+	     dokumenterar att en skalstrang finns men inte vilka de ar, och
+	     en bank som hittar pa dem hade blivit ett pastaende om motorn. ]]
+	function inst:CanSetNetworkOwnership()
+		if rawget(self, "_agarskapKastar") then
+			error("CanSetNetworkOwnership: stubben kastar med flit", 0)
+		end
+		local nekas = rawget(self, "_agarskapNekas")
+		if nekas ~= nil then return false, tostring(nekas) end
+		return true
+	end
+
 	function inst:SetNetworkOwner(agare)
+		--[[ FORSOKET RAKNAS ALLTID, aven nar det nekas. Ett prov ska
+		     kunna se att koden FORSOKTE nagot forbjudet.
+
+		     TVA RAKNARE, och skillnaden ar inte kosmetisk: `nil` betyder
+		     «servern tar over» och gors med flit mitt i avsittningen.
+		     En raknare som slog ihop dem kunde inte skilja den
+		     avsiktliga overlamningen till servern fran ett forbjudet
+		     forsok att ge kroppen till spelaren. ]]
+		rawset(self, "_agarskapForsok", (rawget(self, "_agarskapForsok") or 0) + 1)
+		if agare ~= nil then
+			rawset(self, "_agarskapTillSpelare",
+				(rawget(self, "_agarskapTillSpelare") or 0) + 1)
+		end
+		if rawget(self, "_satAgarskapKastar") then
+			error("SetNetworkOwner: stubben kastar med flit", 0)
+		end
 		rawset(self, "_agare", agare)
 		rawset(self, "_agareAuto", false)
 	end
@@ -1575,6 +1831,7 @@ local function __nyInstans(klass)
 
 	return setmetatable(inst, {
 		__index = function(t, k)
+			if k == "Parent" then return rawget(t, "_foralder") end
 			if __BEVAKADE[k] then return rawget(t, "_p")[k] end
 			--[[ `Position` är inget eget fält på en riktig BasePart: den
 			     läses ur CFrame. Koden som mäter avstånd till en häst
@@ -1582,7 +1839,7 @@ local function __nyInstans(klass)
 			     läser just `Position`, och en rigg som bara satt sin
 			     CFrame gav då nil. Samma härledning som byggstubbarna. ]]
 			if k == "WorldPosition" and rawget(t, "ClassName") == "Attachment" then
-				local f = rawget(t, "Parent")
+				local f = rawget(t, "_foralder")
 				local egen = rawget(t, "Position") or Vector3.new(0, 0, 0)
 				if f and f.Position then return f.Position + egen end
 				return egen
@@ -1597,7 +1854,7 @@ local function __nyInstans(klass)
 			     träns på huvudet och ett träns i origo. ]]
 			if k == "WorldCFrame" and rawget(t, "ClassName") == "Attachment" then
 				local egen = rawget(t, "CFrame")
-				local vard = rawget(t, "Parent")
+				local vard = rawget(t, "_foralder")
 				local vardCF = vard and rawget(vard, "CFrame")
 				if vardCF and egen then return vardCF * egen end
 				return egen
@@ -1647,10 +1904,61 @@ local function __nyInstans(klass)
 				return
 			end
 			if k == "Parent" then
-				rawset(t, "Parent", v)
+				--[[ LAMNAR DEN VARLDEN? Da ska `DescendantRemoving` fyra
+				     innan bandet klipps, och `DescendantAdded` nar den
+				     kommer in. Utan det kan en modul som stadar efter sig
+				     inte visas gora det — se noten vid signalerna. ]]
+				--[[ BOKFORINGEN OCKSA, SEDAN #264.
+				     Den har raden sa forut «bara signalen, inte
+				     bokforingen», med motiveringen att `varldshud.spec`
+				     foll direkt. Men da ljog banken om motorn: en part
+				     som flyttades fran A till B lag kvar i A:GetChildren()
+				     OCH i B:s, och `Parent = B` en andra gang gav B tva
+				     poster av samma barn. Varje prov som raknar barn,
+				     letar efter en riven nod eller foljer ett subtrad
+				     matte alltsa nagot Roblox aldrig gor.
+				     Ett prov far inte halla sig gront genom att banken
+				     har fel; specarna som byggde pa den gamla semantiken
+				     ar rattade i stallet. ]]
+				if rawget(t, "_forstord") then
+					error("The Parent property of a destroyed instance is locked", 2)
+				end
+				if __underWorkspace(t) then
+					for _, n in ipairs(__medBarn(t)) do
+						workspace.DescendantRemoving:Fire(n)
+					end
+				end
+				--[[ FORALDERN LAGRAS UNDER EN EGEN NYCKEL, och skalet ar
+				     inte prydlighet. `__newindex` fyrar bara for en
+				     FRANVARANDE nyckel. Rawsattes `Parent` gick varje
+				     SENARE omforaldring rakt forbi metatabellen, och da
+				     fyrade varken `DescendantRemoving` eller
+				     `DescendantAdded` — en prompt som lossnade fran
+				     varlden gick inte att mata alls.
+				     `Parent` lases ur `_foralder` i `__index` nedan. ]]
+				--[[ UR DEN GAMLA FORALDERNS LISTA FORST. Roblox har en
+				     nod hos exakt en foralder; banken lat den ligga kvar
+				     hos bada. ]]
+				local gammalF = rawget(t, "_foralder")
+				if type(gammalF) == "table" and type(gammalF._barn) == "table" then
+					for i = #gammalF._barn, 1, -1 do
+						if gammalF._barn[i] == t then
+							table.remove(gammalF._barn, i)
+						end
+					end
+				end
+				rawset(t, "_foralder", v)
 				if v and type(v) == "table" then
 					v._barn = v._barn or {}
+					--[[ SAMMA FORALDER IGEN AR INGEN NY POST. Utan
+					     borttagningen ovan gav `Parent = B; Parent = B`
+					     tva poster av samma barn hos B. ]]
 					table.insert(v._barn, t)
+				end
+				if __underWorkspace(t) then
+					for _, n in ipairs(__medBarn(t)) do
+						workspace.DescendantAdded:Fire(n)
+					end
 				end
 			else
 				rawset(t, k, v)
@@ -1660,6 +1968,28 @@ local function __nyInstans(klass)
 end
 
 Instance = { new = __nyInstans }
+
+--[[ ══ `require` PÅ EN STUBBAD ModuleScript (#263) ═══════════════════
+
+	SAMMA SÖM SOM I `stubs-bygge.luau`, ordagrant och av samma skäl —
+	se noten där. Kort: `Integritet.identitet()` och
+	`Byggidentitet.identitet()` läser build-identiteten med `require()`
+	på en INSTANS de hittat i ReplicatedStorage. Det är ett dynamiskt
+	anrop, så byggfilen skriver inte om det till ett modulnamn, och
+	luau-CLI:t kan inte requira en stubbad ModuleScript.
+
+	Den saknades i DEN HÄR filen, och det syntes först som att den
+	riktiga identiteten lästes som «okänd» i `klient-byggidentitet.spec`
+	— alltså att provet mätte fail closed-vägen och kallade den för den
+	riktiga. Sömmen ligger i bänken och inte i modulen: produktionskoden
+	ska inte ha en gren som bara finns för provet. ]]
+local __riktigRequire = require
+require = function(mal)
+	if type(mal) == "table" and rawget(mal, "__modul") ~= nil then
+		return rawget(mal, "__modul")
+	end
+	return __riktigRequire(mal)
+end
 
 --[[ ══ `typeof` SAKNADES HELT, OCH DET VAR INTE OFARLIGT (#246) ═══════
 
@@ -1810,9 +2140,87 @@ end
      gjort ordningsprovet nedan tidsberoende i stället för deterministiskt.
      Det som provas är ordningen mellan anslutning och anrop, inte att Roblox
      schemalägger. ]]
+--[[ ══ EN OPT-IN SCHEMALAGGARE ═══════════════════════════
+
+	`task.spawn` kor SYNKRONT i banken, och det ar ratt for nastan allt:
+	det som provas ar vad en spawn GOR, inte nar. Men da gar varken
+	FAN-OUT eller ETT PAGAENDE ARBETE att uttrycka — en spawn som alltid
+	kor klart pa stallet ser likadan ut som en serie, och ingen trad kan
+	ligga och vanta mitt i nagot.
+
+	`__schemaPa(true)` byter darfor spawn mot en KO AV COROUTINES:
+
+	  task.spawn(fn)   skapar en coroutine och koar den, kor den inte
+	  task.wait()      i en coroutine: lamnar over till schemat
+	                   i huvudtraden: kor nasta vantande ett steg
+	  __schemaSteg()   koar upp en trad ett steg; false nar kon ar tom
+	  __schemaKvar()   hur manga trader som lever — fan-out-matningen
+
+	Da kan ett prov starta ett arbete, lamna det HALVGJORT mitt i en
+	skrivning, och sedan titta pa vad nagon annan gor under tiden.
+
+	AVSTANGD SOM STANDARD. Ror inget prov schemat beter sig banken exakt
+	som forut — `spawn` kor direkt, `wait` svarar 0. ]]
+local __schemaKo: { thread } = {}
+local __schemaAktivt = false
+
+function __schemaPa(pa: boolean)
+	__schemaAktivt = pa and true or false
+	__schemaKo = {}
+end
+
+function __schemaKvar(): number
+	return #__schemaKo
+end
+
+--[[ Kor forsta vantande traden ETT steg. Yieldar den laggs den sist i
+     kon igen; ar den klar faller den bort. False nar kon ar tom. ]]
+--[[ VILKEN trad schemat just nu kor. `coroutine.isyieldable()` duger
+     inte som prov: specen sjalv kan redan ligga i en coroutine, och da
+     svarar den sant aven for den — vantesloopen i produktionen yieldade
+     da sig sjalv och ingen resumade den igen («thread yielded
+     unexpectedly»). Identiteten ar entydig. ]]
+local __schemaAktuell: thread? = nil
+
+function __schemaSteg(): boolean
+	local co = table.remove(__schemaKo, 1)
+	if not co then return false end
+	local forra = __schemaAktuell
+	__schemaAktuell = co
+	local ok, fel = coroutine.resume(co)
+	__schemaAktuell = forra
+	if not ok then
+		warn("[schema] en trad kastade: " .. tostring(fel))
+	elseif coroutine.status(co) ~= "dead" then
+		table.insert(__schemaKo, co)
+	end
+	return true
+end
+
+--[[ Kor tills kon ar tom. Taket finns for att ett prov med en trad som
+     aldrig blir klar ska FALLA, inte hanga. ]]
+function __schemaTomKo(tak: number?)
+	local n = 0
+	while __schemaSteg() do
+		n += 1
+		if n > (tak or 10000) then
+			error("[schema] kon blev aldrig tom — en trad ar fast")
+		end
+	end
+end
+
 task = {
 	delay = function(_, fn) __senasteDelay = fn end,
-	spawn = function(fn, ...) fn(...) end,
+	spawn = function(fn, ...)
+		if __schemaAktivt then
+			local argv = table.pack(...)
+			table.insert(__schemaKo, coroutine.create(function()
+				fn(table.unpack(argv, 1, argv.n))
+			end))
+			return
+		end
+		fn(...)
+	end,
 	--[[ `defer` kor direkt i banken, precis som `spawn`. I Roblox skjuts
 	     den till bildrutans slut; det som provas ar VAD den gor, inte NAR.
 	     `TouchControls` anvander den for att slå ihop flera
@@ -1823,5 +2231,20 @@ task = {
 	     felprovet sju sekunder långt utan att mäta något annat än att
 	     luau kan sova. Antalet FÖRSÖK är det som provas, och det räknar
 	     datalagerstubben. ]]
-	wait = function() return 0 end,
+	--[[ Med schemat pa drar `wait` kon framat — annars hade en
+	     produktionsloop som vantar in sina egna spawnar snurrat for
+	     evigt i banken. Utan schemat ar den no-op som forut. ]]
+	--[[ I en schemalagd trad LAMNAR `wait` over; i huvudtraden DRAR den
+	     schemat framat. Det andra ar det som far produktionens egen
+	     «vanta in mina spawnar»-loop att ga runt i banken. Utan schemat
+	     ar den no-op som forut. ]]
+	wait = function()
+		if not __schemaAktivt then return 0 end
+		if __schemaAktuell ~= nil and coroutine.running() == __schemaAktuell then
+			coroutine.yield()
+		else
+			__schemaSteg()
+		end
+		return 0
+	end,
 }

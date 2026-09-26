@@ -314,6 +314,22 @@ function CoachBanner.Show(mal: string, detalj: string, duration: number?)
 	end
 end
 
+--[[ #264 GAIT_READABILITY_AND_UGNETA: ramen, så att värden kan flytta den
+     in i en dold behållare medan Ugnetas yta uppe till höger visar texten. ]]
+function CoachBanner.ram(): Frame?
+	return ram
+end
+
+--[[ Skriver om texten UTAN att visa bannern eller förnya tiden. Ett
+     språkbyte ska översätta det som står — inte ta fram en utmattad banner
+     igen. ]]
+function CoachBanner.skrivTyst(mal: string, detalj: string)
+	local m, d = malEtikett, detaljEtikett
+	if not m or not d then return end
+	m.Text = versaler(mal)
+	d.Text = detalj
+end
+
 --[[ Släcker direkt och kastar tiden. Det här är säkerhetsvägen:
 	avsittning, lektionsavbrott och respawn ska inte lämna en text som
 	handlar om en häst spelaren inte sitter på längre. ]]

@@ -4,34 +4,147 @@
 
 | | |
 |---|---|
-| Aktiv gate | **Gate 0 — Gemensam sanning** |
-| Bas | `ab0d662e67c04a570f959bc1673c419130ba0c06` (merge av PR #257) |
-| Teknisk baseline | revisionsrapporten i issue #258 |
+| Aktiv gate | **First Playable — human final QA / product-owner acceptance** |
+| Aktiv gren | `claude/gate2a-first-ride-20260919`, **PR #264** |
+| Head | se senaste leveranskommentaren i PR #264 (undviker sjalvrefererande SHA) |
+| Aktiv order | **HUMAN_FINAL_QA / PRODUCT_OWNER_ACCEPTANCE** — ingen ny implementation; maskinlagret är stängt |
+| Senaste produktbeslut | **Webb + Roblox, ingenting annat**, PR #264 kommentar `5806972193` |
+| Bas | `9c1ebeae7337bbfa138016811d9e380aad4ef3eb` (merge av Gate 1A / PR #262) |
+| Överordnad plan | issue #259 |
 | Builder | **Claude** |
 | Review | **ChatGPT** |
 | Acceptans | **Tobias** |
 
-Issue #259 är den överordnade produkt- och leveransplanen. Den ersätter den
-tidigare gate-bilden i den här filen, som pekade på PR #135 och en baseline
-från 2026-09-07. Allt som stod här om #135, G02-D, #161, #171 och #244 som
-*aktiva* spår är historik och ligger under Historik och backlog nedan.
+Issue #259 är den överordnade produkt- och leveransplanen. `docs/PRODUCT-CANON.md`
+är fortfarande produktens högsta källa. Den här filen registrerar vad som är
+aktivt — den uppfinner inga krav.
 
-`docs/PRODUCT-CANON.md` är fortfarande produktens högsta källa. Den här filen
-registrerar vad som är aktivt — den uppfinner inga krav.
+**Maskinlagret för First Playable är stängt.** Sista kod-/verktygshuvudet är
+`16b91c0`; den här doc-only-stängningen ändrar ingen kod eller test. Alla 19
+review-trådar i PR #264 är resolverade. Kvar före produktacceptans är enbart
+mänsklig slut-QA: PC First Ride, riktig tangentbords-/mus-/touch-input, de 7
+KTX/fysikpunkterna, fysisk iPad/iPhone, kamera- och ridkänsla samt visuell
+review. Ingen av dessa poster är godkänd ännu, och `PRODUCT_ACCEPTED` sätts
+endast av Tobias.
+
+**Runtime-evidens.** Senaste automatiska `runtime-grind` på `16b91c0` föll
+innan mätning med Open Cloud HTTP 500 (`INTERNAL`, 0 mätningar). Det är
+klassat som infra, inte produktfel: committen ändrade inga mappade Roblox-
+källor och kallhashen är fortfarande `b9e778c7…`, samma kallhash som redan
+har `PASS — 176 matningar` i riktig motor på PR #264.
+
+> **Tidsbegränsat produktbeslut 2026-09-22 — Roblox först.** Fram till
+> verifierad First Playable är Roblox enda aktiva leveransmålet; PC och iPad är
+> två kontrollsätt i samma Roblox-spel. Nya webbfeatures och kravet på samtidig
+> webbimplementation är pausade, webben bevaras i befintligt skick, och
+> befintliga tester och regressionsskydd behålls. Beslutet gäller framför
+> paritetskravet i styrningen (#261) och i completion-planen (#259) under den
+> här etappen — utan att skriva om deras historiska evidens och utan att någon
+> gate markeras som klar av det. Fullständig text: `docs/PRODUCT-CANON.md`,
+> «Tidsbegränsat produktbeslut 2026-09-22». Källa: PR #264, kommentar
+> `5779749429`. Återstart av webbfeatures kräver ett nytt produktägarbeslut.
+
+**Den här filen pekade fram till 2026-09-20 ut Gate 0 som aktiv gate.** Det var
+inaktuellt: G0 är levererad, och grenen har sedan dess kört sex gates till.
+CLAUDE.md kräver att dokumentet uppdateras innan motstridig implementation
+fortsätter, och det är vad den här revideringen gör. Allt nedan är knutet till
+evidens i PR #264.
 
 ## Vägen till First Playable
 
 | Gate | Innehåll | Läge |
 |---|---|---|
-| **G0** | Gemensam sanning: den här filen, och `tools/kolla-generisk-hast.py` plattformsoberoende | **aktiv** |
-| G1 | Säker och användbar interaktionsgrund: rate limiting för klientanropade RemoteFunctions (#258 P1-2), cleanup- och felvägar (#258 P2) | kö |
-| G2 | Golden path till uppsittning: start → tilldelad häst → tack → synlig utrustning → ledning → ridhus → `RIDE NOW`, provad som en kedja | kö |
-| G3 | Uppsutten ridning och game feel: skritt, trav, galopp, broms och yaw på PC och touch; `Gaits` som enda hastighetssanning | kö |
-| G4 | Ride First-pedagogik och UI: coach-banner, temafiltrerad Ugneta-feedback, post-ride summary | kö |
-| G5 | Roblox runtime och enheter: mänsklig QA i Studio, fysisk iPad och iPhone; #258 S1–S7 | kö |
-| G6 | Release candidate: låst commit/place, hela sviten plus den mänskliga checklistan mot samma build | kö |
+| **G0** | Gemensam sanning: den här filen, och `tools/kolla-generisk-hast.py` plattformsoberoende | **klar** — `0bf1ef6`; grinden passerar på Windows med separatornormalisering och en vakt mot undantag som inte pekar på någon fil |
+| **G1** | Säker interaktionsgrund: rate limiting (#258 P1-2), cleanup- och felvägar | **klar** — `Skopa` grindar tretton fjärranrop med deklarerade tak; merge av PR #262 |
+| **G2** | Golden path till uppsittning, provad som en kedja | **klar** — ledsträckan stall → ridhus körd i ett svep, 94/94 vägpunkter, dörrarna öppnade av spelaren själv; se M3.2 |
+| **G3** | Uppsutten ridning och game feel | **mekaniken klar** — skritt 4,35 · trav 9,6 · galopp 16,8 studs/s mätt mot `Gaits`; game feel är Tobias bedömning och är **uppskjuten**, inte godkänd |
+| **G4** | Ride First-pedagogik och UI | **klar i det maskinellt mätbara** — coach banner, Ugneta-feedback och `efterForsok` verifierade i runtime |
+| **G5** | Roblox runtime och enheter | **delvis** — Studio-QA gjord maskinellt; **fysisk iPad och iPhone uppskjutna av produktbeslut**, inte godkända |
+| **G6** | Release candidate | **human final QA / product-owner acceptance pågår** — inget mer maskinarbete återstår före denna kontroll |
 
 En implementations-PR åt gången. Små gates. Ingen självacceptans.
+
+## Levererat på den aktiva grenen
+
+Varje rad har evidens i PR #264. Ingen av dem är `PRODUCT_ACCEPTED`.
+
+| Gate | Markör | Kort |
+|---|---|---|
+| Gate 2A — First Ride | `READY_FOR_CHATGPT_REVIEW` | häst i rörelse utan stallkedjan före |
+| Runtime routing | ChatGPT-review klar | två defekter rättade: `MinHast` fanns i två exemplar och hängde varje anropare; en varning som fyrade vid varje uppsittning |
+| Lektionskortet och styrningen | `READY_FOR_CHATGPT_REVIEW` | ett kort som syns är inget rörelselås; bara replayen stoppar hästen |
+| Full world performance | `DESKTOP_PERFORMANCE_BASELINE_ACCEPTED` | se noten nedan — talen gäller ett litet Studio-fönster, och läckfrihet är **inte** verifierad |
+| Multi-horse leading | `CHATGPT_MULTI_HORSE_REVIEW_PASS_WITH_LIMITS` | två riktiga klienter, två boxrader, noll överhörning |
+| Camera feel | `CAMERA_FEEL_READY_FOR_HUMAN_REVIEW` | mekaniken mätt; känslan **uppskjuten av Tobias** |
+| Visuellt paket | `VISUAL_PACK_READY` | preview verifierad mot head; `CHATGPT_VISUAL_PASS` ej utfärdad |
+| M1 — lokala grindkedjan | pushad | `PRE_TOBIAS_FIRST_PLAYABLE_GATE: PASS` lokalt efter två verktygsfel |
+| M3 — hela ledrutten stall → ridhus | `READY_FOR_CHATGPT_REVIEW` | 94/94 vägpunkter, kopplet aldrig släppt, `malNatt` och målzon |
+| M3.1 — hörnet vid Tvärvägg 1:2 | `READY_FOR_CHATGPT_REVIEW` | planeraren löste det sex gånger; alla sex revs bildrutan efter |
+| M3.2 — spelarens egen dörrväg | `READY_FOR_CHATGPT_REVIEW` | 13 av 13 stängda vid start, två öppnade med X på riktig prompt |
+| M3.3 — uppsittning, ritt, avsittning | `READY_FOR_CHATGPT_REVIEW` | samma session: skritt 4,35, galopp 16,81 studs/s, styrning, efterritt |
+| Ridhusets avgränsning | `READY_FOR_CHATGPT_REVIEW` | **ingen defekt** — utgången skedde genom den kontraktsenliga norra porten; fyra stängda sargsektioner höll vid 40 studs/s |
+| Efterrittens omdöme | `LOGIC_PASS` | `"TRY AGAIN"` / `"Good the softness. Work on the timing."` blev `Visible` efter ett riktigt lektionsförsök |
+
+### Prestandaraden, utskriven
+
+Raden stod förut som «60 FPS i sex av sju scenarier; ingen tillväxt över
+11 min». Det övertolkade evidensen på två sätt, och rättas här.
+
+**Mätvillkoren.** Desktop Studio, AMD Ryzen 5 5600X, GTX 1080 Ti,
+`Rendering.QualityLevel` på Automatic. Play-fönstrets viewport var
+**727 × 533** — 0,39 MP mot skrivbordets 5,0. Varje renderrelaterat tal
+gäller det lilla fönstret och är inget hårdvarubetyg.
+
+**Bildfrekvensen.** Uppmätt ur `RenderStepped`, 48 810 ramar över 814 s:
+medel 16,68 ms, 334 ramar ≥ 33 ms (0,68 %), en ram ≥ 50 ms. **Fem av sju
+scenarier** har uppmätt FPS; scenario 1 och 3 har det inte — deras rader
+är `ej uppmätt`.
+
+**Minnet — och det här är rättelsen.** Två punkter över 645 s oavbruten
+ridning:
+
+```
+medelramtid    16,66 ms  ->  16,68 ms
+bildfrekvens   60,0      ->  59,9
+totalminne     2 114 MB  ->  2 003 MB
+instanser      54 527    ->  54 635      (+108)
+```
+
+Två punkter är **inte en kurva**. Det som faktiskt visats är att ingen
+tillväxt i ramtid eller instansantal observerades i just det fönstret.
+**Frånvaro av minnesläcka är inte verifierad**, och en trend går inte att
+skilja från en svängning på två mätpunkter.
+
+## Uppskjutet — inte godkänt
+
+Ingen av posterna nedan får läsas som grön.
+
+| Post | Status |
+|---|---|
+| PC First Ride mot aktuell canonical artefakt | `HUMAN_QA_ONLY` — full kedja med riktig hand/input återstår |
+| Riktig tangentbords-/mus-/touch-input | `HUMAN_QA_ONLY` — kräver faktisk klient/OS-fokus |
+| 7 KTX/fysikpunkter | `HUMAN_QA_ONLY` — kräver Studio/fysik, t.ex. att ledda hästar faktiskt rör sig |
+| Tobias kamerakänsla i Studio | `CAMERA_HUMAN_FEEL_REVIEW_DEFERRED_BY_PRODUCT_OWNER` |
+| Fysisk iPad och iPhone | `PHYSICAL_DEVICE_DEFERRED` — `TouchControls.luau:614` bär själv noten |
+| Om prompter, HUD och Ugneta-ytan **syns** | `HUMAN_VISUAL_DEFERRED` — `capture_screenshot` ger svart 3D-fält. Logiken är mätt: ytan blir `Visible` med rätt text |
+| Om utrustningen **ser rätt ut** på modellen | `HUMAN_VISUAL_DEFERRED` — 19 delar sitter fast och är icke-transparenta; utseendet avgör Tobias |
+| Visuell fidelity side-by-side | `HUMAN_QA_ONLY` — paketet är klart, bedömningen återstår |
+| `PRODUCT_ACCEPTED` | endast Tobias |
+
+## Backlog — inte First Playable
+
+Rörs inte utan färskt bevis att de blockerar något:
+
+- 33 hästriggar simuleras alltid (1 564 oankrade delar),
+- `Markkontakt` strålar mot alla hästar två gånger i sekunden,
+- ~~`PathfindingService` ger `NoPath` över långa sträckor i den här världen~~
+  — **förklarad 2026-09-20, inte ett fel i tjänsten.** Mätt under M3.2:
+  med de två `portbla (intern)` öppna ger den `Success` och 94 vägpunkter
+  hela vägen stall → ridhus. Med endera stängd: `NoPath`. Det var
+  stängda dörrar, inte sträckan,
+- `TavlingskladerService` startas aldrig av någon,
+- bomkameran (`Kameralage`, feedbackvinkeln) har ingen anropare i produktionskoden,
+- `REFERENCE GAP` i byggnaderna — kräver foto, inte kod.
 
 ## First Playable — vad som ska gå att göra
 

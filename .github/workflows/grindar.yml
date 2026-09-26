@@ -4,9 +4,13 @@ name: Grindar
 # Lager B i docs/DELIVERY-PROTOCOL.md automatiskt och obligatoriskt: ingen kan
 # längre säga "testerna är gröna" utan att exitkoden finns här att läsa.
 #
-# Varje steg är villkorat på att filen existerar. Det är avsiktligt: olika
-# brancher har olika många kontroller, och en PR ska inte falla för att den
-# ännu inte har en kontroll som en annan branch har infört.
+# G8: INGET STEG ÄR LÄNGRE VILLKORAT. Varje kontroll var förut inlindad i
+# `if [ -f ... ]; then ... else echo hoppar; fi`, med motiveringen att olika
+# brancher har olika många kontroller. Den motiveringen gör grön CI
+# meningslös: att radera ett obligatoriskt skript fick steget att passera
+# utan att testa någonting, och inget i loggen skilde det från ett riktigt
+# PASS. Saknad indata faller nu med exitkod och en rad som namnger sökvägen
+# och steget. tools/testa-grindar-workflow.py bevakar att det förblir så.
 
 on:
   pull_request:
@@ -38,10 +42,41 @@ jobs:
           sudo install -m 0755 /tmp/luau/luau /usr/local/bin/luau
           luau --help >/dev/null && echo "luau installerad"
 
+      # G8 (#264): grinden som vaktar grindarna. Ligger FORE
+      # förhandskollen med flit: tre obligatoriska indata saknas på den
+      # här grenen, och GitHub stoppar jobbet vid första röda steget —
+      # låg självprovet efter dem gick det aldrig att se att det funkar
+      # på Linux. Det beror inte på någon av kontrollerna nedan. Kontrollerna ovan var förut
+      # villkorade på att sina filer fanns, så en raderad kontroll gav ett
+      # grönt steg som inte testat någonting. Provet läser den här filen med
+      # en riktig YAML-parser, håller en fast inventarielista över de
+      # obligatoriska anropen och KÖR run-blocken härifrån i isolerade
+      # fixturer — både att saknad indata fäller och att ett trasigt bygge
+      # inte maskeras av en gammal genererad fil. Ovillkorligt, självklart.
+      - name: Grindarna är fail closed
+        run: |
+          set -euo pipefail
+          test -f tools/testa-grindar-workflow.py || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/testa-grindar-workflow.py (steget 'Grindarna är fail closed')" >&2; exit 1; }
+          python3 -m pip install --quiet pyyaml
+          python3 tools/testa-grindar-workflow.py
+
+      # G8 (#264): FORHANDSKOLL. Stegen nedan fäller var och en på sin egen
+      # saknade indata, men GitHub stoppar jobbet vid det första röda steget
+      # — saknas tre kontroller upptäcks de en CI-körning i taget. Det här
+      # steget lägger ingen ny sanning till: det läser samma `test -f`-rader
+      # ur den här filen och namnger ALLA som saknas, på en gång.
+      - name: Förhandskoll — finns varje obligatorisk indata?
+        run: |
+          set -euo pipefail
+          test -f tools/testa-grindar-workflow.py || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/testa-grindar-workflow.py (steget 'Förhandskoll — finns varje obligatorisk indata?')" >&2; exit 1; }
+          python3 -m pip install --quiet pyyaml
+          python3 tools/testa-grindar-workflow.py --forhandskoll
+
       - name: Materialkontroll — ogiltigt Enum.Material fäller Studio
         run: |
-          if [ -f tools/kolla-material.py ]; then python3 tools/kolla-material.py
-          else echo "hoppar: tools/kolla-material.py finns inte i denna branch"; fi
+          set -euo pipefail
+          test -f tools/kolla-material.py || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/kolla-material.py (steget 'Materialkontroll — ogiltigt Enum.Material fäller Studio')" >&2; exit 1; }
+          python3 tools/kolla-material.py
 
       # Build-identiteten (#171). Den läsande Studio-auditen fann att
       # ReplicatedStorage.UBRFBuild var handplacerad och pekade på en head 53
@@ -52,28 +87,33 @@ jobs:
       # mäter att innehållet stämmer.
       - name: Build-identitet aktuell — UBRFBuild mot mappade källor
         run: |
-          if [ -f tools/bygg-identitet.py ]; then python3 tools/bygg-identitet.py --kontrollera
-          else echo "hoppar: tools/bygg-identitet.py finns inte i denna branch"; fi
+          set -euo pipefail
+          test -f tools/bygg-identitet.py || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/bygg-identitet.py (steget 'Build-identitet aktuell — UBRFBuild mot mappade källor')" >&2; exit 1; }
+          python3 tools/bygg-identitet.py --kontrollera
 
       - name: Speldata i synk — src/spel/ mot Roblox-modulerna
         run: |
-          if [ -f tools/exportera-spel.js ]; then node tools/exportera-spel.js --kontrollera
-          else echo "hoppar: tools/exportera-spel.js finns inte i denna branch"; fi
+          set -euo pipefail
+          test -f tools/exportera-spel.js || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/exportera-spel.js (steget 'Speldata i synk — src/spel/ mot Roblox-modulerna')" >&2; exit 1; }
+          node tools/exportera-spel.js --kontrollera
 
       - name: Ridkanon i synk — src/model.js mot RidKanon.luau
         run: |
-          if [ -f tools/exportera-ridkanon.mjs ]; then node tools/exportera-ridkanon.mjs --kontrollera
-          else echo "hoppar: tools/exportera-ridkanon.mjs finns inte i denna branch"; fi
+          set -euo pipefail
+          test -f tools/exportera-ridkanon.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/exportera-ridkanon.mjs (steget 'Ridkanon i synk — src/model.js mot RidKanon.luau')" >&2; exit 1; }
+          node tools/exportera-ridkanon.mjs --kontrollera
 
       - name: Geometri i synk — src/site.js mot UBRFKomplex.luau
         run: |
-          if [ -f tools/exportera-geometri.js ]; then node tools/exportera-geometri.js --kontrollera
-          else echo "hoppar: tools/exportera-geometri.js finns inte i denna branch"; fi
+          set -euo pipefail
+          test -f tools/exportera-geometri.js || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/exportera-geometri.js (steget 'Geometri i synk — src/site.js mot UBRFKomplex.luau')" >&2; exit 1; }
+          node tools/exportera-geometri.js --kontrollera
 
       - name: Dörrfärgsparitet webb/Roblox
         run: |
-          if [ -f tools/kolla-dorrfarg.py ]; then python3 tools/kolla-dorrfarg.py
-          else echo "hoppar: tools/kolla-dorrfarg.py finns inte i denna branch"; fi
+          set -euo pipefail
+          test -f tools/kolla-dorrfarg.py || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/kolla-dorrfarg.py (steget 'Dörrfärgsparitet webb/Roblox')" >&2; exit 1; }
+          python3 tools/kolla-dorrfarg.py
 
       # Första dagens häst (#162 blockerare 3): produktregeln "ny spelare
       # rider Jack" står numera på två ställen — src/scenes.js och
@@ -81,23 +121,27 @@ jobs:
       # två SANNINGAR, och att hästen finns i den delade datan.
       - name: Första dagens häst — samma på webb och Roblox
         run: |
-          if [ -f tools/kolla-forstadagen.py ]; then python3 tools/kolla-forstadagen.py
-          else echo "hoppar: tools/kolla-forstadagen.py finns inte i denna branch"; fi
+          set -euo pipefail
+          test -f tools/kolla-forstadagen.py || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/kolla-forstadagen.py (steget 'Första dagens häst — samma på webb och Roblox')" >&2; exit 1; }
+          python3 tools/kolla-forstadagen.py
 
       - name: Rojo-projektkontroll
         run: |
-          if [ -f tools/kolla-rojo.py ]; then python3 tools/kolla-rojo.py
-          else echo "hoppar: tools/kolla-rojo.py finns inte i denna branch"; fi
+          set -euo pipefail
+          test -f tools/kolla-rojo.py || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/kolla-rojo.py (steget 'Rojo-projektkontroll')" >&2; exit 1; }
+          python3 tools/kolla-rojo.py
 
       - name: VERIFIED kräver granskad nyckelbild
         run: |
-          if [ -f tools/kolla-nyckelbilder.py ]; then python3 tools/kolla-nyckelbilder.py
-          else echo "hoppar: tools/kolla-nyckelbilder.py finns inte i denna branch"; fi
+          set -euo pipefail
+          test -f tools/kolla-nyckelbilder.py || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/kolla-nyckelbilder.py (steget 'VERIFIED kräver granskad nyckelbild')" >&2; exit 1; }
+          python3 tools/kolla-nyckelbilder.py
 
       - name: Luau-specarna
         run: |
-          if [ -f roblox/tests/kor.sh ]; then bash roblox/tests/kor.sh
-          else echo "hoppar: roblox/tests/kor.sh finns inte i denna branch"; fi
+          set -euo pipefail
+          test -f roblox/tests/kor.sh || { echo "OBLIGATORISK KONTROLL SAKNAS: roblox/tests/kor.sh (steget 'Luau-specarna')" >&2; exit 1; }
+          bash roblox/tests/kor.sh
 
       # Handigheten, webbens halva. roblox/tests/handighet.spec.luau mäter
       # Roblox i steget ovan; det här mäter webben mot SAMMA ankare ur
@@ -107,8 +151,9 @@ jobs:
       # spegelvänt med alla grindar gröna.
       - name: Handigheten på webben
         run: |
-          if [ -f tools/handighetsgrind.mjs ]; then node tools/handighetsgrind.mjs
-          else echo "hoppar: tools/handighetsgrind.mjs finns inte i denna branch"; fi
+          set -euo pipefail
+          test -f tools/handighetsgrind.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/handighetsgrind.mjs (steget 'Handigheten på webben')" >&2; exit 1; }
+          node tools/handighetsgrind.mjs
 
       # PRE_TOBIAS_FIRST_PLAYABLE_GATE (processändringen på #162, 05:42).
       # Samlingsgrinden kör undergrindarna en gång till i ett svep och
@@ -117,29 +162,33 @@ jobs:
       # frågan "får Tobias en ny .rbxlx?" — och den är fail closed.
       - name: PRE_TOBIAS_FIRST_PLAYABLE_GATE
         run: |
-          if [ -f tools/pre-tobias-grind.py ]; then python3 tools/pre-tobias-grind.py
-          else echo "hoppar: tools/pre-tobias-grind.py finns inte i denna branch"; fi
+          set -euo pipefail
+          test -f tools/pre-tobias-grind.py || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/pre-tobias-grind.py (steget 'PRE_TOBIAS_FIRST_PLAYABLE_GATE')" >&2; exit 1; }
+          python3 tools/pre-tobias-grind.py
 
       - name: Referenschecksummor
         run: |
-          if [ -f references/CHECKSUMS.sha256 ]; then
-            cd references && sha256sum -c --quiet CHECKSUMS.sha256
-          else echo "hoppar: references/CHECKSUMS.sha256 finns inte i denna branch"; fi
+          set -euo pipefail
+          test -f references/CHECKSUMS.sha256 || { echo "OBLIGATORISK KONTROLL SAKNAS: references/CHECKSUMS.sha256 (steget 'Referenschecksummor')" >&2; exit 1; }
+          cd references && sha256sum -c --quiet CHECKSUMS.sha256
 
       - name: Webbygget
         run: |
-          if [ -f tools/build.py ]; then python3 tools/build.py
-          else echo "hoppar: tools/build.py finns inte i denna branch"; fi
+          set -euo pipefail
+          test -f tools/build.py || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/build.py (steget 'Webbygget')" >&2; exit 1; }
+          python3 tools/build.py
 
       - name: Hästkanon-save migreras utan identitetsläckage
         run: |
-          if [ -f tools/testa-hastkanon-save.mjs ]; then node tools/testa-hastkanon-save.mjs
-          else echo "hoppar: tools/testa-hastkanon-save.mjs finns inte i denna branch"; fi
+          set -euo pipefail
+          test -f tools/testa-hastkanon-save.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/testa-hastkanon-save.mjs (steget 'Hästkanon-save migreras utan identitetsläckage')" >&2; exit 1; }
+          node tools/testa-hastkanon-save.mjs
 
       - name: Studio-paketet ska gå att bygga
         run: |
-          if [ -f tools/studio-paket.py ]; then python3 tools/studio-paket.py
-          else echo "hoppar: tools/studio-paket.py finns inte i denna branch"; fi
+          set -euo pipefail
+          test -f tools/studio-paket.py || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/studio-paket.py (steget 'Studio-paketet ska gå att bygga')" >&2; exit 1; }
+          python3 tools/studio-paket.py
 
       # FIRST_PLAYABLE_PREFLIGHT, pakethalvan (#162). Blockeraren Tobias
       # hittade fysiskt i Studio var att miljöpaketet presenterades som First
@@ -149,16 +198,22 @@ jobs:
       # frånvaro av ett PASS är inte ett PASS.
       - name: First Playable-placen är komplett
         run: |
-          if [ -f tools/kolla-place.py ]; then python3 tools/kolla-place.py
-          else echo "hoppar: tools/kolla-place.py finns inte i denna branch"; fi
+          set -euo pipefail
+          test -f tools/kolla-place.py || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/kolla-place.py (steget 'First Playable-placen är komplett')" >&2; exit 1; }
+          python3 tools/kolla-place.py
 
       # EVIDENS_PLACE (#219). Den bevarade First Playable-placen från #218 ska
       # vara byte för byte den Tobias accepterade, och .gitattributes-regeln
-      # som hindrar radslutsnormalisering ska fortfarande gälla. Med flit
-      # utan `if [ -f ]`-skydd (review 01:43): en bevarandegrind ska falla,
-      # inte hoppas över, om kontrollskriptet försvinner.
+      # som hindrar radslutsnormalisering ska fortfarande gälla. Det här
+      # steget var redan fail closed när resten av filen inte var det
+      # (review 01:43): en bevarandegrind ska falla, inte hoppas över, om
+      # kontrollskriptet försvinner. G8 behöll kommandot oförändrat och la
+      # bara till samma namngivna diagnostik som övriga steg nu har.
       - name: Bevarad First Playable-place är oförändrad
-        run: python3 tools/kolla-evidens-place.py
+        run: |
+          set -euo pipefail
+          test -f tools/kolla-evidens-place.py || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/kolla-evidens-place.py (steget 'Bevarad First Playable-place är oförändrad')" >&2; exit 1; }
+          python3 tools/kolla-evidens-place.py
 
       # END_TO_END_PLAYABILITY_GATE (#162, ChatGPT-processreview 16:31).
       # Mäter en gångbar kedja spawn → entrédörr → in → gången vid Jacks
@@ -167,10 +222,10 @@ jobs:
       # fysiskt alla var osynliga för grindar som mätte avsikt.
       - name: END_TO_END_PLAYABILITY_GATE — kedjan är gångbar
         run: |
-          if [ -f roblox/tests/spelbarhet.spec.luau ]; then
-            python3 roblox/tests/build.py tests/spelbarhet.spec.luau
-            luau roblox/tests/.build/spelbarhet.spec.luau
-          else echo "hoppar: spelbarhet.spec.luau finns inte i denna branch"; fi
+          set -euo pipefail
+          test -f roblox/tests/spelbarhet.spec.luau || { echo "OBLIGATORISK KONTROLL SAKNAS: roblox/tests/spelbarhet.spec.luau (steget 'END_TO_END_PLAYABILITY_GATE — kedjan är gångbar')" >&2; exit 1; }
+          python3 roblox/tests/build.py tests/spelbarhet.spec.luau
+          luau roblox/tests/.build/spelbarhet.spec.luau
 
       # END_TO_END_PLAYABILITY_GATE punkt 7-11 (#162). Gångbarhetsgrinden
       # ovan mäter att kedjan i VÄRLDEN går att gå. Den här mäter att DAGEN
@@ -181,10 +236,10 @@ jobs:
       # här faller ska loggen säga VILKEN punkt i gaten som föll.
       - name: END_TO_END_PLAYABILITY_GATE — dagen går att spela igenom
         run: |
-          if [ -f roblox/tests/integration.spec.luau ]; then
-            python3 roblox/tests/build.py tests/integration.spec.luau
-            luau roblox/tests/.build/integration.spec.luau
-          else echo "hoppar: integration.spec.luau finns inte i denna branch"; fi
+          set -euo pipefail
+          test -f roblox/tests/integration.spec.luau || { echo "OBLIGATORISK KONTROLL SAKNAS: roblox/tests/integration.spec.luau (steget 'END_TO_END_PLAYABILITY_GATE — dagen går att spela igenom')" >&2; exit 1; }
+          python3 roblox/tests/build.py tests/integration.spec.luau
+          luau roblox/tests/.build/integration.spec.luau
 
       # PRODUKTKRAV (#162): alla kanoniska UBRF-hästar ska vara ridbara,
       # genom EN datastyrd kedja. Två steg för de två halvorna av kravet:
@@ -192,10 +247,10 @@ jobs:
       # om någon enskild häst fått en egen gren i runtimekoden.
       - name: Alla UBRF-hästar är ridbara — hela rostern
         run: |
-          if [ -f roblox/tests/roster.spec.luau ]; then
-            python3 roblox/tests/build.py tests/roster.spec.luau
-            luau roblox/tests/.build/roster.spec.luau
-          else echo "hoppar: roster.spec.luau finns inte i denna branch"; fi
+          set -euo pipefail
+          test -f roblox/tests/roster.spec.luau || { echo "OBLIGATORISK KONTROLL SAKNAS: roblox/tests/roster.spec.luau (steget 'Alla UBRF-hästar är ridbara — hela rostern')" >&2; exit 1; }
+          python3 roblox/tests/build.py tests/roster.spec.luau
+          luau roblox/tests/.build/roster.spec.luau
 
       # LOKALISERING sv/en (#162). Tre steg, tre olika frågor:
       #   · Luau-specen: ritas ytorna FAKTISKT om på sv-se och en-us,
@@ -203,30 +258,32 @@ jobs:
       #   · webbgrinden: läser webben SAMMA katalog som Roblox.
       - name: Lokalisering — ytorna ritas om på sv-se och en-us
         run: |
-          if [ -f roblox/tests/sprak.spec.luau ]; then
-            python3 roblox/tests/build.py tests/sprak.spec.luau
-            luau roblox/tests/.build/sprak.spec.luau
-          else echo "hoppar: sprak.spec.luau finns inte i denna branch"; fi
+          set -euo pipefail
+          test -f roblox/tests/sprak.spec.luau || { echo "OBLIGATORISK KONTROLL SAKNAS: roblox/tests/sprak.spec.luau (steget 'Lokalisering — ytorna ritas om på sv-se och en-us')" >&2; exit 1; }
+          python3 roblox/tests/build.py tests/sprak.spec.luau
+          luau roblox/tests/.build/sprak.spec.luau
 
       # Punkt 4 ur reviewen 18:27: ett engelskt svep över NEJ-vägarna.
       # sprak.spec mäter att ytorna ritas om; den här mäter att serverns
       # nekanden inte är svensk prosa — det var där prosan satt.
       - name: Lokalisering — engelskt svep över nej-vägarna
         run: |
-          if [ -f roblox/tests/sprak-en.spec.luau ]; then
-            python3 roblox/tests/build.py tests/sprak-en.spec.luau
-            luau roblox/tests/.build/sprak-en.spec.luau
-          else echo "hoppar: sprak-en.spec.luau finns inte i denna branch"; fi
+          set -euo pipefail
+          test -f roblox/tests/sprak-en.spec.luau || { echo "OBLIGATORISK KONTROLL SAKNAS: roblox/tests/sprak-en.spec.luau (steget 'Lokalisering — engelskt svep över nej-vägarna')" >&2; exit 1; }
+          python3 roblox/tests/build.py tests/sprak-en.spec.luau
+          luau roblox/tests/.build/sprak-en.spec.luau
 
       - name: Lokalisering — varje nyckel finns, ingen text utan nyckel
         run: |
-          if [ -f tools/kolla-sprak.py ]; then python3 tools/kolla-sprak.py
-          else echo "hoppar: tools/kolla-sprak.py finns inte i denna branch"; fi
+          set -euo pipefail
+          test -f tools/kolla-sprak.py || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/kolla-sprak.py (steget 'Lokalisering — varje nyckel finns, ingen text utan nyckel')" >&2; exit 1; }
+          python3 tools/kolla-sprak.py
 
       - name: En generisk häststack — inget hästid hårdkodat
         run: |
-          if [ -f tools/kolla-generisk-hast.py ]; then python3 tools/kolla-generisk-hast.py
-          else echo "hoppar: tools/kolla-generisk-hast.py finns inte i denna branch"; fi
+          set -euo pipefail
+          test -f tools/kolla-generisk-hast.py || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/kolla-generisk-hast.py (steget 'En generisk häststack — inget hästid hårdkodat')" >&2; exit 1; }
+          python3 tools/kolla-generisk-hast.py
 
       # …och grinden själv provas i BÅDA riktningarna (#259 Gate 0). Den
       # var grön här och röd på Windows, och ingen av färgerna var sann:
@@ -236,8 +293,9 @@ jobs:
       # faller grinden numera på det, och därför provas den härifrån.
       - name: Grindprovet för generisk häststack
         run: |
-          if [ -f tools/testa-kolla-generisk-hast.py ]; then python3 tools/testa-kolla-generisk-hast.py
-          else echo "hoppar: tools/testa-kolla-generisk-hast.py finns inte i denna branch"; fi
+          set -euo pipefail
+          test -f tools/testa-kolla-generisk-hast.py || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/testa-kolla-generisk-hast.py (steget 'Grindprovet för generisk häststack')" >&2; exit 1; }
+          python3 tools/testa-kolla-generisk-hast.py
 
       # Sökvägarna (#153 fix 2 / P3-5): verktygen läste repo-roten ur
       # `new URL(".", import.meta.url).pathname`, som ger PROCENTKODAD text.
@@ -247,8 +305,9 @@ jobs:
       # behövs, så steget hör hemma i det här jobbet.
       - name: Sökvägarna — verktygen kör ur en katalog med mellanslag och ä
         run: |
-          if [ -f tools/sokvagstest.mjs ]; then node tools/sokvagstest.mjs
-          else echo "hoppar: tools/sokvagstest.mjs finns inte i denna branch"; fi
+          set -euo pipefail
+          test -f tools/sokvagstest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/sokvagstest.mjs (steget 'Sökvägarna — verktygen kör ur en katalog med mellanslag och ä')" >&2; exit 1; }
+          node tools/sokvagstest.mjs
 
   dubbel-sanning:
     runs-on: ubuntu-latest
@@ -311,43 +370,47 @@ jobs:
       - name: Playwright + Chromium
         run: |
           set -euo pipefail
-          if [ -f tools/ridtest.mjs ]; then
-            npm install --no-save --no-package-lock playwright@1.49.1
-            npx playwright install --with-deps chromium
-          else echo "hoppar: tools/ridtest.mjs finns inte i denna branch"; fi
+          test -f tools/ridtest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/ridtest.mjs (steget 'Playwright + Chromium')" >&2; exit 1; }
+          npm install --no-save --no-package-lock playwright@1.49.1
+          npx playwright install --with-deps chromium
 
       - name: Webbygget
         run: |
-          if [ -f tools/build.py ]; then python3 tools/build.py
-          else echo "hoppar: tools/build.py finns inte i denna branch"; fi
+          set -euo pipefail
+          test -f tools/build.py || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/build.py (steget 'Webbygget')" >&2; exit 1; }
+          python3 tools/build.py
 
       # Paritetshalvan av lokaliseringen: läser webben SAMMA katalog som
       # Roblox, nyckel för nyckel och text för text? Ligger i webbjobbet
       # eftersom den mäter dist/ridskolan.html, inte bara källan.
       - name: Lokalisering — webben läser samma katalog som Roblox
         run: |
-          if [ -f tools/sprakgrind.mjs ]; then node tools/sprakgrind.mjs
-          else echo "hoppar: tools/sprakgrind.mjs finns inte i denna branch"; fi
+          set -euo pipefail
+          test -f tools/sprakgrind.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/sprakgrind.mjs (steget 'Lokalisering — webben läser samma katalog som Roblox')" >&2; exit 1; }
+          node tools/sprakgrind.mjs
 
       - name: Ridkärnan — Gate 01-värden, telemetri, live-koppling och volten
         run: |
-          if [ -f tools/ridtest.mjs ]; then node tools/ridtest.mjs
-          else echo "hoppar: tools/ridtest.mjs finns inte i denna branch"; fi
+          set -euo pipefail
+          test -f tools/ridtest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/ridtest.mjs (steget 'Ridkärnan — Gate 01-värden, telemetri, live-koppling och volten')" >&2; exit 1; }
+          node tools/ridtest.mjs
 
       # Gården: de fyra blockerarna ur Tobias produkttest 2026-09-06 —
       # haggrinden, hästens startplats, stalldörren och tystnaden. Går med
       # spelets riktiga kollision, inte med punktprov mot datan.
       - name: Gården — grind, startplats, stalldörr och ljud
         run: |
-          if [ -f tools/gardtest.mjs ]; then node tools/gardtest.mjs
-          else echo "hoppar: tools/gardtest.mjs finns inte i denna branch"; fi
+          set -euo pipefail
+          test -f tools/gardtest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/gardtest.mjs (steget 'Gården — grind, startplats, stalldörr och ljud')" >&2; exit 1; }
+          node tools/gardtest.mjs
 
       # Uppdraget: objective/navigation-kedjan och att uppsittningen går
       # att NÅ genom hela produktionsvägen, gående, med E-interaktioner.
       - name: Uppdraget — vad, var, hur — och uppsittningen hela vägen
         run: |
-          if [ -f tools/uppdragstest.mjs ]; then node tools/uppdragstest.mjs
-          else echo "hoppar: tools/uppdragstest.mjs finns inte i denna branch"; fi
+          set -euo pipefail
+          test -f tools/uppdragstest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/uppdragstest.mjs (steget 'Uppdraget — vad, var, hur — och uppsittningen hela vägen')" >&2; exit 1; }
+          node tools/uppdragstest.mjs
 
       # Inputsemantiken (PO-tillägg #151): att hjälperna SLÄPPS när spelaren
       # inte trycker. Kör riktiga tangent- och pekhändelser i telefon, iPad
@@ -355,8 +418,9 @@ jobs:
       # skänkeln på, så hästen gick vidare medan spelaren var i en annan app.
       - name: Inputsemantik — focus loss, dold flik, spak och paneler
         run: |
-          if [ -f tools/inputsemantiktest.mjs ]; then node tools/inputsemantiktest.mjs
-          else echo "hoppar: tools/inputsemantiktest.mjs finns inte i denna branch"; fi
+          set -euo pipefail
+          test -f tools/inputsemantiktest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/inputsemantiktest.mjs (steget 'Inputsemantik — focus loss, dold flik, spak och paneler')" >&2; exit 1; }
+          node tools/inputsemantiktest.mjs
 
       # Välfärden (#153 fix 1): en häst som vilar för en skada får aldrig
       # tilldelas, och en ritt får aldrig radera skadan. Poolen föll förut
@@ -365,8 +429,9 @@ jobs:
       # `delete ny.skada` gjorde sedan hästen frisk av att ha arbetat.
       - name: Välfärden — skadad häst tilldelas inte och skadan består
         run: |
-          if [ -f tools/valfardstest.mjs ]; then node tools/valfardstest.mjs
-          else echo "hoppar: tools/valfardstest.mjs finns inte i denna branch"; fi
+          set -euo pipefail
+          test -f tools/valfardstest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/valfardstest.mjs (steget 'Välfärden — skadad häst tilldelas inte och skadan består')" >&2; exit 1; }
+          node tools/valfardstest.mjs
 
       # Uppdragsetiketten (#153 fix 4): vägvisarens pin är centrerad, så
       # etiketten sticker ut halva sin bredd åt vardera hållet. Klampningen
@@ -374,16 +439,18 @@ jobs:
       # (231 px) hamnade 72 px utanför kanten på alla fyra vyer.
       - name: Uppdragsetiketten — hela labeln innanför skärmen
         run: |
-          if [ -f tools/uppdragsetikett-test.mjs ]; then node tools/uppdragsetikett-test.mjs
-          else echo "hoppar: tools/uppdragsetikett-test.mjs finns inte i denna branch"; fi
+          set -euo pipefail
+          test -f tools/uppdragsetikett-test.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/uppdragsetikett-test.mjs (steget 'Uppdragsetiketten — hela labeln innanför skärmen')" >&2; exit 1; }
+          node tools/uppdragsetikett-test.mjs
 
       # Replaypanelen (#153 fix 4 / QA-2): rutnätet låg som inline-stil och
       # kunde därför inte tas över av en media query. Kolumnerna låg kvar ner
       # till 320 px, där ritt-canvasen — funktionens hela poäng — blev 122 px.
       - name: Replaypanelen — en kolumn och läsbar canvas på små skärmar
         run: |
-          if [ -f tools/replaylayouttest.mjs ]; then node tools/replaylayouttest.mjs
-          else echo "hoppar: tools/replaylayouttest.mjs finns inte i denna branch"; fi
+          set -euo pipefail
+          test -f tools/replaylayouttest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/replaylayouttest.mjs (steget 'Replaypanelen — en kolumn och läsbar canvas på små skärmar')" >&2; exit 1; }
+          node tools/replaylayouttest.mjs
 
       # Karaktärsskaparen (#153 fix 4 / QA-3): mobil.js sätter golvet 44 px
       # för .btn och motiverar det själv — "fingret behöver 44 px, inte 26".
@@ -391,8 +458,9 @@ jobs:
       # 31 px på den allra första skärmen en spelare rör vid på en iPad.
       - name: Karaktärsskaparen — träffytorna når 44 px på pekskärm
         run: |
-          if [ -f tools/skapartest.mjs ]; then node tools/skapartest.mjs
-          else echo "hoppar: tools/skapartest.mjs finns inte i denna branch"; fi
+          set -euo pipefail
+          test -f tools/skapartest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/skapartest.mjs (steget 'Karaktärsskaparen — träffytorna når 44 px på pekskärm')" >&2; exit 1; }
+          node tools/skapartest.mjs
 
       # Röstgrinden (#161): Tobias produktbeslut 2026-09-10 — ingen röst får
       # agera ridlärare. `ljudRost()` läste lärarens repliker med webbläsarens
@@ -404,8 +472,9 @@ jobs:
       # själv mot tre syntetiserade återinföranden.
       - name: Röstgrinden — skriven lärartext, ingen uppläsning
         run: |
-          if [ -f tools/rostgrind.mjs ]; then node tools/rostgrind.mjs
-          else echo "hoppar: tools/rostgrind.mjs finns inte i denna branch"; fi
+          set -euo pipefail
+          test -f tools/rostgrind.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/rostgrind.mjs (steget 'Röstgrinden — skriven lärartext, ingen uppläsning')" >&2; exit 1; }
+          node tools/rostgrind.mjs
 
       # Läktaren (P0 #81/#114): gångtestet visar att en VÄG finns, det här
       # mäter vad spelaren SER — att kroppen ritas på golvnivån hon står på,
@@ -413,5 +482,6 @@ jobs:
       # fötterna inte tonas bort. Grön CI på vägen räckte inte förra gången.
       - name: Läktaren — kroppen följer golvet, ingen debuggeometri
         run: |
-          if [ -f tools/laktartest.mjs ]; then node tools/laktartest.mjs
-          else echo "hoppar: tools/laktartest.mjs finns inte i denna branch"; fi
+          set -euo pipefail
+          test -f tools/laktartest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/laktartest.mjs (steget 'Läktaren — kroppen följer golvet, ingen debuggeometri')" >&2; exit 1; }
+          node tools/laktartest.mjs

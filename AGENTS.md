@@ -15,6 +15,14 @@ If any document conflicts with Tobias' latest explicit product decision, Tobias'
 
 - Roblox is the primary play platform.
 - HTML/web is also a real playable distribution and a fast QA surface.
+- **Time-limited product decision 2026-09-22 — Roblox first.** Until First
+  Playable is verified, Roblox is the only active delivery target; new web
+  features and the requirement to implement each new Roblox feature on the web
+  at the same time are paused. The web build is preserved as-is — this is not
+  permission to delete, retire or degrade it, and existing tests and regression
+  protection stay. Full text and conditions in `docs/PRODUCT-CANON.md`,
+  "Tidsbegränsat produktbeslut 2026-09-22". Restarting web features needs a new
+  product-owner decision.
 - The game must be fun, responsive and understandable before it becomes more simulation-heavy.
 - Horse care, responsibility and real horse knowledge are gameplay.
 - UBRF reality is the source of truth for the facility. Never invent missing real-world details.

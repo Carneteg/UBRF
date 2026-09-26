@@ -594,11 +594,37 @@ do
 				('("%s")'):format(en))
 			Sprak.satLocale(fore)
 		end
-		--[[ PAUSEN SKA HÅLLA. Rider hon vidare bakom kortet blir det
-			försök spelaren just läser om ogiltigt medan hon läser. ]]
-		prova("och medan kortet väntar står hästen still",
-			hum.WalkSpeed == 0,
-			("(WalkSpeed %.2f)"):format(hum.WalkSpeed))
+		--[[ KORTET AR INGET ROERELSELAS (LESSON_CARD_RIDING_INPUT_ACCEPTANCE,
+			PO-order 2026-09-20). Raden matte forut MOTSATSEN — `WalkSpeed == 0`
+			— och det var det gamla kontraktet: pausen skulle skydda forsoket
+			genom att stanna hasten. Ordern vander pa det. Att VISA coaching far
+			aldrig i sig sjalvt bli ett lokomotionslas; bara en uttrycklig
+			intervention som verkligen kraver skritt eller halt far ta
+			framdrivningen.
+
+			SKYDDET AV FORSOKET AR KVAR, men ligger dar det hor hemma:
+			`LektionController.steg` mater ingenting medan kortet vantar, sa
+			`pass.tid` vaxer inte. Raderna nedan mater alltsa SAKEN — att
+			forsoket inte blir ogiltigt — i stallet for en biverkning av den. ]]
+		do
+			local tidFore = LektionController.pass().tid
+			prova("hasten rider vidare bakom kortet — kortet ar inget las",
+				hum.WalkSpeed > 0, ("(WalkSpeed %.2f)"):format(hum.WalkSpeed))
+			ridBildrutor(1.0)
+			local tidEfter = LektionController.pass().tid
+			--[[ FALSIFIERINGEN SA ATT DEN HAR RADEN INTE MATER VAKTEN.
+				Har ar `lage` "presentation", och `steg` returnerar redan pa
+				`lage ~= "rider"` — en mutation som river `vantar()`-vakten
+				andrar alltsa ingenting har. Raden star kvar for att den ar
+				sann och billig, men SKYDDET matas dar det binder: mitt i
+				ritten, i `klient-lektionspaus.spec` punkt 5c. ]]
+			prova("forsoket star stilla medan presentationskortet vantar",
+				math.abs(tidEfter - tidFore) < 1e-6,
+				("(tid %.3f -> %.3f)"):format(tidFore, tidEfter))
+			prova("och kortet star kvar tills spelaren svarar",
+				LektionController.vantar() == true,
+				("(vantar %s)"):format(tostring(LektionController.vantar())))
+		end
 
 		--[[ …OCH DEN SKA SLÄPPA. Det är den här raden som hade fällt en
 			häst som inte gick att rida: gick hon inte igång efter att
@@ -676,14 +702,20 @@ do
 	prova("hästen drevs under själva ritten — räknaren mäter något",
 		drivnaUnderRitt > 0, ("(%d Move-anrop)"):format(drivnaUnderRitt))
 
-	--[[ HÄSTEN STÅR STILLA MEDAN KORTET VÄNTAR. Utan pausen red hon vidare
-	     bakom panelen och försöket hon tittade på hann bli ogiltigt. ]]
+	--[[ OCH SAMMA REGEL EFTER FORSOKET. Kortet «Se ritten / Ga vidare»
+		ar ocksa coaching, och det far inte heller frysa henne. Den har
+		raden matte forut `drivningar == drivnaUnderRitt and WalkSpeed == 0`;
+		se noten vid A ovan for varfor kontraktet ar omvant.
+
+		REPLAYEN AR UNDANTAGET och mats strax nedan: nar spelaren SJALV
+		oppnar analysen ar det en uttrycklig intervention, och da ska hon
+		sta still. ]]
 	do
 		for _ = 1, 60 do RunService.RenderStepped:Fire(dt) end
-		prova("hästen drivs INTE framåt medan kortet väntar",
-			drivningar == drivnaUnderRitt and hum.WalkSpeed == 0,
-			("(%d framåtdrag, oförändrat under 60 bildrutor · WalkSpeed %s)")
-				:format(drivningar, tostring(hum.WalkSpeed)))
+		prova("hasten drivs fortfarande framat medan kortet vantar",
+			drivningar > drivnaUnderRitt and hum.WalkSpeed > 0,
+			("(%d -> %d framatdrag under 60 bildrutor · WalkSpeed %.2f)")
+				:format(drivnaUnderRitt, drivningar, hum.WalkSpeed))
 	end
 
 	--[[ SE RITTEN genom fingret — knappens eget Activated. ]]

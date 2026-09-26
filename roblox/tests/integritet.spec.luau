@@ -280,6 +280,70 @@ end
 	"kan inte mätas" — aldrig grön. Att en REDIGERAD fil glider igenom är
 	känt och står i modulens egen not; det försvaret ligger i
 	`bygg-identitet.py --kontrollera` i CI. ]]
+print("\n── 9f: placen bär lika många MODELLER som identiteten räknade ──")
+
+--[[ 9e räknar SKRIPT, för det är vad `LuaSourceContainer` är. När
+	hästmallen mappades in i #264 R3 räknade identiteten 79 mappade filer
+	mot placens 78 skriptobjekt. 9e föll i RIKTIG MOTOR,
+	CRITICAL_STARTUP_GATE gav FAIL, och ingen spelare släpptes in.
+
+	Grinden hade rätt i att talen gick isär — den jämförde bara skript
+	mot skript PLUS modell.
+
+	Modellerna räknas därför för sig. Utan den här raden vore en tappad
+	hästmall helt omätbar: ingen skriptkontroll ser den, placen startar
+	som vanligt, och varenda häst blir en låda — tyst. Det var precis det
+	felet Tobias rapporterade. ]]
+do
+	local SSt = game:GetService("ServerStorage")
+	local mapp = Instance.new("Folder")
+	mapp.Name = "ProvVisualer"
+	mapp.Parent = SSt
+	local mall = Instance.new("Model")
+	mall.Name = "provmall"
+	mall.Parent = mapp
+
+	local function identitetMed(modeller)
+		sattIdentitet({
+			kallhash = string.rep("c", 64), lage = "rojo", kallor = 0,
+			modeller = modeller,
+			rojo = { ServerStorage = { "ProvVisualer" } },
+			kallrotter = { "ServerStorage.ProvVisualer.provmall" },
+		})
+	end
+
+	identitetMed(1)
+	local r = matning("9f")
+	check("preflighten mäter 9f", r ~= nil, r and r.namn or "ingen 9f-rad")
+	check("rätt antal modeller ger grönt", r ~= nil and r.ok == true,
+		r and tostring(r.detalj) or "-")
+
+	--[[ MODELLEN FÖRSVINNER. Det är hela poängen: ingen skripträkning
+	     hade märkt det. ]]
+	mall:Destroy()
+	local r2 = matning("9f")
+	check("EN TAPPAD MODELL FÄLLER GRINDEN", r2 ~= nil and r2.ok == false,
+		r2 and tostring(r2.detalj) or "-")
+	check("och nejet säger vad placen har mot vad identiteten sa",
+		r2 ~= nil and string.find(tostring(r2.detalj), "placen har 0") ~= nil,
+		r2 and tostring(r2.detalj) or "-")
+
+	--[[ EN ÄLDRE IDENTITET utan fältet kan inte mätas — och då ska svaret
+	     vara just det, inte ett grönt som råkar stämma. ]]
+	sattIdentitet({
+		kallhash = string.rep("c", 64), lage = "rojo", kallor = 0,
+		rojo = { ServerStorage = { "ProvVisualer" } },
+		kallrotter = { "ServerStorage.ProvVisualer.provmall" },
+	})
+	local r3 = matning("9f")
+	check("en identitet utan fältet säger 'kan inte mätas'",
+		r3 ~= nil and string.find(tostring(r3.detalj), "kan inte mätas") ~= nil,
+		r3 and tostring(r3.detalj) or "-")
+
+	mapp:Destroy()
+	sattIdentitet(nil)
+end
+
 print("\n── 9e: placen bär lika många källor som identiteten räknade ──")
 
 do
@@ -488,26 +552,118 @@ do
 		e2 ~= nil and string.find(tostring(e2.detalj), "inga") ~= nil,
 		e2 and tostring(e2.detalj) or "-")
 
-	--[[ ── OSPÅRAT SOM KODEN LÄSER ────────────────────────────────────
+	--[[ ── HastVisualer ÄR INTE OSPÅRAD LÄNGRE (#264 R3) ─────────────
 
-		`ServerStorage.HastVisualer` är ospårad — ingen Rojo-väg pekar på
-		den — och samtidigt läser `HastVisual.mall` den vid varje hästbygge.
-		Utan mallen faller inte spelet, men varenda häst går tillbaka till
-		lådor, tyst. Städpolicyn säger "utred, radera inte", och den som
-		utreder måste kunna se skillnaden mot en backup ingen rör. ]]
+		Här stod att `ServerStorage.HastVisualer` är ospårad och därför
+		ska märkas «KRÄVS AV». Det var sant, och det är hela problemet
+		R3 löste: hästmallen `k3` ligger nu i repot som
+		`roblox/assets/hastvisualer-k3.rbxmx` och mappas av
+		projektfilen. Rojo äger mappen.
+
+		Så den nya mätningen är den omvända — och den är starkare:
+		mappen ska INTE rapporteras alls, för det finns ingenting
+		oförklarat med den längre. Hade provet lämnats som det var hade
+		det krävt att grinden fortsätter peka ut något källstyrt. ]]
 	local mall = Instance.new("Folder")
 	mall.Name = "HastVisualer"
 	mall.Parent = SS
 	local e3 = matning("10e")
-	check("ett ospårat objekt koden LÄSER märks ut, inte bara namnges",
-		e3 ~= nil and string.find(tostring(e3.detalj), "KRÄVS AV") ~= nil,
+	check("HastVisualer rapporteras INTE — Rojo äger den nu",
+		e3 ~= nil and string.find(tostring(e3.detalj), "HastVisualer") == nil,
 		e3 and tostring(e3.detalj) or "-")
-	check("och märkningen pekar ut raden i koden",
-		e3 ~= nil and string.find(tostring(e3.detalj), "HastVisual.luau") ~= nil,
-		e3 and tostring(e3.detalj) or "-")
-	check("men den fäller fortfarande ingenting", e3 ~= nil and e3.ok == true,
-		e3 and tostring(e3.ok) or "-")
 	mall:Destroy()
+
+	--[[ ── MEN MEKANISMEN LEVER, OCH MÄTS ──────────────────────────
+
+		Listan är tom just nu. Ett prov som bara mätte en levande post
+		hade dött med posten, och nästa gång något hamnar i samma läge
+		hade märkningen varit otestad. Provet lägger därför in sin egen
+		post. ]]
+	Integritet._kodberoendeForProv("ServerStorage", "ProvBeroende",
+		"server/Provfil.luau:1 — provets egen rad")
+	local skrap = Instance.new("Folder")
+	skrap.Name = "ProvBeroende"
+	skrap.Parent = SS
+	local e4 = matning("10e")
+	check("ett ospårat objekt koden LÄSER märks ut, inte bara namnges",
+		e4 ~= nil and string.find(tostring(e4.detalj), "KRÄVS AV") ~= nil,
+		e4 and tostring(e4.detalj) or "-")
+	check("och märkningen pekar ut raden i koden",
+		e4 ~= nil and string.find(tostring(e4.detalj), "Provfil.luau") ~= nil,
+		e4 and tostring(e4.detalj) or "-")
+	check("men den fäller fortfarande ingenting", e4 ~= nil and e4.ok == true,
+		e4 and tostring(e4.ok) or "-")
+	skrap:Destroy()
+	Integritet._kodberoendeForProv(nil)
+end
+
+--[[ == 10f: TVA BARN MED SAMMA NAMN =================================
+
+	Uppmätt i Studio 2026-09-20, placen `106030782437053` i Play-läge:
+	`ReplicatedStorage` bar TVÅ `RemoteFunction` som hette `MinHast`.
+	Den ena hade `OnServerInvoke`, den andra inte, och klientens
+	`FindFirstChild` svarade med den utan handlare —
+	`MinHast:InvokeServer()` återvände då aldrig. En kontrollmätning i
+	samma pass visade att `PreparationHello:InvokeServer()` svarade på
+	0,06 s, så det var varken bänken eller nätet.
+
+	10a–10e såg ingenting: namnet står i facit, klassen är rätt, och
+	inget är ospårat. Det enda som saknades var att någon RÄKNADE dem.
+
+	Provet mäter genom preflightens egen rad, inte genom
+	`Integritet.dubblerade` direkt — en rad som inte är inkopplad i den
+	grind som faktiskt kör kan vara aldrig så korrekt utan att mäta
+	något. Samma skäl som punkt 9 en gång hade. ]]
+print("\n-- 10f: dubblerat namn i ReplicatedStorage --")
+
+do
+	sattIdentitet(UBRFBuild)
+
+	local ren = matning("10f")
+	check("preflighten mäter 10f", ren ~= nil, ren and ren.namn or "ingen 10f-rad")
+	check("10f är grön när varje namn är unikt",
+		ren ~= nil and ren.ok == true, ren and tostring(ren.detalj) or "-")
+
+	--[[ Den faktiska defekten, återskapad: ett andra objekt med samma
+		namn som ett som redan finns. ]]
+	local forst = Instance.new("RemoteFunction")
+	forst.Name = "MinHast"
+	forst.Parent = RS
+	local dubblett = Instance.new("RemoteFunction")
+	dubblett.Name = "MinHast"
+	dubblett.Parent = RS
+
+	local d = matning("10f")
+	check("dubblerat namn FÄLLER grinden", d ~= nil and d.ok == false,
+		d and tostring(d.detalj) or "-")
+	check("och felet namnger det", d ~= nil
+		and string.find(tostring(d.detalj), "MinHast") ~= nil,
+		d and tostring(d.detalj) or "-")
+	check("och säger HUR MÅNGA — ett antal skiljer två från tio", d ~= nil
+		and string.find(tostring(d.detalj), "x2") ~= nil,
+		d and tostring(d.detalj) or "-")
+	forst:Destroy()
+	dubblett:Destroy()
+
+	local efter = matning("10f")
+	check("och den blir grön igen när dubbletten är borta",
+		efter ~= nil and efter.ok == true, efter and tostring(efter.detalj) or "-")
+
+	--[[ VERKTYGSSPÅREN UNDANTAS, precis som i `klassificera`. En plugin
+		som lägger två `__`-objekt ska inte fälla en produktgrind — och
+		utan det här provet hade undantaget kunnat falla bort tyst. ]]
+	local v1 = Instance.new("RemoteFunction")
+	v1.Name = "__Verktygsspar"
+	v1.Parent = RS
+	local v2 = Instance.new("RemoteFunction")
+	v2.Name = "__Verktygsspar"
+	v2.Parent = RS
+	local verktyg = matning("10f")
+	check("men tva verktygsspar med samma namn faller INTE",
+		verktyg ~= nil and verktyg.ok == true,
+		verktyg and tostring(verktyg.detalj) or "-")
+	v1:Destroy()
+	v2:Destroy()
 end
 
 if fails > 0 then

@@ -381,9 +381,22 @@ function InteractionController.setLedCheck(fn: ((Model) -> boolean)?)
 	ledFor = fn
 end
 
+--[[ ══ LEDNINGENS REGEL FICK INTE LÅNA UPPSITTNINGENS ═══════════════
+
+	Raden löd förut `if farVisas(model) then return true end` före allt
+	annat: var hästen REDO ritades ledknappen oavsett vad `ledFor` sa. Det
+	var osynligt så länge `ledFor` bara frågade efter rätt häst-id, och det
+	blev fel i samma ögonblick den började fråga efter UPPGIFTEN —
+	eftervården är precis läget där `redo` är sant OCH ett moment väntar,
+	alltså där ordern 2026-09-20 säger att ledningen ska vika.
+
+	`farVisas` bär nu bara det den alltid handlade om: G01-flaggans tre
+	lägen (se `promptSynlig`). Är loopen på äger `ledFor` frågan ensam. ]]
 local function farVisasLed(model: Model): boolean
-	if farVisas(model) then return true end
-	if InteractionController.g01Lage() ~= true then return false end
+	if InteractionController.g01Lage() ~= true then
+		--[[ nil → göm (fail closed), false → legacy utan G01-loopen. ]]
+		return farVisas(model)
+	end
 	return ledFor ~= nil and ledFor(model)
 end
 
@@ -474,7 +487,12 @@ local function addLedPrompt(model: Model)
 	--[[ HANDLINGEN BAR HASTENS NAMN. "Led hasten" gick inte att skilja
 		fran "Rida nu" nar de lag pa varandra; "Led Trixie" gor det, utan
 		att spelaren behover lasa objektraden under. ]]
-	led.ActionText = ledtext(model, false)
+	--[[ `false` STOD HÄR, och det höll bara så länge knappen omöjligt
+		kunde byggas medan hon redan leddes. Den kan den nu: en ledning som
+		börjar medan knappen är gömd — servern kan starta och släppa kopplet
+		själv — bygger den på nästa `uppdatera()`, och då är "Led Trixie"
+		fel ord på en häst som redan går i repet. ]]
+	led.ActionText = ledtext(model, lederNu == model)
 	led.ObjectText = hastnamn(model)
 	led.HoldDuration = 0.2
 	led.MaxActivationDistance = 12
@@ -806,17 +824,54 @@ local function lyssnaPaLedningen()
 	(ev :: RemoteEvent).OnClientEvent:Connect(function(vy)
 		local leder = type(vy) == "table" and vy.leder == true
 		local hastId = if type(vy) == "table" then vy.hastId else nil
+		--[[ ══ HÄSTEN SÖKS BLAND VÄRLDENS HÄSTAR, INTE BLAND KNAPPARNA ══
+
+			Loopen gick förut över `ledKnappar` — alltså över de knappar
+			som RÅKADE finnas — och härledde "vilken häst leder jag" ur
+			dem. Det gjorde knappen till statusens källa: fanns ingen
+			knapp blev `min` nil, och en ledning servern redan startat
+			nådde aldrig klienten. Mätt i Studio 2026-09-20 medan
+			ledknappen var gömd: `LedBorja` gick igenom på servern, och
+			statusraden, kvittensen och HUD-kontexten visste ingenting.
+
+			Det är en riktig bugg oavsett synlighetsregel — servern
+			släpper och tar kopplet på egen hand (`led.for_langt`,
+			`led.tappade_bort`, `led.rider`) — men den blir en spärr så
+			fort knappen får gömmas. SANNINGEN ÄR `vy.hastId`, och hästen
+			slås upp ur taggen som världen redan bär. ]]
 		local min: Model? = nil
-		for model in pairs(ledKnappar) do
-			local ar = leder and model:GetAttribute("HorseId") == hastId
-			ledPrompts[model] = if ar then true else nil
-			if ar then min = model end
+		if leder and type(hastId) == "string" then
+			for _, model in CollectionService:GetTagged("Horse") do
+				if model:IsA("Model")
+				and model:GetAttribute("HorseId") == hastId then
+					min = model :: Model
+					break
+				end
+			end
 		end
+		for model in pairs(ledKnappar) do
+			ledPrompts[model] = if model == min then true else nil
+		end
+		--[[ Och läget sätts på hästen ÄVEN om hon ännu inte har någon
+			knapp: `removeLed` läser samma tabell för att aldrig riva
+			släpp-vägen, och `addLedPrompt` skriver rätt ord ur `lederNu`
+			när knappen byggs om en bildruta senare. ]]
+		if min then ledPrompts[min] = true end
 		--[[ SERVERN AR SANNINGEN, ocksa nar kopplet slapper utan att
 			spelaren tryckt: for langt bort, fastnat, satte sig upp. Samma
 			overgang som knappen anvander, sa att status och kvittens
 			kommer aven da. ]]
 		satLeder(min)
+		--[[ #264 LEADING_BOX_EXIT_R3: SKÄLET SKA SES, INTE BARA LOGGAS.
+			Mätt i Studio: `led.fastnat` syntes bara i Output — panelen och
+			Ugneta var tysta, och spelaren stod med en häst som slutat följa
+			utan att veta varför. Samma meddelanderad som ett nekat
+			`LedBorja` redan använder. `led.rider` är en uppsittning, inget
+			fel, och visas inte. ]]
+		if type(vy) == "table" and vy.skal and not leder
+			and vy.skal ~= "led.rider" and avslagVisare then
+			avslagVisare(vy.skal)
+		end
 		if type(vy) == "table" and vy.skal and not leder then
 			warn(("[Led] kopplet släpptes: %s (%s)")
 				:format(Sprak.t(tostring(vy.skal)), tostring(vy.skal)))
@@ -824,8 +879,24 @@ local function lyssnaPaLedningen()
 	end)
 end
 
+--[[ #264 GAIT_READABILITY_AND_UGNETA: språkflaggan byter text PÅ PLATS.
+     Knapparna bär sin text från när de byggdes; ett byte skriver om varje
+     knapp som finns, med samma nycklar som bygget använde. ]]
+function InteractionController._skrivOmTexter()
+	for _, p in pairs(prompts) do p.ActionText = Sprak.t("interaktion.sitt_upp") end
+	for model, p in pairs(ledKnappar) do p.ActionText = ledtext(model, lederNu == model) end
+	for _, p in pairs(ridaKnappar) do p.ActionText = Sprak.t("interaktion.rida_nu") end
+	for model, p in pairs(sadlaKnappar) do
+		p.ActionText = Sprak.t("interaktion.sadla_namn", hastnamn(model))
+	end
+	for model, p in pairs(transaKnappar) do
+		p.ActionText = Sprak.t("interaktion.transa_namn", hastnamn(model))
+	end
+end
+
 function InteractionController.start(mountCallback: (Model) -> ())
 	onMount = mountCallback
+	Sprak.vidByte(function() InteractionController._skrivOmTexter() end)
 	lyssnaPaLedningen()
 	for _, model in CollectionService:GetTagged("Horse") do
 		if model:IsA("Model") then addPrompt(model); addLedPrompt(model) end

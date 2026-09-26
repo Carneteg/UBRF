@@ -117,6 +117,10 @@ local GRANSER: { [string]: Grans } = {
 	--[[ `MinHast` frågar efter dagens tilldelning. Svaret ändras inte
 		mellan två anrop i samma sekund. ]]
 	MinHast = { tak = 3, pafyll = 0.5 },
+
+	--[[ Språkflaggan. Ett barn som trycker fram och tillbaka ska inte
+		stoppas, en ström ska det. ]]
+	SprakVal = { tak = 6, pafyll = 2 },
 }
 
 Skopa.STANDARD = STANDARD

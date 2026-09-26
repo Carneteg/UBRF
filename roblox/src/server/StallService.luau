@@ -56,6 +56,66 @@ end
 
 --[[ Skylten vid boxen. Osynlig och genomsläpplig — den är bara en bärare
 	för prompten, inte något att gå in i. ]]
+--[[ ══ VAD SOM STÅR OM HÄSTEN I BOXEN ═══════════════════════════════
+
+Raden byggdes förut med en enda `string.format` över fyra fält. Tre av
+dem finns alltid; `ras` gör det inte. `string.format("%s", nil)` KASTAR
+i Luau, så varje `V`-tryck på en box vars häst saknar ras dog i
+`Triggered` — utan text, utan felrad för spelaren.
+
+Det är inte en kantfall: `ras = nil` gäller TOLV hästar i rostern, och
+bland dem `blackrock_jack` — First Ride-hästen själv. Tobias hittade
+det på Troy i ett riktigt playtest 2026-09-24.
+
+FRÅNVARANDE FAKTA UTELÄMNAS, DE HITTAS INTE PÅ. Saknas rasen står det
+ingen ras — inte «okänd», inte `nil`, och absolut ingen gissad ras.
+`docs/PRODUCT-CANON.md` är tydlig: hitta aldrig på en UBRF-detalj för
+att fylla ett hål. Beskrivningen är fortfarande ordagrann från
+ubrf.se/hastar och foderraden kommer ur samma delade data.
+
+Ren funktion, och publik med flit: provet ska kunna mäta texten utan
+att bygga ett stall, och prompten ska kunna mäta samma rader som
+spelaren ser. ]]
+function StallService.boxtext(d: { [string]: any }): { string }
+	local rader = {}
+	if d == nil then return rader end
+
+	--[[ Rasen och typen står i samma led, åtskilda med komma. Finns bara
+	     den ena blir det bara den ena; finns ingen faller ledet bort. ]]
+	local led = {}
+	if d.ras ~= nil and d.ras ~= "" then table.insert(led, tostring(d.ras)) end
+	if d.typ ~= nil and d.typ ~= "" then table.insert(led, tostring(d.typ)) end
+
+	local rad = ("[Stallet] %s"):format(tostring(d.namn))
+	if #led > 0 then rad ..= " — " .. table.concat(led, ", ") end
+	rad ..= "."
+	if d.besk ~= nil and d.besk ~= "" then rad ..= " " .. tostring(d.besk) end
+	table.insert(rader, rad)
+
+	return rader
+end
+
+--[[ FODRET, som värden och inte som färdig text.
+
+	Raden hade samma brist som rasen: `%d` mot ett frånvarande `ho` kastar
+	precis som `%s` mot ett frånvarande `ras`. Guarden hör hit, men TEXTEN
+	gör det inte: `tools/kolla-sprak.py` undantar svensk text bara på rader
+	som bär `print(` eller `warn(`, och det är rätt regel — den skiljer
+	utvecklarutskrift från spelartext som ska ha en nyckel. Första
+	rättelsen byggde foderraden här och föll på just det i CI.
+
+	Därför returneras värdena, och prompten formaterar dem på sin egen
+	`print(`-rad. Guarden går att mäta; texten stannar där regeln vill. ]]
+function StallService.foder(d: { [string]: any }): (number?, string?, string?)
+	if d == nil then return nil end
+	local f = d.foder
+	if type(f) ~= "table" then return nil end
+	if type(f.ho) ~= "number" then return nil end
+	return f.ho,
+		if f.kraft ~= nil then tostring(f.kraft) else "—",
+		if f.notis ~= nil and f.notis ~= "" then tostring(f.notis) else ""
+end
+
 local function satMarkor(player: Player, dagens: any): Model?
 	local b = bas()
 	if not b then
@@ -92,7 +152,6 @@ local function satMarkor(player: Player, dagens: any): Model?
 		som argument — det översätts inte. ]]
 	prompt.ActionText = "Titta in"
 	prompt:SetAttribute("SprakNyckel", "stall.titta_in")
-	prompt.ObjectText = dagens.namn .. " står här"
 	prompt:SetAttribute("SprakObjekt", "stall.star_har")
 	prompt:SetAttribute("SprakArg", tostring(dagens.namn))
 	prompt.HoldDuration = 0
@@ -117,13 +176,12 @@ local function satMarkor(player: Player, dagens: any): Model?
 
 	prompt.Triggered:Connect(function(spelare)
 		if spelare ~= player then return end
-		--[[ Ingen egen text hittas på: beskrivningen är ordagrann från
-			ubrf.se/hastar och foderraden kommer ur samma delade data. ]]
-		print(("[Stallet] %s — %s, %s. %s"):format(
-			dagens.namn, dagens.ras, dagens.typ, dagens.besk))
-		if dagens.foder then
-			print(("[Stallet] Foder: %d kg hö, kraftfoder %s. %s"):format(
-				dagens.foder.ho, tostring(dagens.foder.kraft), dagens.foder.notis))
+		for _, rad in ipairs(StallService.boxtext(dagens)) do
+			print(rad)
+		end
+		local ho, kraft, notis = StallService.foder(dagens)
+		if ho then
+			print(("[Stallet] Foder: %d kg hö, kraftfoder %s. %s"):format(ho, kraft, notis))
 		end
 	end)
 
@@ -252,10 +310,56 @@ function StallService.hastIdFor(player: Player): string?
 	return dagens and dagens.id or nil
 end
 
+--[[ ══ `MinHast` ÅTERANVÄNDS, DEN NYSKAPAS INTE ═══════════════════════
+
+	`Networking.get` gör redan så för sina tolv objekt, och noten där
+	säger varför: `ReplicatedStorage` är en del av den SPARADE placen.
+	Ett fjärrobjekt servern skapade under en Play-session ligger kvar i
+	filen när någon sparar efteråt, och nästa start hittar det igen.
+
+	Den här filen gjorde i stället `Instance.new` rakt av, och då blev
+	det TVÅ objekt som heter `MinHast`. Roblox tillåter det — namn är
+	inte unika — och `FindFirstChild("MinHast")` svarar då med det
+	FÖRSTA, alltså den sparade kopian, som ingen satte någon
+	`OnServerInvoke` på.
+
+	Uppmätt i Studio 2026-09-20, placen `106030782437053`, Play-läge:
+
+	    ReplicatedStorage-barn med namnet MinHast      2
+	    PreparationHello:InvokeServer()                svarade på 0,06 s
+	    MinHast:InvokeServer()                         återvände ALDRIG
+
+	En `RemoteFunction` utan handlare svarar inte — den yieldar för
+	evigt. Anropartråden är alltså död, tyst, utan fel i Output.
+
+	Det förklarar också noten i `DinHast.luau:386`: «Den HÄNGDE i
+	flerspelarläge». Diagnosen där var fel — det var inte
+	flerspelarläget, det var dubbletten. Klienten slutade fråga och
+	läser numera hästen ur `PreparationController`, vilket är bättre av
+	andra skäl, men remoten lämnades kvar levande och trasig.
+
+	Fel klass under samma namn är en trasig place och inte något att
+	bygga vidare på: då rivs objektet och ett rätt skapas, med en rad i
+	Output. Att lägga ett andra bredvid hade återskapat exakt det här
+	felet. ]]
+local function minHastObjekt(): RemoteFunction
+	local fanns = ReplicatedStorage:FindFirstChild("MinHast")
+	if fanns and fanns:IsA("RemoteFunction") then
+		return fanns :: RemoteFunction
+	end
+	if fanns then
+		warn(("[Stallet] ReplicatedStorage.MinHast var en %s, inte en "
+			.. "RemoteFunction — den revs och ersattes."):format(fanns.ClassName))
+		fanns:Destroy()
+	end
+	local ny = Instance.new("RemoteFunction")
+	ny.Name = "MinHast"
+	ny.Parent = ReplicatedStorage
+	return ny
+end
+
 function StallService.start()
-	local fraga = Instance.new("RemoteFunction")
-	fraga.Name = "MinHast"
-	fraga.Parent = ReplicatedStorage
+	local fraga = minHastObjekt()
 	--[[ AVSLAGSFORMEN AR HANDLARENS EGEN: `MinHast` svarar med en
 		hastpost eller `nil`. `nil` betyder redan "inget svar an" i det
 		har granssnittet, och det ar ratt svar aven for ett nekat

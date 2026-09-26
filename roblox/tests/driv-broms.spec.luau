@@ -322,6 +322,61 @@ do
 		yta.Enabled = true
 	end
 
+	--[[ ══ #264 ROBLOX_HUMAN_PLAYTEST_FIX: RAMEN, OCH ORDNINGEN ══════════
+
+	     Svaret på frågan ovan kom från Studio 2026-09-25, iPad Air-emulering:
+	     YTAN var tänd. Det som var släckt var `ContextButtonFrame` MELLAN
+	     ytan och knapparna — Robloxs kärnskript döljer den — och när den väl
+	     tändes låg `HorseTouch`s blickyta (DisplayOrder 8) över knapparna
+	     (DisplayOrder 0) och tog varje tryck. Båda är mätta i motorn,
+	     inklusive falsifieringen: med ordningen 0 åt blickytan trycket på
+	     GO och gångarten stod kvar.
+
+	     Bänken bygger samma träd som motorn — knapparna i en dold ram i
+	     ytan — och mäter att monteringen tänder ramen, håller den tänd
+	     under ritten och lägger ytan över `HorseTouch`. ]]
+	do
+		local yta = nil
+		for _, g in ipairs(playerGui._barn or {}) do
+			if g.Name == "ContextActionGui" then yta = g end
+		end
+		check("CAS-ytan finns inför ramprovet", yta ~= nil)
+		if yta then
+			TouchControls.unmount()
+			local ram = Instance.new("Frame")
+			ram.Name = "ContextButtonFrame"
+			ram.Visible = false
+			ram.Parent = yta
+			for _, h in ipairs({ Input.DRIV, Input.BROMS, Input.AVSITT }) do
+				local b = CAS:GetButton(h)
+				if b then b.Parent = ram end
+			end
+			yta.DisplayOrder = 0
+			TouchControls.mount(Input, { dismount = function() end })
+			check("EN DOLD RAM MELLAN YTAN OCH KNAPPARNA TÄNDS",
+				ram.Visible == true, tostring(ram.Visible))
+			--[[ BEVAKNINGEN UNDER RITTEN MÄTS INTE HÄR. Stubben fyrar
+			     `GetPropertyChangedSignal` bara för sina bevakade egenskaper
+			     (`__BEVAKADE`), och `Visible` är inte en av dem; att lägga
+			     till den ändrar varje GUI-objekt i varje spec. Mätt i
+			     motorn i stället, 2026-09-25: uppsutten, ramen dold med
+			     flit — synlig igen 0,3 s senare. ]]
+			local hojd = nil
+			for _, g in ipairs(playerGui._barn or {}) do
+				if g.Name == "HorseTouch" then hojd = g.DisplayOrder end
+			end
+			check("CAS-YTAN LIGGER ÖVER BLICKYTAN — trycket når knapparna",
+				type(hojd) == "number" and type(yta.DisplayOrder) == "number"
+					and yta.DisplayOrder > hojd,
+				("CAS %s, HorseTouch %s"):format(tostring(yta.DisplayOrder),
+					tostring(hojd)))
+			TouchControls.unmount()
+			ram.Visible = false
+			check("vid avsittning rivs bevakningen — ramen lämnas i fred",
+				ram.Visible == false, tostring(ram.Visible))
+		end
+	end
+
 	TouchControls.unmount()
 	CAS:UnbindAction(Input.AVSITT)
 	UIS.TouchEnabled = false

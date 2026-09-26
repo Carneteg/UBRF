@@ -52,6 +52,14 @@
 local Lektion = require(game:GetService("ReplicatedStorage").HorseCore.Lektion)
 local UgnetaController = require(script.Parent.UgnetaController)
 local UgnetaGestalt = require(script.Parent.UgnetaGestalt)
+--[[ Teaching Loop: summeringen rankas av SAMMA modul som varje
+     forsoksbesked, inte av en andra bedomningslogik. ]]
+local Ugneta = require(game:GetService("ReplicatedStorage").HorseCore.Ugneta)
+--[[ QA blockerare 2: ETT tema per pass. Förut valde `Lektion.liveCue`
+     den svagaste dimensionen i VARJE bildruta, så Ugneta hoppade mellan
+     tre olika saker under samma volt. Regeln bor i HorseCore så att
+     webben och Roblox kan dela den. ]]
+local UgnetaTema = require(game:GetService("ReplicatedStorage").HorseCore.UgnetaTema)
 local ReplayController = require(script.Parent.ReplayController)
 local Inspelning = require(game:GetService("ReplicatedStorage").HorseCore.Inspelning)
 --[[ Kortets knapptext kommer ur språkkatalogen. Den stod hårdkodad på
@@ -65,6 +73,34 @@ local LIVE_CD = require(game:GetService("ReplicatedStorage").HorseCore.RidKanon)
 
 local pass: Lektion.Pass? = nil
 local liveCd = 0
+--[[ ── DAGENS TEMA ─────────────────────────────────────────────────
+     Ett per pass, se `HorseCore/UgnetaTema`. `nil` betyder «inte valt
+     än»: valet kräver en mätning och den finns först när hon ridit.
+
+     Hästens sida hålls bredvid: namnet för att kunna säga vem det kom
+     ifrån, kontexten för att kunna avgöra OM det kom från henne. Båda
+     sätts av `satHast` vid uppsittning och nollas vid avsittning — en
+     kvarglömd kontext hade låtit nästa häst ärva föregåendes lynne. ]]
+local tema: UgnetaTema.Tema? = nil
+local hastNamn = ""
+local hastKontext: { [string]: any }? = nil
+
+--[[ ── EN AVBRUTEN LEKTION SOM INTE VAR SLUT ───────────────
+
+	Re-review runda 2 av `f6ff67d`, blockerare 1.
+
+	Ett nekat nej river lektionen lokalt, och servern sätter upp
+	spelaren igen med `MountChanged`. Utan den här posten fick hon ett
+	NYTT pass: övningen började om, historiken var borta och dagens tema
+	valdes om från ingenting — fast ritten aldrig tog slut.
+
+	`rittMarke` är serverns märke på den ritt lektionen hör till. Posten
+	är EN och bär samma märke; ett annat märke är en annan ritt, och då
+	ska passet vara nytt. Den konsumeras vid första uppslaget, så en
+	återförening kan inte återanvändas en andra gång. ]]
+local rittMarke: any = nil
+local avbrutet: { marke: any, pass: any, tema: UgnetaTema.Tema?,
+	lage: string }? = nil
 local liveSagt = ""
 local lage = "ingen"
 
@@ -188,10 +224,73 @@ end
      ingen plats att ställa Ugneta på, och då körs lektionen ändå — HUD:en
      är inte beroende av gestalten. En saknad byggnad ska inte tysta
      undervisningen, bara gestalten. ]]
-function LektionController.start(ridhus: Instance?)
-	pass = Lektion.nyttPass()
+--[[ HÄSTEN SOM RIDS. Anropas av `init.client.mount` innan lektionen
+     startar. `kontext` är riggens egna stats — `skygghet` och
+     `dagsform` när de finns. Saknas de tiger `UgnetaTema` om hästens
+     spänning i stället för att skylla på ryttaren. ]]
+function LektionController.satHast(namn: string?, kontext: { [string]: any }?)
+	hastNamn = namn or ""
+	hastKontext = kontext
+end
+
+--[[ ── DAGSFORMEN FÅR KOMMA SENARE ─────────────────────────
+
+	Re-review runda 2 av `f6ff67d`, blockerare 3.
+
+	Servern sätter attributet `Dagsform` före `MountChanged` fyras. Det
+	räcker inte: attributreplikering och en RemoteEvent är två olika
+	kanaler, och deras inbördes ordning är inte garanterad hos mottagaren.
+	Kom händelsen först läste `satHast` ett `nil`, och eftersom den bara
+	lästes EN gång blev dagsformen okänd för hela ritten.
+
+	Det syntes inte som ett fel. `hastensEgen` svarar `nil` på okänt och
+	tiger — säkert, men tyst fel: hon hade aldrig sagt «det där kom från
+	henne» även när det gjorde det.
+
+	Den här vägen finns för att ta emot värdet NÄR det kommer, oavsett
+	ordning. Den rör bara dagsformen; resten av kontexten står kvar. ]]
+function LektionController.satDagsform(dagsform: number?)
+	local k = hastKontext
+	if k == nil then
+		--[[ Ingen häst satt än. Ett värde utan häst hör ingenstans hemma
+		     och ska inte bäras över till nästa. ]]
+		return false
+	end
+	k.dagsform = dagsform
+	return true
+end
+
+--[[ Läsprob för proven: vilken dagsform bär lektionens hästkontext just
+     nu? Bara läsning — den kan inte ändra något, och den finns för att
+     kedjan attribut → lyssnare → kontext annars bara går att mäta
+     indirekt genom vad Ugneta råkar säga. ]]
+function LektionController.dagsform(): number?
+	local k = hastKontext
+	return if k then k.dagsform else nil
+end
+
+function LektionController.start(ridhus: Instance?, marke: any)
+	--[[ SAMMA RITT SOM NYSS REVS? Då fortsätter lektionen där den var.
+	     Utan märke — fallet för varje anropare som inte vet om någon
+	     ritt — blir det ett nytt pass, precis som förut.
+
+	     `lage` sätts av grenarna och får INTE sättas om längre ner: ett
+	     återupptaget pass ska tillbaka till SITT läge, inte till «ny»
+	     med lektionskortet uppe igen. ]]
+	local spar = avbrutet
+	avbrutet = nil
+	rittMarke = marke
+	if spar ~= nil and marke ~= nil and spar.marke == marke
+		and spar.pass ~= nil then
+		pass = spar.pass
+		tema = spar.tema
+		lage = spar.lage
+	else
+		pass = Lektion.nyttPass()
+		tema = nil
+		lage = "ny"
+	end
 	liveCd, liveSagt = 0, ""
-	lage = "ny"
 	inspelare = nil
 	inspelningar = {}
 	senasteOvning = nil
@@ -301,12 +400,16 @@ local function presentera(p: Lektion.Pass)
 		if ovId and Sprak.finns(nyckel) then return Sprak.t(nyckel) end
 		return reserv
 	end
-	local punkter = {}
-	for i, reserv in ipairs(o.punkter) do
-		punkter[i] = kortText("p" .. i, reserv)
-	end
-	UgnetaController.visa(kortText("rubrik", o.rubrik), punkter, true,
-		Sprak.t("ugneta.borja_lektionen"))
+	--[[ #264: en BYGGARE, inte färdiga strängar — språkflaggan skriver om
+	     presentationen på plats utan att lektionen går vidare. ]]
+	UgnetaController.visa(function()
+		local punkter = {}
+		for i, reserv in ipairs(o.punkter) do
+			punkter[i] = kortText("p" .. i, reserv)
+		end
+		return kortText("rubrik", o.rubrik), punkter, true,
+			Sprak.t("ugneta.borja_lektionen")
+	end)
 	lage = "presentation"
 end
 
@@ -342,14 +445,44 @@ function LektionController.steg(dt: number, tm: { [string]: any }?,
 	     långsam på samma ritt. ]]
 	Lektion.matning(p, tm, dt)
 
-	--[[ LIVE: några ord, och aldrig samma ord två gånger i rad. ]]
-	liveCd -= dt
-	if liveCd <= 0 then
-		local txt, bra = Lektion.liveCue(p, Lektion.kvalitet(tm))
-		if txt ~= "" and txt ~= liveSagt then
-			liveCd = if bra then LIVE_CD.bra else LIVE_CD.fel
+	--[[ ── LIVE: DAGENS TEMA, OCH TYSTNAD OM ALLT ANNAT ──────────────
+
+		QA-review av `082062c`, blockerare 2. Förut låg spärren och
+		«aldrig samma ord två gånger» här, och VALET av vad hon skulle
+		säga gjordes om varje bildruta av `Lektion.liveCue` — den
+		svagaste dimensionen just då. Hela regeln bor nu i `UgnetaTema`:
+		ett tema, temafiltrerad signal, mönster före kommentar, spärr
+		utan kö och hästens dag skild från ryttarens fel.
+
+		Spärren räknas därför inte längre HÄR. Två spärrar hade betytt
+		två sanningar om när hon får tala. ]]
+	local kvalitet = Lektion.kvalitet(tm)
+	local ovId = Lektion.ovningId(p)
+	if tema == nil and ovId then
+		tema = UgnetaTema.nytt(ovId)
+	end
+	local t = tema
+	if t and ovId then
+		local txt, bra, kalla, signal = UgnetaTema.steg(t, dt, kvalitet,
+			hastKontext, tonumber(tm.spanning), Ugneta.dimensionerFor(ovId))
+		if txt ~= "" then
+			--[[ Hästens rad byggs HÄR och inte i modulen: modulen är
+			     delad med webben och ska inte kunna språkvägarna. Den
+			     svarar med en KÄLLA, ytan väljer orden. ]]
+			--[[ #264 GAIT_UGNETA_REVIEW_R1: och så även temats rad. Den
+			     skickas som NYCKEL + argument och slås upp när den visas —
+			     förut gick kanonens svenska rakt till ytan, även på
+			     engelska. ]]
+			local nyckel: string?, args: { any } = nil, {}
+			if kalla == "hast" then
+				nyckel = "ugneta.hastens_dag"
+				args = { if hastNamn ~= "" then hastNamn else Sprak.t("ugneta.hasten") }
+			elseif kalla == "tema" then
+				nyckel = UgnetaController.liveNyckel(signal, bra)
+			end
+			if nyckel then txt = Sprak.t(nyckel, table.unpack(args)) end
 			liveSagt = txt
-			UgnetaController.live(txt, bra)
+			UgnetaController.live(txt, bra, nyckel, args)
 		end
 	end
 
@@ -377,10 +510,13 @@ function LektionController.steg(dt: number, tm: { [string]: any }?,
 		     alla andra kort. ]]
 		--[[ Ur katalogen, av samma skäl som presentationens knapp ovan:
 			de här fyra strängarna stod hårdkodade på svenska i logiken. ]]
-		UgnetaController.visa(Sprak.t("ugneta.ej_bedomd.rubrik"),
-			{ Sprak.t("ugneta.ej_bedomd.punkt") },
-			true, if p.forsokNr < 2 then Sprak.t("ugneta.prova_igen")
-				else Sprak.t("ugneta.nasta_ovning"))
+		local forsta = p.forsokNr < 2
+		UgnetaController.visa(function()
+			return Sprak.t("ugneta.ej_bedomd.rubrik"),
+				{ Sprak.t("ugneta.ej_bedomd.punkt") },
+				true, if forsta then Sprak.t("ugneta.prova_igen")
+					else Sprak.t("ugneta.nasta_ovning")
+		end)
 		lage = "efter"
 	end
 	liveCd, liveSagt = 0, ""
@@ -389,8 +525,41 @@ end
 --[[ Slut på ritten, av vilket skäl som helst. Säkerhet före undervisning:
      chipet släcks, kortet stängs, den väntande fortsättningen kastas och
      gestalten tas bort. ]]
-function LektionController.avbryt()
+function LektionController.avbryt(skal: string?)
+	--[[ ── EFTERRITTENS SUMMERING (Teaching Loop) ──────────────────
+
+		Bara efter en avsittning spelaren själv bad om, och bara om det
+		FINNS något att summera. En respawn, en riven rigg eller serverns
+		egen rättelse ger tystnad — se skälet i `init.client.dismount`.
+
+		QA-review av `082062c`, blockerare 1: summeringen VISADES här,
+		och det var för tidigt. Den lokala rivningen sker med flit innan
+		servern hunnit svara — säkerhet före undervisning — men servern
+		kan NEKA avsittningen (`pass.rider_inte`, `hast.oregistrerad`,
+		`takt.for_snabbt`). En nekad avsittning presenterades då ändå som
+		en fullbordad ritt, och #234 kräver att summeringen följer en
+		GILTIG auktoritativ övergång.
+
+		Rivningen och undervisningens avslut är därför två saker nu. Den
+		här funktionen river direkt och LÄMNAR TILLBAKA underlaget; den
+		som vet om serverns svar blev ett ja anropar `visaEfterritt`.
+
+		Att ta fram underlaget FÖRE rivningen är fortfarande nödvändigt:
+		`pass` nollas tre rader ner, och då finns historiken inte kvar
+		att summera. En ögonblicksbild överlever rivningen; en referens
+		till `pass` hade inte gjort det. ]]
+	local summering = Ugneta.efterrittFor(skal, if pass then pass.historik else nil)
+
+	--[[ SPARAS FÖR EN EVENTUELL ÅTERFÖRENING. Se noten vid `avbrutet`.
+	     Rivningen nedan sker oavsett — det här är en KOPIA av vad som
+	     revs, inte ett skäl att låta bli att riva. ]]
+	avbrutet = if pass ~= nil
+		then { marke = rittMarke, pass = pass, tema = tema, lage = lage }
+		else nil
 	pass = nil
+	tema = nil
+	rittMarke = nil
+	hastNamn, hastKontext = "", nil
 	liveCd, liveSagt = 0, ""
 	lage = "ingen"
 	--[[ SÄKERHET FÖRE UNDERVISNING. Analysen stängs och inspelningen
@@ -406,6 +575,22 @@ function LektionController.avbryt()
 	UgnetaController.vidVidare(nil)
 	UgnetaController.sakerhetTarOver()
 	UgnetaGestalt.dolj()
+
+	--[[ Ytan är tom nu, och underlaget går tillbaka till anroparen
+	     OVISAT. `begarAvsittning` håller det tills servern sagt ja. ]]
+	return summering
+end
+
+--[[ SERVERN SA JA — då, och först då, får ritten ett avslut.
+
+	Två eller tre punkter med en knapp att stänga med — samma yta, samma
+	språkvägar och samma responsiva regler som varje annat Ugneta-besked.
+	Ingen egen panel, inget nytt lektionssystem.
+
+	`nil` är ett giltigt argument och betyder tystnad, så att anroparen
+	kan skicka vidare det `avbryt` gav utan att först kontrollera det. ]]
+function LektionController.visaEfterritt(summering)
+	if summering then UgnetaController.efterritt(summering) end
 end
 
 return LektionController

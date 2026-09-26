@@ -248,10 +248,57 @@ def main() -> int:
         #
         #   Jamforelsen ar ordagrann pa varje inbaddad modul mot filen den
         #   kom ur. Ett tecken isar och det ar inte samma bygge. ]]
+        #[[ EN MODELL HAR INGEN KALLTEXT.
+        #
+        #   Jamforelsen ovan letar efter `ProtectedString[Source]`, och en
+        #   Model har ingen. Nar hastmallen mappades in rapporterade den
+        #   darfor "k3: finns inte i placen" — sant om kalltext, falskt om
+        #   verkligheten. Ett nej av fel skal ar lika illa som ett ja av
+        #   fel skal.
+        #
+        #   En modell jamfors i stallet STRUKTURELLT: varje instans med sin
+        #   klass och sitt namn, plus varje mesh- och texturadress. Det ar
+        #   det som gor skillnad pa en hast och en lada. ]]
+        def modellsignatur(nod):
+            delar = sorted(
+                (e.get("class") or "?",
+                 e.findtext("./Properties/string[@name='Name']") or "?")
+                for e in nod.iter("Item"))
+            adresser = sorted(e.text or "" for e in nod.iter("url"))
+            return delar, adresser
+
+        modeller_i_placen = {}
+        for it in rot.iter("Item"):
+            if it.find("Properties/ProtectedString[@name='Source']") is None:
+                modeller_i_placen.setdefault(namn(it), it)
+
         avvikande = []
         kallor = kallmappning()
         jamforda = 0
+        modeller = 0
         for modul, kalla in sorted(kallor.items()):
+            if kalla.suffix == ".rbxmx":
+                nod = modeller_i_placen.get(modul)
+                if nod is None:
+                    avvikande.append(f"{modul}: modellen finns inte i placen")
+                    continue
+                kallrot = ET.fromstring(kalla.read_text(encoding="utf-8"))
+                kalldel = [e for e in kallrot if e.tag == "Item"]
+                if len(kalldel) != 1:
+                    avvikande.append(f"{modul}: kallan har inte EN rotinstans")
+                    continue
+                a, b = modellsignatur(nod), modellsignatur(kalldel[0])
+                if a[0] != b[0]:
+                    avvikande.append(
+                        f"{modul}: {len(a[0])} instanser i placen mot "
+                        f"{len(b[0])} i {kalla.relative_to(ROT)}")
+                elif a[1] != b[1]:
+                    avvikande.append(
+                        f"{modul}: {len(a[1])} mesh-/texturadresser i placen "
+                        f"mot {len(b[1])} i kallan")
+                else:
+                    modeller += 1
+                continue
             if modul not in kod_i_placen:
                 avvikande.append(f"{modul}: finns inte i placen")
                 continue
@@ -267,6 +314,9 @@ def main() -> int:
         else:
             print(f"  OK   nyttolasten ar ordagrant samma kod som grindarna korde "
                   f"({jamforda} moduler jamforda)")
+            if modeller:
+                print(f"  OK   och modellerna kom fram hela "
+                      f"({modeller} jamford(a) instans for instans)")
 
     if fel:
         print(f"\nFIRST_PLAYABLE_PREFLIGHT: FAIL — {len(fel)} saknas:")

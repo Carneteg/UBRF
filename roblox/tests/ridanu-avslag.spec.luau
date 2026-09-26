@@ -295,6 +295,255 @@ do
 end
 
 print("")
+--[[ ══ HAN SADLADE SJÄLV, OCH «RIDA NU» NEKADE (#264) ═══════════════
+
+	Tobias playtest 2026-09-24, 08:19-08:21: Troy tilldelad, träns och
+	sadel tagna, «Rida nu» nekad TVÅ gånger med `forb.fel_tur` och
+	argumentet `kanon:Utrustning 1/5` — alltså «det är inte din tur att
+	göra det du redan gjort».
+
+	KEDJAN, läst i källan: `TackService.satPa` svarar `tack.redan_pa` när
+	en del av den sorten redan sitter på hästen. `GameplayService.moment`
+	returnerade DÅ direkt, innan `Preparation.utforMoment` — det FYSISKA
+	steget var gjort men det LOGISKA momentet kvitterades aldrig.
+	`ridaNuInre` tolererar `tack.redan_pa` och gick vidare till nästa
+	moment, som därmed låg ur tur, och nejet namngav det moment som
+	faktiskt stod på tur.
+
+	Blocket ovanför missade det här: det godtar ett avslag så länge
+	avslaget är LÄSBART. Tobias fall är inte ett läsbart avslag — det är
+	ett avslag som inte borde finnas. ]]
+do
+	print("\n── Spelaren sadlade själv: «Rida nu» ska gå igenom ──")
+	local k = nyKaraktar(Vector3.new(2, 0, 0))
+	local sp = { Name = "QA2", UserId = 9247, Character = k,
+		CharacterAdded = __signal_ny(), CharacterRemoving = __signal_ny() }
+	SparService._glomForProv(sp)
+	Players._spelare = { sp }
+	Players.PlayerAdded:Fire(sp)
+	Players.PlayerAdded:slutfor()
+
+	local hastId = StallService.hastIdFor(sp)
+	local mod = HastRigg.bygg(hastId, hastId, CFrame.new(Vector3.new(0, 0, 0)))
+	mod.Parent = workspace
+	Taggar:AddTag(mod, "Horse")
+	local M = 3
+	local hp = mod.PrimaryPart.Position
+	LedService.satMalzon({ x = hp.X / M - 5, y = 170 - hp.Z / M - 5, w = 10, h = 10 })
+
+	--[[ Han tog utrustningen ur boxfronten, precis som i loggen. ]]
+	local front = TackForradService.forHast(hastId)
+	if front and front.PrimaryPart then stallDig(sp, front.PrimaryPart.Position) end
+	TackForradService.tagSadel(sp, hastId)
+	stallDig(sp, hp)
+
+	--[[ OCH HAN SATTE PÅ DEN SJÄLV. Det fysiska steget är gjort; det
+	     logiska momentet är det inte. Det är hela reproduktionen. ]]
+	local okU = TackService.satPa(sp, mod, "underlagg", hastId, mod)
+	local okS = TackService.satPa(sp, mod, "sadel", hastId, mod)
+	check("REPRODUKTION: sadeln sitter fysiskt på hästen",
+		TackService.harTack(mod, "sadel") == true,
+		("underlagg=%s sadel=%s"):format(tostring(okU), tostring(okS)))
+
+	--[[ Och momentet är INTE kvitterat — annars mäter provet fel sak. ]]
+	local st = GameplayService.stateFor(sp)
+	local gjorda = st and st.gjorda and st.gjorda["iordning"]
+	check("och det logiska momentet är ännu inte kvitterat",
+		gjorda == nil or next(gjorda) == nil,
+		tostring(gjorda and next(gjorda)))
+
+	local ok, skal, arg = GameplayService.ridaNu(sp)
+	print(("       [QA] RidaNu -> ok=%s skal=%s arg=%s"):format(
+		tostring(ok), tostring(skal), tostring(arg)))
+	check("«RIDA NU» GÅR IGENOM NÄR SPELAREN SADLAT SJÄLV",
+		ok == true, ("ok=%s skal=%s arg=%s"):format(
+			tostring(ok), tostring(skal), tostring(arg)))
+	check("och nejet är i synnerhet inte forb.fel_tur",
+		skal ~= "forb.fel_tur" and skal ~= "pass.fel_tur", tostring(skal))
+
+	if ok then
+		local redo = Preparation.provaUppsittning(GameplayService.stateFor(sp), hastId)
+		check("och hästen är faktiskt uppsittningsklar", redo == true,
+			tostring(redo))
+		--[[ ── VEM SOM GJORDE DET GÅR INTE ATT LÄSA UR GEOMETRIN ──────
+
+		     Här stod att sadlingen skulle bokföras som SPELARENS, och
+		     rättelsen bakom det slöt sig till utföraren ur att
+		     utrustningen redan satt på hästen. Granskningen underkände
+		     det, med rätta: en påsatt sadel är ett faktum om VÄRLDEN,
+		     inte om vem som lyfte den. I ett rent auto-pass gav samma
+		     slutledning `ownU1=auto ownU2=true` — stallet fick kredit
+		     för handarbete som ingen människa gjort.
+
+		     Kontraktet är därför: momentet KVITTERAS, vilket var
+		     `fel_tur`-felet, med den utförare anropet faktiskt bär.
+		     «Rida nu» är stallets arbete och bokförs som `auto`.
+		     Verkligt registrerat handarbete rörs inte, och påhittat
+		     blir det aldrig. ]]
+		local st2 = GameplayService.stateFor(sp)
+		local iord = st2 and st2.gjorda and st2.gjorda["iordning"] or {}
+		local auto, ospec = 0, 0
+		for _, v in pairs(iord) do
+			if v == "auto" then auto += 1 else ospec += 1 end
+		end
+		check("momenten kvitteras av «Rida nu», som stallets arbete",
+			auto > 0 and ospec == 0,
+			("auto=%d ovrigt=%d"):format(auto, ospec))
+	end
+end
+
+--[[ ══ KREDITEN ÅT BÅDA HÅLL, OCH ETT AUTO-PASS SOM FALLER (#264 R2) ══
+
+	Blocket ovanför mäter ena riktningen: «Rida nu» är stallets arbete och
+	bokförs som `auto` även när spelaren råkat sadla själv först.
+
+	Granskningen bad om de två som saknades.
+
+	  · PRODUKTIONENS MANUELLA VÄG. Spelaren trycker på momentet SJÄLV,
+	    med sin egen hand, på en häst där delen redan sitter. Då ska
+	    kvittensen bära HENNE — inte «auto». Det är samma fall-through
+	    genom `tack.redan_pa`, men med en riktig utförare i anropet, och
+	    det är vägen Tobias faktiskt gick i stallet.
+
+	  · ETT AUTO-PASS SOM FAKTISKT MISSLYCKAS, och sedan görs om. Ett
+	    fysiskt steg som inte går fram ska avbryta HELA förberedelsen med
+	    sitt riktiga nej — och framför allt inte lämna någon påhittad
+	    kredit efter sig i liggaren. Går felet över ska omförsöket lyckas
+	    på riktigt.
+
+	LIGGAREN är `state.gjorda[fas][moment]`: `"auto"` för stallets arbete,
+	`true` för spelarens eget. Att skilja dem åt är hela poängen med
+	FUN FIRST · RIDE FIRST — egen omsorg ska peka uppåt, och då får den
+	inte delas ut gratis. ]]
+do
+	print("\n── Krediten åt båda håll, och ett auto-pass som faller ──")
+
+	--[[ ── A · DEN MANUELLA PRODUKTIONSVÄGEN ─────────────────────────── ]]
+	local k = nyKaraktar(Vector3.new(2, 0, 0))
+	local sp = { Name = "QA3", UserId = 9248, Character = k,
+		CharacterAdded = __signal_ny(), CharacterRemoving = __signal_ny() }
+	SparService._glomForProv(sp)
+	Players._spelare = { sp }
+	Players.PlayerAdded:Fire(sp)
+	Players.PlayerAdded:slutfor()
+
+	local hastId = StallService.hastIdFor(sp)
+	local mod = HastRigg.bygg(hastId, hastId, CFrame.new(Vector3.new(0, 0, 0)))
+	mod.Parent = workspace
+	Taggar:AddTag(mod, "Horse")
+	local M = 3
+	local hp = mod.PrimaryPart.Position
+	LedService.satMalzon({ x = hp.X / M - 5, y = 170 - hp.Z / M - 5, w = 10, h = 10 })
+
+	local front = TackForradService.forHast(hastId)
+	if front and front.PrimaryPart then stallDig(sp, front.PrimaryPart.Position) end
+	TackForradService.tagSadel(sp, hastId)
+	stallDig(sp, hp)
+
+	--[[ FRAM TILL UTRUSTNINGEN GENOM PRODUKTIONENS EGEN VÄG: varje fas
+	     före `iordning`, och sedan hovarna. Utan den här vandringen
+	     nekas `utr:1` med `forb.fel_tur` av ett HELT ANNAT skäl än det
+	     provet vill mäta, och mätningen hade sagt fel sak om rätt rad.
+	     Allt görs med hennes egen hand — ingen «auto» någonstans. ]]
+	do
+		local st = GameplayService.stateFor(sp)
+		for _, f in ipairs(Preparation.stegFaser()) do
+			if f.id == "iordning" then break end
+			for _, m in ipairs(Preparation.moment(f.id)) do
+				if not m.fel and m.id then
+					GameplayService.moment(sp, f.id, m.id)
+					if Preparation.arVal(f.id) and Preparation.fasKlar(st, f.id) then break end
+				end
+			end
+		end
+		for _, m in ipairs(Preparation.moment("iordning")) do
+			if not m.id:match("^utr:") then
+				GameplayService.moment(sp, "iordning", m.id)
+			end
+		end
+		check("utr:1 står på tur — annars mäter provet fel sak",
+			Preparation.nastaMoment(st, "iordning").id == "utr:1",
+			tostring(Preparation.nastaMoment(st, "iordning").id))
+	end
+
+	--[[ Hon lägger på underlägget med sin egen hand — `TackService.satPa`
+	     är samma anrop promptvägen gör. Det LOGISKA momentet står kvar. ]]
+	TackService.satPa(sp, mod, "underlagg", hastId, mod)
+	check("REPRODUKTION: underlägget sitter fysiskt, momentet är okvitterat",
+		TackService.harTack(mod, "underlagg") == true
+			and (GameplayService.stateFor(sp).gjorda["iordning"] or {})["utr:1"] == nil)
+
+	--[[ OCH NU TRYCKER HON SJÄLV. Inget «auto» någonstans i anropet. ]]
+	local okM, skalM = GameplayService.moment(sp, "iordning", "utr:1")
+	check("det egna momentet går igenom trots att delen redan satt där",
+		okM == true, ("ok=%s skal=%s"):format(tostring(okM), tostring(skalM)))
+	local iordM = GameplayService.stateFor(sp).gjorda["iordning"] or {}
+	check("KREDITEN ÄR HENNES — inte stallets",
+		iordM["utr:1"] == true, tostring(iordM["utr:1"]))
+	check("och i synnerhet inte bokförd som auto",
+		iordM["utr:1"] ~= "auto", tostring(iordM["utr:1"]))
+
+	--[[ ── B · AUTO-PASSET FALLER, OCH GÖRS OM ─────────────────────────
+
+	     Ett fysiskt steg vägrar. Fail-closed betyder att HELA
+	     förberedelsen avbryts med det riktiga nejet — inte att resten
+	     fylls i och hästen kallas klar. ]]
+	local k2 = nyKaraktar(Vector3.new(2, 0, 0))
+	local sp2 = { Name = "QA4", UserId = 9249, Character = k2,
+		CharacterAdded = __signal_ny(), CharacterRemoving = __signal_ny() }
+	SparService._glomForProv(sp2)
+	Players._spelare = { sp2 }
+	Players.PlayerAdded:Fire(sp2)
+	Players.PlayerAdded:slutfor()
+
+	local hastId2 = StallService.hastIdFor(sp2)
+	local mod2 = HastRigg.bygg(hastId2, hastId2, CFrame.new(Vector3.new(0, 0, 0)))
+	mod2.Parent = workspace
+	Taggar:AddTag(mod2, "Horse")
+	local hp2 = mod2.PrimaryPart.Position
+	LedService.satMalzon({ x = hp2.X / M - 5, y = 170 - hp2.Z / M - 5, w = 10, h = 10 })
+	stallDig(sp2, hp2)
+
+	local riktigSatPa = TackService.satPa
+	local nekade = 0
+	TackService.satPa = function(...)
+		nekade += 1
+		return false, "tack.kunde_inte_byggas"
+	end
+	local okF, skalF = GameplayService.ridaNu(sp2)
+	TackService.satPa = riktigSatPa
+
+	check("det fysiska steget nekade verkligen", nekade > 0, ("%d"):format(nekade))
+	check("AUTO-PASSET FALLER MED SITT RIKTIGA NEJ",
+		okF == false and skalF == "tack.kunde_inte_byggas",
+		("ok=%s skal=%s"):format(tostring(okF), tostring(skalF)))
+	check("och hästen är INTE uppsittningsklar efter ett fallet pass",
+		Preparation.provaUppsittning(GameplayService.stateFor(sp2), hastId2) ~= true)
+	--[[ DET VIKTIGASTE I HELA BLOCKET: ett fallet auto-pass får inte ha
+	     delat ut spelarkredit på vägen. ]]
+	local iordF = GameplayService.stateFor(sp2).gjorda["iordning"] or {}
+	local falskKredit = 0
+	for _, v in pairs(iordF) do
+		if v ~= "auto" then falskKredit += 1 end
+	end
+	check("INGEN PÅHITTAD KREDIT LIGGER KVAR EFTER FELET",
+		falskKredit == 0, ("%d egna i liggaren"):format(falskKredit))
+
+	--[[ OMFÖRSÖKET. Felet är över; nu ska det gå fram på riktigt. ]]
+	local okR, skalR = GameplayService.ridaNu(sp2)
+	check("OMFÖRSÖKET LYCKAS när det fysiska felet är över",
+		okR == true, ("ok=%s skal=%s"):format(tostring(okR), tostring(skalR)))
+	check("och hästen är uppsittningsklar efter omförsöket",
+		Preparation.provaUppsittning(GameplayService.stateFor(sp2), hastId2) == true)
+	local iordR = GameplayService.stateFor(sp2).gjorda["iordning"] or {}
+	local autoR, egnaR = 0, 0
+	for _, v in pairs(iordR) do
+		if v == "auto" then autoR += 1 else egnaR += 1 end
+	end
+	check("och allt omförsöket gjorde står som stallets arbete",
+		autoR > 0 and egnaR == 0, ("auto=%d egna=%d"):format(autoR, egnaR))
+end
+
 if fails > 0 then
 	print(string.format("%d mätning(ar) föll.", fails))
 else

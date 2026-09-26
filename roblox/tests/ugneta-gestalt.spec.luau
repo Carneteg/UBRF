@@ -71,12 +71,16 @@ local M = 3
 local P = RidKanon.UGNETA.PLATS
 local plats = UgnetaGestalt.plats(hus)
 prova("placeringen går att räkna fram ur det byggda", plats ~= nil, tostring(plats))
-if plats and syd and bana then
-	local fran = plats.pos - syd.Position
+--[[ #264 INFRA-PLATS1: A mäts från dressyrlayoutens A-kant ur
+	`Ridhusplats`, inte från "Sarg syd" — den sågas av södra dörren i bitar,
+	och den bit namnet ger ligger vid sidan av mittlinjen. ]]
+local rp = Ridhusplats.los(hus)
+if plats and rp and bana then
+	local fran = plats.pos - rp.dressyr.A
 	local langs = fran.X * plats.motC.X + fran.Y * plats.motC.Y + fran.Z * plats.motC.Z
 	local vantat = (P.langd + P.bortomC) * M
 	prova("hon står bortom C-linjen, på det avstånd kanonen anger",
-		math.abs(langs - vantat) < 0.2,
+		math.abs(langs - vantat) < 0.01,
 		("%.2f studs från A, väntat %.2f"):format(langs, vantat))
 
 	--[[ …och innanför sargen i andra änden. Banans längd läses ur den
@@ -105,6 +109,12 @@ prova("utan byggd bana placeras hon inte alls",
 
 if fel > 0 then
 	print(("\n%d mätningar föll."):format(fel))
+	--[[ #264 INFRA-PLATS1 R1: specen gav förut exit 0 även när en mätning
+		föll, så en grön svit bevisade inte att den var grön. Nu fälls
+		körningen, som i de andra specarna. ]]
+	local avsluta = (os :: any).exit
+	if avsluta then avsluta(1) end
+	error(("%d mätningar föll."):format(fel), 0)
 else
 	print("\nAlla mätningar gick igenom.")
 end

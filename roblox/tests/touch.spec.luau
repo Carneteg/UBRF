@@ -616,6 +616,179 @@ do
 	kam.ViewportSize = foreVy
 end
 
+--[[ ══ EN RITTS LYSSNARE DÖR MED RITTEN ═══════════════════════════
+
+	Robustness Slice B.
+
+	`mount` körs en gång per ritt och öppnade fyra
+	`UserInputService`-kopplingar som `unmount` aldrig rörde. Fyra till
+	för varje uppsittning, hela sessionen.
+
+	De var inte inerta: handlarna stänger om MODULLOKALER, inte om
+	per-mount-tillstånd, så en kvarlevande handlare från förra ritten
+	passerar sin egen `obj == aktivFinger`-vakt och kör vidare mot en
+	riven ram — och `flytta` slutar i `Input.setTouch(…)`, den LEVANDE
+	styrningen.
+
+	PROVET FÅR INTE VARA GRÖNT BARA FÖR ATT GUI:T REVS. Det mäter därför
+	två oberoende saker: att antalet ägda kopplingar går tillbaka till
+	utgångsläget, och att ett gammalt fingerobjekt inte längre KAN röra
+	den nya rittens styrning eller kamera. ]]
+do
+	print("")
+	print("-- En ritts lyssnare dör med ritten --")
+
+	local UIS = game:GetService("UserInputService")
+	local spelare = game:GetService("Players").LocalPlayer
+	local kam = workspace.CurrentCamera
+	local foreTouch2 = UIS.TouchEnabled
+	local foreVy2 = kam.ViewportSize
+	UIS.TouchEnabled = true
+	kam.ViewportSize = { _typ = "Vector2", X = 1180, Y = 1000 }
+	spelare:WaitForChild("PlayerGui")
+
+	TouchControls.unmount()
+	local baslinje = TouchControls._kopplingar()
+	local uisBas = #UIS.InputChanged._lyssnare + #UIS.InputEnded._lyssnare
+	check("ingen ritt äger några kopplingar innan provet",
+		baslinje == 0, ("%d"):format(baslinje))
+
+	--[[ Ett fingerobjekt som bänkens signaler kan bära. ]]
+	local function finger(x, y)
+		return { UserInputType = Enum.UserInputType.Touch,
+			Position = { X = x, Y = y } }
+	end
+
+	--[[ Hitta ramarna i den MONTERADE ytan, så att provet trycker där
+	     spelaren trycker i stället för att anropa handlarna direkt. ]]
+	local function ramar()
+		local pg = spelare:FindFirstChildOfClass("PlayerGui")
+		local ht
+		for _, g in ipairs(pg._barn or {}) do
+			if g.Name == "HorseTouch" then ht = g end
+		end
+		if not ht then return nil, nil end
+		local function sok(nod, namn)
+			for _, b in ipairs(nod._barn or {}) do
+				if b.Name == namn then return b end
+				local t = sok(b, namn)
+				if t then return t end
+			end
+			return nil
+		end
+		return sok(ht, "Spak"), sok(ht, "Blickyta")
+	end
+
+	--[[ ── RITT 1 ───────────────────────────────────────────────── ]]
+	local blick1 = 0
+	TouchControls.mount(Input, { dismount = function() end,
+		blick = function() blick1 += 1 end })
+	local ettAgda = TouchControls._kopplingar()
+	check("ritt 1 äger sina kopplingar", ettAgda > 0, ("%d"):format(ettAgda))
+
+	local spak1, blickyta1 = ramar()
+	check("ramarna finns att trycka på", spak1 ~= nil and blickyta1 ~= nil)
+
+	--[[ STYRNINGEN LÄSES GENOM `Input.consume()`, inte genom något fält
+	     på `Input`. Första versionen läste `Input.touchX`, som inte finns
+	     — `nil ~= 0` är sant, så raden var grön utan att mäta något, och
+	     nollställningen nedan blev röd av samma skäl. ]]
+	local function styrning()
+		local i = Input.consume()
+		return i.forward, i.steer
+	end
+
+	local f1 = finger(400, 500)
+	if spak1 then spak1.InputBegan:Fire(f1) end
+	UIS.InputChanged:Fire(f1)
+	local f1Fram, f1Sid = styrning()
+	check("ritt 1: styrningen svarar på fingret",
+		math.abs(f1Fram) > 0.01 or math.abs(f1Sid) > 0.01,
+		("forward %.3f · steer %.3f"):format(f1Fram, f1Sid))
+
+	local b1 = finger(900, 500)
+	if blickyta1 then blickyta1.InputBegan:Fire(b1) end
+	UIS.InputChanged:Fire({ UserInputType = Enum.UserInputType.Touch,
+		Position = { X = 940, Y = 500 } })
+	--[[ Blickfingret jämförs på OBJEKT, så draget måste bära samma
+	     tabell som det som började. ]]
+	b1.Position = { X = 940, Y = 500 }
+	UIS.InputChanged:Fire(b1)
+	check("ritt 1: blicken når den aktuella kroken", blick1 > 0,
+		("%d anrop"):format(blick1))
+
+	--[[ ── UNMOUNT ──────────────────────────────────────────────── ]]
+	TouchControls.unmount()
+	check("UNMOUNT LÄMNAR INGA ÄGDA KOPPLINGAR",
+		TouchControls._kopplingar() == 0,
+		("%d"):format(TouchControls._kopplingar()))
+	check("och UIS-lyssnarna är tillbaka på utgångsläget",
+		#UIS.InputChanged._lyssnare + #UIS.InputEnded._lyssnare == uisBas,
+		("%d -> %d"):format(uisBas,
+			#UIS.InputChanged._lyssnare + #UIS.InputEnded._lyssnare))
+	local avFram, avSid = styrning()
+	check("och styrningen är nollad", avFram == 0 and avSid == 0,
+		("forward %.3f · steer %.3f"):format(avFram, avSid))
+
+	--[[ ── RITT 2 ───────────────────────────────────────────────── ]]
+	local blick2 = 0
+	TouchControls.mount(Input, { dismount = function() end,
+		blick = function() blick2 += 1 end })
+	check("ritt 2 äger lika många kopplingar som ritt 1 — ingen tillväxt",
+		TouchControls._kopplingar() == ettAgda,
+		("%d vs %d"):format(TouchControls._kopplingar(), ettAgda))
+
+	--[[ DET AVGÖRANDE: förra rittens fingerobjekt, i den nya ritten. ]]
+	local spak2, blickyta2 = ramar()
+	local f2 = finger(300, 400)
+	if spak2 then spak2.InputBegan:Fire(f2) end
+	UIS.InputChanged:Fire(f2)
+	local nyFram, nySid = styrning()
+	check("ritt 2: den egna styrningen svarar",
+		math.abs(nyFram) > 0.01 or math.abs(nySid) > 0.01,
+		("forward %.3f · steer %.3f"):format(nyFram, nySid))
+
+	--[[ Och så det GAMLA fingret, med ett läge långt från det nya. Rör
+	     det styrningen har en kvarlevande handlare fortfarande handen på
+	     ratten. ]]
+	f1.Position = { X = 1100, Y = 900 }
+	UIS.InputChanged:Fire(f1)
+	local efterFram, efterSid = styrning()
+	check("ETT GAMMALT FINGER KAN INTE RÖRA DEN NYA RITTENS STYRNING",
+		efterFram == nyFram and efterSid == nySid,
+		("%.3f/%.3f  ->  %.3f/%.3f"):format(nyFram, nySid, efterFram, efterSid))
+
+	local blickFore = blick2
+	b1.Position = { X = 1000, Y = 600 }
+	UIS.InputChanged:Fire(b1)
+	check("OCH INTE HELLER DEN NYA RITTENS KAMERA",
+		blick2 == blickFore, ("%d -> %d"):format(blickFore, blick2))
+
+	--[[ …och ritt 2 fungerar fortfarande som vanligt. Utan den här raden
+	     vore allt ovan uppfyllt av en modul som slutat lyssna helt. ]]
+	local b2 = finger(900, 500)
+	if blickyta2 then blickyta2.InputBegan:Fire(b2) end
+	b2.Position = { X = 960, Y = 520 }
+	UIS.InputChanged:Fire(b2)
+	check("RITT 2:s EGEN BLICK FUNGERAR SOM VANLIGT", blick2 > blickFore,
+		("%d -> %d"):format(blickFore, blick2))
+
+	--[[ ── FLERA CYKLER ────────────────────────────────────────── ]]
+	TouchControls.unmount()
+	for _ = 1, 4 do
+		TouchControls.mount(Input, { dismount = function() end })
+		TouchControls.unmount()
+	end
+	check("EFTER FEM CYKLER ÄR ALLT TILLBAKA PÅ UTGÅNGSLÄGET",
+		TouchControls._kopplingar() == 0
+			and #UIS.InputChanged._lyssnare + #UIS.InputEnded._lyssnare == uisBas,
+		("agda=%d  uis=%d (bas %d)"):format(TouchControls._kopplingar(),
+			#UIS.InputChanged._lyssnare + #UIS.InputEnded._lyssnare, uisBas))
+
+	UIS.TouchEnabled = foreTouch2
+	kam.ViewportSize = foreVy2
+end
+
 if fails > 0 then
 	print(string.format("%d mätning(ar) föll.", fails))
 else

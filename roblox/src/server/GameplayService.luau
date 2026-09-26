@@ -64,6 +64,7 @@ local Net = Core.Networking
 local HorseService = require(script.Parent.HorseService)
 local StallService = require(script.Parent.StallService)
 local SparService = require(script.Parent.SparService)
+local Aktor = require(ReplicatedStorage.HorseCore.Aktor)
 --[[ #259 Gate 1A: takten framfor de klientanropade fjarrfunktionerna.
 	En delad skopa, inte en per handlare — se `Skopa.luau`. ]]
 local Skopa = require(script.Parent.Skopa)
@@ -185,11 +186,19 @@ end
 	FireClient härifrån var felet senior review fällde: en klient som
 	anslöt sent startade utan hästId, steg och ready-state. ]]
 local function skicka(player: Player)
-	Net.get("PreparationSync"):FireClient(player, vyFor(player))
+	--[[ #252 DEL C: vyn gar till aktorens KLIENT. En aktor utan klient
+	     — testsatet i runtime-grinden, eller en spelare som just kopplat
+	     ned — far ingen sandning. Sanningen ar oforandrad; det ar bara
+	     presentationen som inte har nagon mottagare. ]]
+	local k = Aktor.klient(player)
+	if not k then return end
+	Net.get("PreparationSync"):FireClient(k, vyFor(player))
 end
 
 local function skickaPass(player: Player)
-	Net.get("PassSync"):FireClient(player, Pass.vy(passState[player], nastaRev(player)))
+	local k = Aktor.klient(player)
+	if not k then return end
+	Net.get("PassSync"):FireClient(k, Pass.vy(passState[player], nastaRev(player)))
 end
 
 --[[ Passnumret för dagen som börjar. Ur sparningen, alltså serverns tal.
@@ -372,10 +381,44 @@ function GameplayService.moment(player: Player, fasId: string, momentId: string,
 			end
 			local ok, skal = TackService.satPa(player, modell, typ,
 				utrustningId, modell)
-			if not ok then
+			--[[ ── REDAN PÅ ÄR INTE ETT NEJ ───────────────────────────
+
+				Tobias sadlade Troy själv och tryckte «Rida nu». Svaret
+				blev `forb.fel_tur` med `Utrustning 1/5` — alltså «det är
+				inte din tur att göra det du redan gjort».
+
+				Kedjan: `satPa` svarar `tack.redan_pa` när en del av den
+				sorten redan sitter på hästen, och den här raden
+				returnerade DÅ direkt — innan `Preparation.utforMoment`.
+				Det LOGISKA momentet kvitterades alltså aldrig, medan det
+				FYSISKA var gjort. `ridaNuInre` tolererar `tack.redan_pa`
+				och gick vidare till nästa moment, som därmed var ur tur,
+				och nejet namngav det moment som faktiskt stod på tur.
+
+				`tack.redan_pa` kommer EFTER ägarkontrollen i `satPa`: fel
+				sadel svarar `tack.fel_sadel` långt innan. Att den här
+				sorten redan sitter där betyder alltså att rätt sak är på
+				plats, inte att något är trasigt. Världen är sanningen —
+				det är samma regel raden nedanför redan tillämpar — så
+				momentet ska kvitteras på samma grund, inte hoppas över.
+
+				VEM SOM GJORDE DET GÅR INTE ATT LÄSA UR GEOMETRIN, och
+				första rättelsen försökte ändå. Den bokförde momentet som
+				spelarens så fort utrustningen redan satt på hästen — även
+				mitt i en helt automatisk förberedelse, där stallet självt
+				satt dit den ett varv tidigare. Granskningen mätte
+				`ownU1=auto ownU2=true` i ett rent auto-pass.
+
+				En påsatt sadel är ett faktum om VÄRLDEN, inte om vem som
+				lyfte den. Slutledningen är därför borttagen: momentet
+				kvitteras — det var `fel_tur`-felet — men med den utförare
+				anropet faktiskt bär. Verkligt registrerat handarbete rörs
+				inte; påhittat blir det aldrig. ]]
+			if not ok and skal ~= "tack.redan_pa" then
 				skicka(player)
 				return false, skal
 			end
+			local redanPa = not ok
 			--[[ ── OCH DEN SKA FAKTISKT SITTA DÄR (#182) ──────────────
 				`satPa` svarar ja när bygget gick fram, men VÄRLDEN är
 				sanningen — det är samma regel uppsittningsgrinden läser
@@ -387,7 +430,10 @@ function GameplayService.moment(player: Player, fasId: string, momentId: string,
 				skicka(player)
 				return false, "tack.kunde_inte_byggas"
 			end
-			pasattDel = DEL_NYCKEL[typ]
+			--[[ Kvittensen namnger bara det som FAKTISKT kom på henne nu.
+			     Låg det redan där är det ingen nyhet för spelaren — se
+			     noten vid `tack.pa_plats` längre ned. ]]
+			if not redanPa then pasattDel = DEL_NYCKEL[typ] end
 		end
 	end
 
@@ -548,6 +594,44 @@ local function ridaNuInre(player: Player): (boolean, string?, string?)
 	return klar, varfor, arg
 end
 
+--[[ #264 PLAYER_FLOW_CLOSURE_R4: LEDSTEGET KVITTERAS AV ANKOMSTEN.
+
+	Mätt i Studio på kandidat 167133b: hästen ledd box MB 5 -> ridhuset,
+	`malNatt=true`, kopplet släppt — panelen stod kvar på «Lead her to the
+	arena 4/5» tills spelaren tryckte på stegets egen rad en gång till.
+	Kontraktet (`PreparationController.aktuellUppgift`) säger att ledningen
+	TILL ridhuset är det som bockar av steget.
+
+	Anropas av `LedService` när målet nås och när kopplet släpps där. Går
+	genom den vanliga momentvägen: `harLamnatBox`, `harNattMal` och
+	närvaron prövas precis som för ett tryck. `utforare` lämnas tom — det
+	var spelaren som ledde henne, inte stallet. Står något annat än `leda`
+	på tur nekar momentvägen själv (`forb.fel_tur`); ett nej här är tyst,
+	för spelaren har inte bett om något. ]]
+function GameplayService.kvitteraLedning(player: Player): boolean
+	local s = state[player]
+	if not s then return false end
+	local kvitterat = false
+	while true do
+		local m = Preparation.nastaMoment(s, "leda")
+		if not m then break end
+		local ok = GameplayService.moment(player, "leda", m.id)
+		if not ok then break end
+		kvitterat = true
+	end
+	return kvitterat
+end
+
+--[[ #264 GAIT_READABILITY_AND_UGNETA: spelarens språkval. Argumentet är en
+	fråga från klienten och valideras här: "sv" eller "en", annars nej. Det
+	enda som skrivs är spelarens eget attribut, som `Sprak.sprakForSpelare`
+	läser — så att det servern säger till henne följer flaggan. ]]
+function GameplayService.sprakVal(player: Player, val: any): (boolean, string?)
+	if val ~= "sv" and val ~= "en" then return false, nil end
+	player:SetAttribute("UBRFSprak", val)
+	return true, val
+end
+
 function GameplayService.ridaNu(player: Player): (boolean, string?, string?)
 	--[[ #182 del 2: loggevidens. «Rida nu» ar genvagen forbi hela
 		forberedelsen, och nar den nekar vill man veta VILKEN hast och
@@ -705,9 +789,14 @@ local function agarnyckel(typ: string, hastId: string): string
 	return hastId .. "/" .. typ
 end
 
---[[ Slapper allt den har spelaren bar. Anropas nar hon lamnar, nar
-	karaktaren forsvinner och nar passet tar slut — annars later registret
-	en sadel vara tagen for alltid av nagon som inte finns kvar. ]]
+--[[ Slapper allt den har spelaren bar — annars later registret en sadel
+	vara tagen for alltid av nagon som inte finns kvar.
+
+	TVA ANROPARE, OCH BARA TVA: `lamnar` (hela sessionen) och
+	`karaktarBorta` (kroppen dog eller byttes). Raden har pastod tidigare
+	en tredje, «nar passet tar slut», och den var aldrig kopplad. Ett
+	pastaende om en livscykelvag som inte finns ar varre an inget: nasta
+	lasare litar pa den. ]]
 function GameplayService.slappBuret(player: Player)
 	for nyckel, agare in pairs(burenAv) do
 		if agare == player then
@@ -1292,6 +1381,45 @@ end
 
 --[[ Registreras i `HorseService`. Körs FÖRE all uppsittningslogik, så en
 	oförberedd spelare aldrig hinner bli monterad och sedan kastas av. ]]
+--[[ ── FIRST RIDE-KROKEN (#263 Gate 2A) ────────────────────────────
+
+	`ForstaRitten` registrerar sig har vid start. Kroken svarar pa EN
+	fraga: ar det har spelarens allra forsta ritt, last ur bestandig
+	sparning? Den tar inget klientargument och kan inte satas av en
+	klient. ]]
+local forstaRitten: ((Player, Model) -> boolean)? = nil
+
+function GameplayService.satForstaRitten(fn: ((Player, Model) -> boolean)?)
+	forstaRitten = fn
+end
+
+--[[ Slapper First Ride igenom det har nejet? Se den langa noten inne i
+	`farSittaUpp` for vad som far ersattas och vad som aldrig far det. ]]
+local function forstaRittenSlapper(player: Player, modell: Model, s: any,
+	skal: string?): boolean
+	if forstaRitten == nil then return false end
+	--[[ BARA CHECKLISTAN. `pass.aterstar` ar det enda skal
+		`provaUppsittning` ger for en ogjord fas; varje annat nej ar
+		identitet eller valfard och star kvar. ]]
+	if skal ~= "pass.aterstar" then return false end
+	--[[ VALFARDSSTOPPET, uttryckligen och inte underforstatt. Skulle
+		`provaUppsittning` nagon gang bytta ordning pa sina nej ska den
+		har raden halla anda. ]]
+	if s ~= nil and s.stoppad then return false end
+	local ok, svar = pcall(forstaRitten :: any, player, modell)
+	return ok and svar == true
+end
+
+--[[ Provkrok: satter valfardsstoppet i spelarens EGNA tillstand, samma
+	falt som visitationens fynd skriver. Den finns for att ett prov ska
+	kunna mata att First Ride-grenen INTE kringgar stoppet — utan den
+	kom mutationen som tog bort den kontrollen ut gron, och da matte
+	provet inte det villkor som skyddar hasten. ]]
+function GameplayService._stoppaForProv(player: Player, text: string)
+	local s = state[player]
+	if s then (s :: any).stoppad = text end
+end
+
 function GameplayService.farSittaUpp(player: Player, modell: Model): (boolean, string?, string?)
 	local s = state[player]
 	--[[ Krav 6 och 7 avgörs av regeln, inte här. Kvar i tjänsten är bara
@@ -1301,7 +1429,38 @@ function GameplayService.farSittaUpp(player: Player, modell: Model): (boolean, s
 		fyndets mening (argument). Se noten i `HorseService.tryMount`. ]]
 	local ok, skal, arg = Preparation.provaModell(s, modell:GetAttribute("HorseId"))
 	if not ok then
-		return false, skal, arg
+		--[[ ══ FIRST RIDE (#263 Gate 2A) ═══════════════════════════════
+
+			Den ENDA vägen upp i sadeln som inte går genom en avbockad
+			checklista, och den är avsiktligt smal.
+
+			Vad den ersätter: `pass.aterstar` — att spelaren själv inte
+			har utfört skötselmomenten. Ingenting annat.
+
+			Vad den INTE ersätter, och varför:
+
+			  `forb.lararen_tar_over` — välfärdsstoppet. En häst med ett
+			  fynd ska ingen sitta upp på, aldrig, oavsett hur ny
+			  ryttaren är. Prövas uttryckligen nedan och inte bara genom
+			  att skälet råkar vara ett annat.
+
+			  `spel.inte_din_hast`, `forb.inte_din_hast`,
+			  `spel.ingen_hast` — identiteten. En ny spelare får sin
+			  tilldelade häst, inte vilken som helst.
+
+			  `TackService.ridklar` längst ned — det FYSISKA. Den raden
+			  körs oförändrat, så hästen måste faktiskt bära sadel och
+			  träns. Kanon är entydig: hästen ska alltid vara korrekt
+			  förberedd när ritten börjar, oavsett vem som gjorde
+			  arbetet, och spelet får aldrig lära ut fel hästhantering
+			  för att spara tid.
+
+			Kroken ägs av `ForstaRitten` och svarar ur beständig
+			sparning, inte ur ett klientargument. Saknas kroken — ingen
+			`ForstaRitten.start()` — är grenen stängd. ]]
+		if not forstaRittenSlapper(player, modell, s, skal) then
+			return false, skal, arg
+		end
 	end
 	if bunden[player] ~= modell then
 		return false, "spel.inte_din_hast"
@@ -1333,7 +1492,50 @@ end
 
 --[[ ── Livscykel ───────────────────────────────────────────────────── ]]
 
-local function glom(player: Player)
+--[[ ── DEN SOM LAMNAR (#252 DEL C) ───────────────────────
+
+	Handlaren var en lokal `glom`, och `Players.PlayerRemoving` var enda
+	vagen in i den. Runtime-grinden maste kunna kora EXAKT den har
+	vagen — `lamnar -> slappBuret -> satSynlig` — utan en riktig
+	`Player`, och en signal gar inte att fyra fran koden.
+
+	Alternativet hade varit att provet anropade `slappBuret` sjalvt.
+	Det hade varit en ANDRA sanning om vad «spelaren lamnade» betyder,
+	och da mater grinden till slut sig sjalv. Handlaren far darfor ett
+	namn; `PlayerRemoving` kopplar samma funktion som forut. ]]
+--[[ ══ KARAKTAREN FORSVINNER — BARA TACKET, INTE PASSET ═════════
+
+	Robustness Slice C.
+
+	Den burna sadeln är en fysisk del under KARAKTAREN. Dor hon, eller
+	byts kroppen vid en respawn, forsvinner delen med den — men
+	`burenAv` stod kvar och pekade pa spelaren. Sadeln var da reserverad
+	av nagon som inte hade den, och ingen annan kunde ta den forran
+	agaren sjalv rorde forradet igen eller kopplade ner helt.
+
+	`valdUtrustning` foljer med av samma skal. Den ar en AVSIKT — «jag
+	har hamtat Jacks sadel» — och den avsikten dog med handerna. Lamnas
+	den kvar pastar forberedelsevyn att spelaren barer nagot som inte
+	finns, och resten av spelet laser den pastaenden som sanning.
+
+	PASSET ROR VI INTE. `state`, `passState`, `bunden` och avbockade
+	skotselmoment ska overleva en respawn exakt som forut — det ar
+	testat sedan tidigare (`integration.spec`: «skotseln raknas
+	fortfarande som gjord efter respawnen»). Den har vagen ar tack, och
+	ingenting annat.
+
+	IDEMPOTENT. `slappBuret` itererar och rensar; att kora den tva
+	ganger, eller efter `lamnar`, gor ingenting mer. ]]
+function GameplayService.karaktarBorta(player: Player)
+	GameplayService.slappBuret(player)
+	valdUtrustning[player] = nil
+	--[[ Och vyn till den klient som fortfarande finns kvar — en
+	     respawnande spelare ar inte borta, hon har bara ny kropp.
+	     `pcall`: ett fel i presentationen far inte hindra stadningen. ]]
+	pcall(function() skicka(player) end)
+end
+
+function GameplayService.lamnar(player: Player)
 	--[[ #235 FAS 1: en spelare som gar far inte lamna en sadel «tagen»
 		for alltid. Registret slapps och fronten far tillbaka sin
 		utrustning — inga orphans, varken i state eller i varlden. ]]
@@ -1354,8 +1556,19 @@ function GameplayService.start()
 	HorseService.setMountGate(GameplayService.farSittaUpp)
 	--[[ Belöningen för egen skötsel: dagsformen vid uppsittning. ]]
 	HorseService.setDagsformHook(GameplayService.dagsformFor)
+	--[[ EN ÄGARE I TAGET (Robustness Slice A). Speglingen av
+	     `LedService.satRidenHake` några rader ned: den vägen stängdes
+	     redan, den här står öppen. `ledsAv` är `LedService`s egen
+	     sanning — hästsystemet får fråga, inte föra egen bok. ]]
+	HorseService.setLedareHook(LedService.ledsAv)
 	Net.get("RidaNu").OnServerInvoke = Skopa.grind("RidaNu", function(player)
 		return GameplayService.ridaNu(player)
+	end)
+
+	--[[ #264 GAIT_READABILITY_AND_UGNETA: språkflaggan. Bara "sv" eller
+		"en" tas emot, och bara spelarens EGET attribut skrivs. ]]
+	Net.get("SprakVal").OnServerInvoke = Skopa.grind("SprakVal", function(player, val)
+		return GameplayService.sprakVal(player, val)
 	end)
 
 	--[[ #235 FAS 2. Samma monster som `RidaNu`: klienten skickar en
@@ -1405,6 +1618,12 @@ function GameplayService.start()
 		return DorrService.satLage(blad, true)
 	end)
 
+	--[[ #264 R4: när hästen FYSISKT nått målzonen kvitteras ledsteget.
+		Se `GameplayService.kvitteraLedning`. ]]
+	LedService.satMalKrok(function(player)
+		GameplayService.kvitteraLedning(player)
+	end)
+
 	LedService.satRidenKrok(function(modell)
 		local sess = HorseService.sessionFor(modell)
 		return sess ~= nil and sess.rider ~= nil
@@ -1418,7 +1637,7 @@ function GameplayService.start()
 		`HorseService` i stället för att `GameplayService` skulle lyssna på
 		remoten: allt som monterar en ryttare går genom `tryMount`, och en
 		krok på fjärranropet hade missat varje annan väg in. ]]
-	HorseService.setRiderHook(function(player: Player, sitter: boolean)
+	HorseService.lyssnaRyttare(function(player: Player, sitter: boolean)
 		local p = passState[player]
 		if not p then return end
 		if sitter then
@@ -1495,11 +1714,18 @@ function GameplayService.start()
 		player.CharacterAdded:Connect(function()
 			GameplayService.bind(player)
 		end)
+		--[[ Slice C: kroppen dor eller byts. Den burna sadeln lag i
+		     karaktaren och forsvinner med den — registret maste folja
+		     med, annars ar hon reserverad av nagon som inte har henne.
+		     `CharacterRemoving` ar sanningen; ingen pollning. ]]
+		player.CharacterRemoving:Connect(function()
+			GameplayService.karaktarBorta(player)
+		end)
 	end)
 	--[[ Ingen `GetPlayers()`-loop här heller (#162 re-review): den band mot
 		ett `passnummer()` som föll till 1 när saven ännu var nil.
 		`efterLaddning` kör hooken direkt för dem som redan är redo. ]]
-	Players.PlayerRemoving:Connect(glom)
+	Players.PlayerRemoving:Connect(GameplayService.lamnar)
 
 	--[[ En rigg som kommer in senare ska plockas upp av den som väntar på
 		henne. Det är krav 2: `waiting_model` ska läka av sig själv. ]]

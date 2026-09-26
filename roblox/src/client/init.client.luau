@@ -44,6 +44,10 @@ local PreparationController = require(script.PreparationController)
 local UgnetaController = require(script.UgnetaController)
 local LektionController = require(script.LektionController)
 local KontrollHjalp = require(script.KontrollHjalp)
+--[[ #264 GAIT_READABILITY_AND_UGNETA: Ugnetas ridrad utanför lektionen. ]]
+local UgnetaRad = require(script.UgnetaRad)
+--[[ #263: vilken build sitter jag i? Egen liten yta, se modulhuvudet. ]]
+local Byggidentitet = require(script.Byggidentitet)
 --[[ #162: världens prompter skrivs om till spelarens språk på klienten —
      en ProximityPrompt replikeras till alla och kan inte ha ett språk
      på servern. ]]
@@ -79,8 +83,87 @@ local function poseAv(rig: { [string]: any }?): { [string]: any }?
 	return { x = pos.X, z = pos.Z, yaw = yaw }
 end
 
-local function dismount()
+--[[ VARFÖR RITTEN TOG SLUT, och inte bara ATT den gjorde det.
+
+	`dismount` hade inget skäl, och därför kunde ingenting nedströms
+	skilja «spelaren steg av» från «karaktären dog» eller «riggen
+	försvann ur workspace». För rivningen spelade det ingen roll — allt
+	ska ner ändå — men Teaching Loop behöver skillnaden: en summering
+	efter en ritt man avslutat är en belöning, samma summering efter en
+	respawn är förvirrande.
+
+	Skälet är därför ett argument, och den som ANROPAR vet det. Utan
+	argument antas det otrygga fallet: ingen summering. En ny anropare
+	som glömmer skälet får alltså tystnad, inte en felaktig summering. ]]
+export type Slutskal = "avsittning" | "avbrott"
+
+--[[ ── DEN AVBRUTNA RITTENS IDENTITET ──────────────────────────────
+
+	Re-review runda 2 av `f6ff67d`, blockerare 1.
+
+	`begarAvsittning` river lokalt innan servern svarat. Svarar servern
+	NEJ återförenar den oss med `MountChanged`, och klientens lyssnare
+	anropade då `mount()` — en HELT NY ritt: `ridSekvens = 0`, nytt pass,
+	nytt tema.
+
+	Servern hade INTE nollat något. Den nekade ju. `session.sekvens` stod
+	kvar på N, och regeln i `onRidingIntent` är `sekvens > session.sekvens`.
+	Klientens nästa hjälp gick alltså ut med 1, lästes som ett återspelat
+	paket och KASTADES TYST. Hästen slutade svara på DRIV och BROMS, och
+	ingenting i loggen sa varför.
+
+	Ritten som just revs sparas därför här, en enda post, och `mount`
+	plockar upp den igen om det är SAMMA häst och SAMMA rittmärke. Är
+	märket ett annat är det en ny ritt och posten ska inte användas —
+	servern har då nollat sin räknare och 0 är rätt. ]]
+--[[ VILKEN RITT ETT SENT SVAR HÖR TILL.
+
+	Räknas upp vid varje avsittningsbegäran och vid varje uppsittning.
+	En coroutine som väntar på servern fångar värdet när den startar och
+	jämför före den rör någon yta: har siffran flyttat sig har spelaren
+	gått vidare, och svaret gäller en ritt som inte finns längre.
+
+	En siffra, inte två: samma räknare avgör både om en summering får
+	visas och om ett misslyckat avsittningsanrop fortfarande är värt att
+	försona. ]]
+local sessionGen = 0
+
+--[[ SERVERN HAR TAGIT HENNE IFRÅN OSS, och det måste gå att minnas.
+
+	En återkallelse kunde landa i en glugg: `avbrytAterforening` rörde
+	bara en REDAN startad återförening, och kom beskedet innan undantags-
+	grenen i avsittningen hunnit köra fanns ingen loop att avbryta. Grenen
+	startade då en återförening mot attribut som ligger kvar på modellen
+	från före — de är CACHADE, inte sanna — och klienten satte upp sig
+	själv på en häst servern redan tagit ifrån henne.
+
+	POSTEN HÖR TILL BEGÄRAN, inte till klienten i allmänhet. Första
+	versionen var ett enda fält, med motiveringen att spelaren har en häst
+	i taget. Det är sant om vad hon RIDER och irrelevant för vad hon FÅR
+	FÖR HÄNDELSER: `MountChanged` går ut med `FireAllClients`, så beskedet
+	om en helt orelaterad häst skrev över återkallelsen av vår — och sedan
+	återauktoriserade den främmande hästen en återhämtning av vår.
+
+	Därför en post om den avsittning som faktiskt väntar på svar, och
+	ingenting annat. Den sätts när begäran skickas, märks bara av ett
+	besked om SAMMA häst, och rivs när svaret är färdigbehandlat. ]]
+local vantandeAvsittning: { hast: Model, aterkallad: boolean }? = nil
+
+--[[ FRAMATDEKLARATION. `startaAterforening` definieras langre ned, vid
+     de andra aterhamtningsdelarna, men `begarAvsittning` hogre upp
+     behover den nu. Lokalen finns har; `function startaAterforening(...)`
+     nedan tilldelar DEN, inte en global. ]]
+local startaAterforening: (Model) -> ()
+
+local avbrutenRitt: { model: Model, rittId: any, ridSekvens: number }? = nil
+
+local function dismount(skal: Slutskal?)
 	if not ride then return end
+	avbrutenRitt = {
+		model = ride.model,
+		rittId = ride.rittId,
+		ridSekvens = ride.ridSekvens,
+	}
 	Telemetri.sittAv(ride.ritt)
 	Input.unbind()
 	--[[ Avsittningens handling rivs med ritten, av samma skäl som `E`
@@ -88,6 +171,12 @@ local function dismount()
 	     `UnbindAction` river också pekknappen. ]]
 	ContextActionService:UnbindAction(Input.AVSITT)
 	TouchControls.unmount()
+	--[[ Dagsformslyssnaren först: den skriver i lektionens kontext, och
+	     ska inte kunna skriva i nästa ritts. ]]
+	if ride.dagsformLyssnare then
+		ride.dagsformLyssnare:Disconnect()
+		ride.dagsformLyssnare = nil
+	end
 	ride.movement:release()
 	ride.animation:release()
 	ride.camera:release()
@@ -99,7 +188,7 @@ local function dismount()
 	     försvinner, riggen är borta ur workspace, servern flyttar
 	     uppsittningen. Lärarytan släcks här, i samma andetag som resten av
 	     ekipaget rivs, så att "Bra rytm" aldrig blir kvar på skärmen. ]]
-	LektionController.avbryt()
+	local summering = LektionController.avbryt(skal)
 	--[[ Hjälpen hör till ritten. Den ska inte ligga kvar över en spelare
 	     som just klivit av. ]]
 	KontrollHjalp.dolj()
@@ -111,6 +200,12 @@ local function dismount()
 	--[[ #235: till fots agar naromradet skarmen igen. ]]
 	Naromrade.satRider(false)
 	ride = nil
+	--[[ Underlaget till efterrittens summering, OVISAT. Rivningen ovan
+	     har hänt oavsett; undervisningens avslut har det inte. Bara
+	     `begarAvsittning` vet om servern godtog avsittningen, så bara
+	     den får visa det. Alla andra vägar hit är avbrott och får ändå
+	     `nil` ur `efterrittFor`. ]]
+	return summering
 end
 
 --[[ SPELAREN BEGÄR AVSITTNING — lokalt först, servern sedan.
@@ -138,30 +233,119 @@ end
 	skickar en andra begäran. ]]
 local function begarAvsittning()
 	if not ride then return end
-	dismount()
+	--[[ DEN ENDA GILTIGA VAGEN UT. Spelaren tryckte sjalv, och servern
+	     far begaran direkt efterat. Summeringen hor hit och ingen
+	     annanstans. ]]
+	local hast = ride.model
+	--[[ VILKEN RITT DET HÄR SVARET HÖR TILL. Se noten vid `sessionGen`. ]]
+	sessionGen += 1
+	local minSession = sessionGen
+	--[[ Den här begäran är nu den som kan återkallas. Se noten vid
+	     `vantandeAvsittning`. ]]
+	local vantande = { hast = hast, aterkallad = false }
+	vantandeAvsittning = vantande
+	local summering = dismount("avsittning")
 	task.spawn(function()
-		local ok, err = pcall(function()
-			Net.get("DismountRequest"):InvokeServer()
+		local ok, svar, skal = pcall(function()
+			return Net.get("DismountRequest"):InvokeServer()
 		end)
 		if not ok then
-			--[[ Uteblivet eller felande svar får inte återuppliva något
-			     lokalt. Servern rättar oss via MountChanged om den vill. ]]
-			warn("[Horse] DismountRequest misslyckades: " .. tostring(err))
+			--[[ ── ETT KAST ÄR INTE ETT SVAR ──────────────────────────
+
+				Förut blev det `warn` och `return`. Men rivningen har
+				redan skett — kontrollerna, bindningen och HUD:en är
+				borta — och ett kastat anrop betyder att servern kanske
+				ALDRIG behandlade begäran. Då kommer ingen `MountChanged`
+				som rättar oss, och spelaren står kvar utan väg tillbaka
+				bredvid en häst servern anser att hon rider.
+
+				Ett kast är varken en godkänd avsittning eller ett bevis
+				att ryttaren ska sättas upp igen. Därför frågas serverns
+				egen sanning i stället: `startaAterforening` prövar
+				`RiderUserId`, `RidSession` och medlemskap i världen före
+				varje försök, och är bunden till `ATERFORENING_FORSOK`.
+				Har servern faktiskt satt av oss stämmer inte längre
+				attributen, och då sätter den ingen upp igen. ]]
+			warn("[Horse] DismountRequest misslyckades: " .. tostring(svar))
+			--[[ HAR SERVERN HUNNIT SÄGA IFRÅN OM DEN HÄR HÄSTEN? Då är
+			     attributen på modellen cachade och bevisar ingenting.
+			     Se noten vid `vantandeAvsittning`. ]]
+			if vantandeAvsittning == vantande then vantandeAvsittning = nil end
+			if sessionGen == minSession and not ride
+				and not vantande.aterkallad then
+				startaAterforening(hast)
+			end
+			return
 		end
+		--[[ ── SERVERNS NEJ ÄR ETT NEJ ────────────────────────────────
+
+			QA-review av `082062c`, blockerare 1. `pcall` svarar `true`
+			så länge fjärranropet inte KASTADE — och `HorseService.
+			dismount` kastar inte när den nekar, den svarar
+			`false, "pass.rider_inte"` eller `false, "hast.oregistrerad"`.
+			`Skopa.grind` lägger till `false, "takt.for_snabbt"`. Alla
+			tre kom förut ut som en fullbordad ritt med summering.
+
+			Två frågor, inte en: gick anropet fram (`ok`), och sa servern
+			ja (`svar`)? Bara när båda är sanna har ritten avslutats
+			auktoritativt, och bara då får undervisningen sitt avslut.
+
+			Rivningen står kvar oavsett. Nekar servern skickar den
+			`MountChanged` och klienten sätter upp igen på serverns ord
+			— en legitim rättelse, och en ritt som fortsätter ska inte
+			ha fått en summering. ]]
+		if svar ~= true then
+			--[[ Servern återförenar oss: den skickar `MountChanged` med
+			     oss själva som ryttare om den fortfarande anser att vi
+			     sitter upp, och klientens lyssnare sätter upp igen. Det
+			     PÅSTOD den här koden förut utan att det var sant — se
+			     `HorseService.aterforena`, som lades till för att göra
+			     påståendet till en funktion. ]]
+			warn("[Horse] avsittningen nekades: " .. tostring(skal))
+			if vantandeAvsittning == vantande then vantandeAvsittning = nil end
+			return
+		end
+		--[[ ── PRESENTATIONEN HÖR TILL SIN EGEN RITT ─────────────────
+
+			Ett fördröjt ja från ritt A la förut upp A:s efterritt rakt
+			över ritt B: coroutinen bar med sig summeringen och frågade
+			aldrig vilken ritt som pågår nu. Har en ny ritt, en respawn
+			eller ett avbrott hunnit emellan är det här svaret en
+			eftersläntrare, och en eftersläntrare ska vara inert.
+
+			Ett giltigt avslut UTAN efterföljande ritt räknar inte upp
+			`sessionGen` och visar därför fortfarande sin summering,
+			exakt en gång. ]]
+		if vantandeAvsittning == vantande then vantandeAvsittning = nil end
+		if sessionGen ~= minSession then
+			warn("[Horse] efterritten hör till en tidigare ritt — visas inte")
+			return
+		end
+		LektionController.visaEfterritt(summering)
 	end)
 end
 
 local function mount(model: Model, rittId: string?)
+	--[[ EN NY RITT GOR VARJE VANTANDE SVAR INERT. Se noten vid
+	     `sessionGen`: en coroutine som star och vantar pa serverns
+	     besked om en TIDIGARE ritt far inte rora nagon yta efter
+	     det har. ]]
+	sessionGen += 1
 	--[[ RITTMARKET kommer ur `MountRequest`-svaret och binder varje
 	     avsikt till DEN HAR ritten (#233, ChatGPT-review av #241). Utan
 	     det kunde ett fordrojt paket fran en tidigare ritt landa efter
 	     nasta uppsittning och accepteras mot fel ritt eller fel hast. ]]
-	if ride then dismount() end
+	if ride then dismount("avbrott") end
 
 	local rig, err = RigAdapter.build(model)
 	if not rig then
+		--[[ SVARET ÄR INTE KOSMETIK. Den som återförenar oss efter ett
+		     nekat nej behöver veta om ritten faktiskt kom tillbaka —
+		     annars går ett misslyckande inte att skilja från ett lyckat
+		     försök. `avbrutenRitt` rörs INTE här: identiteten ska
+		     överleva ett byggfel så att omförsöket kan använda den. ]]
 		warn("[Horse] " .. tostring(err))
-		return
+		return false
 	end
 	local stats = Config.resolveStats(rig.stats)
 
@@ -175,6 +359,8 @@ local function mount(model: Model, rittId: string?)
 		sound = SoundController.new(rig, stats),
 		effects = EffectsController.new(rig),
 		rider = RiderController.new(rig),
+		--[[ #264: Ugnetas ridrad börjar om för varje ritt. ]]
+		ugnetaRad = UgnetaRad.ny(),
 		--[[ G02-A: ridningens tillstånd och telemetri, samma kontrakt som
 		     webbens src/riding/telemetri.js. Sätts FÖRE första bildrutan
 		     av samma skäl som på webben — annars finns ett fönster där
@@ -199,6 +385,19 @@ local function mount(model: Model, rittId: string?)
 		     hjälp. ]]
 		rittId = rittId or model:GetAttribute("RidSession"),
 	}
+
+	--[[ SAMMA RITT IGEN? Då fortsätter räknaren där den var. Se noten
+	     vid `avbrutenRitt`. Posten konsumeras oavsett utfall: den gäller
+	     exakt en återförening, inte varje framtida uppsittning. ]]
+	local avbruten = avbrutenRitt
+	avbrutenRitt = nil
+	local sammaRitt = avbruten ~= nil
+		and avbruten.model == model
+		and avbruten.rittId ~= nil
+		and avbruten.rittId == ride.rittId
+	if sammaRitt and avbruten then
+		ride.ridSekvens = avbruten.ridSekvens
+	end
 
 	local character = player.Character
 	if character then
@@ -235,7 +434,15 @@ local function mount(model: Model, rittId: string?)
 		--[[ #227: hjälpknappen viker undan för reglagen på en telefon i
 		     landskap. Reserven rapporteras härifrån, i samma andetag som
 		     reglagen byggs, byggs om (#208) eller rivs. ]]
-		efterLayout = KontrollHjalp.reservAndrad,
+		--[[ TVÅ lyssnare, inte en. `Byggidentitet` viker undan för
+		     samma reserv och genom samma kontrakt (#263); slotten bär
+		     en funktion, så de kopplas ihop här i stället för att
+		     `TouchControls` får en lista. Ordningen spelar ingen roll —
+		     båda räknar bara om sin egen knapps plats. ]]
+		efterLayout = function(bredd: number, topp: number)
+			KontrollHjalp.reservAndrad(bredd, topp)
+			Byggidentitet.reservAndrad(bredd, topp)
+		end,
 	})
 	InteractionController.setEnabled(false)
 	DinHast.satDold(true)
@@ -252,16 +459,236 @@ local function mount(model: Model, rittId: string?)
 	     (BuildKit.newBuilding i roblox/buildings/Anlaggningen.luau).
 	     Ridbanan och sargen hänger direkt under den. ]]
 	local anlaggning = workspace:FindFirstChild("Anläggning")
-	LektionController.start(anlaggning and anlaggning:FindFirstChild("UBRF"))
+	--[[ HÄSTEN FÖRE LEKTIONEN. `UgnetaTema` behöver veta vem hon är för
+	     att kunna säga «det där kom från henne», och behöver hennes lynne
+	     för att kunna avgöra OM det gjorde det.
+
+	     DE TVÅ FÄLTEN KOMMER FRÅN OLIKA HÅLL, och det är inte en
+	     inkonsekvens:
+
+	       `skygghet`  är en EGENSKAP hos hästen och ligger i riggens
+	                   stats, samma väg som `MovementController` läser den.
+	       `dagsform`  är ett TILLSTÅND servern räknar ut vid uppsittning
+	                   ur spelarens egen skötsel. Den finns inte i stats
+	                   och får inte gissas — servern replikerar den som
+	                   attributet `Dagsform` (HorseService.setRider).
+
+	     Re-review av `269bec5`: jag läste förut `stats.Dagsform`, som
+	     ingen någonsin satt. Fältet var alltid `nil`, och regeln föll
+	     tillbaka på skyggheten utan att någon kunde se det.
+
+	     Saknas attributet blir fältet `nil` — och `hastensEgen` svarar då
+	     «går inte att avgöra» i stället för att frikänna hästen. ]]
+	LektionController.satHast(model.Name, {
+		skygghet = tonumber(stats.Skygghet),
+		dagsform = tonumber(model:GetAttribute("Dagsform")),
+	})
+	--[[ …OCH LYSSNA VIDARE. Att läsa attributet en gång här räcker inte:
+	     `MountChanged` och attributreplikeringen är två kanaler utan
+	     garanterad inbördes ordning, så värdet kan mycket väl landa efter
+	     den här raden. Då hade dagsformen varit okänd hela ritten, och
+	     `hastensEgen` hade tigit — säkert, men tyst fel.
+
+	     Kopplingen rivs med ritten (`ride.dagsformLyssnare`), så att en
+	     avsutten häst inte fortsätter skriva i någon annans kontext. ]]
+	ride.dagsformLyssnare = model:GetAttributeChangedSignal("Dagsform")
+		:Connect(function()
+			LektionController.satDagsform(tonumber(model:GetAttribute("Dagsform")))
+		end)
+	--[[ RITTMÄRKET VIDARE. Lektionen hör till EN ritt, och märket är hur
+	     den vet om en ny uppsittning är samma ritt igen — en
+	     återförening efter ett nekat nej — eller en ny. ]]
+	LektionController.start(anlaggning and anlaggning:FindFirstChild("UBRF"),
+		ride and ride.rittId)
 	--[[ Första uppsittningen: visa reglagen en gång, av sig själv. Då är
 	     frågan "vad gör jag nu?" som mest aktuell. ]]
 	KontrollHjalp.vidUppsittning()
 
+	--[[ ══ EN VARNING SOM ALLTID FYRAR ÄR INGEN VARNING ═══════════════
+
+		Raden varnade förut så fort NÅGOT klipp saknades. I den här builden
+		saknas ALLA arton, och det är ett beslut: `HastGang` driver benen
+		procedurellt just för att hästens kärnrörelse inte ska hänga på en
+		annan skapares assets (se modulens egen not). `AnimationConfig`
+		skapas därför tom av `HorseService`, och ingenting fyller den.
+
+		Följden var en `warn` med arton namn vid VARJE uppsittning, i ett
+		läge som fungerar som avsett. Mätt i Studio 2026-09-20, två gånger
+		i samma pass:
+
+		    [Horse] Saknade animationer (18): Idle, …, Graze
+
+		Det är inte gratis. Runtime-QA:s fråga är "varnar den här builden
+		om något?", och en varning som alltid fyrar gör svaret värdelöst —
+		den drunknade två riktiga `led.`-rader i samma logg.
+
+		Nu varnar raden bara för det den kan betyda något om: en
+		AnimationConfig som är HALVFYLLD. Då är ett saknat id ett riktigt
+		paketeringsfel. Är den tom körs det procedurella läget, och det
+		sägs i klartext en gång i stället. ]]
 	local missing = (ride.animation :: any).missing
-	if missing and #missing > 0 then
-		warn(("[Horse] Saknade animationer (%d): %s")
-			:format(#missing, table.concat(missing, ", ")))
+	local laddade = (ride.animation :: any).laddade or 0
+	if missing and #missing > 0 and laddade > 0 then
+		warn(("[Horse] Saknade animationer (%d av %d): %s")
+			:format(#missing, #missing + laddade, table.concat(missing, ", ")))
+	elseif missing and #missing > 0 then
+		print("[Horse] Inga animationsklipp konfigurerade — benen drivs "
+			.. "procedurellt av HastGang. Det är avsett.")
 	end
+	return true
+end
+
+--[[ ══ ÅTERFÖRENINGEN KAN BEHÖVA MER ÄN ETT FÖRSÖK ════════════
+
+	Robustness Slice G.
+
+	Klienten river ritten INNAN `DismountRequest` svarat. Nekar servern
+	skickar den `MountChanged(model, player)` tillbaka, och lyssnaren
+	monterar om. Men `mount` gav upp tyst om `RigAdapter.build` föll —
+	och då stod klienten avsutten medan servern hade en levande ritt.
+	Ingen väg tillbaka.
+
+	Riggen kan vara tillfälligt ofullständig i just det ögonblicket:
+	replikeringen av en modells delar är inte atomär, och återföreningen
+	kommer ofta mitt i. Ett bundet omförsök låter det läka.
+
+	IDENTITETEN ÄR INTE NY. `avbrutenRitt` bär redan modellen, rittmärket
+	och sekvensen; det enda som behövs här är tålamod och en vakt.
+
+	GENERATIONEN GÖR GAMLA TRÅDAR INERTA. Varje start räknar upp den, och
+	en tråd som ser ett annat tal lägger av. Det är både avbrottet
+	(punkt 8) och skyddet mot dubbla loopar (punkt 7) i samma tal. ]]
+local ATERFORENING_FORSOK = 12
+local aterforeningModell: Model? = nil
+local aterforeningGen = 0
+
+local function avbrytAterforening()
+	aterforeningModell = nil
+	aterforeningGen += 1
+end
+
+--[[ Säger serverns REPLIKERADE fakta fortfarande att det här är samma
+     ritt? Fail closed: allt som inte längre stämmer stoppar. ]]
+local function sammaAuktoritativaRitt(model: Model, marke: any): (boolean, string?)
+	--[[ MEDLEMSKAP, INTE FORALDER. `model.Parent ~= nil` bevisar
+	     ingenting om varlden: en modell vars FORFADER kopplats bort har
+	     kvar sin egen foralder hela vagen ner. ChatGPT reproducerade
+	     det genom den riktiga lyssnaren — hasten under en bortkopplad
+	     mapp gav ETT riggbygge och en ateruppvackt lektion UTANFOR
+	     workspace. `RenderStepped` stadade efterat, men da hade den
+	     ogiltiga rekonstruktionen redan hant. ]]
+	if not model:IsDescendantOf(workspace) then
+		return false, "modellen ar inte langre i varlden"
+	end
+	local agare = model:GetAttribute("RiderUserId")
+	if agare ~= player.UserId then
+		return false, ("RiderUserId är %s, inte vår"):format(tostring(agare))
+	end
+	local nu = model:GetAttribute("RidSession")
+	if nu ~= marke then
+		return false, ("RidSession är %s, inte %s"):format(tostring(nu), tostring(marke))
+	end
+	return true
+end
+
+function startaAterforening(model: Model)
+	--[[ ── OCKSÅ DEN FÖRSTA UPPSITTNINGEN ──────────────────────────
+
+		Förut krävdes en `avbrutenRitt` för just den här hästen, annars
+		returnerade funktionen direkt. Den posten skrivs bara i
+		`dismount`, så den finns per definition INTE vid den första
+		uppsittningen — och då fick en halvreplikerad rigg ett enda
+		byggförsök och sedan ingenting. Spelaren blev stående bredvid en
+		häst som servern säger att hon rider. Det var Slice G:s
+		återhämtning, men bara för den som redan haft en ritt.
+
+		MÄRKET KOMMER UR SERVERNS SANNING. Attributet `RidSession` på
+		modellen är vad servern säger NU; `avbrutenRitt` är bara reserv
+		för det som ännu inte replikerat. Förut var ordningen den omvända,
+		och då ärvde en ANDRA ritt på samma häst den förstas märke — posten
+		överlever ju en avslutad ritt. Återhämtningen mätte sig då mot ett
+		märke som inte fanns längre och kom aldrig tillbaka.
+
+		Märket LÅSES vid första observationen och gäller sedan resten av
+		väntan, så en ändring under tiden fortfarande stoppar oss.
+
+		SAKNAS IDENTITETEN HELT väntar vi i stället — bundet. Servern har
+		redan auktoriserat uppsittningen genom att fyra händelsen; att
+		`RidSession` och `RiderUserId` inte kommit fram är en replikerings-
+		fördröjning, inte ett nej. Ingenting hittas på: vi väntar tills
+		märket dyker upp, tar det som det är, och först då gäller vakterna
+		— som är helt oförändrade. Kommer det aldrig ger vi upp lika tyst
+		som förut. ]]
+	local avbruten = avbrutenRitt
+	local marke = model:GetAttribute("RidSession")
+	if marke == nil and avbruten ~= nil and avbruten.model == model then
+		marke = avbruten.rittId
+	end
+	--[[ EN I TAGET. Ett dubblerat `MountChanged` ska inte ge en andra loop. ]]
+	if aterforeningModell == model then return end
+
+	aterforeningGen += 1
+	local min = aterforeningGen
+	aterforeningModell = model
+
+	task.spawn(function()
+		for _ = 1, ATERFORENING_FORSOK do
+			RunService.Heartbeat:Wait()
+			--[[ Avbruten, eller ersatt av en nyare återförening. ]]
+			if aterforeningGen ~= min then return end
+			--[[ En annan ritt hann börja lokalt. Serverns nästa besked
+			     får ställa det till rätta; vi ska inte tränga oss in. ]]
+			if ride then
+				aterforeningModell = nil
+				return
+			end
+			--[[ Identiteten kan ha kommit fram sedan sist. Första
+			     observationen blir märket; därefter rörs det inte. ]]
+			if marke == nil then
+				marke = model:GetAttribute("RidSession")
+			end
+			--[[ ── SAKNAT ÄR INTE FRÄMMANDE ────────────────────────────
+
+				Väntan gällde först bara `RidSession`. Fanns märket men
+				inte `RiderUserId` föll vakten nedan på ett `nil ~= vårt`
+				och loopen var slut efter EN Heartbeat — trots att servern
+				redan auktoriserat uppsittningen. De två fälten replikerar
+				inte nödvändigtvis i samma bildruta.
+
+				Ett SAKNAT fält betyder «har inte kommit fram än» och
+				väntas in inom samma budget. Ett fält som FINNS och säger
+				något annat stoppar oss direkt, som förut — det är vakten
+				nedan som avgör det, och den är orörd. ]]
+			if marke == nil or model:GetAttribute("RiderUserId") == nil then
+				--[[ Vänta vidare inom budgeten — men bara så länge
+				     hästen är kvar i världen. ]]
+				if not model:IsDescendantOf(workspace) then
+					aterforeningModell = nil
+					warn("[Horse] återföreningen avbröts — modellen "
+						.. "lämnade världen innan identiteten kom")
+					return
+				end
+				continue
+			end
+			local ok, skal = sammaAuktoritativaRitt(model, marke)
+			if not ok then
+				aterforeningModell = nil
+				warn(("[Horse] återföreningen avbröts — %s"):format(tostring(skal)))
+				return
+			end
+			if mount(model) == true then
+				aterforeningModell = nil
+				return
+			end
+		end
+		aterforeningModell = nil
+		--[[ EGEN, LETBAR RAD. Det här är inte «riggen var trasig» i
+		     allmänhet — det är att servern påstod att spelaren satt upp
+		     och klienten inte kunde följa med dit. ]]
+		warn(("[Horse] ÅTERFÖRENINGEN MISSLYCKADES efter %d försök: servern "
+			.. "säger att %s fortfarande rider %s, men riggen gick inte att "
+			.. "bygga här."):format(ATERFORENING_FORSOK, player.Name, model.Name))
+	end)
 end
 
 --[[ Inomhusläsbarhet, till fots och till häst: väggar mellan kameran och
@@ -282,6 +709,27 @@ InteractionController.setReadyCheck(function(model: Model): boolean
 	local id = PreparationController.hastId()
 	if not id then return false end
 	if model:GetAttribute("HorseId") ~= id then return false end
+	--[[ ══ «MOUNT» VIKER FÖR ETT VÄNTANDE SKÖTSELSTEG (2026-09-20) ═════
+
+	     Det finns exakt ETT läge där `redo` och en full panel möts, och
+	     det är EFTERVÅRDEN: `Pass.farSittaUpp` släpper med flit en andra
+	     uppsittning så länge inget eftervårdsmoment är gjort, så «Sitt
+	     upp» stod bredvid «Lossa sadelgjorden». Det är bilden i PO-orderns
+	     acceptansstycke, och punkt 3 avgör den: knappen ska inte stå där
+	     «merely because a second ride is technically allowed».
+
+	     HANDLINGEN TAS INTE BORT. `MountRequest` svarar precis som förut,
+	     och `Pass.farSittaUpp` är orörd — det här är en
+	     interaktionsprioritet, inte en behörighet. Så fort eftervårdens
+	     moment är gjorda är uppgiften "rida" igen och knappen är tillbaka.
+
+	     EN TIDIGARE VERSION AV DEN HÄR GRINDEN MÄTTES SOM ONÖDIG, och den
+	     mätningen var riktig så länge regeln bara frågade «väntar ett
+	     steg?»: i förberedelsen är `redo` falskt ändå, så en mutation som
+	     rev grinden kom ut grön. Skillnaden nu är eftervården, och
+	     `klient-uikontext.spec` avsnitt 3c mäter just den — inte det läge
+	     där `redo` redan svarat nej. ]]
+	if PreparationController.skotselstegAgerFokus() then return false end
 	return PreparationController.redo()
 end)
 --[[ Ledningen öppnas av att `leda` är spelarens tur — inte av `redo`.
@@ -311,6 +759,18 @@ InteractionController.setLedStatus(function(model: Model?)
 	DinHast.satLedstatus(if model
 		then tostring(model:GetAttribute("HorseName") or model.Name)
 		else nil)
+	--[[ PO-order 2026-09-20: skötselns framstegskort hör till boxen, inte
+	     till kopplet. Ledningens ENDA övergång driver HUD-kontexten —
+	     samma väg statusraden redan gick, så de två kan inte glida isär.
+	     Se noten vid `PreparationController.kontext`. ]]
+	PreparationController.satLeder(model ~= nil)
+	--[[ Och prompterna räknas om DIREKT. `aktuellUppgift` svarar
+	     annorlunda nu — ledningen äger fokus, eller släppte det — och utan
+	     den här raden hade knapparna burit föregående läges svar tills
+	     nästa `PreparationSync` råkade komma. Servern kan släppa kopplet
+	     utan att spelaren tryckt (för långt, fastnat, satte sig upp), och
+	     då finns ingen sådan sync att vänta på. ]]
+	InteractionController.uppdatera()
 end)
 
 InteractionController.setAvslagVisare(function(skal: any, extra: any?)
@@ -332,10 +792,41 @@ end)
      SERVERN AVGÖR FORTFARANDE ALLT annat — rätt häst, avstånd, om hon
      leds av någon annan, om hon rids, om spelaren redan leder. Den här
      raden flyttar ingen behörighet; den slutar bara gömma knappen. ]]
+--[[ ══ LEDKNAPPEN VIKER FÖR ETT VÄNTANDE SKÖTSELSTEG — MED GRÄNS ════
+
+     PO-order 2026-09-20 PRODUCT CLARIFICATION: «Treat prompt visibility
+     by current task relevance, not by «care panel visible» as a blanket
+     rule.»
+
+     Ett första försök (`8aba0f3`) gjorde just det som ordern förbjuder:
+     det frågade om PANELEN. Mätningen som fällde det står kvar, för den
+     är fortfarande sann och den är hela skälet till gränsen nedan:
+
+         skötselpanelen visas      `Config.STEG_RACKVIDD` = 12 studs
+         servern släpper ledning   `LedService.RACKVIDD` 4,0 m × M 3
+                                   = 12 studs
+
+     SAMMA RADIE. Innanför 12 studs finns knappen bara om regeln släpper
+     den; utanför svarar servern `led.for_langt`. En ytregel lämnar därför
+     ingen position alls där ledningen både syns och fungerar.
+
+     DÄRFÖR FRÅGAR REGELN UPPGIFTEN I STÄLLET. `aktuellUppgift` svarar
+     "leda" i de två lägen där ledningen ÄR handlingen — `leda` står på
+     tur, eller repet är redan i handen — och knappen finns då mitt inne i
+     radien, där servern också säger ja. Ordern punkt 2 och 4 är alltså
+     uppfyllda i själva regeln, inte som undantag bredvid den.
+
+     Det som SMALNAS mot 2026-09-17 är faserna före `leda`, och bara i det
+     ögonblick de själva står i nederkanten och ber om ett tryck. Går man
+     ifrån hästen, eller gör steget, är knappen tillbaka.
+
+     BEHÖRIGHETEN FLYTTAS INTE. `LedBorja` svarar som förut; servern äger
+     rätt häst, avstånd, om hon leds av någon annan, om hon rids. ]]
 InteractionController.setLedCheck(function(model: Model): boolean
 	local id = PreparationController.hastId()
 	if not id then return false end
-	return model:GetAttribute("HorseId") == id
+	if model:GetAttribute("HorseId") ~= id then return false end
+	return not PreparationController.skotselstegAgerFokus()
 end)
 --[[ Prompt-uppdateringen hänger på ATT EN NY VY ACCEPTERATS, inte på
      RemoteEvent-händelsen. Skillnaden är hela rättelsen efter senior review
@@ -428,17 +919,52 @@ UgnetaController.start()
      bygga den vid uppsittning hade gett samma hål vi just stängde — hjälpen
      ska finnas i stallet också. ]]
 KontrollHjalp.start()
+--[[ #263: byggidentiteten lever hela sessionen, av samma skäl som
+     hjälpknappen — QA ska kunna läsa av builden i stallet också, inte
+     bara i sadeln. ]]
+Byggidentitet.start()
 Prompttext.start()
 
 --[[ Servern talar om när uppsittningen ändras — även när den ändras av
      något annat än oss, som respawn eller att hästen tas bort. ]]
 Net.get("MountChanged").OnClientEvent:Connect(function(model: Model, rider: Player?)
 	if rider == player then
-		if not ride or ride.model ~= model then
-			mount(model)
+		--[[ Ett nytt auktoritativt JA om DEN HÄR hästen upphäver en
+		     tidigare återkallelse av henne. ]]
+		local vantande = vantandeAvsittning
+		if vantande ~= nil and vantande.hast == model then
+			vantande.aterkallad = false
 		end
-	elseif ride and ride.model == model then
-		dismount()
+		if not ride or ride.model ~= model then
+			--[[ Gick det inte nu kan riggen vara halvreplikerad. Se
+			     noten vid `startaAterforening`. ]]
+			if mount(model) ~= true then
+				startaAterforening(model)
+			end
+		end
+	else
+		--[[ SERVERN HAR GÅTT VIDARE. Ett väntande omförsök får inte
+		     sätta upp oss igen efter att servern sagt att någon annan —
+		     eller ingen — rider henne. Avbrottet sker oavsett om vi
+		     själva har en ritt just nu. ]]
+		--[[ MINNS DET, oavsett om någon lyssnade just nu — men bara för
+		     den häst beskedet faktiskt gäller. Se noten vid
+		     `vantandeAvsittning`. ]]
+		local vantande = vantandeAvsittning
+		if vantande ~= nil and vantande.hast == model then
+			vantande.aterkallad = true
+		end
+		if aterforeningModell == model then
+			avbrytAterforening()
+		end
+	end
+	if rider ~= player and ride and ride.model == model then
+		--[[ Serverns besked, inte spelarens tryck. Skalet «avbrott» ger
+		     tystnad ur `efterrittFor`, sa den har vagen kan aldrig
+		     summera. Den egna avsittningen summerar i `begarAvsittning`
+		     — efter serverns ja — och tva besked om samma ritt gar
+		     darfor inte att fa. ]]
+		dismount("avbrott")
 	end
 end)
 
@@ -563,12 +1089,31 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	     som äger dem. #162 blockerare 2 mäts fortsatt av klientprovet. ]]
 end)
 
-player.CharacterRemoving:Connect(dismount)
+--[[ Dod eller respawn. INGEN summering: en ritt som tog slut for att
+     karaktaren forsvann ar inget att gratulera till. Wrappen finns for
+     att signalen annars skickar karaktaren som forsta argument — och
+     det hade lasts som ett skal. ]]
+--[[ KARAKTÄREN DÖR — OCH DÅ ÄR ALLT SOM ÄR I LUFTEN INERT.
+
+	`dismount("avbrott")` räcker inte. Har spelaren redan bett om en
+	avsittning är `ride` nollad, funktionen returnerar direkt, och
+	`sessionGen` rör sig inte — då vinkade vakten i `begarAvsittning`
+	igenom en summering för en ritt vars ryttare inte finns längre.
+	Räknaren måste gå upp ÄVEN när det inte finns någon lokal ritt att
+	riva, och ett väntande omförsök måste avbrytas.
+
+	En vanlig accepterad avsittning rör inte den här vägen, så dess
+	summering visas fortfarande exakt en gång. ]]
+player.CharacterRemoving:Connect(function()
+	dismount("avbrott")
+	sessionGen += 1
+	avbrytAterforening()
+end)
 
 RunService.RenderStepped:Connect(function(dt)
 	if not ride then return end
 	if not ride.rig.root:IsDescendantOf(workspace) then
-		dismount()
+		dismount("avbrott")
 		return
 	end
 
@@ -581,8 +1126,70 @@ RunService.RenderStepped:Connect(function(dt)
 	     engångsflankerna (gångart upp/ner, parad); låg de kvar hade varje
 	     tryck under pausen fyrat på en gång när pausen släppte. En impuls
 	     ska verka en gång, i den bildruta den gjordes — inte sparas. ]]
-	if LektionController.vantar() or LektionController.replayAktiv() then
-		Input.consume()
+	local intent = Input.consume()
+	--[[ Vad ryttaren bad om den här bildrutan. Räknas FÖRE pausgrenen
+	     sedan #263: grenen behöver veta om det kom en hjälp. Samma
+	     uttryck som förut, bara flyttat hit. ]]
+	local hjalp = intent.gaitUp or intent.gaitDown or (intent.parad or 0) > 0
+
+	--[[ ══ EN HJÄLP ÄR ETT SVAR (#263 P1) ═══════════════════════════
+
+	     Uppmätt i Studio: `vantar()` är SANT i samma ögonblick spelaren
+	     sätter sig upp — First Ride sätter henne i sadeln rakt framför
+	     kortet «Continue to start the lesson». Varje DRIV hon gav
+	     försvann här, tyst: inmatningen gick hela vägen till `consume`
+	     och kastades sedan. Hästen stod kvar i halt och ingenting sa
+	     varför.
+
+	     Det var inte en trasig inmatningskedja. Kedjan var hel —
+	     `drivImpuls` svarade `true`, servern hade `ActionDriv` bunden,
+	     och ett tryck på kortets knapp gav omedelbart `halt → walk`.
+	     Det som fattades var att kortet åt hjälpen.
+
+	     Bänken visste om det och gick runt det: `klient-ridhandlingar`
+	     har en hjälpare `kvitteraKort()` vars kommentar säger att kortet
+	     "kastar varje avsikt tills det kvitteras". Varje spec kvitterade
+	     först och mätte sedan. Ingen mätte spelarens egen väg.
+
+	     Nu besvarar en hjälp kortet OCH verkar i samma bildruta. Det är
+	     det enda rimliga: kortet ber om en skänkelhjälp, och när hon ger
+	     den ska hästen gå — inte be henne trycka en knapp först. ]]
+
+	--[[ ══ ETT KORT SOM SYNS ÄR INGET RÖRELSELÅS ════════════════════
+	     LESSON_CARD_RIDING_INPUT_ACCEPTANCE (PO-order 2026-09-20).
+
+	     #263 P1 ovan löste halva problemet. En HJÄLP besvarade kortet —
+	     men styrning är ingen hjälp, så `vantar() and not hjalp` var
+	     sant i varje bildruta där ryttaren bara höll en tygel. Då kördes
+	     `release()`, `movement:step` hoppades över, och `step` är enda
+	     stället som skriver hästens kurs.
+
+	     Uppmätt i Studio 2026-09-20, uppsutten på Trixie i ridbanan, med
+	     `D` bevisligen nere (`UserInputService:IsKeyDown(D) == true`) i
+	     2,5 s medan `vantar()` var sann:
+
+	         yaw före  −156,8°      yaw efter  −156,8°      flytt 0,0 studs
+
+	     Samma tangent med kortet kvitterat gav omedelbart en obruten båge
+	     −58° → +66°. Hästen var alltså inte trasig; kortet höll henne.
+
+	     REGELN: att visa coaching får aldrig i sig självt stoppa
+	     ridningen. Bara en uttrycklig intervention som verkligen kräver
+	     skritt eller halt får ta framdrivningen — och en sådan ska säga
+	     det själv, inte härledas ur att någon panel råkar vara synlig.
+
+	     I dag finns exakt EN sådan: REPLAYEN. Den är inte ett
+	     lektionskort utan en analys spelaren själv öppnat med `R`
+	     eller `T` för att titta på sin ritt, och att rida vidare bakom
+	     den vore att titta på en inspelning av något annat än det som
+	     händer. Den är därför kvar som hård paus, mätt i punkt 4 och 5d
+	     i `klient-lektionspaus.spec`.
+
+	     Kortets egen skyddsuppgift är kvar och ligger där den hör hemma:
+	     `LektionController.steg` mäter ingenting medan `vantar()` är
+	     sann, så försöket kan inte bli ogiltigt av att hon rider under
+	     tiden. Att FRYSA hästen var aldrig det som skyddade mätningen. ]]
+	if LektionController.replayAktiv() then
 		--[[ ══ PAUSEN MÅSTE STANNA HÄSTEN, INTE BARA SLUTA STYRA HENNE ══
 
 		     Stycket ovanför säger "hästen stegas inte", och det stämde —
@@ -608,12 +1215,23 @@ RunService.RenderStepped:Connect(function(dt)
 		ride.movement:release()
 		local loco = ride.movement.loco
 		ride.animation:step(loco, dt)
+		HastGang.mata(ride.rig.model, loco)
 		ride.rider:step(loco, dt)
 		ride.camera:step(loco, dt)
 		return
 	end
 
-	local intent = Input.consume()
+	--[[ Hjälpen besvarar kortet. `fortsatt()` gör exakt det knappen gör
+	     och returnerar false när det inte fanns något att kvittera — då
+	     har raden ingen verkan, vilket är rätt.
+
+	     `hjalp`-villkoret är NYTT och nödvändigt sedan pausgrenen ovan
+	     bara stoppar på replayen: utan det hade varje bildruta med ett
+	     kort uppe kvitterat det, och kortet försvunnit av sig självt
+	     innan spelaren hunnit läsa en rad. Ett kort ska besvaras av ett
+	     SVAR — en hjälp eller ett tryck på knappen — och en tygel är
+	     inget svar. Mätt i `klient-lektionspaus.spec` punkt 5b. ]]
+	if hjalp and LektionController.vantar() then LektionController.fortsatt() end
 
 	--[[ ── AVSIKTEN SKICKAS, INTE RESULTATET (#233 Fas 4b) ─────────────
 
@@ -633,7 +1251,6 @@ RunService.RenderStepped:Connect(function(dt)
 	     `_targetGait` ned av sig själv. Den rörelsen är INTE en avsikt,
 	     och servern gör redan samma sänkning på sin sida — skickades den
 	     som `broms` hade hästen stegat ned två pinnar på en trötthet. ]]
-	local hjalp = intent.gaitUp or intent.gaitDown or (intent.parad or 0) > 0
 	local trappaFore = Ridtrappa.index(
 		ride.movement.loco.beddGangart, ride.movement.ryggar)
 
@@ -681,8 +1298,26 @@ RunService.RenderStepped:Connect(function(dt)
 	     annat i den här ordningen: den ska se bildrutans mätning, inte
 	     förra bildrutans, och den rör varken rörelse eller kamera. ]]
 	LektionController.steg(dt, ride.telemetri, poseAv(ride.rig))
+	--[[ #264 GAIT_READABILITY_AND_UGNETA: panelens gångartsrad och Ugnetas
+	     ridrad läser samma bildrutas läge. Ugneta säger den knapp spelaren
+	     faktiskt har för högre gångart; lektionen äger rösten medan den pågår. ]]
+	Naromrade.ridlage(loco)
+	do
+		local tak = ride.rig.model:GetAttribute("GaitCeiling")
+		local nyckel, args = UgnetaRad.steg(ride.ugnetaRad, dt, {
+			uppsutten = true,
+			lektion = LektionController.pagar(),
+			gait = loco.gait,
+			driv = KontrollHjalp.reglageFor("hjalp.hogre_gangart"),
+			travTillaten = type(tak) == "string" and Core.Gaits.index(tak) >= Core.Gaits.index("trot"),
+		})
+		UgnetaController.ridrad(nyckel, args)
+	end
 
 	ride.animation:step(loco, dt)
+	--[[ #264: ett ekipage, en klocka. Benen i `HastGang` läser samma fas
+	     och gångart som ljudet och ryttaren nedan. ]]
+	HastGang.mata(ride.rig.model, loco)
 	ride.rider:step(loco, dt)
 	ride.sound:step(loco, dt)
 	ride.effects:step(loco, dt)

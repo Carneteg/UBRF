@@ -35,6 +35,7 @@ local HorseCore = require(ReplicatedStorage.HorseCore)
 local Net = HorseCore.Networking
 local Gaits = require(ReplicatedStorage.HorseCore.Gaits)
 local Config = require(ReplicatedStorage.HorseCore.Config)
+local Aktor = require(ReplicatedStorage.HorseCore.Aktor)
 --[[ #259 Gate 1A. `LedBorja` var den ena av de tva konkreta
 	vagarna i #258 P1-2: ett anrop med `nil` nekas pa forsta raden i
 	`borjaInre` och skrev anda en `warn` genom `logg`. Grinden ligger
@@ -84,6 +85,8 @@ local KOPPEL_TID = 0.75        -- s: sa lange maste hon vara for langt bort
 	Satt strax under kopplets slapp-avstand — ett mal som ligger langre
 	bort an kopplet racker ar per definition orimligt. ]]
 local MAL_AVVIK  = 7.0         -- m: sa langt fran spelaren far malpunkten ligga
+local SPAR_TAK   = 40          -- smulor: minnestaket, se noten vid inläggningen
+local HOPP       = 3.0         -- m: langre an sa pa en bildruta ar inget steg
 
 --[[ Hur mycket snabbare spelaren gar an hasten SKRITTAR. Marginalen
 	finns for att hon ska kunna ga fore utan att kopplet strammar — men
@@ -181,6 +184,7 @@ local NAV_OMPLAN_PAUS  = 1.0   -- s: kortaste tid mellan två planeringar
 local NAV_MAX_PLANER   = 6     -- fler än så och vi ger upp i stället för att mala
 local NAV_FASTNAT      = 8.0   -- s helt stilla trots order: kopplet släpper
 local NAV_ANKARE       = 0.25  -- m hon måste förflytta sig för att räknas som i rörelse
+local NAV_TAKT         = 0.5   -- andel av BEORDRAD fart som räknas som att hon går
 
 --[[ EN LEDD HÄST SKRITTAR. Farten hämtas ur gångartskanonen och skrivs
 	inte av som ett tal: `Gaits.DATA.walk.norm` är skrittens nominella
@@ -290,6 +294,15 @@ export type Led = {
 	stillaSedan: number,
 	badGa: boolean,
 	ankare: Vector3,
+	ankartid: number,
+	sparFullt: boolean,
+	forraSpelarPos: Vector3?,
+	--[[ Engangsflagga: gallringen vid boxutgangen ska ta aven den smula
+		som laggs SENARE i samma bildruta. Se noten vid utgangen. ]]
+	gallraVidUtgang: boolean,
+	--[[ Fonstret mellan HENNES utgang och SPELARENS. Sa lange det star
+		oppet ar hans lage platsen hon just lamnat, inte vag hon ska ga. ]]
+	utgangsfonster: boolean,
 }
 
 local ledd: { [Player]: Led } = {}
@@ -307,6 +320,16 @@ export type Boxminne = {
 local senasteLedning: { [Player]: Boxminne } = {}
 
 local hakar: { [string]: (Player, Led) -> () } = {}
+
+--[[ #264 R4: målkroken, se `LedService.satMalKrok`. Ett fel i den som
+	kvitterar får aldrig fälla ledningen. ]]
+local function malNattKrok(player: Player)
+	local f = (hakar :: any).mal
+	if f then
+		local ok, fel = pcall(f, player)
+		if not ok then warn("[Led] målkroken föll: " .. tostring(fel)) end
+	end
+end
 
 --[[ ══ DET UPPNÅDDA ÖVERLEVER KOPPLET ═══════════════════════════════════
 
@@ -434,7 +457,28 @@ end
 	Ryttaren får ingen ny position: hon går dit själv. Det stallet gör är
 	att lämna hästen framme, precis som en stallpersonal som ställt fram
 	henne inför lektionen. ]]
-function LedService.placeraVidMal(player: Player, modell: Model): (boolean, string?)
+--[[ STALL FRAM HAST OCH RYTTARE I MALZONEN — utan att bokfora nagot.
+
+	Bruten ur `placeraVidMal` for #263 Gate 2A. Delningen ar inte
+	kosmetisk: `placeraVidMal` gor TVA saker, och First Ride far bara
+	gora den ena.
+
+	  GEOMETRIN — dar malzonen ligger i varlden, och var hasten och
+	  ryttaren hamnar. Ren fysisk placering.
+
+	  BOKFORINGEN — `noteraUppnatt(lamnatBox, malNatt)`, alltsa beviset
+	  for att SPELAREN ledde henne dit. Det ar en ledningsprestation.
+
+	First Ride flyttar hasten till ridhuset at spelaren; hon har inte
+	lett henne. Skrev den har funktionen flaggorna hade hennes senare
+	`leda`-fas passerat sin fysiska kontroll utan att hon gjort
+	arbetet, och ordern i #263 forbjuder uttryckligen att stallskotsel
+	markeras som utford.
+
+	Geometrin star kvar pa ETT stalle. Tva kopior av samma
+	koordinatmatematik hade varit precis den dubbla sanning kanon
+	forbjuder. ]]
+function LedService.stallFram(player: Player, modell: Model): (boolean, string?)
 	if typeof(modell) ~= "Instance" or not modell:IsA("Model") then
 		return false, "spel.ingen_hast"
 	end
@@ -480,6 +524,19 @@ function LedService.placeraVidMal(player: Player, modell: Model): (boolean, stri
 		local hast = (modell.PrimaryPart :: BasePart).CFrame
 		hrp.CFrame = hast * CFrame.new(-3, 0, 0)
 	end
+
+	return true, nil
+end
+
+--[[ Stall fram HENNE, och bokfor att spelaren tog henne dit.
+
+	Den har ar ledningens och «Rida nu»:s vag: bada ar handlingar dar
+	spelaren bett om eller utfort forflyttningen, och da ar flaggorna
+	sanna. Se noten vid `stallFram` for varfor First Ride inte far
+	anvanda den. ]]
+function LedService.placeraVidMal(player: Player, modell: Model): (boolean, string?)
+	local ok, fel = LedService.stallFram(player, modell)
+	if not ok then return false, fel end
 
 	local hastId = tostring(modell:GetAttribute("HorseId") or "")
 	noteraUppnatt(player, hastId, "lamnatBox")
@@ -578,13 +635,54 @@ local function byggFoljrigg(karaktar: Model, modell: Model): { [string]: any }?
 	vrid.Enabled = false
 	vrid.Parent = pivot
 
-	return { mal = mal, hastfast = hastfast, drag = drag, vrid = vrid }
+	--[[ ══ #264 LEADING_BOX_EXIT_R3: LEDAREN ÄR INGET HINDER ════════════
+
+		Mätt i Studio på kandidat 941ffeb, box MB 5, riktig ledning (håll L,
+		sedan gå). Den som leder står i dörröppningen — där står man när man
+		öppnar och tar hästen — och öppningen är 3,60 studs. Hästens rot är
+		1,86 bred, spelarens kropp ungefär 2. De ryms inte där samtidigt.
+
+		    spelaren i gången, x 500      ingen kontakt · ute på 2,0 s
+		    spelaren i öppningen          356 bildrutor rot/huvudskydd mot
+		                                  spelarens HumanoidRootPart,
+		                                  UpperTorso och ben · ute på 5 s
+		    spelaren i öppningen          knuffad ur dörraxeln, kurs −77 → 0,
+		                                  kilad mot norra karmen (Boxfront
+		                                  och Kappregel MB 5) · led.fastnat
+		    i öppningen, utan kollision   ute på 2,4 s, dörrplanet passerat
+		                                  vid z 273,3–273,9 (mitten 274,0)
+
+		`AlignPosition` drar henne mot vägpunkten, spelarens kropp står i
+		vägen och trycker tillbaka, och när spelaren sedan går knuffar hon
+		hästens främre del åt sidan. Planerarens vägar var giltiga hela
+		tiden; det var kroppen i öppningen som flyttade henne.
+
+		Därför kolliderar den ledda hästen inte med den som leder henne så
+		länge kopplet sitter. Allt annat — väggar, karmar, andra hästar och
+		andra spelare — kolliderar som förut. Rivs med riggen. ]]
+	local frikoll = Instance.new("Folder")
+	frikoll.Name = "UBRFLedIngenKrock"
+	for _, hastdel in ipairs(modell:GetDescendants()) do
+		if hastdel:IsA("BasePart") and hastdel.CanCollide then
+			for _, kroppsdel in ipairs(karaktar:GetDescendants()) do
+				if kroppsdel:IsA("BasePart") then
+					local nc = Instance.new("NoCollisionConstraint")
+					nc.Part0 = hastdel
+					nc.Part1 = kroppsdel
+					nc.Parent = frikoll
+				end
+			end
+		end
+	end
+	frikoll.Parent = pivot
+
+	return { mal = mal, hastfast = hastfast, drag = drag, vrid = vrid, frikoll = frikoll }
 end
 
 local function rivFoljrigg(l: any)
 	local r = l and l.rigg
 	if not r then return end
-	for _, namn in ipairs({ "drag", "vrid", "mal", "hastfast" }) do
+	for _, namn in ipairs({ "drag", "vrid", "mal", "hastfast", "frikoll" }) do
 		local d = r[namn]
 		if d then pcall(function() d:Destroy() end) end
 	end
@@ -910,7 +1008,8 @@ local function borjaInre(player: Player, modell: Model?, ratt: Model?): (boolean
 		dorrsteg = 1,
 		delmal = nil,
 		navVag = {}, navIx = 1, navPlaner = 0, navSenast = -NAV_OMPLAN_PAUS, planerar = false, tid = 0,
-		stillaSedan = 0, badGa = false, ankare = pivot.Position,
+		stillaSedan = 0, badGa = false, ankare = pivot.Position, ankartid = 0,
+		sparFullt = false, forraSpelarPos = nil, gallraVidUtgang = false, utgangsfonster = false,
 	}
 	--[[ REPET (#182 del 2). Byggs SIST, nar tillstandet finns: ett rep
 		utan en ledning bakom sig vore en lognaktig bild. ]]
@@ -974,16 +1073,50 @@ function LedService.slapp(player: Player, skal: string?): (boolean, string?)
 			hennes Humanoid. ]]
 		hum.WalkSpeed = l.tidigareFart
 	end
-	--[[ Ägarskapet tillbaka som det var. ]]
+	--[[ ══ ÄGARSKAPET TILLBAKA — UTOM NÄR NÅGON HUNNIT SÄTTA SIG ══
+
+		Normalfallet är oförändrat: ledningen tog ägarskapet till servern
+		och sparade undan det som gällde innan, och här lämnas det tillbaka.
+		Utan det blir en ledd häst permanent serversimulerad och ridningen
+		får tillbaka den halvsekunds fördröjning ägarskapet finns för att
+		slippa.
+
+		MEN DET SPARADE VÄRDET ÄR GAMMALT. Slice A släpper igenom det
+		vanligaste fallet i hela kärnloopen: spelaren leder sin häst till
+		banan och sätter sig upp där, utan att släppa repet först. Då
+		släpper `steg` kopplet själv nästa bildruta med skälet `led.rider`
+		— och kom vi hit och återställde det undansparade värdet skulle vi
+		skriva över det ägarskap `HorseService.setRider` just gav RYTTAREN.
+		Hon skulle sitta på en häst hon inte styr.
+
+		Sitter någon upp är ägarskapet alltså redan rätt satt av
+		hästsystemet, och det enda korrekta är att INTE röra det.
+
+		`hakar.riden` är samma krok som `borjaInre` redan frågar några
+		hundra rader upp — ingen ny koppling, ingen andra uppfattning om
+		vem som rider.
+
+		FAIL MOT ATT INTE KLOTTRA. Kastar kroken, eller saknas den inte
+		men svarar oklart, låter vi ägarskapet vara. En häst som blir kvar
+		serversimulerad rättas av nästa uppsittning; en ryttare som får
+		ägarskapet bortryckt har ingen väg tillbaka utom att sitta av. ]]
 	local pivot = l.modell.PrimaryPart
 	if pivot then
-		pcall(function()
-			if l.tidigareAuto then
-				pivot:SetNetworkOwnershipAuto()
-			else
-				pivot:SetNetworkOwner(l.tidigareAgare)
-			end
-		end)
+		local ridenNu = false
+		local riden = hakar.riden
+		if riden ~= nil then
+			local ok, svar = pcall(riden, l.modell)
+			ridenNu = (not ok) or (svar == true)
+		end
+		if not ridenNu then
+			pcall(function()
+				if l.tidigareAuto then
+					pivot:SetNetworkOwnershipAuto()
+				else
+					pivot:SetNetworkOwner(l.tidigareAgare)
+				end
+			end)
+		end
 	end
 
 	--[[ Spelarens egen fart tillbaka. Utan den går hon kvar i
@@ -1004,6 +1137,8 @@ function LedService.slapp(player: Player, skal: string?): (boolean, string?)
 		logg(player, "LedSlapp", l.hastId, nil)
 	end
 	LedService._sync(player, skal)
+	--[[ #264 R4: ett släpp i målet kvitterar ledsteget, se `satMalKrok`. ]]
+	if LedService.harNattMal(player) then malNattKrok(player) end
 	return true, skal
 end
 
@@ -1080,9 +1215,11 @@ function LedService._glomBoxminne(player: Player)
 end
 
 function LedService._sync(player: Player, skal: string?)
+	local k = Aktor.klient(player)
+	if not k then return end
 	local ev = Net.get("LedSync")
 	local l = ledd[player]
-	ev:FireClient(player, {
+	ev:FireClient(k, {
 		leder = l ~= nil,
 		hastId = l and l.hastId or nil,
 		lamnatBox = l ~= nil and l.lamnatBox or false,
@@ -1196,6 +1333,37 @@ local function planera(l: Led, pivot: BasePart, mal: Vector3, reserv: Vector3?)
 		--[[ Första vägpunkten ligger i hästens egen fot; att gå dit är att
 			stå still. ]]
 		l.navIx = math.min(2, #l.navVag)
+		--[[ ══ EN NY VÄG FÅR BÖRJA MED REN KLOCKA ═══════════════════
+
+			MÄTT I STUDIO under M3.1, i gluggen mellan Tvärvägg 1:1 och 1:2.
+			Hästen låg kilad mot väggens norra sida — flanken nådde Z 185,68
+			och väggen börjar 185,70, alltså två hundradels studs mellan dem.
+			Hennes mål låg rakt söder om väggen.
+
+			Planeraren KLARADE det. `ComputeAsync` från exakt den posen ger
+			sex vägpunkter rakt genom gluggen — uppmätt efteråt på samma
+			koordinater. Men i körningen var `navVag` tom bildrutan efter:
+
+			     9,9 s   nav 2/5   en väg på fem punkter fanns
+			    10,1 s   nav 1/0   den var borta
+
+			Skyldig ar «EN VÄG SOM INTE BÄR SKA KASTAS» i `_steg`: den kastar
+			vagen nar `stillaSedan > NAV_STILLA`. Klockan stod redan på fem
+			sekunder från tiden FÖRE vägen fanns, så varje ny väg revs innan
+			hon hunnit ta ett enda steg på den. Alla sex planöken gick samma
+			väg, och sedan släppte kopplet på `led.fastnat`.
+
+			Den regelns EGEN avsikt är att mäta tid PÅ VÄGEN — «hon låg på en
+			vägpunkt hon inte kunde nå». Klockan nollställs därför när vägen
+			installeras, så att den mäter just det. Ingen tidsgräns är ändrad.
+
+			`navPlaner` rörs INTE här. Nollställningen av den ligger i `_steg`
+			bakom `navigerar(l)`-grenens `continue`, så en häst som följer en
+			väg får inga nya försök gratis. Taket består, och bär ingen av de
+			sex vägarna släpper kopplet som förr. ]]
+		l.stillaSedan = 0
+		l.ankare = pivot.Position
+		l.ankartid = 0
 	end)
 end
 
@@ -1236,29 +1404,112 @@ end
 	maste vanda forst for att inte ga in i dorrkarmen pa tvaren.
 	`AlignOrientation` vrider henne kontinuerligt medan `AlignPosition`
 	drar, sa problemet uppstar inte. Kursen ar mjuk och kan inte snappa. ]]
---[[ INAKTUELLA SMULOR GALLRAS (#182 del 2, arkitektens villkor).
+--[[ ══ SPÅRET ÄR RUTTHISTORIK — BARA HÄSTEN FÅR FÖRBRUKA EN SMULA ═══
 
-	Gränsen är `MAL_AVVIK` och inte `KOPPEL`: en smula som ligger längre
-	bort än målpunkten får ligga kan aldrig bli ett mål ändå, och ska då
-	inte ligga kvar och fördröja de smulor som kan.
+	Produktbeslut 2026-09-20, efter M3:
 
-	DET ÄR OCKSÅ STALENESS-REGELN när spelaren byter riktning. Vänder hon
-	tvärt hamnar de gamla smulorna snabbt utanför taket och faller bort, i
-	stället för att dra hästen dit hon nyss var.
+	  > En ledd häst får inte förlora en OFÖRBRUKAD smula medan ledningen
+	  > fortfarande är giltig. Spelarens avstånd får avgöra kopplet. Det
+	  > får inte radera rutthistorik som hästen ännu inte har gått igenom.
+
+	FÖRUT GALLRADE DEN PÅ SPELARENS AVSTÅND, med `MAL_AVVIK` som gräns.
+	Mätt i Studio, hela ledrutten box E 8 -> ridhuset, sju pass med samma
+	utfall:
+
+	    häst      488,6 · 184,8   v 0,01
+	    spelare   471,3 · 207,2   koppel 9,4 m
+	    delmål    472,8 · 187,1
+	    rör       Tvärvägg 1:2 @ 485 · 186
+	    strålen mot målet   Tvärvägg 1:2 på 5,8 studs
+
+	Hon stod NORR om väggen, målet låg SÖDER om den, och linjen dit gick
+	rakt igenom. Spelaren hade tagit sig runt väggens västra ände — men
+	smulorna längs den vägen, 488 · 184 och 480 · 184 och 475 · 184, låg
+	7,7..9,7 m från spelaren och var därför redan kastade. Kvar fanns
+	bara en punkt på fel sida om väggen.
+
+	OCH TALEN GARANTERADE DET:
+
+	    MAL_AVVIK  7,0 m   så långt från SPELAREN fick en smula ligga
+	    KOPPEL     9,0 m   så långt efter får HÄSTEN hamna
+
+	Spåret gallrades 2 m INNANFÖR kopplet. Det fanns alltså ett band där
+	kopplet höll men vägen redan var borta — hon var garanterat väglös
+	innan hon släpptes.
+
+	NU MÄTS FÖRBRUKNINGEN I STÄLLET, och den ägs av hästen: en smula hon
+	har kommit fram till är gången, resten är väg hon har kvar. Gränsen
+	är `START_R`, samma tal hysteresen börjar gå vid — en punkt hon inte
+	tänker gå till får inte vara hennes mål. Minnet begränsas som förut
+	av ringbufferten, och den sista smulan gallras aldrig, så hon blir
+	aldrig mållös av en städning.
+
+	STALENESS-REGELN ÄR DÄRMED BORTA, med flit. Vänder spelaren tvärt
+	följer hästen den väg hon faktiskt leddes i stället för att skära
+	hörnet — och det är samma sak som att hon går runt väggen.
 
 	EGEN FUNKTION AV SAMMA SKÄL SOM `klampMal`: inbakad i loopen kom
 	mutationen som tog bort den ut GRÖN — spårgrenen kräver att hästen
 	lämnat en box, och inget bänkscenario nådde dit. En regel som bara går
 	att mäta genom ett scenario man inte kan bygga är obevisad. ]]
-local function gallraSpar(spar: { Vector3 }, rotPos: Vector3)
-	while #spar > 0 and avstandM(spar[1], rotPos) > MAL_AVVIK do
+local function gallraSpar(spar: { Vector3 }, hastPos: Vector3)
+	--[[ FÖRBRUKNINGEN ÄR MONOTON I RUTTENS ORDNING — bara framifrån.
+
+		En smula är förbrukad när hästen har KOMMIT FRAM TILL den, inom
+		`START_R`. Inget annat. Gallringen går därför framifrån och
+		stannar vid den första hon inte nått; allt bakom den ligger kvar
+		som väg hon har att gå.
+
+		══ VARFÖR DEN INTE FÅR SÖKA NÄRMASTE SMULA ═══════════════════
+
+		Den sökte förut den GLOBALT närmaste smulan i hela spåret och
+		kastade allt före den. Det var samma fel som hela regeln finns
+		för att stänga — rak linje i stället för färdväg — och ChatGPT:s
+		slutreview på `3ecaa16` reproducerade det:
+
+		    fyra oförbrukade smulor på rutten
+		    den fjärde korsar tillbaka till 0,5 m från hästen
+		    nästa hon faktiskt ska gå till ligger 2,0 m bort
+		    -> 1 av 4 kvar
+
+		En väg som böjer tillbaka — spelaren rundar ett hinder och
+		passerar nära hästen igen — har en SENARE smula fysiskt
+		närmast. Hela sträckan hon hade kvar raderades då i ett svep,
+		och hon lämnades med ett mål på andra sidan omvägen. 2,0 m är
+		dessutom mer än `START_R`: hon hade inte nått någon av dem.
+
+		FYSISK NÄRHET TILL NÅGOT LÄNGRE FRAM ÄR INTE FRAMSTEG.
+
+	══ OCH NÄRHET ÄR INTE FRAMSTEG — INTE HELLER TILL NÄSTA GRANNE ══
+
+	Regeln skrevs om två gånger innan den blev riktig, och båda de
+	underkända formerna var samma fel i olika kläder.
+
+	  1 · GLOBALT NÄRMASTE. Kastade allt före den närmaste smulan i
+	      hela spåret. En väg som böjer tillbaka har en SENARE smula
+	      närmast, och hela sträckan hon hade kvar försvann:
+	      fyra smålor, den fjärde 0,5 m bort — 1 av 4 kvar.
+
+	  2 · «NÄSTA GRANNE NÄRMARE». Samma fel, en granne i taget. En rutt
+	      som böjer sig successivt tillbaka mot en eftersäpande häst
+	      har fallande avstånd hela vägen — 4,00 · 3,16 · 2,24 · 0,50 —
+	      och loopen gick framåt genom alla tre. Också 1 av 4.
+
+	DET ENDA BEVISET ATT HON GÅTT EN PUNKT ÄR ATT HON HAR VARIT DÄR.
+	Ingen geometrisk genväg duger: varje form av «hon är nära något
+	senare» kan konstrueras till ett falskt framsteg, eftersom rutten
+	själv får böja sig hur som helst. Därför `START_R`, och bara det:
+	hon var framme.
+
+	Den sista smulan gallras aldrig, så hon blir aldrig mållös. ]]
+	while #spar > 1 and avstandM(spar[1], hastPos) < START_R do
 		table.remove(spar, 1)
 	end
 end
 
---[[ Provets fönster in. ]]
-function LedService._gallraSpar(spar: { Vector3 }, rotPos: Vector3)
-	gallraSpar(spar, rotPos)
+--[[ Provets fönster in. Referensen är HÄSTENS läge, inte spelarens. ]]
+function LedService._gallraSpar(spar: { Vector3 }, hastPos: Vector3)
+	gallraSpar(spar, hastPos)
 end
 
 --[[ TAKET PÅ MÅLPUNKTENS AVVIKELSE (#182 del 2, arkitektens villkor).
@@ -1273,7 +1524,26 @@ end
 	scenario i bänken nådde dit. En regel som bara går att mäta genom ett
 	scenario man inte kan bygga är obevisad.
 
-	Som ren funktion går den att pröva direkt, med vilket läge som helst. ]]
+	Som ren funktion går den att pröva direkt, med vilket läge som helst.
+
+	TAKET GÄLLER INTE RUTTHISTORIK (produktbeslut 2026-09-20).
+
+	Mätt i Studio under M3: att BEHÅLLA smulan runt hindret räckte inte.
+	Hästen på 488,6 · 184,8 fick smulan 480 · 184 — rätt väg, norr om
+	Tvärvägg 1:2 — men spelaren stod 8,2 m bort, och taket drog punkten
+	tillbaka längs linjen mot henne till 483,5 · 190,1. Det är SÖDER om
+	väggen. Klampningen un-krokade alltså precis den omväg den säger sig
+	bevara, och linjen gick genom väggen igen.
+
+	Arkitektens villkor var att spelaren förblir den SEMANTISKA
+	destinationen. En smula är en punkt spelaren själv gick på — att gå
+	dit är att gå till henne, längs hennes egen väg. Villkoret hålls
+	alltså bättre utan klampningen än med den.
+
+	Funktionen själv är OFÖRÄNDRAD. Det är anroparen som avgör: ett mål
+	ur spåret eller ur en planerad väg skickas utan `spelarPos`, medan
+	reservpunkten bakom spelaren och dörrens delmål klampas som förr.
+	Taket finns därmed kvar för allt som INTE är en gången väg. ]]
 local function klampMal(mal: Vector3, spelarPos: Vector3?, y: number): Vector3
 	local punkt = Vector3.new(mal.X, y, mal.Z)
 	if not spelarPos then return punkt end
@@ -1414,16 +1684,28 @@ local function steg(_dt: number)
 					oavsett vilken sida om dörrplanet de hamnar på. Bara de
 					som fanns i kön I UTGÅNGSÖGONBLICKET, och som låg på
 					boxsidan, försvinner. ]]
-				if l.dorrMitt and l.dorrUt then
-					local kvar = {}
-					for _, c in ipairs(l.spar) do
-						if (c - l.dorrMitt):Dot(l.dorrUt) > 0 then
-							table.insert(kvar, c)
-						end
-					end
-					table.clear(l.spar)
-					for _, c in ipairs(kvar) do table.insert(l.spar, c) end
-				end
+				--[[ ══ GALLRINGEN SKER EFTER ANTECKNANDET (reviewrond 6) ══
+
+					Gallringen låg FÖRUT precis här, och tog bara de smulor
+					som redan fanns i kön. Men antecknandet kör längre ner i
+					samma `steg`. Står spelaren kvar på boxsidan i den
+					bildruta då hon passerar dörrplanet — och det gör han
+					ofta, han släpper ju fram henne — lades hans läge till
+					som första smula DIREKT EFTER gallringen, och hon drogs
+					tillbaka in genom dörren hon just kommit ut ur.
+
+					Det doldes av hoppvaktens `table.clear`: nästa gång
+					spelaren flyttades ett stycke tömdes spåret ändå. När
+					rond 6 tog bort den raderingen blev smulan synlig —
+					491,5 · 277,2, en enda, på boxsidan. Felet fanns hela
+					tiden; ingenting mätte det.
+
+					Därför står här bara en ENGÅNGSFLAGGA, och gallringen
+					görs efter antecknandet. Engångs av exakt samma skäl som
+					ovan: gallras det varje bildruta äter gallringen upp
+					hela den västra rutten. ]]
+				l.gallraVidUtgang = true
+				l.utgangsfonster = true
 
 				noteraUppnatt(player, l.hastId, "lamnatBox")
 				LedService._sync(player)
@@ -1433,6 +1715,7 @@ local function steg(_dt: number)
 			l.malNatt = true
 			noteraUppnatt(player, l.hastId, "malNatt")
 			LedService._sync(player)
+			malNattKrok(player)
 		end
 
 		--[[ HÄSTEN GÅR I SPELARENS SPÅR, inte mot en punkt bakom henne.
@@ -1452,30 +1735,277 @@ local function steg(_dt: number)
 			Ringbufferten är kort med flit — den ska bära genom en dörr,
 			inte minnas en rundtur. ]]
 		local spar = l.spar
-		local senaste = spar[#spar]
 		--[[ ETT HOPP ÄR INGEN VÄG. Flyttas spelaren långt på en bildruta —
 			respawn, en spec som ställer henne någon annanstans — är spåret
 			dit inte gångbart, och hästen skulle skickas till en punkt hon
-			aldrig kan nå. Då kastas spåret. ]]
-		if senaste and (senaste - rot.Position).Magnitude > 3.0 * M then
-			table.clear(spar)
-			senaste = nil
-		end
-		if not senaste or (senaste - rot.Position).Magnitude > 0.6 * M then
-			table.insert(spar, rot.Position)
-			if #spar > 40 then table.remove(spar, 1) end
-		end
-		--[[ Smulor längre bort än kopplet hör inte hit heller. ]]
-		--[[ INAKTUELLA SMULOR KASSERAS. Gransen ar `MAL_AVVIK` och inte
-			`KOPPEL`: en smula som ligger langre bort an malpunkten far
-			ligga kan aldrig bli ett mal anda, och da ska den inte ligga
-			kvar och fordroja de smulor som kan.
+			aldrig kan nå. Då kastas spåret.
 
-			DET AR OCKSA STALENESS-REGELN nar spelaren byter riktning:
-			vander hon tvart hamnar de gamla smulorna snabbt utanfor
-			taket och faller bort, i stallet for att dra hasten dit hon
-			nyss var. ]]
-		gallraSpar(spar, rot.Position)
+			HOPPET MÄTS MOT SPELARENS FÖRRA LÄGE, inte mot sista smulan.
+			Smulan var en proxy som bara höll så länge vi antecknade var
+			0,6 m. När taket pausar antecknandet (se noten nedan) blir
+			avståndet till sista smulan större för varje steg, och vakten
+			tömde då hela spåret fast spelaren gick något hundradels varv
+			i taget. Mätt i bänken: ett varv med 6 m radie lämnade 4 smulor
+			av 40. Förra läget är det vakten faktiskt menar.
+
+			══ HOPPET MÄRKER, DET RADERAR INTE (reviewrond 6) ═══════════
+
+			Raden löd `table.clear(spar)`, och den gjorde två saker i ett
+			svep: den upptäckte att spelarens rörelse var diskontinuerlig,
+			OCH den påstod att hästen därmed hade gått hela den antecknade
+			vägen. Bara det första är sant.
+
+			Reproducerat: giltig ledning, fyra oförbrukade smulor, spelaren
+			flyttas 3,75 m på en bildruta och står efteråt 8,00 m bort —
+			innanför `KOPPEL`, så sessionen lever vidare. Ändå blev
+			4 punkter 1 och framsidan flyttade sig 17,25 studs. Rutt hon
+			hade kvar att gå försvann utan att någon gått den.
+
+			Och vakten nådde inte ens sitt eget mål: med spåret tömt lades
+			spelarens NYA läge till som första smula nästa rad, så bron
+			tvärs över teleporten byggdes ändå — 0,00 m från hoppmålet.
+
+			RÄTTELSEN är den klistriga pausen rond 5 redan byggde. Hoppet
+			märker kedjan bruten; den oförbrukade vägen ligger kvar tills
+			hon gått den, och då sår reseeden ett nytt frö vid spelaren.
+			Ingenting läggs till efter hoppet, så det påhittade segmentet
+			uppstår aldrig — vakten behåller hela sin ursprungliga poäng
+			och tappar bara påståendet den inte kunde bevisa.
+
+			Kopplet är fortfarande det som avgör om sessionen ÖVERLEVER ett
+			hopp. Bär den inte, släpper `led.koppel` som förut. ]]
+		local forra = l.forraSpelarPos
+		if forra and (rot.Position - forra).Magnitude > HOPP * M then
+			l.sparFullt = true
+		end
+		l.forraSpelarPos = rot.Position
+
+		--[[ ALLT GÅNGET → SÅ FÅR SPÅRET SÅS OM.
+
+			Är bara en smula kvar och hon står på den har hon gått hela
+			den väg vi antecknat. Då — och bara då — går det att tömma
+			spåret utan att någon oförbrukad väg går förlorad, och nästa
+			rad sår ett nytt frö vid spelaren. Utan det skulle ett spår
+			som pausats med ett för stort gap aldrig kunna börja om. ]]
+		if #spar == 1 and avstandM(spar[1], pivot.Position) < START_R then
+			table.clear(spar)
+		end
+
+		--[[ En TOM kedja är ingen bruten kedja. Spåret töms bara av
+			reseeden ovan — alltså när hon gått allt vi antecknat — och
+			då börjar nästa smula en ny och obruten kedja. ]]
+		if #spar == 0 then l.sparFullt = false end
+
+		local senaste = spar[#spar]
+		--[[ ══ TAKET FÅR INTE ÄTA FRAMSIDAN (reviewrond 3) ═══════════
+
+			Raden löd `if #spar > 40 then table.remove(spar, 1) end`, och
+			den tar bort FRAMSIDAN — alltid, oavsett om hon gått dit.
+
+			Reproducerat i review: spelaren går ett varv med 6 m radie,
+			hela tiden innanför kopplets 9 m, med hästen kvar i mitten.
+			Varje smula ligger 6 m bort, alltså långt utanför `START_R`:
+			hon har inte gått en enda. Ändå började den äldsta vägen falla
+			bort så fort bufferten nått taket.
+
+			POLICYN: är bufferten full och framsidan oförbrukad, så slutar
+			vi ANTECKNA. Minnet förblir bundet vid `SPAR_TAK`, och ingen
+			väg hon har kvar att gå raderas. Att i stället kasta framsidan
+			vore att påstå ett framsteg som inte hänt.
+
+			Den nyaste änden är den billiga att tappa: hon går spåret
+			framifrån, så framsidan är hennes nästa steg och baksidan det
+			hon behöver sist. `sparFullt` gör läget synligt i runtime.
+
+			Kostnaden: en omväg spelaren tar medan det är pausat hamnar
+			inte i spåret. Då är hon redan så långt efter att bufferten
+			räcker till, och då är planeraren och kopplet skydden. ]]
+		--[[ ══ PAUSEN ÄR KLISTRIG — NÄRA ÄNDPUNKTER ÄR INTE KONTINUITET ══
+
+			Rond 3 slutade kasta framsidan, men när en plats blev ledig
+			lades spelarens nuvarande läge till efter den gamla svansen —
+			ett påhittat segment tvärs över allt osett. Rond 4 vaktade det
+			gapet mot `HOPP`.
+
+			DET RÄCKTE INTE, och skälet är principiellt: `HOPP` bevisar bara
+			att EN BILDRUTA inte var en teleport. Efter ett osett intervall
+			bevisar det ingenting. Spelaren kan gå ett helt varv medan det
+			är pausat och komma tillbaka intill svansen — uppmätt i review
+			36,16 m komprimerat till 2,09 m, i bänken 36 m till 1,79.
+
+			NÄRA ÄNDPUNKTER ÄR INTE KONTINUITET.
+
+			När kedjan en gång brutits läggs därför inget mer till den, hur
+			nära spelaren än kommer. Den får gås färdigt, och när hästen
+			nått sista smulan sår reseeden ovan en ny kedja vid spelaren.
+			`HOPP` används nu bara till det den kan bevisa: att avfärda en
+			omöjlig förflyttning på en bildruta, i vakten ovanför. ]]
+		--[[ ══ SMULAN FRÅN UTGÅNGSBILDRUTAN (reviewrond 8) ═══════════
+
+			Rond 7 gallrar den LEDANDE serien av boxsidiga smulor och
+			stannar vid första smulan på gångsidan. Det är rätt för
+			rutthistorik — men det räcker inte, och skälet är ordningen.
+
+			Ligger det redan en utsidespunkt i kön när hon passerar
+			dörrplanet hamnar spelarens boxsidiga läge från SAMMA
+			bildruta EFTER den:
+
+			    [ gammal box , UTE , ny box från utgångsbildrutan ]
+			         ^gallras    ^stopp      ^överlever
+
+			Hon förbrukar sedan `UTE`, spelaren går normalt ut i 0,5 m
+			steg, och den bevarade boxsmulan väljs som delmål TILLBAKA IN
+			i boxen. Mätt i review: `delmal plan −2,00`, utan hopp och
+			med sessionen vid liv.
+
+			DE TVÅ FALLEN ÄR INTE SAMMA SAK, och skillnaden är inte
+			geometrisk utan tidslig:
+
+			  · en SENARE återgång till boxsidan är framtida väg — den
+			    ska leva, och det är rond 7,
+			  · spelarens läge medan hon är UTE och han ännu är KVAR är
+			    platsen hon just lämnat. Det är historik, oavsett var i
+			    kön det hamnar.
+
+			FÖNSTRET, inte bildrutan. Första versionen av rättelsen
+			hoppade bara över själva utgångsbildrutan, och provet var
+			fortfarande rött: hon förbrukade utsidespunkten, kön blev
+			tom, och reseeden sådde ett nytt frö vid spelaren — som
+			fortfarande stod inne. `delmal plan −2,00` igen.
+
+			Därför löper fönstret från den bildruta HON passerar planet
+			till den bildruta HAN gör det. Under tiden antecknas inget.
+			Sedan stängs det för gott, och allt därefter — även en
+			genuin återgång in i boxen — antecknas som vanligt.
+
+			Skillnaden mot rond 7 är TIDSLIG, inte geometrisk. Plansidan
+			används bara för att beskriva fönstret, aldrig som bevis för
+			att framtida rutt är gången. ]]
+		local exitFrameHistorik = false
+		if l.utgangsfonster then
+			if l.dorrMitt and l.dorrUt then
+				if (rot.Position - l.dorrMitt):Dot(l.dorrUt) <= 0 then
+					exitFrameHistorik = true
+				else
+					l.utgangsfonster = false
+				end
+			else
+				l.utgangsfonster = false
+			end
+		end
+
+		if exitFrameHistorik then
+			-- spelarens läge hör till tiden före utgången; det antecknas inte
+		elseif not senaste then
+			table.insert(spar, rot.Position)
+		elseif not l.sparFullt
+			and (senaste - rot.Position).Magnitude > 0.6 * M then
+			if #spar < SPAR_TAK then
+				table.insert(spar, rot.Position)
+			else
+				l.sparFullt = true
+			end
+		end
+		--[[ ENGÅNGSGALLRINGEN VID UTGÅNGEN, ANDRA HALVAN. Flaggan sattes
+			högre upp i samma bildruta, när hon passerade dörrplanet. Nu
+			är antecknandet gjort, så den smula som lades till just nu
+			gallras med — och flaggan släcks. Den kör alltså EN gång.
+
+			══ BARA DEN LEDANDE SERIEN (reviewrond 7) ══════════════════
+
+			Raderna filtrerade förut HELA kön på dörrplanets sida. Men
+			PLANSIDA ÄR INTE FÖRBRUKNING, och det är samma fel som hela
+			den här serien handlar om: ett geometriskt sammanträffande
+			som får betyda «hon har gått här».
+
+			Spåret är ORDNAT. En smula som ligger SENARE i kön och råkar
+			hamna på boxsidan är FRAMTIDA VÄG — rutten kan mycket väl
+			vika tillbaka förbi dörrplanet längre fram. Reproducerat i
+			review, med kön gammal-inne · ute · återgång · ute och koppel
+			5,90 m: återgången raderades, enbart på plansida, fast hon
+			låg 3,89 m från hästen och alltså långt utanför `START_R`.
+
+			Nu gallras bara den LEDANDE serien av boxsidiga smulor. Den
+			är per definition historiken före utgången: spåret byggs
+			framifrån och spelaren stod inne i boxen. Första smulan på
+			gångsidan avslutar gallringen, och allt därefter är framtid.
+
+			Rond 6b:s poäng är oförändrad. Står spelaren kvar på boxsidan
+			i utgångsbildrutan ligger hans nya smula sist i en kö som är
+			boxsidig hela vägen — alltså i den ledande serien — och den
+			går med. ]]
+		if l.gallraVidUtgang then
+			l.gallraVidUtgang = false
+			if l.dorrMitt and l.dorrUt then
+				--[[ LEDANDE OCH AVSLUTANDE SERIE, INTE HELA KON.
+
+					Den LEDANDE serien ar rutthistoriken fran innan hon
+					borjade ga ut. Den AVSLUTANDE ar dar ledaren star just
+					nu — han slapper fram henne och blir kvar innanfor
+					dorren, sa hans senaste smulor ligger sist i kon och pa
+					boxsidan. Ocksa det ar bakom henne.
+
+					Mellan tva gangsidiga smulor ligger daremot en GENUIN
+					atergang: en punkt rutten viker tillbaka till langre
+					fram. Den ror vi inte — det ar rond 7.
+
+					    [ box box | UTE | box | UTE | box box ]
+					      ^gallras         ^lever        ^gallras
+
+					Reproducerat i MOTORN, inte bara i banken: med bara den
+					ledande serien overlevde spelarens egen smula pa plan
+					−2,70, och delmalet pekade dit efter att bada var ute. ]]
+				while #spar > 0
+					and (spar[1] - l.dorrMitt):Dot(l.dorrUt) <= 0 do
+					table.remove(spar, 1)
+				end
+				--[[ ══ SVANSEN KRAVER TIDSBEVIS (reviewrond 9) ══════
+
+					Raderna ovanfor sa «sist + boxsidig = dar ledaren star
+					just nu». Det ar ett pastaende om TIDEN, och det gick
+					inte att lasa ur kon.
+
+					Under den klistriga pausen fran rond 5/6 ar svansen
+					gammal: det sista som hann antecknas innan taket slog
+					i. Spelaren kan ha gatt hur langt som helst sedan
+					dess. Reproducerat i review med ledaren redan UTE,
+					koppel 5,90 m och `sparFullt = true` — suffixregeln
+					raderade da en framtida atergang som ingen gatt.
+
+					Forsta forsoket (rond 9) bevisade det med ett
+					AVSTAND: svansen raknades som nulage om den lag inom
+					0,6 m fran spelaren. DET VAR ROND 5:s INVARIANT IGEN
+					— narhet mellan tva punkter sager ingenting om NAR de
+					uppstod. En gammal, pausad svans kan ligga tjugo
+					centimeter fran en spelare som kom dit langt senare.
+					Matt i review: ledaren plan +0,10, svansen −0,10, gap
+					0,20 m, `sparFullt = true` — och svansen raderades.
+
+					BEVISET AR TIDSLIGT OCH FINNS I TILLSTANDET, exakt:
+
+					  · antecknandet sker BARA nar loggen ar levande,
+					  · pausen slapper BARA nar kon ar tom.
+
+					Darfor ar kon HOMOGEN — alla smulor i den hor till
+					samma antecknandeomgang — och med levande logg ar
+					svansen per konstruktion det SENASTE provet. Spelaren
+					kan inte ha gatt mer an 0,6 m sedan det logades, for
+					da hade en ny smula funnits. Ar loggen pausad ar
+					svansen per definition inte senast, hur nara ledaren
+					den an rakar ligga.
+
+					Homogeniteten ar inget pastaende har: den mats i
+					`ledning.spec`, sektionen «Pausen antecknar inte, och
+					kon forblir homogen». ]]
+				local svansArNulaget = #spar > 0 and not l.sparFullt
+				if svansArNulaget then
+					while #spar > 0
+						and (spar[#spar] - l.dorrMitt):Dot(l.dorrUt) <= 0 do
+						table.remove(spar, #spar)
+					end
+				end
+			end
+		end
 		--[[ EN SMULA HÄSTEN STÅR PÅ ÄR FÖRBRUKAD, och det gäller ÄVEN NÄR
 			HON STÅR STILL.
 
@@ -1484,20 +2014,19 @@ local function steg(_dt: number)
 			med den äldsta smulan under sig, och då låg målpunkten inom
 			dödzonen — vilket gjorde att hon stod kvar, vilket gjorde att
 			smulan aldrig gallrades. Spelaren 6,1 m bort, hästen blickstilla,
-			och ingenting i tillståndet såg trasigt ut. En lås-i-sig-själv. ]]
-		--[[ RADIEN ÄR START_R, INTE ETT MINDRE TAL, och det är hela poängen.
+			och ingenting i tillståndet såg trasigt ut. En lås-i-sig-själv.
 
-			Gallringen låg på 1,2 m medan hysteresen börjar gå först vid 1,8 m.
-			En smula som hamnade i bandet däremellan var varken förbrukad eller
+			RADIEN ÄR START_R, INTE ETT MINDRE TAL, och det är hela poängen.
+			Gallringen låg på 1,2 m medan hysteresen börjar gå först vid
+			1,8 m. En smula i bandet däremellan var varken förbrukad eller
 			värd att gå till: mätt i Studio, söder om boxraderna, stod hästen
-			stilla 1,21 m från sin egen brödsmula med spelaren 6,30 m bort och
-			rörde ingenting alls. Samma sorts glapp som dörrens delmål hade.
+			stilla 1,21 m från sin egen brödsmula med spelaren 6,30 m bort
+			och rörde ingenting alls.
 
-			En punkt hon inte tänker gå till får alltså inte vara hennes mål. ]]
-		while #spar > 1 and avstandM(pivot.Position, spar[1]) < START_R do
-			table.remove(spar, 1)
-		end
-
+			DET ÄR NUMERA DEN ENDA GALLRINGEN. Se noten över `gallraSpar`:
+			spelarens avstånd får avgöra kopplet, aldrig radera väg hon inte
+			har gått än. ]]
+		gallraSpar(spar, pivot.Position)
 
 		--[[ MÅLPUNKTEN FÅR ALDRIG LIGGA I DÖDZONEN.
 
@@ -1510,10 +2039,16 @@ local function steg(_dt: number)
 			i tillståndet såg trasigt ut. Duger ingen smula tas punkten
 			bakom spelaren i stället. ]]
 		local bakom = rot.Position - rot.CFrame.LookVector * (FOLJ_BAKOM * M)
+		--[[ ÄR MÅLET RUTTHISTORIK? Se noten över `klampMal`: en smula är
+			en punkt spelaren FAKTISKT gick på, och den får inte dras
+			tillämpas mot henne. Reservpunkten bakom spelaren är däremot
+			härledd ur hennes blickriktning just nu och hör till taket. ]]
+		local urSpar = false
 		for i = 1, #spar do
 			if avstandM(spar[i], rot.Position) >= FOLJ_BAKOM
 				and avstandM(spar[i], pivot.Position) >= START_R then
 				bakom = spar[i]
+				urSpar = true
 				break
 			end
 		end
@@ -1669,6 +2204,10 @@ local function steg(_dt: number)
 				glappet mellan "för nära för att gå" och "för långt för att
 				vara framme", och stod där. Radien måste vara större än
 				START_R, annars finns bandet kvar. ]]
+			--[[ Dörrens delmål är inte en smula. Det är härlett ur dörrens
+				egen geometri, ligger några meter bort, och taket är därför
+				oförändrat här — det löser ändå aldrig ut på de avstånden. ]]
+			urSpar = false
 			if l.dorrsteg == 1 then
 				if avstandM(pivot.Position, ut1) < START_R + 0.4 then
 					l.dorrsteg = 2
@@ -1756,15 +2295,48 @@ local function steg(_dt: number)
 			nollställdes varje bildruta. Ett ankare i världen och ett krav på
 			att hon faktiskt LÄMNAR det kan inte ljuga på samma sätt. ]]
 		l.tid += _dt
+		l.ankartid = (l.ankartid or 0) + _dt
+		--[[ ANKARET HAR EN TAKT, INTE BARA EN RADIE (M3, hela ledrutten).
+
+			Mätt i Studio under hela rutten box E 8 -> ridhuset, tre pass med
+			samma utfall. Hon växlade mellan att följa i 5,74 studs/s och att
+			KRYPA:
+
+			    11,9 -> 15,5 s   hasten 2,2 studs     = 0,6 studs/s
+			                     spelaren 17 studs    = 4,7 studs/s
+			    draget            på, MaxVelocity 6,00
+			    stillaSedan       0,0  0,4  0,1  0,6  1,2  0,1  0,0
+
+			Radien är 0,25 m. En krypning på 0,2 m/s lämnar den på 1,25 s och
+			NOLLSTÄLLER därmed stillaståendet strax innan NAV_STILLA nås. Hon
+			räknades alltså som GÅENDE medan hon förlorade fyra studs i sekunden
+			mot den som ledde henne. Planeraren kopplades aldrig in, och kopplet
+			släppte på `led.tappade_bort` vid waypoint 41 av 94.
+
+			FÖRFLYTTNINGEN ÄR FORTFARANDE MÅTTET — en ankrad häst rapporterade
+			1,59 studs/s utan att röra sig, och det är därför ankaret finns.
+			Det som saknades var att förflyttningen också måste ske i NÅGON takt.
+			Tiden det tog att lämna ankaret jämförs därför med tiden hon fick på
+			sig vid `NAV_TAKT` av den fart hon FAKTISKT beordrats hålla. Hann hon
+			det är hon i rörelse och klockan nollställs som förr; hann hon inte
+			flyttas ankaret ändå — hon är ju någon annanstans — men klockan får
+			gå vidare, så en krypning inte längre kan köpa sig fri en gång per
+			radie. Tröskeln är RELATIV till ordern och inte ett valt tal: går hon
+			långsamt för att hon beordrats långsamt räknas hon fortfarande som
+			gående. ]]
 		if l.badGa then
 			if avstandM(pivot.Position, l.ankare) > NAV_ANKARE then
+				local budget = NAV_ANKARE / math.max(onskadFart * NAV_TAKT, 0.01)
+				local holltTakten = l.ankartid <= budget
 				l.ankare = pivot.Position
-				l.stillaSedan = 0
+				l.ankartid = 0
+				if holltTakten then l.stillaSedan = 0 end
 			else
 				l.stillaSedan += _dt
 			end
 		else
 			l.ankare = pivot.Position
+			l.ankartid = 0
 			l.stillaSedan = 0
 		end
 		l.badGa = false
@@ -1831,8 +2403,11 @@ local function steg(_dt: number)
 			if navigerar(l) then
 				local w = l.navVag[l.navIx]
 				l.gar = true
+				--[[ En vägpunkt är också rutthistorik — planeraren har lagt den
+					runt hindret. Klampas den mot spelaren un-krokas omvägen,
+					och det är samma fel som spelaravståndsgallringen gjorde. ]]
 				l.badGa = styrMot(pivot, hum, Vector3.new(w.X, pivot.Position.Y, w.Z),
-					onskadFart, _dt, l.rigg, rot.Position)
+					onskadFart, _dt, l.rigg, nil)
 			else
 				--[[ Vägen är slut. Tillbaka till spårföljningen; blev hon
 					ändå inte fri märks det som stillastående igen. ]]
@@ -1867,13 +2442,13 @@ local function steg(_dt: number)
 					en annan gangart, bara ratt att ta igen. Kopplet haller.
 					Regeln ar samma i bada grenarna nedan. ]]
 				l.badGa = styrMot(pivot, hum, Vector3.new(bakom.X, pivot.Position.Y, bakom.Z),
-					onskadFart, _dt, l.rigg, rot.Position)
+					onskadFart, _dt, l.rigg, if urSpar then nil else rot.Position)
 			end
 		else
 			if tillMal > START_R then
 				l.gar = true
 				l.badGa = styrMot(pivot, hum, Vector3.new(bakom.X, pivot.Position.Y, bakom.Z),
-					onskadFart, _dt, l.rigg, rot.Position)
+					onskadFart, _dt, l.rigg, if urSpar then nil else rot.Position)
 			end
 		end
 	end
@@ -1893,20 +2468,28 @@ function LedService.start()
 			return LedService.slapp(player)
 		end)
 
-	Players.PlayerRemoving:Connect(function(player)
-		if ledd[player] then LedService.slapp(player, "led.tappad") end
-		--[[ Städningen läser MINNET, inte den aktiva ledningen: kopplet har
-			oftast släppt långt innan spelaren stänger spelet. ]]
-		LedService.aterstallTillBox(senasteLedning[player])
-		senasteLedning[player] = nil
-		--[[ Bokföringen är sessionsbunden och hör till spelaren som gick.
-			Lämnas den kvar läcker den, och nästa spelare på samma
-			Player-objekt hade ärvt någon annans framsteg. ]]
-		uppnatt[player] = nil
-	end)
+	Players.PlayerRemoving:Connect(LedService.lamnar)
 
 	RunService.Heartbeat:Connect(steg)
 	print("[Led] Ledningen igång")
+end
+
+--[[ ── DEN SOM LÄMNAR (#252 DEL C) ──────────────────────────
+
+	Samma skäl som `GameplayService.lamnar`: städningen efter en spelare
+	som går är en av de fyra saker runtime-grinden ska kunna falla på,
+	och den måste då kunna köras genom produktionens EGEN handlare i
+	stället för genom en kopia av den. ]]
+function LedService.lamnar(player: Player)
+	if ledd[player] then LedService.slapp(player, "led.tappad") end
+	--[[ Städningen läser MINNET, inte den aktiva ledningen: kopplet har
+		oftast släppt långt innan spelaren stänger spelet. ]]
+	LedService.aterstallTillBox(senasteLedning[player])
+	senasteLedning[player] = nil
+	--[[ Bokföringen är sessionsbunden och hör till spelaren som gick.
+		Lämnas den kvar läcker den, och nästa spelare på samma
+		Player-objekt hade ärvt någon annans framsteg. ]]
+	uppnatt[player] = nil
 end
 
 --[[ Den som äger tilldelningen (GameplayService) lämnar en krok som
@@ -1952,6 +2535,28 @@ end
 	`CanCollide = false`. Det var den STANGDA dorren som holl henne. ]]
 function LedService.satDorrKrok(f: ((BasePart) -> boolean)?)
 	hakar.dorr = f :: any
+end
+
+--[[ ══ #264 PLAYER_FLOW_CLOSURE_R4: MÅLET KVITTERAR LEDSTEGET ══════════
+
+	Mätt i Studio på kandidat 167133b, riktig ledning box MB 5 -> ridhuset:
+	`malNatt=true`, `lamnatBox=true`, kopplet släppt — och panelen stod kvar
+	på «Lead her to the arena 4/5». `nastaFas` var fortfarande `leda`.
+
+	Kontraktet står i `PreparationController.aktuellUppgift`: «GameplayService
+	bockar av `leda` genom att hon FYSISKT leds till ridhuset». Det gjorde
+	den inte. `GameplayService.moment` PRÖVADE villkoret, men bara när
+	spelaren tryckte på stegets egen rad; ingenting kvitterade det när hon
+	faktiskt kom fram. Ett andra tryck efter en verklig ankomst är en
+	bekräftelse av något som redan hänt.
+
+	Kroken anropas när hästen når målzonen och när kopplet släpps i den.
+	Den som äger förberedelsen (GameplayService) kvitterar genom den
+	VANLIGA momentvägen — samma grindar, samma närvarokrav — så ingenting
+	här kan kvittera en förflyttning som inte skett. Samma krokmönster som
+	`satDorrKrok`: ledningen känner inte till skötseln. ]]
+function LedService.satMalKrok(f: ((Player) -> ())?)
+	hakar.mal = f :: any
 end
 
 --[[ För specar: kör EN bildruta explicit.

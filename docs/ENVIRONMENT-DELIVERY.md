@@ -6,6 +6,23 @@ Status: processförslag enligt Tobias beslut 2026-09-07. Gäller omedelbart som 
 
 UBRF är ett lätt, roligt ridspel där spelaren lär sig hästkunskap och ansvar genom att göra. Den verkliga anläggningen är facit. Roblox är primär spelplattform och HTML/webb är en fullvärdig, parallell spelbar distribution. Ingen av dem får reduceras till en senare port, statisk demo eller enbart QA-yta. Miljö, hästar, lektioner, interaktioner och centrala regler ska motsvara varandra; renderer, UI och inputadapter får vara plattformsspecifika.
 
+> **Tidsbegränsat produktbeslut 2026-09-22 — Roblox först.** Fram till
+> verifierad First Playable är Roblox enda aktiva leveransmålet, och kravet på
+> samtidig webbimplementation är pausat. Det räknas som den uttryckligt
+> godkända avvikelsen nedan och ska redovisas som en avvikelse, aldrig som
+> genomförd paritet. Webben bevaras i befintligt skick. Se
+> `docs/PRODUCT-CANON.md`, «Tidsbegränsat produktbeslut 2026-09-22».
+
+> **Produktbeslut 2026-09-26 — miljöansvaret flyttar till Claude efter
+> överlämning.** Tobias beslut, PR #264 kommentar `5843082008`. Claude äger
+> miljöimplementationen **först efter** en kontrollerad överlämning:
+> inventering av Replits befintliga miljöarbete, fastställt filägarskap och
+> kvittens. Överlämningsgrinden står i `docs/LEVERANSMATRIS.md` (G-MILJÖ).
+>
+> Till dess gäller Replits ansvar och Claudes begränsning nedan för allt som
+> inte är överlämnat. Accepterat innehåll och referenser bevaras, och ingen
+> andra skrivare startas.
+
 En miljöleverans är inte färdig för oberoende review förrän samma källstyrda miljöändring finns i båda spelbara versionerna, eller en uttryckligt godkänd plattformsspecifik avvikelse är dokumenterad. Webbscreenshots eller grön CI bevisar inte Roblox Studio-funktionalitet.
 
 ## Ansvar och arbetsfördelning

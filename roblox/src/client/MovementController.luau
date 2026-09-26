@@ -37,6 +37,7 @@ local Config, Gaits, RigAdapter = Core.Config, Core.Gaits, Core.RigAdapter
 local Ridtrappa = Core.Ridtrappa
 local StateMachine = Core.StateMachine
 local RidKanon, Hjalper, Svar = Core.RidKanon, Core.Hjalper, Core.Svar
+local Gangfas = Core.Gangfas
 
 local MovementController = {}
 MovementController.__index = MovementController
@@ -97,6 +98,73 @@ local NEUTRAL_INTENT: Types.Intent = {
 local function smooth(current: number, target: number, tau: number, dt: number): number
 	if tau <= 0 then return target end
 	return current + (target - current) * (1 - math.exp(-dt / tau))
+end
+
+--[[ ── VARVET OCH GALOPPENS LEDANDE SIDA (#264 GAIT_READABILITY_AND_UGNETA)
+
+	Varvet avgör lättridningens yttre framben och galoppens sida. Det räknas
+	i BANANS koordinater — ligger ridbanans mitt till höger eller vänster
+	om kursen — aldrig ur kamerans sida, och bara inne på banan. Utanför
+	finns ingen bana att rida ett varv på, och då är svaret okänt.
+
+	Galoppens sida väljs NÄR galoppen börjar och hålls tills den tar slut:
+	ett litet styrutslag byter inte ledande ben. Okänd sida ritas som höger
+	galopp men redovisas okänd, så att ingen text påstår en sida som inte
+	valts. ]]
+local banMitt: Vector3? = nil
+local banRekt: { x0: number, z0: number, x1: number, z1: number }? = nil
+local banLast = false
+local function ridbanan(): (Vector3?, any)
+	if banLast then return banMitt, banRekt end
+	banLast = true
+	pcall(function()
+		local K = require(game:GetService("ReplicatedStorage"):FindFirstChild("UBRFKomplex") :: any)
+		local hus
+		for _, b in ipairs(K.byggnader) do
+			if b.id == "ridhus" then hus = b end
+		end
+		local bana = K.ridhus and K.ridhus.bana
+		if hus and bana then
+			local M = Config.STUDS_PER_METRE
+			local x0, z0 = (hus.rekt.x + bana.x) * M, (hus.rekt.y + bana.y) * M
+			local x1, z1 = x0 + bana.w * M, z0 + bana.h * M
+			banRekt = { x0 = x0, z0 = z0, x1 = x1, z1 = z1 }
+			banMitt = Vector3.new((x0 + x1) / 2, 0, (z0 + z1) / 2)
+		end
+	end)
+	return banMitt, banRekt
+end
+
+--[[ Provets fönster in: sätt banan direkt, utan `UBRFKomplex`. ]]
+function MovementController._satBanaForProv(x0: number, z0: number, x1: number, z1: number)
+	banLast = true
+	banRekt = { x0 = x0, z0 = z0, x1 = x1, z1 = z1 }
+	banMitt = Vector3.new((x0 + x1) / 2, 0, (z0 + z1) / 2)
+end
+
+function MovementController._varvOchLedande(loco: any, pos: Vector3, framat: Vector3,
+	forraGangart: string?)
+	local mitt, rekt = ridbanan()
+	local varv: string? = nil
+	if mitt and rekt and pos.X >= rekt.x0 and pos.X <= rekt.x1
+		and pos.Z >= rekt.z0 and pos.Z <= rekt.z1 then
+		varv = Gangfas.varv(pos, framat, mitt)
+	end
+	--[[ Okänt i ett ögonblick (rakt mot mitten) behåller det senast giltiga
+	     så länge hon är kvar på banan; utanför banan är det okänt. ]]
+	if varv ~= nil then
+		loco.varv = varv
+	elseif not (mitt and rekt and pos.X >= rekt.x0 and pos.X <= rekt.x1
+		and pos.Z >= rekt.z0 and pos.Z <= rekt.z1) then
+		loco.varv = nil
+	end
+	local galopp = loco.gait == "canter" or loco.gait == "gallop"
+	local varGalopp = forraGangart == "canter" or forraGangart == "gallop"
+	if galopp and not varGalopp then
+		loco.lead = loco.varv
+	elseif not galopp then
+		loco.lead = nil
+	end
 end
 
 function MovementController.new(rig: Types.Rig, stats: { [string]: any })
@@ -762,7 +830,10 @@ function MovementController:step(intent: Types.Intent, dt: number)
 		jumpFired = jumpFired,
 		gait = faktiskGangart,
 	}, dt)
+	local forraGangart = loco.gait
 	loco.gait = self.machine.gait
+	MovementController._varvOchLedande(loco, rig.root.Position,
+		rig.root.CFrame.LookVector, forraGangart)
 
 	--[[ ── Fasen följer MARKEN ────────────────────────────────────────
 	     Förut drevs fasen av beatRate × dt, alltså av den fart vi BEGÄRT.
@@ -775,6 +846,12 @@ function MovementController:step(intent: Types.Intent, dt: number)
 	local pos = rig.root.Position
 	local moved = if self.lastPos then (pos - self.lastPos).Magnitude else 0
 	self.lastPos = pos
+	--[[ #264: ETT HOPP ÄR INGEN RÖRELSE. En teleport, ett återinsteg eller
+	     en nätverkskorrigering flyttar roten fler meter än hon kan gå på en
+	     bildruta. Stegades fasen med det blev det en salva hovslag och ben
+	     som slog runt. Tre meter per bildruta är omöjligt i galopp även
+	     vid 5 bildrutor/s (5,6 m/s × 0,2 s = 1,1 m). ]]
+	if moved > 3 * Config.STUDS_PER_METRE then moved = 0 end
 	--[[ RYGGNINGEN HAR EN EGEN CYKEL (#233, ryggningsljudet).
 
 	     `Gaits.cycleLength("halt")` är 0, så fasen slutade växa så fort
@@ -790,7 +867,14 @@ function MovementController:step(intent: Types.Intent, dt: number)
 	local cycle = if loco.ryggar then Config.RYGGNING.CycleLength
 		else Gaits.cycleLength(loco.gait)
 	if cycle > 0 then
-		loco.phase = (loco.phase + (moved / Config.STUDS_PER_METRE) / cycle) % 1
+		local steg = (moved / Config.STUDS_PER_METRE) / cycle
+		loco.phase = (loco.phase + steg) % 1
+		--[[ #264 GAIT_UGNETA_REVIEW_R1: samma framsteg LÖPANDE, utan
+		     modulo. Ljudet läste förut bara `phase` och räknade tillbaka
+		     med en modulo-differens — en bildruta som gick över en hel
+		     cykel tappade då hela cykelns slag (mätt i bänken: 0,1 till
+		     1,2 gav noll slag i stället för två). En ägare, två vyer. ]]
+		loco.fasLopande = (loco.fasLopande or loco.phase) + steg
 	end
 
 	--[[ ── Ut i världen ───────────────────────────────────────────────

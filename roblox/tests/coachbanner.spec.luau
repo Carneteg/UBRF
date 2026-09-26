@@ -126,8 +126,14 @@ do
 			tostring(yta and yta.IgnoreGuiInset)))
 
 	local b = hitta("CoachBanner")
+	--[[ #264 GAIT_READABILITY_AND_UGNETA: med panelen som värd visas
+	     undervisningen i Ugnetas yta uppe till höger, och bannern ligger då
+	     i en dold behållare — fortfarande i SAMMA ScreenGui, aldrig en andra. ]]
+	local dolt = sokI(yta, "Dolt")
 	check("bannern är byggd och bor i lektionens yta",
-		b ~= nil and b.Parent == yta)
+		b ~= nil and (b.Parent == yta or (dolt ~= nil and b.Parent == dolt
+			and dolt.Parent == yta)),
+		("förälder %s"):format(tostring(b and b.Parent and b.Parent.Name)))
 	check("toppcentrerad under Roblox-menyn",
 		b ~= nil and b.AnchorPoint.X == 0.5 and b.AnchorPoint.Y == 0
 			and b.Position.X.Scale == 0.5 and b.Position.Y.Offset == 48,

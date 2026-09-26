@@ -14,7 +14,7 @@
 	PLATSEN LÄSES UR DET BYGGDA, INTE UR EN ANDRA MODELL. Punkten kommer
 	ur RidKanon.UGNETA.PLATS — samma tal som webbens `ugnetaPlats()` — och
 	löses upp mot de delar som faktiskt står i workspace ("Ridbanan" och
-	"Sarg syd"). Läktarlärdomen (#114) var att rendering och logik inte
+	"Dressyrlayout 20x60", via `Ridhusplats`). Läktarlärdomen (#114) var att rendering och logik inte
 	får ha var sin uppfattning om var något står; att räkna om ridhusets
 	origo här hade varit exakt det felet igen.
 
@@ -26,6 +26,7 @@
 ]]
 
 local RidKanon = require(game:GetService("ReplicatedStorage").HorseCore.RidKanon)
+local Ridhusplats = require(game:GetService("ReplicatedStorage").HorseCore.Ridhusplats)
 
 local UgnetaGestalt = {}
 
@@ -56,39 +57,41 @@ local function del(mor: Model, namn: string, storlek: Vector3, pos: Vector3,
 	return p
 end
 
---[[ VAR STÅR HON? Räknas ur de byggda delarna:
+--[[ VAR STÅR HON? Räknas ur de byggda delarna, genom `Ridhusplats`:
 
-	  "Ridbanan"  ger banans mitt och mått,
-	  "Sarg syd"  ger A-änden, och därmed VILKET håll som är C.
+	  "Dressyrlayout 20x60"  ger A-kanten och längdaxeln,
+	  "Ridbanan"             ger golvet och VILKET håll som är C (banan
+	                         fortsätter bortom layoutens C-linje).
 
-	Utan den andra delen hade tecknet på längdaxeln varit en gissning om
-	hur ridhuset råkar vara vridet i världen. Nu kommer riktningen ur
-	geometrin själv. ]]
+	Tecknet på längdaxeln är alltså ingen gissning om hur ridhuset råkar
+	vara vridet i världen; det kommer ur geometrin själv. ]]
 export type Plats = { pos: Vector3, motC: Vector3 }
 
 function UgnetaGestalt.plats(ridhus: Instance?): Plats?
-	if not ridhus then return nil end
-	--[[ Grunt uppslag: BuildKit.box hänger delarna direkt under byggnadens
-	     Model, så det är där de står. En rekursiv sökning hade letat efter
-	     en struktur produktionen inte har. ]]
-	local bana = ridhus:FindFirstChild("Ridbanan")
-	local syd = ridhus:FindFirstChild("Sarg syd")
-	if not bana or not syd then return nil end
-	local b = bana :: BasePart
-	local a = syd :: BasePart
-	local langs = b.Position - a.Position
-	if langs.Magnitude < 1e-3 then return nil end
-	local motC = langs.Unit                     -- från A mot C
+	--[[ #264 INFRA-PLATS1: platsen löses genom den gemensamma platsgrunden
+		`Ridhusplats`, ur banan och dressyrlayouten via deras stabila
+		`PlatsId`. Saknas eller tvetydigt underlag blir det ingen gestalt —
+		ingen gissad reserv.
+
+		REDOVISAD FLYTT (INFRA-PLATS1): förut räknades hon från den del som
+		`FindFirstChild("Sarg syd")` råkade ge. Den sargen sågas av södra
+		dörren i två bitar, och biten låg 24,6 studs vid sidan av banans
+		mittlinje — riktningen blev ~14° diagonal, och hon hamnade ~6,7 m
+		från mittlinjen och 0,49 m INNANFÖR layoutens C-linje. Nu står hon
+		där kanonen och webben säger: mitt på (`P.u`) och `P.bortomC` meter
+		bortom C, räknat från layoutens A-kant. ]]
+	local rp = Ridhusplats.los(ridhus)
+	if not rp then return nil end
+	local motC = rp.motC                        -- från A mot C, i planet
 
 	local P = RidKanon.UGNETA.PLATS
 	--[[ Dressyrlayouten är förankrad i A och `P.langd` meter lång; hon står
-	     `P.bortomC` meter bortom dess C-linje. Den fysiska ridytan
-	     fortsätter förbi den linjen, vilket är just varför punkten finns
-	     i huset — se modulhuvudet. ]]
-	local fot = a.Position + motC * studs(P.langd + P.bortomC)
-	--[[ Höjd: sandens överkant, så hon står PÅ golvet i stället för i det. ]]
-	local golv = b.Position.Y + b.Size.Y / 2
-	return { pos = Vector3.new(fot.X, golv, fot.Z), motC = motC }
+	     `P.bortomC` meter bortom dess C-linje, på tvärsläget `P.u` av
+	     `P.bredd`. Den fysiska ridytan fortsätter förbi C-linjen, vilket är
+	     just varför punkten finns i huset — se modulhuvudet. ]]
+	local fot = Ridhusplats.tillVarld(rp, Vector3.new((P.u - 0.5) * P.bredd, 0, P.langd + P.bortomC))
+	--[[ Höjd: sandens överkant (`tillVarld` med h = 0), så hon står PÅ golvet. ]]
+	return { pos = fot, motC = motC }
 end
 
 --[[ Bygger gestalten. Måtten är webbfigurens (src/scen3d.js: kavaj som

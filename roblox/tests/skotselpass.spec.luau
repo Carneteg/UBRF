@@ -1755,6 +1755,339 @@ do
 	game:GetService("RunService")._server = false
 end
 
+
+--[[ ══ NEDSTÄNGNINGEN VÄNTAR INTE PÅ EN SPELARE I TAGET ═════════════
+
+	Robustness Slice D.
+
+	`BindToClose` gick igenom spelarna i tur och ordning, och `skriv`
+	yieldar mot lagret med upp till tre försök och 1-2-4 sekunders
+	backoff. EN trög nyckel sköt därför alla bakom sig framåt i kön, och
+	Roblox nedstängningsbudget räcker inte hur länge som helst — svansen
+	av listan var risken.
+
+	PROVET GÅR GENOM DEN RIKTIGA CALLBACKEN. `__senasteBindToClose` är
+	den funktion produktionen lämnade till `game:BindToClose`; ingen
+	kopia av loopen provas här.
+
+	Bänkens `task.spawn` kör synkront som standard, och då går fan-out
+	inte att skilja från en serie. `__schemaPa(true)` byter den mot en
+	coroutine-kö bara för det här blocket. ]]
+print("\n── Nedstängningen väntar inte på en spelare i taget ──")
+do
+	local Players = game:GetService("Players")
+	local function nyP(namn, id)
+		return { Name = namn, UserId = id,
+			CharacterAdded = __signal_ny(), CharacterRemoving = __signal_ny() }
+	end
+
+	--[[ Ett färskt lager och en färsk tjänst för varje mätning. ]]
+	local sistaId = 9500
+	local function stall(antal)
+		__datastore.nollstall()
+		local spelare = {}
+		for i = 1, antal do
+			sistaId += 1
+			spelare[i] = nyP("Stang" .. sistaId, sistaId)
+		end
+		Players._spelare = spelare
+		--[[ `start()` kors en gang per provblock har, inte en gang per
+		     server. Utan den har raden lagger block tva pa sig block
+		     ettas `efterLaddning`-hookar. ]]
+		SparService._glomHookarForProv()
+		for _, p in ipairs(spelare) do SparService._glomForProv(p) end
+		SparService.start()
+		return spelare
+	end
+
+	--[[ Ordningen av start/slut per nyckel, och hur många som är inne i
+	     en skrivning samtidigt. Det är fan-out-måttet. ]]
+	local ordning, inne, mest = {}, 0, 0
+	local langsam: string? = nil
+	local function mat(droj)
+		ordning, inne, mest = {}, 0, 0
+		__datastore.foreSkriv = function(nyckel)
+			inne += 1
+			if inne > mest then mest = inne end
+			table.insert(ordning, "start:" .. nyckel)
+			if langsam ~= nil and nyckel == langsam then
+				for _ = 1, droj do task.wait() end
+			end
+			inne -= 1
+			table.insert(ordning, "slut:" .. nyckel)
+		end
+	end
+
+	--[[ ── FAN-OUT ─────────────────────────────────────────────── ]]
+	do
+		local sp = stall(4)
+		__schemaPa(true)
+		langsam = "spelare_" .. sp[1].UserId
+		mat(6)
+		check("callbacken finns att fyra",
+			type(__senasteBindToClose) == "function")
+		__senasteBindToClose()
+		__schemaPa(false)
+		__datastore.foreSkriv = nil
+
+		check("FLERA SKRIVNINGAR ÄR IGÅNG SAMTIDIGT — INTE EN I TAGET",
+			mest >= 2, ("som mest %d samtidigt"):format(mest))
+
+		--[[ …och allt kom fram INNAN callbacken returnerade. Utan den
+		     raden vore fan-out uppfyllt av en nedstängning som startar
+		     fyra trådar och går hem. ]]
+		local skrivna = 0
+		for _, p in ipairs(sp) do
+			if __datastore._data["spelare_" .. p.UserId] ~= nil then
+				skrivna += 1
+			end
+		end
+		check("OCH ALLAS DATA LÅG I LAGRET NÄR CALLBACKEN RETURNERADE",
+			skrivna == #sp, ("%d av %d"):format(skrivna, #sp))
+
+		--[[ Ingen nyckel skrevs två gånger samtidigt. ]]
+		local oppna, dubbel = {}, nil
+		for _, rad in ipairs(ordning) do
+			local vad, nyckel = rad:match("^(%a+):(.+)$")
+			if vad == "start" then
+				if oppna[nyckel] then dubbel = nyckel end
+				oppna[nyckel] = true
+			else
+				oppna[nyckel] = nil
+			end
+		end
+		check("och ingen nyckel skrevs två gånger på samma gång",
+			dubbel == nil, tostring(dubbel))
+	end
+
+	--[[ ── EN TRÖG SPELARE STOPPAR INTE DE ANDRA ───────────────── ]]
+	do
+		local sp = stall(3)
+		__schemaPa(true)
+		langsam = "spelare_" .. sp[1].UserId
+		mat(8)
+		__senasteBindToClose()
+		__schemaPa(false)
+		__datastore.foreSkriv = nil
+		local andra = 0
+		for i = 2, #sp do
+			if __datastore._data["spelare_" .. sp[i].UserId] ~= nil then
+				andra += 1
+			end
+		end
+		check("EN TRÖG SPELARE HINDRAR INTE DE ANDRAS SKRIVNING",
+			andra == #sp - 1, ("%d av %d"):format(andra, #sp - 1))
+	end
+
+	--[[ ── EN SOM INTE FÅR SPARAS SKRIVS INTE ───────────────────── ]]
+	do
+		__datastore.nollstall()
+		__datastore.felLas = true
+		local sp = { nyP("StangFel", 9590) }
+		Players._spelare = sp
+		SparService._glomHookarForProv()
+		SparService._glomForProv(sp[1])
+		SparService.start()
+		__datastore.felLas = false
+		check("lasningen foll, sa sessionen far inte sparas",
+			SparService.kanSpara(sp[1]) == false)
+
+		__schemaPa(true)
+		langsam = nil
+		mat(0)
+		__senasteBindToClose()
+		__schemaPa(false)
+		__datastore.foreSkriv = nil
+		check("EN SESSION UTAN BETRODD LÄSNING SKRIVS INTE VID NEDSTÄNGNING",
+			#ordning == 0, ("%d skrivningar"):format(#ordning // 2))
+	end
+
+	--[[ ── EN SKRIVNING SOM REDAN ÄR I LUFTEN ───────────────────── ]]
+	do
+		local sp = stall(2)
+		__schemaPa(true)
+		langsam = "spelare_" .. sp[1].UserId
+		mat(4)
+
+		--[[ ── VARFÖR DEN PÅGÅENDE SKRIVNINGEN SKA FALLA ───────────
+
+			Utan det går de två utfallen inte att skilja åt. En
+			nedstängning som bara HOPPAR ÖVER en spelare vars skrivning
+			är i luften ser likadan ut som en som väntar ut den — för
+			den pågående skrivningen läser minnet i sin transformator
+			och får med allt som hänt fram till dess. Datat hamnar rätt
+			ändå, och provet ser ingen skillnad.
+
+			Låter vi DEN falla finns bara en väg fram: nedstängningen
+			måste vänta ut den och göra ett EGET försök. Gör den inte
+			det står nyckeln tom.
+
+			Felet slås på för första skrivningen och av igen direkt, så
+			att just det andra försöket kan lyckas. ]]
+		local forsokPaLangsam = 0
+		local egenKrok = __datastore.foreSkriv
+		__datastore.foreSkriv = function(nyckel)
+			if nyckel == langsam then
+				forsokPaLangsam += 1
+				--[[ HELA den pagaende skrivningen ska falla, inte bara
+				     dess forsta forsok: `medRetry` gor tre, och lyckas
+				     nagot av dem hamnar datat pa plats anda och provet
+				     ser ingen skillnad. Forsta versionen falde bara ett
+				     forsok och kunde darfor inte bli rod. ]]
+				__datastore.felSkriv = forsokPaLangsam <= SparService._FORSOK_FOR_PROV
+			else
+				__datastore.felSkriv = false
+			end
+			if egenKrok then egenKrok(nyckel) end
+		end
+
+		--[[ Starta en VANLIG skrivning och lämna den halvgjord: tråden
+		     ligger och väntar inne i lagret med `skriver` satt. ]]
+		task.spawn(function() SparService.skriv(sp[1]) end)
+		__schemaSteg()
+		check("en skrivning ligger halvgjord", #ordning >= 1,
+			table.concat(ordning, " "))
+
+		--[[ …och SÅ stängs servern. ]]
+		__senasteBindToClose()
+		__schemaTomKo()
+		__schemaPa(false)
+		__datastore.foreSkriv = nil
+		__datastore.felSkriv = false
+
+		local oppna, dubbel = {}, nil
+		for _, rad in ipairs(ordning) do
+			local vad, nyckel = rad:match("^(%a+):(.+)$")
+			if vad == "start" then
+				if oppna[nyckel] then dubbel = nyckel end
+				oppna[nyckel] = true
+			else
+				oppna[nyckel] = nil
+			end
+		end
+		check("EN PÅGÅENDE SKRIVNING FÅR INGEN ANDRA PÅ SAMMA NYCKEL",
+			dubbel == nil, tostring(dubbel))
+		check("och nedstängningen skrev ändå spelaren",
+			__datastore._data["spelare_" .. sp[1].UserId] ~= nil)
+		check("OCH DET VAR NEDSTÄNGNINGENS EGET FÖRSÖK SOM RÄDDADE DET",
+			forsokPaLangsam > SparService._FORSOK_FOR_PROV,
+			("%d forsok pa nyckeln, retryn gor %d")
+				:format(forsokPaLangsam, SparService._FORSOK_FOR_PROV))
+	end
+
+	--[[ ── KANTFALLEN ───────────────────────────────────────────── ]]
+	do
+		local sp = stall(1)
+		__schemaPa(true)
+		langsam = nil
+		mat(0)
+		__senasteBindToClose()
+		__schemaPa(false)
+		__datastore.foreSkriv = nil
+		check("en ensam spelare skrivs fortfarande",
+			__datastore._data["spelare_" .. sp[1].UserId] ~= nil)
+	end
+	do
+		stall(0)
+		__schemaPa(true)
+		mat(0)
+		local ok = pcall(__senasteBindToClose)
+		__schemaPa(false)
+		__datastore.foreSkriv = nil
+		check("och noll spelare returnerar rent", ok == true)
+	end
+
+	--[[ Tillbaka till ett rent lage for resten av specen. ]]
+	__datastore.nollstall()
+	Players._spelare = {}
+end
+
+--[[ ══ BOXTEXTEN KRASCHAR INTE PÅ SAKNAD METADATA (#264) ═══════════════
+
+	Tobias tryckte `V` på Troys box i ett riktigt playtest 2026-09-24 och
+	fick `StallService:122` kastat två gånger. Orsaken stod i källan:
+
+	    print(("[Stallet] %s — %s, %s. %s"):format(
+	        dagens.namn, dagens.ras, dagens.typ, dagens.besk))
+
+	`Troy` har `ras = nil`, och `string.format("%s", nil)` KASTAR i Luau.
+	Det är inget kantfall — `ras = nil` gäller tolv hästar i rostern, och
+	bland dem `blackrock_jack`, alltså First Ride-hästen själv.
+
+	Provet mäter tre saker: att texten går att bygga utan att kasta, att
+	den inte skriver `nil` eller hittar på en ras, och att en komplett
+	post fortfarande får med sig sin. ]]
+do
+	print("\n── Boxtexten tål en häst utan ras ──")
+
+	local function raderFor(d)
+		local ok, ut = pcall(function() return StallService.boxtext(d) end)
+		return ok, ut
+	end
+
+	--[[ TROY, ur den riktiga speldatan — inte en påhittad post. ]]
+	local troy = UBRFSpel.hastar["troy"]
+	check("Troy finns i speldatan", troy ~= nil)
+	check("och han saknar verkligen ras — det är reproduktionen",
+		troy ~= nil and troy.ras == nil, tostring(troy and troy.ras))
+
+	local ok, rader = raderFor(troy)
+	check("BOXTEXTEN KASTAR INTE PÅ TROY", ok, tostring(rader))
+	local text = if ok then table.concat(rader, " | ") else ""
+	check("och den nämner hästen", ok and text:find("Troy") ~= nil, text)
+	check("och den skriver inte nil", ok and text:find("nil") == nil, text)
+	--[[ INGEN PÅHITTAD RAS. `docs/PRODUCT-CANON.md`: hitta aldrig på en
+	     UBRF-detalj för att fylla ett hål. Saknas rasen står det ingen. ]]
+	check("och den hittar inte på en ras",
+		ok and text:find("okänd") == nil and text:find("Okänd") == nil, text)
+
+	--[[ FIRST RIDE-HÄSTEN har samma brist. ]]
+	local jack = UBRFSpel.hastar["blackrock_jack"]
+	local okJ, raderJ = raderFor(jack)
+	check("BOXTEXTEN KASTAR INTE PÅ BLACKROCK JACK", okJ, tostring(raderJ))
+	check("och han saknar också ras", jack ~= nil and jack.ras == nil)
+
+	--[[ KONTROLLEN: en komplett post ska fortfarande få med sin ras,
+	     annars kunde tystnaden ovan betyda att rasen aldrig skrivs ut. ]]
+	local westside = UBRFSpel.hastar["westside"]
+	local okW, raderW = raderFor(westside)
+	local textW = if okW then table.concat(raderW, " | ") else ""
+	check("KONTROLL: en häst MED ras får med den",
+		okW and westside.ras ~= nil and textW:find(westside.ras) ~= nil,
+		textW)
+
+	--[[ Hela rostern, så att ingen enskild häst kan fälla prompten. ]]
+	local fel = {}
+	for id, d in pairs(UBRFSpel.hastar) do
+		local okA = pcall(function() return StallService.boxtext(d) end)
+		if not okA then table.insert(fel, id) end
+	end
+	check("HELA ROSTERN GÅR ATT LÄSA I BOXEN", #fel == 0,
+		table.concat(fel, ", "))
+
+	--[[ Och en tom post får inte kasta heller — prompten kan fyras innan
+	     tilldelningen hunnit fram. ]]
+	local okT = pcall(function() return StallService.boxtext({}) end)
+	check("en tom post kastar inte", okT)
+	local okN = pcall(function() return StallService.boxtext(nil) end)
+	check("och nil kastar inte", okN)
+
+	--[[ FODERRADENS GUARD hade samma brist: `%d` mot ett frånvarande `ho`
+	     kastar precis som `%s` mot ett frånvarande `ras`. Värdena
+	     returneras separat, och texten formateras på promptens egen
+	     `print(`-rad — se noten i `StallService.foder`. ]]
+	local okF = pcall(function() return StallService.foder(troy) end)
+	check("foderguarden kastar inte på Troy", okF)
+	check("en post utan foder ger inget att skriva ut",
+		StallService.foder({ namn = "X" }) == nil)
+	check("och ett foder utan hömängd ger inte heller något",
+		StallService.foder({ namn = "X", foder = { kraft = "müsli" } }) == nil)
+	local ho, kraft = StallService.foder({ namn = "X",
+		foder = { ho = 7, kraft = "müsli" } })
+	check("KONTROLL: ett komplett foder ger sina värden",
+		ho == 7 and kraft == "müsli", ("%s %s"):format(tostring(ho), tostring(kraft)))
+end
+
 if fails > 0 then
 	error(("skotselpass.spec: %d fel"):format(fails))
 end

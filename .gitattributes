@@ -3,3 +3,4 @@
 # eller en framtida `* text=auto`-regel skulle ge en annan fil än den som
 # Tobias accepterade. `binary` = -text -diff -merge.
 *.rbxlx binary
+

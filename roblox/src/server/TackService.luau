@@ -284,7 +284,56 @@ function TackService.satPa(player: Player, modell: Model?, typ: string,
 		Underlägget släpper INTE sadeln — det ligger under henne, och
 		spelaren bär sadeln vidare tills den är på. ]]
 	if BARBARA[typ] then
-		pcall(function() TackService.slappBuren(player, typ) end)
+		--[[ ── OCH UTFALLET PRÖVAS (#264) ─────────────────────────────
+
+			Här stod `pcall(function() TackService.slappBuren(...) end)`
+			och sedan `return true`. Bådadera kastades bort: `pcall`:s
+			eget `ok` och `slappBuren`:s returvärde. Gick släppet inte
+			fram svarade `satPa` ändå JA, och spelaren stod kvar med
+			sadeln i handen på en häst som var sadlad.
+
+			Tobias rapporterade precis det i sitt playtest 2026-09-24.
+			Delen på hästen och kopian i handen är två påståenden om
+			samma sak, och när de säger emot varandra får svaret inte
+			vara «klart».
+
+			FÖRSTA RÄTTELSEN STANNADE HALVVÄGS. Den svarade nej men
+			lät delen sitta kvar på hästen — och då mötte omförsöket
+			`tack.redan_pa`, föll igenom och svarade JA med en kopia
+			kvar i handen. Granskningen mätte det:
+
+			    first=false/tack.bars_kvar  second=true/nil
+			    heldBefore=larry  heldAfter=larry  saddle=true
+
+			Ett omförsök får inte lyckas med två exemplar av samma sak.
+			Därför ÅTERRULLAS den nyss fästa delen: världen går tillbaka
+			till «buren, inte påsatt», vilket är konsekvent och går att
+			försöka om på riktigt. Samma mönster som det halvbyggda
+			försöket ovanför redan använder.
+
+			Ett avslag konsumerar alltså ingenting: det spelaren håller i
+			ligger kvar, och hästen är lika osadlad som innan. ]]
+		--[[ BARA OM HON FAKTISKT BÄR EN. `satPa` går också den
+		     automatiska vägen, där stallet lägger på utrustningen utan
+		     att någon hållit i den — då svarar `slappBuren` nej med
+		     rätta, för det fanns ingenting att släppa. Första rättelsen
+		     saknade det villkoret och gjorde 65 mätningar i
+		     `integration.spec` röda. ]]
+		local barFore = TackService.barBuren(player, typ) ~= nil
+		local ok, slapptes = pcall(function()
+			return TackService.slappBuren(player, typ)
+		end)
+		if barFore and not (ok and slapptes) then
+			--[[ Tillbaka till utgångsläget. Tyglarna hör till tränset och
+			     tas med det, precis som i bygget ovanför. ]]
+			if typ == "trans" then
+				pcall(function() TackRigg.taAv(m, "tygel") end)
+			end
+			pcall(function() TackRigg.taAv(m, typ) end)
+			warn(("[Tack] %s bär kvar sin %s — påsättningen rullades tillbaka")
+				:format(player.Name, typ))
+			return false, "tack.bars_kvar"
+		end
 	end
 	return true
 end

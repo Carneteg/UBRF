@@ -26,10 +26,17 @@ local Svar, RidKanon = Core.Svar, Core.RidKanon
 --[[ Stallet äger den kanoniska hästdatan; HorseService läser den för att
      binda rätt individ till rätt ridkänsla (blocker 1). ]]
 local Stallet = require(game:GetService("ReplicatedStorage").Stallet)
+local Aktor = require(game:GetService("ReplicatedStorage").HorseCore.Aktor)
 --[[ #259 Gate 1A: den delade takten framfor fjarrfunktionerna.
 	`StateSync` och `RidingIntent` har sina EGNA skopor nedan — de ar
 	RemoteEvents och deras tal speglas av klientens prediktion. ]]
 local Skopa = require(script.Parent.Skopa)
+local RidLogg = require(script.Parent.RidLogg)
+local RidObservation = require(script.Parent.RidObservation)
+local HinderObservation = require(script.Parent.HinderObservation)
+local RidPlatsObservation = require(script.Parent.RidPlatsObservation)
+local VoltObservation = require(script.Parent.VoltObservation)
+local RidForsok = require(script.Parent.RidForsok)
 
 local HorseService = {}
 
@@ -79,6 +86,10 @@ export type Session = {
 	     den impulsspärren mäts mot, och den är sanningen; klientens egen
 	     spärr är presentation. ]]
 	sisteHjalp: number,
+	--[[ Vilken `sisteHjalp` vi redan skickat ett avslagsfacit for. Se
+	     noten vid impulssparren: en kvittens per fonster, inte per
+	     paket. ]]
+	nekKvitterad: number,
 	--[[ Växer vid varje accepterad ändring. Klienten kastar svar som är
 	     äldre än det den redan sett, så att ett omkastat paket inte kan
 	     dra tillbaka henne till en gångart hon lämnat. ]]
@@ -230,6 +241,7 @@ local function register(model: Model)
 		stegIndex = Gaits.index("halt"),
 		sekvens = 0,
 		sisteHjalp = 0,
+		nekKvitterad = -1,
 		ridVersion = 0,
 		intentPolletter = Config.RIDINPUT.SkopaTak,
 		intentSenast = os.clock(),
@@ -250,6 +262,14 @@ end
      via CollectionService — men blocker 1 kräver ett prov som går genom
      den RIKTIGA registreringen och läser de stats hästen faktiskt fick.
      Krokarna kallar samma kod, de duplicerar den inte. ]]
+--[[ RIV SESSIONEN, LÄMNA BOKFÖRINGEN. Enda vägen att framkalla
+     `hast.oregistrerad` i en bänk: läget uppstår i drift när en häst
+     avregistreras under en ryttare, och utan den här kroken går grinden
+     mot stale `byRider` inte att mäta alls. Provkrok, som grannarna. ]]
+function HorseService._glomSessionForProv(model: Model)
+	sessions[model] = nil
+end
+
 function HorseService._registerForProv(model: Model)
 	register(model)
 end
@@ -263,6 +283,27 @@ local function unregister(model: Model)
 	if not session then return end
 	if session.rider then
 		byRider[session.rider] = nil
+	end
+	--[[ En häst som avregistreras under en ritt: posten stängs som avbruten
+		här, annars står den öppen för alltid. `logga` deklareras längre
+		ned, därför går stängningen direkt och i egen pcall. ]]
+	if session.rittId then
+		--[[ INFRA-FORSOK1: ett aktivt försök stängs med ritten, före
+			observationerna (markören läser deras sista läge). ]]
+		local obs = RidObservation.ogonblick(session.rittId)
+		local ok0, fel0 = pcall(RidForsok.rittSlut, session.rittId, "hast_avregistrerad",
+			if obs then obs.tid else 0, VoltObservation.ogonblick(session.rittId))
+		if not ok0 then warn("[Horse] försöken kastade: " .. tostring(fel0)) end
+		local ok, fel = pcall(RidLogg.avsluta, session.rittId, "avbruten", "hast_avregistrerad", os.clock())
+		if not ok then warn("[Horse] ridloggen kastade: " .. tostring(fel)) end
+		local ok2, fel2 = pcall(RidObservation.avsluta, session.rittId, "avbruten")
+		if not ok2 then warn("[Horse] ridobservationen kastade: " .. tostring(fel2)) end
+		local ok3, fel3 = pcall(HinderObservation.avsluta, session.rittId, "avbruten")
+		if not ok3 then warn("[Horse] hinderobservationen kastade: " .. tostring(fel3)) end
+		local ok4, fel4 = pcall(RidPlatsObservation.avsluta, session.rittId, "avbruten")
+		if not ok4 then warn("[Horse] ridplatsobservationen kastade: " .. tostring(fel4)) end
+		local ok5, fel5 = pcall(VoltObservation.avsluta, session.rittId, "avbruten")
+		if not ok5 then warn("[Horse] voltobservationen kastade: " .. tostring(fel5)) end
 	end
 	sessions[model] = nil
 end
@@ -314,8 +355,19 @@ end
 	någonsin monterat en ryttare mot en riktig rigg. Kontraktet mäts nu i
 	`integration.spec.luau` (punkt 9 och 11).
 
-	Kroken får INTE avgöra något — se noten vid `setRiderHook`. ]]
-local riderHook: ((Player, boolean) -> ())? = nil
+	Kroken får INTE avgöra något — se noten vid `riderHooks`. ]]
+--[[ EN LISTA, INTE EN KROK (#263 Gate 2A).
+
+	Faltet var en enda krok, och `GameplayService` hade tagit den.
+	`ForstaRitten` behover samma besked — nar en ryttare sitter av ska
+	dess sessionsstatus rivas — och alternativet hade varit en andra,
+	parallell kroktyp for samma handelse.
+
+	Att det gar att gora sa har utan risk star redan i noten ovan:
+	kroken FAR inte avgora nagot. Den ar en avisering, och en avisering
+	tal flera mottagare. Varje lyssnare kors i egen pcall, sa en som
+	kastar tystar inte nasta. ]]
+local riderHooks: { (Player, boolean) -> () } = {}
 
 --[[ ── REPLIKERINGEN AV DET ACCEPTERADE LÄGET (#233 Fas 4b) ────────────
 
@@ -347,6 +399,35 @@ local function nyttRittId(): string
 		math.random(0, 0xffffff))
 end
 
+--[[ ══ RIDLOGGEN (#264 INFRA-2A) ═════════════════════════════════════
+	Serverns egen logg per ritt, skriven BARA där en övergång redan har
+	accepterats: i `setRider` (upp och av), efter ett accepterat steg i
+	`onRidingIntent`, när trötthetstaket drar ned trappan, och när
+	`stannaHast` stoppar en häst som fortfarande rids.
+
+	`replikera` är INTE en krok för loggen. Den körs också för nekade
+	hjälper och för rättelser utan ändring, så en logg där hade skrivit
+	övergångar som aldrig accepterades.
+
+	Varje anrop går genom `logga`, i pcall: loggen får aldrig hindra en
+	uppsittning, en avsittning eller ett steg. ]]
+local function logga(fn: (...any) -> any, ...: any)
+	local ok, fel = pcall(fn, ...)
+	if not ok then warn("[Horse] ridloggen kastade: " .. tostring(fel)) end
+end
+
+local function loggaSteg(session: Session, franIndex: number, orsak: string, handling: string?)
+	if session.rittId == nil or franIndex == session.stegIndex then return end
+	logga(RidLogg.gangart, session.rittId, {
+		fran = Ridtrappa.gangart(franIndex),
+		franRyggar = Ridtrappa.ryggar(franIndex),
+		till = Ridtrappa.gangart(session.stegIndex),
+		tillRyggar = Ridtrappa.ryggar(session.stegIndex),
+		orsak = orsak,
+		handling = handling,
+	}, os.clock())
+end
+
 local function replikera(session: Session)
 	local model = session.rig.model
 	local gangart = Ridtrappa.gangart(session.stegIndex)
@@ -364,13 +445,16 @@ local function replikera(session: Session)
 		     sent svar från ritt A kunde därför rätta en klient som hunnit
 		     sitta upp på ritt B. Hästen och rittmärket följer nu med, och
 		     klienten reconcilar bara när båda stämmer. ]]
-		Net.get("RidTillstand"):FireClient(session.rider, {
-			hast = model,
-			ritt = session.rittId,
-			gangart = gangart,
-			ryggar = ryggar,
-			version = session.ridVersion,
-		})
+		local kRid = Aktor.klient(session.rider)
+		if kRid then
+			Net.get("RidTillstand"):FireClient(kRid, {
+				hast = model,
+				ritt = session.rittId,
+				gangart = gangart,
+				ryggar = ryggar,
+				version = session.ridVersion,
+			})
+		end
 	end
 end
 
@@ -385,12 +469,18 @@ local function nollstallRitt(session: Session)
 	session.stegIndex = Gaits.index("halt")
 	session.sekvens = 0
 	session.sisteHjalp = 0
+	session.nekKvitterad = -1
 	session.intentPolletter = Config.RIDINPUT.SkopaTak
 	session.intentSenast = os.clock()
 end
 
-local function setRider(session: Session, player: Player?)
+--[[ `orsak` gäller bara när en ryttare lämnar: "avsittning" är en
+	avsittning hon själv bad om, allt annat är ett avbrott. ]]
+local function setRider(session: Session, player: Player?, orsak: string?)
 	local previous = session.rider
+	--[[ Märket fångas FÖRE nollställningen nedan, annars finns ingen
+		identitet kvar att stänga ridloggen med. ]]
+	local gammalRitt = session.rittId
 	session.rider = player
 
 	if previous then
@@ -411,12 +501,28 @@ local function setRider(session: Session, player: Player?)
 	     en mätning som hör till någon annan. ]]
 	--[[ Dagsformen avgörs NÄR hon sätts upp på, inte när hon registreras:
 		skötseln sker mellan de två, och det är den som ska synas. ]]
+	--[[ DAGSFORMEN ÄR SERVERNS, OCH KLIENTEN SKA FÅ VETA DEN.
+
+	     Den räknades förut ut här, göts in i `session.energi` och glömdes
+	     sedan bort som eget begrepp. `UgnetaTema` behöver den för att
+	     kunna skilja «hästen har en dålig dag» från «ryttaren sitter
+	     fel», och klienten hade ingen väg till den alls — attributet
+	     `Dagsform` fanns inte, så regeln föll tillbaka på skyggheten.
+
+	     Attributet sätts av samma skäl som `RidSession` några rader ned:
+	     det REPLIKERAS, och då hittar varje väg in i ritten samma värde.
+	     Saknas kroken, eller är det ingen som sitter upp, tas attributet
+	     BORT. Det är avsiktligt: en klient ska läsa «okänd» och tiga,
+	     inte ärva föregående ryttares dagsform. ]]
+	local dagsform: number? = nil
 	if player and dagsformHook then
 		local ok, d = pcall(dagsformHook, player)
 		if ok and typeof(d) == "number" then
-			session.energi = Svar.startEnergi(math.clamp(d, 0, 1))
+			dagsform = math.clamp(d, 0, 1)
+			session.energi = Svar.startEnergi(dagsform)
 		end
 	end
+	session.rig.model:SetAttribute("Dagsform", dagsform)
 
 	session.polletter = RATE_TAK
 	session.lastPollett = os.clock()
@@ -430,6 +536,37 @@ local function setRider(session: Session, player: Player?)
 	     utgångsläge i stället för att den förra får ett sista svar. ]]
 	nollstallRitt(session)
 	session.rittId = if player then nyttRittId() else nil
+	--[[ Ridloggen: den gamla ritten stängs (en gång — `avsluta` är ett
+		nej andra gången) och en ny öppnas för den nya ryttaren. ]]
+	local logNu = os.clock()
+	if gammalRitt then
+		local vanlig = orsak == nil or orsak == "avsittning"
+		--[[ INFRA-FORSOK1: försöket stängs exakt en gång, med orsaken. ]]
+		local obs = RidObservation.ogonblick(gammalRitt)
+		logga(RidForsok.rittSlut, gammalRitt, orsak or "avsittning", if obs then obs.tid else 0,
+			VoltObservation.ogonblick(gammalRitt))
+		logga(RidLogg.avsluta, gammalRitt, if vanlig then "avslutad" else "avbruten",
+			orsak or "avsittning", logNu)
+		logga(RidObservation.avsluta, gammalRitt, if vanlig then "avslutad" else "avbruten")
+		logga(HinderObservation.avsluta, gammalRitt, if vanlig then "avslutad" else "avbruten")
+		logga(RidPlatsObservation.avsluta, gammalRitt, if vanlig then "avslutad" else "avbruten")
+		logga(VoltObservation.avsluta, gammalRitt, if vanlig then "avslutad" else "avbruten")
+	end
+	if player and session.rittId then
+		local hastId = tostring(session.rig.model:GetAttribute("HorseId") or session.rig.model.Name)
+		logga(RidLogg.starta, session.rittId, hastId,
+			player.UserId, Ridtrappa.gangart(session.stegIndex), logNu)
+		--[[ INFRA-2B1: observationen börjar utan baslinje. Första giltiga
+			läget i nästa uthållighetssteg blir baslinjen, så ingen sträcka
+			från före uppsittningen kan räknas in. ]]
+		logga(RidObservation.starta, session.rittId, hastId, player.UserId)
+		logga(HinderObservation.starta, session.rittId, hastId, player.UserId)
+		logga(RidPlatsObservation.starta, session.rittId, hastId, player.UserId)
+		logga(VoltObservation.starta, session.rittId, hastId, player.UserId)
+		--[[ INFRA-FORSOK1: ritten kan bära försök, men inget startas här —
+			fri ridning är fri. ]]
+		logga(RidForsok.rittStart, session.rittId, hastId, player.UserId)
+	end
 	--[[ ── MÄRKET REPLIKERAS, OCH DET ÄR INTE EN BEKVÄMLIGHET ──────────
 	     Första utkastet lämnade märket ENBART i `tryMount`-returen. Det
 	     var en trasig leverans, och felet är värt att stå kvar:
@@ -465,12 +602,14 @@ local function setRider(session: Session, player: Player?)
 		warn("[Horse] Kunde inte sätta nätverksägare (ankrad eller ej fysisk del?)")
 	end
 
-	Net.get("MountChanged"):FireAllClients(session.rig.model, player)
+	--[[ #252 DEL C: broadcasten bar SPELAREN som nyttolast. En aktor utan
+	     klient gar inte att serialisera over traden, och en session utan
+	     ryttare skickar redan `nil`. Testsatet hamnar i samma gren. ]]
+	Net.get("MountChanged"):FireAllClients(session.rig.model, Aktor.klient(player))
 
 	--[[ Aviseringen sist, när allt annat är gjort: kroken ska se ett
 		färdigt tillstånd, inte ett halvt. ]]
-	local hook = riderHook
-	if hook then
+	for _, hook in ipairs(riderHooks) do
 		if previous and previous ~= player then
 			local ok, fel = pcall(hook, previous, false)
 			if not ok then warn("[Horse] ryttarkroken (av) kastade: " .. tostring(fel)) end
@@ -528,8 +667,60 @@ function HorseService.setDagsformHook(hook: ((Player) -> number)?)
 	dagsformHook = hook
 end
 
-function HorseService.setRiderHook(hook: ((Player, boolean) -> ())?)
-	riderHook = hook
+--[[ ══ LEDS HON REDAN? ══════════════════════════════════
+
+	Robustness Slice A. `LedService` har alltid vägrat att börja LEDA en
+	riden häst (`led.rids`), men motsatta vägen stod öppen: A ledde, B
+	satte sig upp, och båda ägde henne.
+
+	Det är inte en kosmetisk krock. Ledningen tar nätverksägarskapet till
+	servern och sparar det föregående värdet; uppsittningen ger ägarskapet
+	till ryttaren. Delarna sitter i samma assembly (`Motor6D` i
+	`HastRigg`), och Roblox ägarskap gäller per assembly. När A sedan
+	släpper lämnar `LedService` tillbaka det ägarskap den sparade INNAN B
+	satte sig — och rycker det därmed från den aktiva ryttaren. B rider en
+	häst hon inte längre styr.
+
+	LEDNINGENS SANNING BOR KVAR I `LedService`. Den här modulen får en
+	KROK, inte en kopia av `ledd`-tabellen — två böcker över vem som leder
+	vore samma sorts delade sanning som felet ovan.
+
+	SEPARAT FRÅN `mountGate` MED FLIT. Grinden nedan sitter i `tryMount`
+	själv och inte i gameplaylagrets gate, för `setMountGate(nil)` är en
+	rimlig sak att göra i ett prov som vill hoppa över checklistan — och
+	den ska inte samtidigt kunna stänga av en säkerhetsregel.
+
+	── OCH DET ÄR «NÅGON ANNAN», INTE «någon» ────────────────
+
+	Första versionen nekade varje ledd häst, och `integration.spec` fällde
+	den omgående — med rätta. Kärnloopen ÄR att leda sin häst till banan
+	och sitta upp där, utan att släppa repet först. `LedService` har redan
+	den vägen löst: sitter ledaren själv upp släpper den kopplet nästa
+	bildruta med skälet `led.rider` (`LedService.luau:1533-1536`).
+
+	Problemet är två OLIKA ägare, inte två roller hos samma spelare.
+	Kroken lämnar därför ut LEDAREN, inte ett ja/nej, och jämförelsen
+	står här där nejet ges — så att regeln går att läsa på ett ställe.
+
+	Ingen krok registrerad = ingen ledning känd. Hästsystemet ska gå att
+	köra utan gameplaylagret, precis som med `mountGate` och dagsformen. ]]
+local ledareHook: ((Model) -> Player?)? = nil
+
+function HorseService.setLedareHook(hook: ((Model) -> Player?)?)
+	ledareHook = hook
+end
+
+--[[ Lagger till en lyssnare. Ersatter INTE de befintliga — se noten vid
+	`riderHooks`. ]]
+function HorseService.lyssnaRyttare(hook: ((Player, boolean) -> ())?)
+	if hook == nil then return end
+	table.insert(riderHooks, hook)
+end
+
+--[[ Provkrok: banken kor `start()` en gang per block, och utan den har
+	arver block tva block ettas lyssnare. ]]
+function HorseService._glomRyttarlyssnareForProv()
+	riderHooks = {}
 end
 
 function HorseService.tryMount(player: Player, model: Model): (boolean, string?, string?)
@@ -554,6 +745,23 @@ function HorseService.tryMount(player: Player, model: Model): (boolean, string?,
 	end
 	if byRider[player] then
 		return false, "hast.rider_redan"
+	end
+	--[[ EN ÄGARE I TAGET. Se noten vid `setLeddHook`. Kroken är
+	     pcall:ad av samma skäl som ryttarlyssnarna: ett fel i
+	     gameplaylagret ska inte kunna släppa igenom en uppsittning som
+	     regeln säger nej till — därför räknas ett KASTAT anrop som
+	     «hon leds» och inte som «hon är fri». Fail closed. ]]
+	if ledareHook then
+		local ok, ledare = pcall(ledareHook, model)
+		if not ok then
+			warn("[Horse] ledareHook kastade: " .. tostring(ledare))
+			return false, "hast.leds_nu"
+		end
+		--[[ NÅGON ANNANS rep. Sitter LEDAREN själv upp är det kärnloopen,
+		     och `LedService` släpper kopplet själv nästa bildruta. ]]
+		if ledare ~= nil and ledare ~= player then
+			return false, "hast.leds_nu"
+		end
 	end
 
 	local character = player.Character
@@ -603,10 +811,10 @@ function HorseService.tryMount(player: Player, model: Model): (boolean, string?,
 	slappStadning(player)
 	local kopplingar = {}
 	table.insert(kopplingar, player.CharacterRemoving:Connect(function()
-		HorseService.dismount(player)
+		HorseService.dismount(player, "karaktar_borta")
 	end))
 	table.insert(kopplingar, humanoid.Died:Connect(function()
-		HorseService.dismount(player)
+		HorseService.dismount(player, "dog")
 	end))
 	if seat then
 		--[[ Roblox kan lossa ryttaren utan att någon av ovanstående fyrar —
@@ -614,7 +822,7 @@ function HorseService.tryMount(player: Player, model: Model): (boolean, string?,
 			enda källan som alltid säger sanningen om sitsen. ]]
 		table.insert(kopplingar, seat:GetPropertyChangedSignal("Occupant"):Connect(function()
 			if seat.Occupant ~= humanoid then
-				HorseService.dismount(player)
+				HorseService.dismount(player, "sitsen_slappte")
 			end
 		end))
 	end
@@ -758,6 +966,62 @@ function HorseService._avsittningsplats(modell: Model, karaktar: Model): (CFrame
 	return nil, "avsitt.ingen_plats"
 end
 
+--[[ #264 R2: hur många hjärtslag efter den sena placeringen utfallet
+	bevakas, och vad "på hästryggen" betyder: roten inom hästens
+	fotavtryck i sidled och tydligt över hennes rot i höjd.
+
+	FÖNSTRET MÅSTE RÄCKA FÖRBI ÅTERLÄMNINGEN. Mätt i Studio (kandidat
+	c1946fe, loggat på både server och klient): i de felande fallen tog
+	klienten aldrig emot serverns placering. Hon hoppade ur sitsen och
+	blev stående på ryggen PÅ KLIENTEN medan servern ägde kroppen. När
+	ägarskapet lämnades tillbaka (hjärtslag 8) vann klientens läge och
+	replikerades hjärtslag 26–34 efter avsittningen. En kontroll vid
+	hjärtslag 10 kom alltså före felet. En ny placering när klienten väl
+	äger kroppen fastnar (mätt: 2 s utan återfall). ]]
+local AVSITT_KONTROLL = 90
+local AVSITT_OMPLACERINGAR = 2
+local AVSITT_RYGGHOJD = 1.5
+
+function HorseService._paHastrygg(modell: Model, karaktar: Model): boolean
+	local rot = modell.PrimaryPart or modell:FindFirstChild("HumanoidRootPart")
+	local krot = karaktar:FindFirstChild("HumanoidRootPart")
+	if not (rot and rot:IsA("BasePart") and krot and krot:IsA("BasePart")) then return false end
+	local lokal = rot.CFrame:PointToObjectSpace(krot.Position)
+	local iSidled = math.abs(lokal.X) <= rot.Size.X / 2 and math.abs(lokal.Z) <= rot.Size.Z / 2
+	return iSidled and (krot.Position.Y - rot.Position.Y) > AVSITT_RYGGHOJD
+end
+
+--[[ ══ #264 PLAYER_FLOW_CLOSURE_R5: EN FASTNAD LANDNING, INTE ETT HOPP ══════
+
+	Bevakningen såg bara «ovanför ryggen». Ett oberoende prov på 941ffeb,
+	genom riktiga tryMount/dismount, satte kroppen 6 studs ovanför hästroten
+	vid hjärtslag 25 med fart uppåt 12 och luftburet tillstånd — ett hopp —
+	och fick en tredje placering med fart 0.
+
+	Det uppmätta felet (c1946fe, R3) var en STÅENDE kropp på ryggen:
+	+4,2 studs, tillstånd Running, fart 0,7 → 0. En luftburen kropp — i
+	hopp eller fall, enligt sitt tillstånd eller sin vertikala fart — står
+	inte på hästen, och får fortsätta. Landar den sedan på ryggen inom
+	fönstret rättas den som förut. ]]
+local AVSITT_LUFTFART = 2.0
+
+function HorseService._luftburen(karaktar: Model): boolean
+	local hum = karaktar:FindFirstChildOfClass("Humanoid")
+	if hum then
+		local ok, tillstand = pcall(function() return hum:GetState() end)
+		if ok and (tillstand == Enum.HumanoidStateType.Freefall
+			or tillstand == Enum.HumanoidStateType.Jumping) then
+			return true
+		end
+	end
+	local krot = karaktar:FindFirstChild("HumanoidRootPart")
+	if krot and krot:IsA("BasePart")
+		and math.abs(krot.AssemblyLinearVelocity.Y) > AVSITT_LUFTFART then
+		return true
+	end
+	return false
+end
+
 local STANNA_HJARTSLAG = 8
 
 local function stannaHast(session: Session)
@@ -779,7 +1043,11 @@ local function stannaHast(session: Session)
 	     attribut. Skrevs attributen direkt här hade sessionen fortsatt
 	     tro att hon travade, och nästa BROMS hade stegat ned från trav
 	     till skritt på en häst som redan stod still. ]]
+	local franIndex = session.stegIndex
 	session.stegIndex = Gaits.index("halt")
+	--[[ Loggas bara om ritten fortfarande är öppen. Efter en avsittning
+		är märket redan nil och ritten stängd. ]]
+	loggaSteg(session, franIndex, "stopp", nil)
 	replikera(session)
 	session.rig.model:SetAttribute("Speed", 0)
 	task.spawn(function()
@@ -789,6 +1057,52 @@ local function stannaHast(session: Session)
 			noll()
 		end
 	end)
+end
+
+--[[ ══ ÅTERLÄMNINGEN AV KROPPENS ÄGARSKAP ══════════════════
+
+	Robustness Slice F. Raden löd `pcall(function() krot:SetNetworkOwner(
+	spelare) end)` och kastade både utfallet och skälet. En misslyckad
+	återlämning lämnade alltså kroppen serverstyrd utan ett spår av varför.
+
+	FÖRHANDSKONTROLLEN. `BasePart:CanSetNetworkOwnership()` svarar `true`,
+	eller `false` plus ett skäl som sträng — dokumenterat som just det
+	sättet att veta om `SetNetworkOwner` kan anropas utan att kasta.
+
+	VI KÄNNER INTE SKÄLTEXTERNA, och låtsas inte göra det. Roblox
+	dokumenterar ATT en skälsträng kommer, men inte vilka de är; det enda
+	som står om själva förbudet är att servern alltid äger ankrade delar.
+	Koden jämför därför aldrig mot en sträng — den skickar vidare det den
+	fick.
+
+	OCH EN SAKNAD FÖRHANDSKONTROLL FÅR INTE TA BORT EN ÅTERLÄMNING SOM
+	SKULLE HA FUNGERAT. Kastar kontrollen själv — eller finns den inte —
+	säger vi det och försöker ändå. Bara ett uttryckligt `false` stoppar. ]]
+local function aterlamnaAgarskap(krot: BasePart, spelare: Player,
+	karaktar: Model): boolean
+	local vem = ("%s/%s"):format(spelare.Name, karaktar.Name)
+
+	local kunde, kan, skal = pcall(function()
+		return krot:CanSetNetworkOwnership()
+	end)
+	if kunde and kan ~= true then
+		warn(("[Horse] ägarskapet åter till spelaren efter avsittning NEKADES "
+			.. "för %s: %s"):format(vem, tostring(skal)))
+		return false
+	end
+	if not kunde then
+		warn(("[Horse] ägarskapet åter till spelaren efter avsittning: "
+			.. "förhandskontrollen gick inte att göra för %s (%s) — "
+			.. "försöker ändå"):format(vem, tostring(kan)))
+	end
+
+	local satt, fel = pcall(function() krot:SetNetworkOwner(spelare) end)
+	if not satt then
+		warn(("[Horse] ägarskapet åter till spelaren efter avsittning "
+			.. "MISSLYCKADES för %s: %s"):format(vem, tostring(fel)))
+		return false
+	end
+	return true
 end
 
 local function stallAv(modell: Model, karaktar: Model)
@@ -812,8 +1126,11 @@ local function stallAv(modell: Model, karaktar: Model)
 	if spelare then
 		task.spawn(function()
 			for _ = 1, 8 do RunService.Heartbeat:Wait() end
+			--[[ Vakten är oförändrad: roten finns kvar, spelaren finns
+			     kvar, och det är fortfarande SAMMA kropp. En ny kropp har
+			     ett eget ägarskap och ska inte få det här. ]]
 			if krot.Parent and spelare.Parent and spelare.Character == karaktar then
-				pcall(function() krot:SetNetworkOwner(spelare) end)
+				aterlamnaAgarskap(krot, spelare, karaktar)
 			end
 		end)
 	end
@@ -835,7 +1152,48 @@ end
 	Dubbel avsittning är i sig inget fel — `Pass` säger det uttryckligen, och
 	sitsens `Occupant`-lyssnare kan nå hit strax efter spelarens egen
 	begäran. Det som ändras är bara att nejet går att läsa. ]]
-function HorseService.dismount(player: Player): (boolean, string?)
+--[[ SÄG VAD SOM FAKTISKT GÄLLER.
+
+	Anropas när en avsittning nekats. Servern äger sanningen, så den
+	skickar sitt eget läge till just den klienten: rider hon fortfarande
+	får hon `MountChanged` med sig själv som ryttare, och klientens
+	lyssnare sätter upp henne igen.
+
+	SVARAR `false` NÄR DET INTE FANNS NÅGOT ATT RÄTTA. Är `byRider` tom
+	anser servern inte att hon rider — då var klientens rivning RÄTT, och
+	att skicka något hade varit att hitta på ett läge. Skillnaden är värd
+	ett returvärde: ett prov ska kunna se att tystnaden var ett beslut.
+
+	── EN TRASIG BOKFÖRING ÄR INTE ETT LÄGE ATT ÅTERVÄNDA TILL ──────
+
+	Re-review runda 2 av `f6ff67d`. Första versionen läste `byRider` och
+	litade på den. Men `hast.oregistrerad` betyder PRECIS att den kartan
+	ljuger: ryttaren står bokförd på en häst vars session är borta. Att
+	skicka `MountChanged` på den uppgiften hade satt upp klienten på en
+	häst servern inte kan köra — en uppfunnen ritt ovanpå en trasig
+	bokföring.
+
+	Saknas sessionen städas posten i stället, och vi svarar `false`.
+	Klientens rivning var då rätt, och nästa uppsittning börjar från ett
+	rent läge i stället för att ärva lögnen. ]]
+function HorseService.aterforena(player: Player): boolean
+	local model = byRider[player]
+	if not model then return false end
+	if not sessions[model] then
+		byRider[player] = nil
+		warn("[Horse] aterforena: stale byRider utan session, posten stadad")
+		return false
+	end
+	Net.get("MountChanged"):FireClient(player, model, Aktor.klient(player))
+	return true
+end
+
+--[[ `orsak` sätts bara av tjänstens egna städvägar (död, karaktären
+	borta, sitsen, spelaren lämnar) och avgör om ridloggen stängs som
+	avslutad eller avbruten. `DismountRequest` skickar den aldrig vidare —
+	klientens argument når inte hit — så en begärd avsittning är alltid
+	"avsittning". ]]
+function HorseService.dismount(player: Player, orsak: string?): (boolean, string?)
 	local model = byRider[player]
 	if not model then return false, "pass.rider_inte" end
 	local session = sessions[model]
@@ -880,7 +1238,7 @@ function HorseService.dismount(player: Player): (boolean, string?)
 		Ordningen är dessutom den riktigare: vem som rider vad är ett
 		LOGISKT tillstånd, var kroppen står är ett fysiskt. Det logiska ska
 		vara sant först. ]]
-	setRider(session, nil)
+	setRider(session, nil, orsak or "avsittning")
 	stannaHast(session)
 
 	if character then
@@ -916,6 +1274,28 @@ function HorseService.dismount(player: Player): (boolean, string?)
 			if humanoid and humanoid.Sit then return end
 			if byRider[player] then return end
 			stallAv(modell, character)
+			--[[ #264 PLAYABLE_UI_AND_DISMOUNT_R2: KONTROLLERA UTFALLET.
+				Mätt i Studio (kandidat e5881dc, ren väg, mitt på banan):
+				1 av 5 avsittningar lämnade henne STÅENDE PÅ HÄSTRYGGEN —
+				servern såg roten 4,2 studs över hästens rot och
+				`FloorMaterial` = hästen, i minst 3 s. Orsaken står vid
+				`AVSITT_KONTROLL`: klientens eget läge vinner när ägarskapet
+				lämnas tillbaka. Utfallet bevakas därför varje hjärtslag
+				genom hela fönstret, och står hon ovanpå hästen placeras hon
+				igen — högst `AVSITT_OMPLACERINGAR` gånger. ]]
+			local omplacerad = 0
+			for _ = 1, AVSITT_KONTROLL do
+				RunService.Heartbeat:Wait()
+				if not (character.Parent and modell.Parent) then return end
+				if (humanoid and humanoid.Sit) or byRider[player] then return end
+				if HorseService._paHastrygg(modell, character)
+					and not HorseService._luftburen(character) then
+					warn(("[Horse] avsittningen landade på %s — placeras igen"):format(modell.Name))
+					stallAv(modell, character)
+					omplacerad += 1
+					if omplacerad >= AVSITT_OMPLACERINGAR then return end
+				end
+			end
 		end)
 	end
 	return true, nil
@@ -980,6 +1360,44 @@ local function stepStamina(session: Session, dt: number)
 	local energiGangart = gaitR
 	if session.rider then
 		local observerad = observera(session, dt)
+		--[[ INFRA-2B1: samma hjärtslagssteg, samma rot och samma
+			teleportgräns som `observera` — men en EGEN baslinje per ritt,
+			så att uthållighetens mätpunkt inte rörs. Observationen läser
+			bara; den ändrar inte rörelse, uthållighet eller ägarskap. ]]
+		local obsRot = session.rig.root
+		local obsPos = if obsRot and obsRot.Parent then obsRot.Position else nil
+		local okObs, _giltigt, status, fran, rittTid = pcall(RidObservation.sampla, session.rittId,
+			obsPos, dt, Ridtrappa.gangart(session.stegIndex), Ridtrappa.ryggar(session.stegIndex),
+			TELEPORT_GRANS)
+		if not okObs then
+			warn("[Horse] ridobservationen kastade: " .. tostring(_giltigt))
+		elseif status == "segment" and fran and obsPos then
+			--[[ INFRA-2B2: hindren får BARA giltiga segment ur ridobservationen,
+				så en passage kan aldrig byggas över ett brott. Luft/mark är
+				serverns `FloorMaterial` på hästen — en observation, som för en
+				klientägd häst kan vara inaktuell. ]]
+			local hum = session.rig.humanoid
+			local okGolv, luft = pcall(function(): string?
+				local golv = hum and hum.FloorMaterial
+				if golv == nil then return nil end
+				--[[ Jämför NAMNET: i motorn heter luftmaterialet "Air". Då
+					behöver varken koden eller bänkens strikta materiallista
+					(byggmaterial, `kolla-material`) nämna ett material som
+					ingen byggnad ska använda. ]]
+				return if golv.Name == "Air" then "luft" else "mark"
+			end)
+			if not okGolv then luft = nil end
+			logga(HinderObservation.segment, session.rittId, fran, obsPos, rittTid, luft,
+				obsRot.Size / 2)
+		elseif status == "brott" then
+			logga(HinderObservation.brott, session.rittId, rittTid)
+		end
+		--[[ INFRA-OBS-PLATS1: samma besked, löst i ridhusets platsram. ]]
+		if okObs then
+			logga(RidPlatsObservation.sampla, session.rittId, status, fran, obsPos, rittTid)
+			--[[ INFRA-VOLT1: referensmätningen läser just den bilden, en gång. ]]
+			logga(VoltObservation.sampla, session.rittId, RidPlatsObservation.ogonblick(session.rittId))
+		end
 		--[[ Utan `current`: hysteresen finns för att animationen inte ska
 		     flimra, och den får inte kunna hålla kvar ett påstått "halt"
 		     en bit upp i skrittbandet. Auktoriteten mäter på bandet. ]]
@@ -1050,7 +1468,9 @@ local function stepStamina(session: Session, dt: number)
 	     att hon hämtat andan. ]]
 	local underTak = Ridtrappa.underTak(session.stegIndex, ceiling)
 	if underTak ~= session.stegIndex then
+		local franIndex = session.stegIndex
 		session.stegIndex = underTak
+		loggaSteg(session, franIndex, "trotthet", nil)
 		replikera(session)
 	end
 
@@ -1058,8 +1478,11 @@ local function stepStamina(session: Session, dt: number)
 		--[[ Fjärde argumentet är energin i sin KANONISKA skala 0–1.
 		     Klienten sätter sin prediktion till den; de tre första är
 		     presentationen, som Debug redan visar. ]]
-		Net.get("StaminaSync"):FireClient(session.rider, visad, stats.MaxStamina,
-			ceiling, session.energi)
+		local kSta = Aktor.klient(session.rider)
+		if kSta then
+			Net.get("StaminaSync"):FireClient(kSta, visad, stats.MaxStamina,
+				ceiling, session.energi)
+		end
 	end
 end
 
@@ -1161,7 +1584,26 @@ local function onRidingIntent(player: Player, rittId: any, handling: any, sekven
 	     Marginalen är dokumenterad i `Config.RIDINPUT` och finns för att
 	     två ärliga hjälper 0,60 s isär kan nå servern tätare än så. ]]
 	local sparr = Config.RIDINPUT.ImpulsSparr - Config.RIDINPUT.ServerMarginal
-	if nu - session.sisteHjalp < sparr then return end
+	if nu - session.sisteHjalp < sparr then
+		--[[ ETT NEJ AR OCKSA ETT SVAR (#264, spelbarhetsgranskningen).
+
+			Raden var ett naket `return`. Klienten hade REDAN predikterat
+			overgangen, sa de tva stod i olika gangarter tills nasta
+			ACCEPTERADE hjalp -- och kom ingen sadan lag divergensen kvar.
+			Takavslaget tio rader ner gjorde redan tvartom, av exakt samma
+			skal. Det drabbar arlig input: tva tryck 0,65 s isar kan na
+			hit 0,45 s isar vid varierande fordrojning.
+
+			EN GANG PER FONSTER, inte en gang per paket. Kvittensen hor
+			till den senast accepterade hjalpen, sa 200 spampaket ger ETT
+			extra svar totalt. Sparren sjalv ar helt orord -- den har
+			grenen andrar bara om servern SAGER nagot nar den sager nej. ]]
+		if session.nekKvitterad ~= session.sisteHjalp then
+			session.nekKvitterad = session.sisteHjalp
+			replikera(session)
+		end
+		return
+	end
 
 	--[[ 6. STEGET. Ett, aldrig fler, och aldrig förbi taket uppåt.
 
@@ -1180,9 +1622,14 @@ local function onRidingIntent(player: Player, rittId: any, handling: any, sekven
 		return
 	end
 
+	local franIndex = session.stegIndex
 	session.stegIndex = nyttIndex
 	session.sisteHjalp = nu
 	if sekvens ~= nil then session.sekvens = sekvens end
+	--[[ Loggas HÄR och bara här i den här handlaren: efter ritten,
+		skopan, payloaden, sekvensen, spärren och steget. Varje tidigare
+		`return` är ett nej, och ett nej loggas inte. ]]
+	loggaSteg(session, franIndex, "hjalp", handling)
 	replikera(session)
 end
 
@@ -1271,6 +1718,35 @@ end
 
 --[[ ── Livscykel ───────────────────────────────────────────────────── ]]
 
+--[[ ══ REMOTENS EGEN VALIDERING (#252 DEL C) ═════════════════════
+
+	`MountRequest` bar sitt eget nej — `hast.ogiltig` — for allt som inte
+	ar en `Model`. Den raden har aldrig korts av nagon spec: bankens prov
+	stubbar `InvokeServer` pa KLIENTSIDAN, och `OnServerInvoke` gar inte
+	att lasa tillbaka ur motorn, sa en anonym funktion dar ar oatkomlig.
+	BANK-AUDIT 2026-09-19 § 7 punkt 3.
+
+	Handlaren har darfor ett namn. `Skopa.grind` ligger kvar UTANPA den:
+	takten ar Gate 1A:s och fanns inte pa #256:s gren, sa hopslagningen
+	behaller bada — namnet inuti, grinden runt om. ]]
+function HorseService.mountRequest(player: Player, model: Model): (boolean, string?, string?)
+	if typeof(model) ~= "Instance" or not model:IsA("Model") then
+		return false, "hast.ogiltig"
+	end
+	return HorseService.tryMount(player, model)
+end
+
+--[[ ── DEN SOM LAMNAR (#252 DEL C) ──────────────────────────
+
+	Samma skal som `GameplayService.lamnar` och `LedService.lamnar`:
+	stadningen efter en spelare som gar ar en av de fyra saker
+	runtime-grinden ska kunna falla pa, och den maste da kunna koras
+	genom produktionens EGEN handlare i stallet for genom en kopia. ]]
+function HorseService.lamnar(player: Player)
+	HorseService.dismount(player, "lamnar")
+	slappStadning(player)
+end
+
 function HorseService.start()
 	Net.init()
 
@@ -1285,26 +1761,49 @@ function HorseService.start()
 	end)
 
 	Net.get("MountRequest").OnServerInvoke = Skopa.grind("MountRequest",
-		function(player, model)
-			if typeof(model) ~= "Instance" or not model:IsA("Model") then
-				return false, "hast.ogiltig"
-			end
-			return HorseService.tryMount(player, model)
-		end)
-	Net.get("DismountRequest").OnServerInvoke = Skopa.grind("DismountRequest",
+		HorseService.mountRequest)
+	--[[ ── ETT NEJ MÅSTE ÅTERFÖRENA, INTE BARA NEKA ──────────────────
+
+	     ChatGPT-re-review av `269bec5`. Klienten river LOKALT innan den
+	     frågar — säkerhet före undervisning — och står alltså av hästen
+	     medan servern svarar. Svarar servern NEJ uppstår en delad
+	     sanning: servern har kvar ryttaren i `byRider`, klienten har
+	     rivit ekipaget.
+
+	     Det värsta fallet är `takt.for_snabbt`. Då når anropet aldrig
+	     `HorseService.dismount`, så ingenting i tjänsten kan upptäcka
+	     att något behöver rättas — och spelaren blir stående bredvid en
+	     häst hon enligt servern fortfarande sitter på.
+
+	     Kommentaren i `begarAvsittning` påstod att «servern rättar oss
+	     via MountChanged om den vill». Den gjorde den inte. Nu gör den
+	     det, och rättelsen ligger utanför `Skopa.grind` så att den
+	     täcker skopans eget nej lika väl som tjänstens. ]]
+	local dismountGrind = Skopa.grind("DismountRequest",
 		function(player)
 			return HorseService.dismount(player)
 		end)
+	Net.get("DismountRequest").OnServerInvoke = function(player, ...)
+		local ok, skal = dismountGrind(player, ...)
+		if ok ~= true then
+			HorseService.aterforena(player)
+		end
+		return ok, skal
+	end
 	Net.get("StateSync").OnServerEvent:Connect(onStateSync)
+	--[[ INFRA-2B2: hinderregistret läser de byggda bommarna. Världen är byggd
+		före HorseService (se `Start.luau`), och senare bommar fångas av
+		`DescendantAdded`. ]]
+	logga(HinderObservation.start, workspace)
+	--[[ INFRA-OBS-PLATS1: ridhusets platsram, hittad en gång och hållen i
+		cache (se RidPlatsObservation). ]]
+	logga(RidPlatsObservation.start, workspace)
 	--[[ #233 Fas 4b. Den semantiska vägen in. Ligger bredvid StateSync med
 	     flit: de två är nu tydligt olika saker — den ena är en AVSIKT som
 	     ändrar sanning, den andra en OBSERVATION som bara presenteras. ]]
 	Net.get("RidingIntent").OnServerEvent:Connect(onRidingIntent)
 
-	Players.PlayerRemoving:Connect(function(player)
-		HorseService.dismount(player)
-		slappStadning(player)
-	end)
+	Players.PlayerRemoving:Connect(HorseService.lamnar)
 
 	--[[ En loop för alla hästar, inte en per häst. Uthålligheten behöver
 	     inte 60 Hz — fyra gånger i sekunden räcker och kostar nästan inget
@@ -1327,6 +1826,91 @@ end
 
 function HorseService.horseOf(player: Player): Model?
 	return byRider[player]
+end
+
+--[[ Ridloggens post för en ritt som fryst djupkopia, eller nil när den
+	aldrig fanns eller redan gallrats. Bara läsning; se `RidLogg`. Ingen
+	konsument ännu (INFRA-2A). ]]
+function HorseService.ridlogg(rittId: string?): any
+	return RidLogg.ogonblick(rittId)
+end
+
+--[[ Ridobservationen för en ritt (INFRA-2B1): fryst djupkopia, eller nil.
+	Serverns observation av klientägd fysik — inget fuskskydd, ingen
+	belöning. Ingen konsument ännu. ]]
+function HorseService.ridobservation(rittId: string?): any
+	return RidObservation.ogonblick(rittId)
+end
+
+--[[ Hinderobservationen för en ritt (INFRA-2B2): fryst djupkopia, eller
+	nil. Passage, observerad luftfas och geometrisk överlapp vid befintliga
+	hinder — inte rivning, inte poäng, inte fuskskydd. Ingen konsument ännu. ]]
+function HorseService.hinderobservation(rittId: string?): any
+	return HinderObservation.ogonblick(rittId)
+end
+
+--[[ Ridplatsobservationen för en ritt (INFRA-OBS-PLATS1): det aktuella
+	observerade läget i ridhusets platsram, fryst, eller nil. Serverns
+	observation av klientägd fysik; planärt medlemskap, inte markkontakt.
+	Ingen konsument ännu. ]]
+function HorseService.ridplats(rittId: string?): any
+	return RidPlatsObservation.ogonblick(rittId)
+end
+
+--[[ INFRA-VOLT1: serverns referensmätning för `storvolt` (egen version,
+	se VoltObservation). Fryst bild; ingen poäng, lektion eller belöning. ]]
+function HorseService.volt(rittId: string?): any
+	return VoltObservation.ogonblick(rittId)
+end
+
+--[[ ── INFRA-FORSOK1: SERVERNS FÖRSÖK (se RidForsok) ───────────────────
+	Bara serverkod, ingen RemoteEvent. Ryttare, häst och ritt härleds ur
+	HorseService: spelaren ska sitta på en registrerad häst, och `rittId`
+	ska vara hennes AKTUELLA accepterade ritt. En saknad, stängd, gammal
+	eller annan spelares ritt nekas utan mutation. ]]
+local function forsokRitt(player: any, rittId: any): (Session?, string?)
+	local model = player ~= nil and byRider[player] or nil
+	local session = model and sessions[model]
+	if not session or session.rider ~= player or session.rittId == nil then
+		return nil, "forsok.ingen_ritt"
+	end
+	if type(rittId) ~= "string" or rittId ~= session.rittId then
+		return nil, "forsok.fel_ritt"
+	end
+	return session, nil
+end
+
+local function rittTidFor(rittId: string): number
+	local obs = RidObservation.ogonblick(rittId)
+	return if obs then obs.tid else 0
+end
+
+function HorseService.startaForsok(player: any, rittId: any, sekvens: any, ovning: any,
+	definition: any): (boolean, string?, string?)
+	local session, fel = forsokRitt(player, rittId)
+	if not session then return false, fel, nil end
+	local id = session.rittId :: string
+	return RidForsok.starta(id, sekvens, ovning, definition, rittTidFor(id), VoltObservation.ogonblick(id))
+end
+
+function HorseService.avbrytForsok(player: any, rittId: any, sekvens: any,
+	forsokId: any): (boolean, string?, string?)
+	local session, fel = forsokRitt(player, rittId)
+	if not session then return false, fel, nil end
+	local id = session.rittId :: string
+	return RidForsok.avbryt(id, sekvens, forsokId, rittTidFor(id), VoltObservation.ogonblick(id))
+end
+
+--[[ Fryst bild av ett försök, nil om det är okänt eller gallrat. ]]
+function HorseService.forsok(forsokId: string?): any
+	return RidForsok.ogonblick(forsokId)
+end
+
+--[[ Voltavsnitten som kan tillskrivas försöket — urval, ingen bedömning. ]]
+function HorseService.forsokVolt(forsokId: string?): (any, string?)
+	local f = RidForsok.ogonblick(forsokId)
+	if not f then return nil, "forsok.okant" end
+	return RidForsok.voltUnderlag(forsokId, VoltObservation.ogonblick(f.rittId))
 end
 
 return HorseService

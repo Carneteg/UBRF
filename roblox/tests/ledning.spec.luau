@@ -97,6 +97,43 @@ end
 --[[ Tomtkoordinat → värld, samma omräkning som tjänsten. ]]
 local function varld(x, y) return vec(x * M, 3, (170 - y) * M) end
 
+--[[ ══ SCENBYTE ÄR INTE ETT STEG (reviewrond 6) ═════════════════════
+
+	Bänken har ingen fysik, så specen FLYTTAR aktörerna dit scenariot
+	behöver dem. Det gick bra så länge hoppvakten svarade med
+	`table.clear(spar)`: varje sådan förflyttning nollade spåret.
+
+	Rond 6 tog bort den raderingen — ett hopp får inte längre påstå att
+	hästen gått den antecknade vägen. Då blev bänkens egna teleporter
+	synliga. Två av dem är SCENBYTEN över tio respektive knappt fyra
+	meter, och scenarierna kallar dem själva gång: «hon når ridbanan»,
+	«rutten fortsätter västerut». Så nu går de — 0,5 m per bildruta,
+	häst och spelare tillsammans så att kopplet håller.
+
+	DÖRRUTGÅNGEN LÄMNAS SOM DEN ÄR, med flit. Där är teleporten poängen:
+	spelaren ska stå kvar på boxsidan i samma bildruta som hästen
+	passerar dörrplanet, för det är den engångsgallringen provet mäter.
+	Går man även den blir provet grönt utan att gallringen körs — mätt:
+	med gallringen borttagen blev specen ändå grön. ]]
+local function ga(par, steg)
+	local n = 0
+	while n < 400 do
+		local klara = true
+		for _, p in ipairs(par) do
+			local nu = p.del.Position
+			local d = p.till - nu
+			if d.Magnitude > 0.05 then
+				klara = false
+				p.del.CFrame = CFrame.new(nu + d.Unit * math.min(steg or (0.5 * M), d.Magnitude))
+			end
+		end
+		LedService._steg(1 / 30)
+		n += 1
+		if klara then break end
+	end
+	return n
+end
+
 print("\n── Att börja leda ──")
 
 LedService._glomForProv()
@@ -158,8 +195,9 @@ check("när hon fysiskt lämnat boxen ser tjänsten det",
 check("men målet är fortfarande inte nått", LedService.harNattMal(spelare) == false)
 
 --[[ ── Hon når ridbanan ───────────────────────────────────────────── ]]
-rot.CFrame = CFrame.new(varld(132, 70))
-hastKropp.CFrame = CFrame.new(varld(132, 72))
+--[[ De GÅR dit tillsammans — se noten vid `ga`. ]]
+ga({ { del = rot, till = varld(132, 70) },
+     { del = hastKropp, till = varld(132, 72) } })
 LedService._steg(1 / 30)
 check("när hon fysiskt står i ridbanan ser tjänsten det",
 	LedService.harNattMal(spelare) == true)
@@ -170,8 +208,8 @@ print("\n── Följandet ──")
 	en RÖRELSERIKTNING, inte en punkt. Skillnaden är hela blockeraren:
 	`MoveTo` skjuter kroppen mot punkten oavsett hur den står, och en häst
 	som går i sidled in i en 1,20 m öppning fastnar. ]]
-rot.CFrame = CFrame.new(varld(132, 60))
-hastKropp.CFrame = CFrame.new(varld(132, 66))
+ga({ { del = rot, till = varld(132, 60) },
+     { del = hastKropp, till = varld(132, 66) } })
 LedService._steg(1 / 30)
 --[[ ══ FÖLJNINGEN ÄR CONSTRAINTS NU (#182 del 2) ═══════════════════
 
@@ -772,6 +810,8 @@ do
 		Nu gallras det EN gång, vid övergången. Smulor som skapas
 		EFTERÅT ska ligga kvar även om de hamnar på boxsidan av planet —
 		precis som de gör när rutten fortsätter västerut. ]]
+	--[[ Spelaren GÅR västerut hit; scenbytet var 3,8 m på en bildruta. ]]
+	ga({ { del = rotS, till = vec(DX - 2.4, 3, DZ + 6) } })
 	for i = 1, 14 do
 		rotS.CFrame = CFrame.new(vec(DX - 2 - i * 0.4, 3, DZ + 6))
 		LedService._steg(1 / 30)
@@ -858,6 +898,641 @@ do
 		boxsidiga > 1, ("%d på boxsidan"):format(boxsidiga))
 
 	anl:Destroy()
+end
+
+
+--[[ ══ UTGÅNGSGALLRINGEN FÅR INTE RADERA FRAMTIDA RUTT ═══════════════
+
+	ChatGPT:s sjunde reviewrond, på `da0392e`. Rond 6b flyttade
+	engångsgallringen till efter antecknandet — men den filtrerade HELA
+	kön på dörrplanets sida, och plansida är inte förbrukning.
+
+	Spåret är ORDNAT. En smula som ligger SENARE i kön och råkar hamna på
+	boxsidan är framtida väg: rutten kan mycket väl vika tillbaka förbi
+	dörrplanet längre fram. Att radera den är samma fel som hela den här
+	serien handlar om — ett geometriskt sammanträffande som får betyda
+	«hon har gått här».
+
+	Reviewens fall, ordnat:
+
+	    1  gammal historik inne i boxen   plan −
+	    2  nästa punkt ute i gången       plan +
+	    3  SENARE återgång till boxsidan  plan −      ← framtida väg
+	    4  senare punkt ute               plan +
+
+	Med helköfiltret överlevde 2 och 4 och 3 raderades — enbart på
+	plansida. Koppel 5,90 m, alltså en fullt giltig ledning.
+
+	POLICYN: bara den LEDANDE serien av boxsidiga smulor gallras. Den är
+	per definition historiken före utgången, för spåret byggs framifrån
+	och spelaren stod inne i boxen. Första smulan på gångsidan avslutar
+	gallringen, och allt därefter är framtid. ]]
+print("\n── En framtida återgång är inte förbrukad historik ──")
+do
+	LedService._glomForProv()
+
+	local anl = Instance.new("Model")
+	anl.Name = "Anläggning"
+	anl.Parent = workspace
+	local DX, DZ = 700, 500
+	local blad = Instance.new("Part")
+	blad.Name = "Boxdörr ordning"
+	blad.Size = vec(0.18, 4.44, 3.60)
+	blad.CFrame = CFrame.new(vec(DX, 2.22, DZ))
+	blad:SetAttribute("UBRFBoxdorr", true)
+	blad:SetAttribute("Langs", "Z")
+	blad:SetAttribute("Utat", 1)
+	blad:SetAttribute("UBRFOppningsmitt", vec(DX, 2.22, DZ))
+	blad.Parent = anl
+
+	local hO, kroppO = nyHast("ordninghast", vec(DX - 5, 3, DZ))
+	local spO, rotO = nySpelare("Ordningsryttare", vec(DX - 3, 3, DZ))
+	check("ledningen startar for ordningsprovet", LedService.borja(spO, hO, hO) == true)
+	local lO = LedService.lage(spO)
+	check("dorrplanet ar kant for ordningsprovet",
+		lO ~= nil and lO.dorrMitt ~= nil and lO.dorrUt ~= nil)
+
+	local function plan(p)
+		return lO and lO.dorrMitt and lO.dorrUt
+			and (p - lO.dorrMitt):Dot(lO.dorrUt) / M or 0
+	end
+
+	--[[ Kön sätts DIREKT, och det är avsiktligt: fallet handlar om
+		ORDNINGEN i en given kö, inte om hur den blev till. Samma fyra
+		punkter som reviewen mätte. ]]
+	--[[ Punkterna ligger ALLA utanfor `START_R` fran hasten dar hon
+		hamnar, sa ingen av dem kan gallras som gangen. Da finns bara en
+		forklaring kvar till att nagon forsvinner: plansidan. ]]
+	local GAMMAL  = vec(DX - 4.5, 3, DZ)
+	local UTE1    = vec(DX + 3, 3, DZ + 8)
+	local FRAMTID = vec(DX - 2, 3, DZ + 10)
+	local UTE2    = vec(DX + 5, 3, DZ + 14)
+	if lO then
+		table.clear(lO.spar)
+		for _, p in ipairs({ GAMMAL, UTE1, FRAMTID, UTE2 }) do table.insert(lO.spar, p) end
+	end
+	check("kon ar ordnad gammal-inne / ute / framtida atergang / ute",
+		lO ~= nil and #lO.spar == 4
+			and plan(GAMMAL) < 0 and plan(UTE1) > 0
+			and plan(FRAMTID) < 0 and plan(UTE2) > 0,
+		("plan %+.2f %+.2f %+.2f %+.2f"):format(
+			plan(GAMMAL), plan(UTE1), plan(FRAMTID), plan(UTE2)))
+
+	--[[ Spelaren står 5,90 m bort — innanför `KOPPEL`, ledningen giltig.
+		Hästen går UT genom dörren, och gallringen löser ut. ]]
+	rotO.CFrame = CFrame.new(vec(DX + 4, 3, DZ + 5.90 * M))
+	kroppO.CFrame = CFrame.new(vec(DX + 4, 3, DZ))
+	local START_R = 1.8
+	local narmast = math.huge
+	for _, q in ipairs({ GAMMAL, UTE1, FRAMTID, UTE2 }) do
+		local d2 = (q - kroppO.Position).Magnitude / M
+		if d2 < narmast then narmast = d2 end
+	end
+	check("ingen av smulorna ar gangen — narmast ligger utanfor START_R",
+		narmast > START_R, ("narmaste %.2f m"):format(narmast))
+	LedService._steg(1 / 30)
+
+	lO = LedService.lage(spO)
+	local koppel = lO and (kroppO.Position - rotO.Position).Magnitude / M or -1
+	check("ledningen lever och kopplet holl", lO ~= nil,
+		("koppel %.2f m"):format(koppel))
+	check("hon raknas som ute ur boxen", LedService.harLamnatBox(spO) == true)
+
+	local harFramtid, harGammal = false, false
+	for _, c in ipairs(lO and lO.spar or {}) do
+		if (c - FRAMTID).Magnitude < 0.01 then harFramtid = true end
+		if (c - GAMMAL).Magnitude < 0.01 then harGammal = true end
+	end
+	--[[ DEN RÖDA MÄTNINGEN. Helköfiltret raderar FRAMTID. ]]
+	check("utgangsgallringen far inte radera en SENARE framtida atergang bara pga plansida",
+		harFramtid,
+		("framtida atergang kvar=%s; %d smulor kvar"):format(
+			tostring(harFramtid), #(lO and lO.spar or {})))
+	--[[ …och rond 6b:s poäng står kvar: historiken före utgången GÅR. ]]
+	check("den gamla historiken inne i boxen gallras fortfarande",
+		not harGammal,
+		("gammal kvar=%s"):format(tostring(harGammal)))
+	--[[ …och hon dras inte tillbaka in. Delmålet ska ligga på gångsidan. ]]
+	check("och delmalet ligger pa gangsidan av dorren",
+		lO ~= nil and lO.delmal ~= nil and plan(lO.delmal) > 0,
+		lO and lO.delmal and ("plan %+.2f"):format(plan(lO.delmal)) or "-")
+
+	anl:Destroy()
+end
+
+
+--[[ ══ SMULAN FRÅN SJÄLVA UTGÅNGSBILDRUTAN ═══════════════════════════
+
+	ChatGPT:s åttonde reviewrond, på `1f0b60e`. Rond 7 gallrar den
+	LEDANDE serien av boxsidiga smulor och stannar vid första smulan på
+	gångsidan. Det är rätt för rutthistorik — men det räcker inte, och
+	skälet är en ordningsfråga.
+
+	Ligger det redan en utsidespunkt i kön när hon passerar dörrplanet,
+	så hamnar spelarens boxsidiga läge från SAMMA bildruta EFTER den:
+
+	    [ gammal box , UTE , ny box från utgångsbildrutan ]
+	         ^gallras    ^stopp      ^överlever
+
+	Hon förbrukar sedan UTE, spelaren går normalt ut i 0,5 m steg — och
+	den bevarade boxsmulan väljs som delmål tillbaka in i boxen. Mätt i
+	review: `delmal plan −2,00`, utan hopp och med sessionen vid liv.
+
+	DE TVÅ FALLEN MÅSTE SKILJAS ÅT. En genuin SENARE återgång till
+	boxsidan är framtida väg och ska leva (rond 7). Smulan som skapas i
+	själva den fysiska utgångsbildrutan är spelarens läge INNAN hon kom
+	ut — den är historik, oavsett var i kön den hamnar. ]]
+print("\n── Smulan från utgångsbildrutan är historik, inte framtid ──")
+do
+	LedService._glomForProv()
+
+	local anl = Instance.new("Model")
+	anl.Name = "Anläggning"
+	anl.Parent = workspace
+	local DX, DZ = 800, 600
+	local blad = Instance.new("Part")
+	blad.Name = "Boxdörr utgångsruta"
+	blad.Size = vec(0.18, 4.44, 3.60)
+	blad.CFrame = CFrame.new(vec(DX, 2.22, DZ))
+	blad:SetAttribute("UBRFBoxdorr", true)
+	blad:SetAttribute("Langs", "Z")
+	blad:SetAttribute("Utat", 1)
+	blad:SetAttribute("UBRFOppningsmitt", vec(DX, 2.22, DZ))
+	blad.Parent = anl
+
+	local hU, kroppU = nyHast("utgangshast", vec(DX - 5, 3, DZ))
+	local spU, rotU = nySpelare("Utgangsryttare", vec(DX - 3, 3, DZ))
+	check("ledningen startar for utgangsrutan", LedService.borja(spU, hU, hU) == true)
+	local lU = LedService.lage(spU)
+	local function plan(p)
+		local li = LedService.lage(spU)
+		if not (li and li.dorrMitt and li.dorrUt) then return 0 end
+		return (p - li.dorrMitt):Dot(li.dorrUt) / M
+	end
+
+	--[[ 1 · gammal boxhistorik OCH en utsidespunkt som redan ligger i kön. ]]
+	local GAMMAL = vec(DX - 4.5, 3, DZ)
+	local UTE    = vec(DX + 3, 3, DZ + 8)
+	if lU then
+		table.clear(lU.spar)
+		table.insert(lU.spar, GAMMAL)
+		table.insert(lU.spar, UTE)
+	end
+	check("kon ar gammal box + en utsidespunkt",
+		lU ~= nil and #lU.spar == 2 and plan(GAMMAL) < 0 and plan(UTE) > 0,
+		("plan %+.2f %+.2f"):format(plan(GAMMAL), plan(UTE)))
+
+	--[[ 2 · UTGÅNGSBILDRUTAN. Hästen passerar planet; spelaren står kvar
+		på boxsidan. Hans läge ligger mer än 0,6 m från sista smulan, så
+		den vanliga loggningen antecknar det — EFTER `UTE`. ]]
+	local EXITPOS = vec(DX - 6, 3, DZ)
+	rotU.CFrame = CFrame.new(EXITPOS)
+	kroppU.CFrame = CFrame.new(vec(DX + 4, 3, DZ))
+	LedService._steg(1 / 30)
+
+	lU = LedService.lage(spU)
+	check("hon raknas som ute ur boxen", LedService.harLamnatBox(spU) == true)
+	check("ledningen lever — inget hopp, inget slapp", lU ~= nil,
+		("koppel %.2f m"):format((kroppU.Position - rotU.Position).Magnitude / M))
+
+	local inneKvar, antal = false, 0
+	for _, c in ipairs(lU and lU.spar or {}) do
+		antal += 1
+		if plan(c) <= 0 then inneKvar = true end
+	end
+	--[[ DEN FÖRSTA RÖDA MÄTNINGEN. Med enbart ledande gallring
+		överlever exit-frame-smulan, för den ligger efter `UTE`. ]]
+	check("smulan fran utgangsbildrutan far inte overleva",
+		not inneKvar,
+		("boxsidig smula kvar=%s; %d smulor"):format(tostring(inneKvar), antal))
+
+	--[[ 3 · HON FÖRBRUKAR UTSIDESPUNKTEN, och spelaren går normalt ut
+		i 0,5 m steg. Nu ska ingenting peka tillbaka in i boxen. ]]
+	kroppU.CFrame = CFrame.new(UTE)
+	LedService._steg(1 / 30)
+	kroppU.CFrame = CFrame.new(vec(DX + 4, 3, DZ + 2))
+
+	--[[ Spelaren gar UT, 0,5 m per bildruta. Mats gor det inte an: sa
+		lange han sjalv star kvar inne ar det RATT att hon gar mot honom.
+		Forsta versionen av provet raknade med de bildrutorna och var rod
+		av fel skal. ]]
+	for _ = 1, 24 do
+		local nu = rotU.Position
+		local mot = vec(DX + 6, 3, DZ + 4)
+		local d = mot - nu
+		if d.Magnitude > 0.05 then
+			rotU.CFrame = CFrame.new(nu + d.Unit * math.min(0.5 * M, d.Magnitude))
+		end
+		LedService._steg(1 / 30)
+	end
+	check("spelaren ar ute i gangen nu", plan(rotU.Position) > 0,
+		("spelarens plan %+.2f"):format(plan(rotU.Position)))
+
+	--[[ NU mats det. Bada ar ute; ingenting far peka tillbaka in. ]]
+	local varstaPlan = math.huge
+	for _ = 1, 16 do
+		LedService._steg(1 / 30)
+		local li = LedService.lage(spU)
+		if li and li.delmal then
+			local p = plan(li.delmal)
+			if p < varstaPlan then varstaPlan = p end
+		end
+	end
+	--[[ DEN ANDRA RÖDA MÄTNINGEN — reviewens egen: delmal plan −2,00. ]]
+	check("bevarad ny boxsmula far inte senare bli valt mal tillbaka in",
+		varstaPlan > 0,
+		("samsta delmal plan %+.2f"):format(varstaPlan))
+
+	anl:Destroy()
+end
+
+
+--[[ ══ EN PAUSAD SVANS ÄR INTE LEDARENS NULÄGE ══════════════════════
+
+	ChatGPT:s nionde reviewrond, på `c5f4b81`. Rond 8 gallrar också den
+	AVSLUTANDE boxsidiga serien vid utgången, med motiveringen «där står
+	ledaren just nu — han släpper fram henne och blir kvar innanför
+	dörren».
+
+	DEN MOTIVERINGEN ÄR ETT PÅSTÅENDE OM TIDEN, och rond 8 bevisade den
+	aldrig. Den läste bara kön: sist + boxsidig = ledarens nuläge.
+
+	Under den klistriga pausen från rond 5/6 är svansen gammal. Den är
+	det sista som hann antecknas innan taket slog i, och spelaren kan ha
+	gått hur långt som helst sedan dess — i reviewens fall är han redan
+	UTE när hon passerar planet. Då raderar suffixregeln en framtida
+	återgång som ingen har gått, av samma skäl som hela den här serien
+	handlar om: en position i kön fick betyda ett framsteg.
+
+	    sparFullt = true
+	    [ gammal box , UTE , framtida återgång ]   ledaren står UTE
+	                            ^raderades
+
+	Kravet är alltså inte att sluta gallra svansen, utan att först BEVISA
+	att den är ledarens nuläge. ]]
+print("\n── En pausad svans är inte ledarens nuläge ──")
+do
+	LedService._glomForProv()
+
+	local anl = Instance.new("Model")
+	anl.Name = "Anläggning"
+	anl.Parent = workspace
+	local DX, DZ = 1000, 700
+	local blad = Instance.new("Part")
+	blad.Name = "Boxdörr pausad svans"
+	blad.Size = vec(0.18, 4.44, 3.60)
+	blad.CFrame = CFrame.new(vec(DX, 2.22, DZ))
+	blad:SetAttribute("UBRFBoxdorr", true)
+	blad:SetAttribute("Langs", "Z")
+	blad:SetAttribute("Utat", 1)
+	blad:SetAttribute("UBRFOppningsmitt", vec(DX, 2.22, DZ))
+	blad.Parent = anl
+
+	local hP, kroppP = nyHast("pausadhast", vec(DX - 5, 3, DZ))
+	local spP, rotP = nySpelare("Pausadryttare", vec(DX - 3, 3, DZ))
+	check("ledningen startar for pausprovet", LedService.borja(spP, hP, hP) == true)
+	local lP = LedService.lage(spP)
+	local function plan(p)
+		local li = LedService.lage(spP)
+		if not (li and li.dorrMitt and li.dorrUt) then return 0 end
+		return (p - li.dorrMitt):Dot(li.dorrUt) / M
+	end
+
+	--[[ 1 · Kön som rond 5/6 lämnar den: pausad, med en framtida
+		återgång sist. Ingen av punkterna ar gången. ]]
+	local GAMMAL  = vec(DX - 4.5, 3, DZ)
+	local UTE     = vec(DX + 3, 3, DZ + 8)
+	local SVANS   = vec(DX - 2, 3, DZ + 10)
+	if lP then
+		table.clear(lP.spar)
+		for _, p in ipairs({ GAMMAL, UTE, SVANS }) do table.insert(lP.spar, p) end
+		lP.sparFullt = true
+	end
+	check("kon ar pausad med en framtida atergang sist",
+		lP ~= nil and lP.sparFullt == true and #lP.spar == 3
+			and plan(GAMMAL) < 0 and plan(UTE) > 0 and plan(SVANS) < 0,
+		("sparFullt=%s  plan %+.2f %+.2f %+.2f"):format(
+			tostring(lP and lP.sparFullt), plan(GAMMAL), plan(UTE), plan(SVANS)))
+
+	--[[ 2 · LEDAREN ÄR REDAN UTE när hon passerar planet. Det är beviset
+		som saknades: svansen kan omöjligt vara hans nuläge. Koppel
+		5,90 m, alltså innanför `KOPPEL`. ]]
+	rotP.CFrame = CFrame.new(vec(DX + 4, 3, DZ + 5.90 * M))
+	kroppP.CFrame = CFrame.new(vec(DX + 4, 3, DZ))
+	check("ledaren star UTE, och svansen ar inte hans lage",
+		plan(rotP.Position) > 0 and (SVANS - rotP.Position).Magnitude / M > 0.6,
+		("ledarens plan %+.2f, avstand till svansen %.2f m"):format(
+			plan(rotP.Position), (SVANS - rotP.Position).Magnitude / M))
+	local START_R, narmast = 1.8, math.huge
+	for _, q in ipairs({ GAMMAL, UTE, SVANS }) do
+		local d = (q - kroppP.Position).Magnitude / M
+		if d < narmast then narmast = d end
+	end
+	check("ingen av smulorna ar gangen", narmast > START_R,
+		("narmaste %.2f m"):format(narmast))
+
+	LedService._steg(1 / 30)
+	lP = LedService.lage(spP)
+	check("hon raknas som ute ur boxen", LedService.harLamnatBox(spP) == true)
+	check("ledningen lever", lP ~= nil,
+		("koppel %.2f m"):format((kroppP.Position - rotP.Position).Magnitude / M))
+
+	local svansKvar, gammalKvar = false, false
+	for _, c in ipairs(lP and lP.spar or {}) do
+		if (c - SVANS).Magnitude < 0.05 then svansKvar = true end
+		if (c - GAMMAL).Magnitude < 0.05 then gammalKvar = true end
+	end
+	--[[ DEN RÖDA MÄTNINGEN. ]]
+	check("avslutande plansidegallring far inte radera en STALE framtida atergang nar sparloggen ar pausad och ledaren redan ar ute",
+		svansKvar,
+		("framtida svans kvar=%s; %d smulor kvar; sparFullt=%s"):format(
+			tostring(svansKvar), #(lP and lP.spar or {}),
+			tostring(lP and lP.sparFullt)))
+	--[[ …och rond 6b/7 står kvar: historiken före utgången går. ]]
+	check("den gamla historiken inne i boxen gallras fortfarande",
+		not gammalKvar, ("gammal kvar=%s"):format(tostring(gammalKvar)))
+	check("pausen ar kvar — rond 5/6 ar orord",
+		lP ~= nil and lP.sparFullt == true,
+		("sparFullt=%s"):format(tostring(lP and lP.sparFullt)))
+
+	anl:Destroy()
+end
+
+
+--[[ ══ NÄRHET ÄR INTE PROVENIENS ═══════════════════════════════════
+
+	ChatGPT:s tionde reviewrond, på `f8877d6`. Rond 9 bytte ut
+	suffixregeln mot ett «tidsbevis» som i själva verket var ett
+	AVSTÅND: svansen räknades som ledarens nuläge om den låg inom
+	0,6 m från honom.
+
+	DET ÄR ROND 5:s INVARIANT IGEN. Närhet mellan två punkter säger
+	ingenting om NÄR de uppstod. En gammal, pausad svans kan ligga
+	tjugo centimeter från en spelare som kom dit långt senare, och då
+	raderade rond 9 framtida rutt på ett sammanträffande.
+
+	    sparFullt = true
+	    ledaren     plan +0,10
+	    svansen     plan −0,10       gap 0,20 m  <  0,6 m
+	    -> raderades
+
+	BEVISET MÅSTE VARA TIDSLIGT. Det finns redan i tillståndet, och det
+	är exakt: antecknandet sker BARA när loggen är levande, och pausen
+	släpper BARA när kön är tom. Kön är därför homogen — alla smulor i
+	den hör till samma antecknandeomgång — och med levande logg ÄR
+	svansen det senaste provet. Är loggen pausad är den per definition
+	inte det, hur nära ledaren den än råkar ligga.
+
+	Den homogeniteten är inget påstående i en kommentar; den mäts i
+	nästa sektion. ]]
+print("\n── Närhet är inte proveniens ──")
+do
+	LedService._glomForProv()
+
+	local anl = Instance.new("Model")
+	anl.Name = "Anläggning"
+	anl.Parent = workspace
+	local DX, DZ = 1200, 900
+	local blad = Instance.new("Part")
+	blad.Name = "Boxdörr narsvans"
+	blad.Size = vec(0.18, 4.44, 3.60)
+	blad.CFrame = CFrame.new(vec(DX, 2.22, DZ))
+	blad:SetAttribute("UBRFBoxdorr", true)
+	blad:SetAttribute("Langs", "Z")
+	blad:SetAttribute("Utat", 1)
+	blad:SetAttribute("UBRFOppningsmitt", vec(DX, 2.22, DZ))
+	blad.Parent = anl
+
+	--[[ Hon staller sig inom RACKVIDD (4,0 m) sa ledningen far borja;
+		forsta versionen satte henne 4,25 m bort och nekades. ]]
+	local hN, kroppN = nyHast("narsvanshast", vec(DX - 2, 3, DZ + 2))
+	local spN, rotN = nySpelare("Narsvansryttare", vec(DX + 0.3, 3, DZ))
+	check("ledningen startar for narhetsprovet", LedService.borja(spN, hN, hN) == true)
+	local lN = LedService.lage(spN)
+	local function plan(p)
+		local li = LedService.lage(spN)
+		if not (li and li.dorrMitt and li.dorrUt) then return 0 end
+		return (p - li.dorrMitt):Dot(li.dorrUt) / M
+	end
+
+	--[[ Pausad kö med en framtida återgång sist — och den ligger NÄRA
+		ledaren, inte långt bort som i rond 9. ]]
+	local GAMMAL = vec(DX - 4.5, 3, DZ)
+	local UTE    = vec(DX + 3, 3, DZ - 8)
+	local SVANS  = vec(DX - 0.3, 3, DZ)
+	if lN then
+		table.clear(lN.spar)
+		for _, p in ipairs({ GAMMAL, UTE, SVANS }) do table.insert(lN.spar, p) end
+		lN.sparFullt = true
+	end
+	local gap = (SVANS - rotN.Position).Magnitude / M
+	check("svansen ligger NARA ledaren — det ar hela poangen",
+		gap < 0.6, ("gap %.2f m, under antecknandets 0,6 m"):format(gap))
+	check("kon ar pausad, ledaren ute, svansen inne",
+		lN ~= nil and lN.sparFullt == true
+			and plan(rotN.Position) > 0 and plan(SVANS) < 0,
+		("sparFullt=%s  ledaren %+.2f  svansen %+.2f"):format(
+			tostring(lN and lN.sparFullt), plan(rotN.Position), plan(SVANS)))
+
+	--[[ Hon gar ut. Kopplet haller, och ingen smula ar gangen. ]]
+	kroppN.CFrame = CFrame.new(vec(DX + 2, 3, DZ + 11.58))
+	local koppel = (kroppN.Position - rotN.Position).Magnitude / M
+	local START_R, narmast = 1.8, math.huge
+	for _, q in ipairs({ GAMMAL, UTE, SVANS }) do
+		local d = (q - kroppN.Position).Magnitude / M
+		if d < narmast then narmast = d end
+	end
+	check("kopplet haller och ingen smula ar gangen",
+		koppel < 9.0 and narmast > START_R,
+		("koppel %.2f m, narmaste smula %.2f m"):format(koppel, narmast))
+
+	LedService._steg(1 / 30)
+	lN = LedService.lage(spN)
+	check("hon raknas som ute ur boxen", LedService.harLamnatBox(spN) == true)
+	check("ledningen lever", lN ~= nil)
+
+	local svansKvar, gammalKvar = false, false
+	for _, c in ipairs(lN and lN.spar or {}) do
+		if (c - SVANS).Magnitude < 0.05 then svansKvar = true end
+		if (c - GAMMAL).Magnitude < 0.05 then gammalKvar = true end
+	end
+	--[[ DEN RÖDA MÄTNINGEN. ]]
+	check("narhet till spelaren ar inte tidsbevis: stale framtida svans inom 0,6 m far inte raderas",
+		svansKvar,
+		("svans kvar=%s; gap %.2f m; %d smulor kvar; sparFullt=%s"):format(
+			tostring(svansKvar), gap, #(lN and lN.spar or {}),
+			tostring(lN and lN.sparFullt)))
+	check("den gamla historiken inne i boxen gallras fortfarande",
+		not gammalKvar, ("gammal kvar=%s"):format(tostring(gammalKvar)))
+
+	anl:Destroy()
+end
+
+
+--[[ ══ EN LEVANDE SVANS ÄR LEDARENS NULÄGE — OCH DEN GALLRAS ════════
+
+	Rond 9 och 10 provar den PAUSADE svansen: den får inte gallras. Den
+	andra halvan av samma regel — med LEVANDE logg är svansen ledarens
+	nuläge och SKA gallras — var obevakad. Auditen av #264 satte
+	`svansArNulaget = false` och hela sviten förblev grön.
+
+	Den är inte redundant med utgångsfönstret från rond 8. Fönstret
+	hindrar bara att NYA smulor antecknas medan han står kvar. En smula
+	han lade INNAN hon passerade planet — han har gått ut förbi dörren
+	och tillbaka in — ligger redan sist i kön:
+
+	    sparFullt = false
+	    [ gammal box , UTE , hans nuläge i boxen ]
+	         ^ledande    ^stopp      ^avslutande serie
+
+	Utan svansgallringen förbrukar hon UTE, han går ut normalt, och
+	hans gamla boxsmula väljs som delmål TILLBAKA IN. Uppmätt med
+	grenen neutraliserad: `samsta delmal plan −2,00`, med ledningen vid
+	liv — samma symptom som rond 8, i det läge rond 8:s prov inte når. ]]
+print("\n── En levande svans är ledarens nuläge och gallras ──")
+do
+	LedService._glomForProv()
+
+	local anl = Instance.new("Model")
+	anl.Name = "Anläggning"
+	anl.Parent = workspace
+	local DX, DZ = 1600, 900
+	local blad = Instance.new("Part")
+	blad.Name = "Boxdörr levande svans"
+	blad.Size = vec(0.18, 4.44, 3.60)
+	blad.CFrame = CFrame.new(vec(DX, 2.22, DZ))
+	blad:SetAttribute("UBRFBoxdorr", true)
+	blad:SetAttribute("Langs", "Z")
+	blad:SetAttribute("Utat", 1)
+	blad:SetAttribute("UBRFOppningsmitt", vec(DX, 2.22, DZ))
+	blad.Parent = anl
+
+	local hL, kroppL = nyHast("levandesvanshast", vec(DX - 5, 3, DZ))
+	local spL, rotL = nySpelare("Levandesvansryttare", vec(DX - 3, 3, DZ))
+	check("ledningen startar for levande-svans-provet",
+		LedService.borja(spL, hL, hL) == true)
+	local lL = LedService.lage(spL)
+	local function plan(p)
+		local li = LedService.lage(spL)
+		if not (li and li.dorrMitt and li.dorrUt) then return 0 end
+		return (p - li.dorrMitt):Dot(li.dorrUt) / M
+	end
+
+	--[[ 1 · Levande logg. Svansen är hans nuläge: han står PÅ den. ]]
+	local GAMMAL = vec(DX - 4.5, 3, DZ)
+	local UTE    = vec(DX + 3, 3, DZ + 8)
+	local SVANS  = vec(DX - 6, 3, DZ)
+	if lL then
+		table.clear(lL.spar)
+		for _, p in ipairs({ GAMMAL, UTE, SVANS }) do table.insert(lL.spar, p) end
+		lL.sparFullt = false
+	end
+	rotL.CFrame = CFrame.new(SVANS)
+	check("kon ar levande, med ledarens boxsidiga nulage sist",
+		lL ~= nil and lL.sparFullt == false and #lL.spar == 3
+			and plan(GAMMAL) < 0 and plan(UTE) > 0 and plan(SVANS) < 0,
+		("sparFullt=%s  plan %+.2f %+.2f %+.2f"):format(
+			tostring(lL and lL.sparFullt), plan(GAMMAL), plan(UTE), plan(SVANS)))
+
+	--[[ 2 · Hon passerar planet; han står kvar inne. ]]
+	kroppL.CFrame = CFrame.new(vec(DX + 4, 3, DZ))
+	LedService._steg(1 / 30)
+	lL = LedService.lage(spL)
+	check("hon raknas som ute ur boxen", LedService.harLamnatBox(spL) == true)
+
+	local svansKvar = false
+	for _, c in ipairs(lL and lL.spar or {}) do
+		if plan(c) <= 0 then svansKvar = true end
+	end
+	check("den levande svansen i boxen gallras vid utgangen",
+		not svansKvar,
+		("boxsidig smula kvar=%s; %d smulor"):format(
+			tostring(svansKvar), #(lL and lL.spar or {})))
+
+	--[[ 3 · Hon förbrukar UTE, han går ut normalt. Ingenting får peka
+		tillbaka in. ]]
+	kroppL.CFrame = CFrame.new(UTE)
+	LedService._steg(1 / 30)
+	kroppL.CFrame = CFrame.new(vec(DX + 4, 3, DZ + 2))
+	for _ = 1, 24 do
+		local nu = rotL.Position
+		local d = vec(DX + 6, 3, DZ + 4) - nu
+		if d.Magnitude > 0.05 then
+			rotL.CFrame = CFrame.new(nu + d.Unit * math.min(0.5 * M, d.Magnitude))
+		end
+		LedService._steg(1 / 30)
+	end
+	check("spelaren ar ute i gangen nu", plan(rotL.Position) > 0,
+		("spelarens plan %+.2f"):format(plan(rotL.Position)))
+	local varstaPlan = math.huge
+	for _ = 1, 16 do
+		LedService._steg(1 / 30)
+		local li = LedService.lage(spL)
+		if li and li.delmal then
+			local p = plan(li.delmal)
+			if p < varstaPlan then varstaPlan = p end
+		end
+	end
+	check("ledningen lever", LedService.lage(spL) ~= nil)
+	check("ledarens gamla boxsmula blir aldrig delmal tillbaka in",
+		varstaPlan > 0,
+		("samsta delmal plan %+.2f"):format(varstaPlan))
+
+	anl:Destroy()
+end
+
+
+--[[ ══ PAUSEN ANTECKNAR INTE — DET ÄR PROVENIENSENS GRUND ══════════
+
+	Rättelsen i rond 10 vilar på en enda egenskap: antecknandet sker
+	bara när loggen är LEVANDE, och pausen släpper bara när kön är tom.
+	Då är kön homogen — alla smulor i den hör till samma omgång — och
+	med levande logg ÄR svansen det senaste provet.
+
+	Den egenskapen får inte vara ett påstående i en kommentar. Här mäts
+	den: med `sparFullt` satt läggs ingen smula till hur mycket
+	spelaren än går, och kön krymper bara framifrån. ]]
+print("\n── Pausen antecknar inte, och kön förblir homogen ──")
+do
+	LedService._glomForProv()
+	local MITT = vec(1400, 3, 1100)
+	local hH, kroppH = nyHast("homogenhast", MITT)
+	local spH, rotH = nySpelare("Homogenryttare", MITT + vec(2 * M, 0, 0))
+	check("ledningen startar for homogenitetsprovet",
+		LedService.borja(spH, hH, hH) == true)
+	local lH = LedService.lage(spH)
+	if lH then lH.lamnatBox = true end
+
+	--[[ Sa en kand ko och pausa den. ]]
+	local A = MITT + vec(3 * M, 0, 0)
+	local B = MITT + vec(3 * M, 0, 4 * M)
+	if lH then
+		table.clear(lH.spar)
+		table.insert(lH.spar, A)
+		table.insert(lH.spar, B)
+		lH.sparFullt = true
+	end
+	local fore = lH and #lH.spar or -1
+
+	--[[ Spelaren gar en lang vag medan det ar pausat. Innanfor kopplet. ]]
+	local lades, vaxte = 0, false
+	for i = 1, 30 do
+		local a = (i / 30) * 2 * math.pi
+		rotH.CFrame = CFrame.new(MITT + vec(math.cos(a) * 5 * M, 0, math.sin(a) * 5 * M))
+		LedService._steg(1 / 30)
+		local li = LedService.lage(spH)
+		if li == nil then break end
+		if #li.spar > fore then vaxte = true end
+		lades = #li.spar
+	end
+	lH = LedService.lage(spH)
+	check("ingen smula antecknas medan loggen ar pausad",
+		lH ~= nil and not vaxte and lades <= fore,
+		("kon gick %d -> %d, vaxte=%s"):format(fore, lades, tostring(vaxte)))
+	check("och pausen star kvar sa lange kon inte ar tom",
+		lH ~= nil and (#lH.spar == 0 or lH.sparFullt == true),
+		("%d smulor, sparFullt=%s"):format(
+			#(lH and lH.spar or {}), tostring(lH and lH.sparFullt)))
 end
 
 
@@ -1209,6 +1884,76 @@ do
 		(kropp4.Position - start4).Magnitude < 0.5 * 3,
 		("%.2f studs från startpunkten"):format((kropp4.Position - start4).Magnitude))
 	anl4:Destroy()
+end
+
+--[[ ══ #264 LEADING_BOX_EXIT_R3: LEDAREN ÄR INGET HINDER ═══════════════
+
+	Mätt i Studio på kandidat 941ffeb, box MB 5, riktig ledning: den som
+	leder står i dörröppningen (3,60 studs) och hästen (1,86) ryms inte
+	förbi. 356 bildrutor kontakt mellan hästens rot och spelarens kropp,
+	och i ett av två försök knuffades hon ur dörraxeln in i norra karmen
+	och kopplet släppte på `led.fastnat`. Utan kollision mellan de två kom
+	hon ut på 2,4 s mitt i öppningen.
+
+	Varför de befintliga ledningsproven missade det: bänken har ingen
+	fysik och ingen spelarkropp som kan stå i vägen, och provens häst
+	står alltid på dörraxeln. Det som går att mäta här är kontraktet —
+	under ledningen kolliderar hästen inte med SIN ledare, men med allt
+	annat som förut, och undantaget rivs med kopplet. ]]
+print("\n── R3: ledaren är inget hinder för hästen hon leder ──")
+do
+	LedService._glomForProv()
+	local h, kropp = nyHast("frikollhäst", vec(1200, 3, 1200))
+	kropp.CanCollide = true
+	local skydd = Instance.new("Part")
+	skydd.Name = "Huvudskydd"
+	skydd.CanCollide = true
+	skydd.Parent = h
+	local pynt = Instance.new("Part")
+	pynt.Name = "Man"
+	pynt.CanCollide = false
+	pynt.Parent = h
+	local sp, rot = nySpelare("Frikollryttare", vec(1203, 3, 1200))
+	local torso = Instance.new("Part")
+	torso.Name = "UpperTorso"
+	torso.Parent = sp.Character
+	local annan, annanRot = nySpelare("Annan", vec(1206, 3, 1200))
+
+	local ok, skal = LedService.borja(sp, h, h)
+	check("R3: ledningen startar", ok == true, tostring(skal))
+
+	local function par()
+		local ut = {}
+		for _, d in ipairs(h:GetDescendants()) do
+			if d.ClassName == "NoCollisionConstraint" then
+				ut[#ut + 1] = { d.Part0, d.Part1 }
+			end
+		end
+		return ut
+	end
+	local function finns(a, b)
+		for _, pp in ipairs(par()) do
+			if (pp[1] == a and pp[2] == b) or (pp[1] == b and pp[2] == a) then return true end
+		end
+		return false
+	end
+	check("R3: roten krockar inte med ledarens rot", finns(kropp, rot))
+	check("R3: roten krockar inte med ledarens överkropp", finns(kropp, torso))
+	check("R3: huvudskyddet krockar inte med ledarens rot", finns(skydd, rot))
+	check("R3: en icke kolliderande hästdel får inget undantag",
+		not finns(pynt, rot) and not finns(pynt, torso))
+	check("R3: en ANNAN spelare kolliderar som förut",
+		not finns(kropp, annanRot) and not finns(skydd, annanRot))
+	check("R3: exakt två hästdelar × två kroppsdelar", #par() == 4,
+		("%d undantag"):format(#par()))
+
+	LedService.slapp(sp)
+	check("R3: undantaget rivs med kopplet", #par() == 0,
+		("%d kvar efter släpp"):format(#par()))
+
+	h:Destroy()
+	sp.Character:Destroy()
+	annan.Character:Destroy()
 end
 
 if fails > 0 then

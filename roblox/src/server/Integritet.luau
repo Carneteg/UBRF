@@ -121,12 +121,36 @@ local RUNTIME: { [string]: { [string]: string } } = {
 	stor backup ingen rör och en mallmapp koden är beroende av. Raden skrev
 	tidigare ut dem sida vid sida, som samma sak.
 
-	Ett namn får bara stå här med en rad i koden bakom sig. ]]
-local KODBEROENDE: { [string]: { [string]: string } } = {
-	ServerStorage = {
-		HastVisualer = "server/HastVisual.luau:37 — mallarna för hästarnas nät",
-	},
-}
+	Ett namn får bara stå här med en rad i koden bakom sig.
+
+	── OCH LISTAN ÄR TOM NU (#264 R3) ───────────────────────────────
+
+	`ServerStorage.HastVisualer` stod här ensam. Den är inte ospårad
+	längre: hästmallen `k3` exporterades ur startplacen, ligger i
+	`roblox/assets/hastvisualer-k3.rbxmx` och mappas av
+	`default.project.json`. Rojo äger den, bygg-identiteten räknar dess
+	bytes, och `tools/kolla-hastmodell.py` vaktar att den kommer fram hel.
+
+	Att lämna kvar namnet hade varit värre än att ta bort det: raden hade
+	märkt ut en mapp som numera ÄR källstyrd, alltså sagt att något är
+	oförklarat när det är förklarat. En grind som ljuger åt det hållet
+	lär folk att bortse från den.
+
+	Mekanismen står kvar för nästa sak som hamnar i samma läge, och den
+	har ett eget prov genom `Integritet._kodberoendeForProv`. ]]
+local KODBEROENDE: { [string]: { [string]: string } } = {}
+
+--[[ Provets väg in. Mekanismen ska inte tappa sin mätning bara för att
+     den råkar sakna verkliga poster just nu. ]]
+function Integritet._kodberoendeForProv(tjanst: string?, namn: string?,
+	rad: string?)
+	if tjanst == nil then
+		table.clear(KODBEROENDE)
+		return
+	end
+	KODBEROENDE[tjanst] = KODBEROENDE[tjanst] or {}
+	KODBEROENDE[tjanst][namn :: string] = rad :: string
+end
 
 type Runtimeregel = { kalla: string, prov: (Instance) -> boolean }
 
@@ -278,6 +302,41 @@ function Integritet.osparade(tjanst: string): { string }
 	return ut
 end
 
+--[[ ══ TVÅ BARN MED SAMMA NAMN ══════════════════════════════════════
+
+	Roblox kräver inte unika syskonnamn, och `FindFirstChild` svarar med
+	det FÖRSTA. En tjänst som skapar sitt fjärrobjekt med `Instance.new`
+	i stället för att återanvända ett som redan ligger i den sparade
+	placen får därför två — och klienten hittar den utan handlare.
+
+	Uppmätt i Studio 2026-09-20 (`106030782437053`, Play): två
+	`RemoteFunction` som hette `MinHast`, och `MinHast:InvokeServer()`
+	återvände aldrig. `10a`–`10e` såg ingenting: namnet står i facit,
+	klassen är rätt, och inget är ospårat. Det som saknades var att
+	någon räknade dem.
+
+	Rättelsen ligger i `StallService`; den här raden finns för att felet
+	inte ska kunna komma tillbaka tyst.
+
+	VERKTYGSSPÅREN UNDANTAS av samma skäl som i `klassificera`: en
+	plugin får lägga två `__`-objekt utan att fälla en produktgrind. ]]
+function Integritet.dubblerade(tjanst: string): { string }
+	local sedda: { [string]: number } = {}
+	for _, post in ipairs(Integritet.inventering(tjanst)) do
+		if not arVerktyg(post.namn) then
+			sedda[post.namn] = (sedda[post.namn] or 0) + 1
+		end
+	end
+	local ut: { string } = {}
+	for namn, antal in sedda do
+		if antal > 1 then
+			table.insert(ut, ("%s x%d"):format(namn, antal))
+		end
+	end
+	table.sort(ut)
+	return ut
+end
+
 --[[ ══ BESKRIVER IDENTITETEN KODEN SOM FAKTISKT LIGGER HÄR? (#171) ═════
 
 	9a–9d prövar att identiteten FINNS, är GENERERAD och har rätt FORM. Ingen
@@ -348,6 +407,35 @@ function Integritet.kallantal(): number?
 	return antal
 end
 
+--[[ Modellerna bland källrötterna. En rot som INTE är ett skript är en
+	modell: `kallrotter` listar varje mappad instans, och de mappade
+	filerna är antingen Luau eller `.rbxmx`. Räknas de inte är en tappad
+	hästmall osynlig — placen startar, och varenda häst blir en låda. ]]
+function Integritet.modellantal(): number?
+	local id = Integritet.identitet()
+	if not id then return nil end
+	local rotter = (id :: any).kallrotter
+	if typeof(rotter) ~= "table" then return nil end
+	local antal = 0
+	for _, vag in ipairs(rotter) do
+		local nod: Instance? = nil
+		for led in tostring(vag):gmatch("[^%.]+") do
+			if nod == nil then
+				local ok, tjansten = pcall(game.GetService, game, led)
+				nod = if ok then tjansten else nil
+			else
+				nod = (nod :: Instance):FindFirstChild(led)
+			end
+			if nod == nil then break end
+		end
+		if nod ~= nil and not nod:IsA("LuaSourceContainer")
+				and not nod:IsA("Folder") then
+			antal += 1
+		end
+	end
+	return antal
+end
+
 --[[ Raderna som Preflighten lägger in. Samma form som dess egna: namn, ok,
 	detalj — så att specen kan läsa dem ur tjänstens utdata i stället för att
 	göra om villkoret. ]]
@@ -396,6 +484,30 @@ function Integritet.rader(): { Rad }
 		elseif faktisk == vantad then ("%d skriptobjekt"):format(faktisk)
 		else ("placen har %d, identiteten säger %d (%+d)"):format(
 			faktisk, vantad :: number, faktisk - (vantad :: number)))
+
+	--[[ ── 9f: OCH MODELLERNA (#264 R3) ────────────────────────────────
+
+		9e räknar SKRIPT, för det är vad `LuaSourceContainer` är. När
+		hästmallen mappades in räknade identiteten 79 mappade filer mot
+		placens 78 skriptobjekt, 9e föll, och CRITICAL_STARTUP_GATE
+		släppte inte in någon. Grinden hade rätt i att talen gick isär —
+		den jämförde bara fel saker.
+
+		Modellerna räknas därför för sig. Utan den här raden hade en
+		tappad hästmall varit helt omätbar: ingen skriptkontroll ser den,
+		och hästen går tillbaka till lådor tyst. Det var hela felet. ]]
+	local vantadeModeller = id and (id :: any).modeller
+	local faktiskaModeller = Integritet.modellantal()
+	rad("9f placen bär lika många modeller som identiteten räknade",
+		typeof(vantadeModeller) ~= "number"
+			or (faktiskaModeller ~= nil and faktiskaModeller == vantadeModeller),
+		if typeof(vantadeModeller) ~= "number" then
+			"identiteten bär inget modeller — äldre verktyg, kan inte mätas"
+		elseif faktiskaModeller == nil then "kan inte mätas"
+		elseif faktiskaModeller == vantadeModeller then
+			("%d modell(er)"):format(faktiskaModeller)
+		else ("placen har %d, identiteten säger %d"):format(
+			faktiskaModeller, vantadeModeller :: number))
 
 	--[[ 10. KVARGLÖMDA RUNTIME-ARTEFAKTER. ]]
 	local okanda = Integritet.okandaRemotes()
@@ -469,6 +581,15 @@ function Integritet.rader(): { Rad }
 	end
 	rad("10e ospårat i Workspace/ServerStorage — redovisat, inte fällt", true,
 		if #delar == 0 then "inga" else table.concat(delar, " · "))
+
+	--[[ 10f FÄLLER, till skillnad från 10e. Ett dubblerat namn i
+		ReplicatedStorage är inte skräp som ligger och skräpar: det gör
+		`FindFirstChild` tvetydigt för VARJE klient, och den som förlorar
+		lottningen får ett objekt utan handlare. Se noten vid
+		`Integritet.dubblerade` för mätningen som gav raden. ]]
+	local dubbletter = Integritet.dubblerade("ReplicatedStorage")
+	rad("10f inget dubblerat namn i ReplicatedStorage", #dubbletter == 0,
+		if #dubbletter == 0 then "-" else table.concat(dubbletter, ", "))
 
 	return ut
 end

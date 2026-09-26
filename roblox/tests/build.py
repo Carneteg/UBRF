@@ -128,6 +128,12 @@ SIKT = QA + [
     #[[ #252 DEL B: HastGang require:ar Riggprofiler (ledernas ordning).
     #   Den saknades i bunten, sa `Riggprofiler` var nil i sikt.spec. ]]
     ("Riggprofiler", "src/shared/HorseCore/Riggprofiler.luau"),
+    #[[ #264: HastGang laser benfoljden ur Gangfas (RidKanon.GANGFAS) och
+    #   cykellangden ur Gaits/Config. ]]
+    ("Config",       "src/shared/HorseCore/Config.luau"),
+    ("Gaits",        "src/shared/HorseCore/Gaits.luau"),
+    ("RidKanon",     "src/shared/HorseCore/RidKanon.luau"),
+    ("Gangfas",      "src/shared/HorseCore/Gangfas.luau"),
     ("HastGang", "src/client/HastGang.luau"),
 ]
 
@@ -144,6 +150,9 @@ FORBEREDELSE = SPEL + [
     ("Utseende", "src/shared/HorseCore/Utseende.luau"),
     ("Config",       "src/shared/HorseCore/Config.luau"),
     ("Gaits",        "src/shared/HorseCore/Gaits.luau"),
+    #[[ #264: MovementController laser Core.Gangfas (varv och galoppsida).
+    #   RidKanon ligger redan i SPEL. ]]
+    ("Gangfas",      "src/shared/HorseCore/Gangfas.luau"),
     ("Ridtrappa",    "src/shared/HorseCore/Ridtrappa.luau"),
     # HorseService rakner numera energin med G02-B:s kanon (blocker 3),
     # och laser den tilldelade hastens profil (blocker 1).
@@ -160,6 +169,16 @@ FORBEREDELSE = SPEL + [
     #   FORE tjansterna: HorseService, StallService, LedService och
     #   GameplayService require:ar den alla fyra. ]]
     ("Skopa",        "src/server/Skopa.luau"),
+    ("RidLogg",      "src/server/RidLogg.luau"),  # #264 INFRA-2A: HorseService require:ar den
+    ("RidObservation", "src/server/RidObservation.luau"),  # #264 INFRA-2B1
+    ("HinderObservation", "src/server/HinderObservation.luau"),  # #264 INFRA-2B2
+    ("Ridhusplats",   "src/shared/HorseCore/Ridhusplats.luau"),  # #264 INFRA-OBS-PLATS1: RidPlatsObservation require:ar den
+    ("RidPlatsObservation", "src/server/RidPlatsObservation.luau"),  # #264 INFRA-OBS-PLATS1
+    ("VoltObservation", "src/server/VoltObservation.luau"),  # #264 INFRA-VOLT1
+    ("RidForsok", "src/server/RidForsok.luau"),  # #264 INFRA-FORSOK1
+    # AKTOREN (#252 DEL C) FORE tjansterna: GameplayService, HorseService
+    # och LedService fragar den om aktoren har en klient att skicka till.
+    ("Aktor",        "src/shared/HorseCore/Aktor.luau"),
     ("HorseService", "src/server/HorseService.luau"),
     # SparService FORE StallService: StallService.hastminnen laser saven ur
     # den. Ordningen ar samma som init.server.luau har.
@@ -203,6 +222,9 @@ FORBEREDELSE = SPEL + [
     #   acceptera en require som inte har nagon modul bakom sig. ]]
     ("DorrService",    "src/server/DorrService.luau"),
     ("GameplayService", "src/server/GameplayService.luau"),
+    #[[ #263 Gate 2A: First Ride. EFTER tjansterna den anropar —
+    #   GameplayService, HorseService, LedService och TackService. ]]
+    ("ForstaRitten",  "src/server/ForstaRitten.luau"),
 ]
 
 #[[ INTEGRATIONSBANKEN (#162, END_TO_END punkt 7-11).
@@ -243,7 +265,10 @@ PARITET = [
     ("Telemetri",  "src/shared/HorseCore/Telemetri.luau"),
     # G02-C: Ugnetas bedomningskontrakt lases ur RidKanon.UGNETA.
     ("Ugneta",     "src/shared/HorseCore/Ugneta.luau"),
-    # Lektionens lifecycle: mater, avgor forsok 1 -> 2, valjer live-cue.
+    #[[ QA blockerare 2: ett tema per pass. Ligger EFTER Ugneta, som den
+    #   require:ar, och FORE Lektion. ]]
+    ("UgnetaTema", "src/shared/HorseCore/UgnetaTema.luau"),
+    # Lektionens lifecycle: mater, avgor forsok 1 -> 2.
     ("Lektion",    "src/shared/HorseCore/Lektion.luau"),
     # G02-D: inspelningen och analysen. BADA maste ligga fore
     # LektionController -- den require:ar dem bagge. Ligger de bara i EN av
@@ -263,7 +288,10 @@ PARITET = [
     #   regel som hela listan: en modul far bara referera det som star
     #   over. ]]
     ("CoachBanner",      "src/client/CoachBanner.luau"),
+    #[[ #264: sprakflaggan fragar servern genom Networking. ]]
+    ("Networking",       "src/shared/HorseCore/Networking.luau"),
     ("UgnetaController", "src/client/UgnetaController.luau"),
+    ("Ridhusplats",   "src/shared/HorseCore/Ridhusplats.luau"),  # #264 INFRA-PLATS1: UgnetaGestalt require:ar den
     ("UgnetaGestalt",    "src/client/UgnetaGestalt.luau"),
     ("ReplayController", "src/client/ReplayController.luau"),
     # Kedjan som binder ihop dem. Utan den var HUD:en bara anropbar.
@@ -276,6 +304,7 @@ PARITET = [
 # huset, vilket ar precis det placeringen undviker.
 GESTALT = BYGGE + [
     ("RidKanon",      "src/shared/HorseCore/RidKanon.luau"),
+    ("Ridhusplats",   "src/shared/HorseCore/Ridhusplats.luau"),  # #264 INFRA-PLATS1: UgnetaGestalt require:ar den
     ("UgnetaGestalt", "src/client/UgnetaGestalt.luau"),
 ]
 
@@ -294,6 +323,8 @@ KLIENT = SPEL + [
     ("Utseende", "src/shared/HorseCore/Utseende.luau"),
     ("Config",       "src/shared/HorseCore/Config.luau"),
     ("Gaits",        "src/shared/HorseCore/Gaits.luau"),
+    #[[ #264: benfoljden. RidKanon ligger redan i SPEL, ovanfor. ]]
+    ("Gangfas",      "src/shared/HorseCore/Gangfas.luau"),
     ("Ridtrappa",    "src/shared/HorseCore/Ridtrappa.luau"),
     ("Hjalper",      "src/shared/HorseCore/Hjalper.luau"),
     ("Svar",         "src/shared/HorseCore/Svar.luau"),
@@ -306,6 +337,7 @@ KLIENT = SPEL + [
     ("Sparning",     "src/shared/HorseCore/Sparning.luau"),
     ("Networking",   "src/shared/HorseCore/Networking.luau"),
     ("Ugneta",       "src/shared/HorseCore/Ugneta.luau"),
+    ("UgnetaTema",   "src/shared/HorseCore/UgnetaTema.luau"),
     ("Lektion",      "src/shared/HorseCore/Lektion.luau"),
     # G02-D: samma tva moduler som i PARITET, av samma skal. Se noten dar.
     ("Inspelning",   "src/shared/HorseCore/Inspelning.luau"),
@@ -320,6 +352,18 @@ KLIENT = SPEL + [
     ("RiderController",     "src/client/RiderController.luau"),
     ("Input",               "src/client/Input.luau"),
     ("TouchControls",       "src/client/TouchControls.luau"),
+    #[[ #263: byggidentiteten. EFTER TouchControls — den viker undan for
+    #   samma reserv och laser den genom `reglageBredd`/`reglageTopp`, sa
+    #   modulen maste ligga over den i bunten. Och FORE init.client, som
+    #   require:ar den; bankens sjalvprov faller annars, vilket det ocksa
+    #   gjorde nar den forst hamnade i PARITET i stallet for har.
+    #
+    #   `UBRFBuild` foljer med: provet jamfor mot den GENERERADE
+    #   `kallhash` och `kallor` i stallet for mot avskrivna tal. En
+    #   avskriven hash hade blivit fel dagen nagon ror en kallfil, och
+    #   provet hade da matt sin egen inaktualitet. ]]
+    ("UBRFBuild",           "game/UBRFBuild.luau"),
+    ("Byggidentitet",       "src/client/Byggidentitet.luau"),
     ("InteractionController", "src/client/InteractionController.luau"),
     ("PreparationController", "src/client/PreparationController.luau"),
     #[[ #244: se noten i PARITET. Bannern maste ligga fore den modul som
@@ -328,6 +372,7 @@ KLIENT = SPEL + [
     #   "attempt to index nil" langt fran orsaken. ]]
     ("CoachBanner",         "src/client/CoachBanner.luau"),
     ("UgnetaController",    "src/client/UgnetaController.luau"),
+    ("Ridhusplats",   "src/shared/HorseCore/Ridhusplats.luau"),  # #264 INFRA-PLATS1: UgnetaGestalt require:ar den
     ("UgnetaGestalt",       "src/client/UgnetaGestalt.luau"),
     ("ReplayController",    "src/client/ReplayController.luau"),
     ("LektionController",   "src/client/LektionController.luau"),
@@ -354,6 +399,8 @@ KLIENT = SPEL + [
     #[[ #235: den gemensamma touchytan. Som DinHast ovan maste den
     #   namnges har - banken hittar den inte sjalv. ]]
     ("Naromrade",           "src/client/Naromrade.luau"),
+    #[[ #264: Ugnetas ridrad utanfor lektionen. Bara init.client require:ar den. ]]
+    ("UgnetaRad",           "src/client/UgnetaRad.luau"),
     ("Init",                "src/client/init.client.luau"),
 ]
 
@@ -384,6 +431,15 @@ KOHERENS = GEOMETRI + [
     #   FORE tjansterna: HorseService, StallService, LedService och
     #   GameplayService require:ar den alla fyra. ]]
     ("Skopa",        "src/server/Skopa.luau"),
+    ("RidLogg",      "src/server/RidLogg.luau"),  # #264 INFRA-2A: HorseService require:ar den
+    ("RidObservation", "src/server/RidObservation.luau"),  # #264 INFRA-2B1
+    ("HinderObservation", "src/server/HinderObservation.luau"),  # #264 INFRA-2B2
+    ("RidPlatsObservation", "src/server/RidPlatsObservation.luau"),  # #264 INFRA-OBS-PLATS1
+    ("VoltObservation", "src/server/VoltObservation.luau"),  # #264 INFRA-VOLT1
+    ("RidForsok", "src/server/RidForsok.luau"),  # #264 INFRA-FORSOK1
+    # AKTOREN (#252 DEL C) FORE tjansterna: GameplayService, HorseService
+    # och LedService fragar den om aktoren har en klient att skicka till.
+    ("Aktor",        "src/shared/HorseCore/Aktor.luau"),
     ("HorseService",    "src/server/HorseService.luau"),
     ("SparService",     "src/server/SparService.luau"),
     ("StallService",    "src/server/StallService.luau"),
@@ -403,6 +459,9 @@ KOHERENS = GEOMETRI + [
     #   borta, buntar med dubbletter byggs inte langre. ]]
     ("DorrService",     "src/server/DorrService.luau"),
     ("GameplayService", "src/server/GameplayService.luau"),
+    #[[ #263 Gate 2A: First Ride. EFTER tjansterna den anropar —
+    #   GameplayService, HorseService, LedService och TackService. ]]
+    ("ForstaRitten",  "src/server/ForstaRitten.luau"),
     ("HastVisual",      "src/server/HastVisual.luau"),
     ("HastRigg",        "src/server/HastRigg.luau"),
 ], {m[0] for m in _KLIENTDELEN}) + [
@@ -425,6 +484,8 @@ MODULER = [
     # provar att en RIKTIG controller-frame producerar underlaget till
     # telemetrin (G02-A, senior review blocker B).
     ("RidKanon",     "src/shared/HorseCore/RidKanon.luau"),
+    #[[ #264: benfoljden per gangart. Ben, hovslag och lattridning laser den. ]]
+    ("Gangfas",      "src/shared/HorseCore/Gangfas.luau"),
     ("Hjalper",      "src/shared/HorseCore/Hjalper.luau"),
     ("Svar",         "src/shared/HorseCore/Svar.luau"),
     ("Telemetri",    "src/shared/HorseCore/Telemetri.luau"),
@@ -563,7 +624,21 @@ def modulblock(namn: str, rel: str, kropp: str) -> str:
 
     `testa-build.py: deklarerad_men_ej_emitterad` byter ut funktionen och
     kraver att bygget faller."""
-    return f"--[[ ══ {rel} ══ ]]\nlocal {namn} = (function()\n{kropp}\nend)()\n"
+    block = f"--[[ ══ {rel} ══ ]]\nlocal {namn} = (function()\n{kropp}\nend)()\n"
+    #[[ FJARRKONTRAKTET VIDARE TILL STUBBEN.
+    #
+    #   Modulerna emitteras som LOKALER, sa stubbarna -- som ligger forst i
+    #   filen -- kan inte na `Networking`. Utan den har raden gissade
+    #   bankens fjarrfabrik `RemoteEvent` for VARJE fjarrobjekt, aven de
+    #   tva som ar `RemoteFunction` i produktion. Det gjorde ett nekat
+    #   fjarranrop omojligt att mata: stubbens `InvokeServer` svarade
+    #   hardkodat `true`.
+    #
+    #   Listan kopieras inte hit. Den lamnas ut ur modulen sjalv via
+    #   `Networking.definitioner()`, som redan finns for `Integritet`. ]]
+    if namn == "Networking":
+        block += "__fjarrdefinitioner = Networking.definitioner()\n"
+    return block
 
 
 _PRODUKT = ("src/", "game/", "buildings/")
@@ -665,6 +740,25 @@ def valjBunt(spec_rel: str):
     #[[ #233 Fas 4b. Samma bank som statesync och av samma skal: den
     #   auktoritativa vagen gar genom HorseService pa en RIKTIG rigg, och
     #   reconcile-matningen behover MovementController ur samma bunt. ]]
+    #[[ #264 INFRA-2A: ridloggen mats genom HorseService pa en riktig rigg,
+    #   samma bank som ridinput. ]]
+    #[[ #264 INFRA-2B2: KOHERENS, for att hindren ska komma ur det RIKTIGA
+    #   anlaggningsbygget (med speglingen) och registreras av HorseService. ]]
+    #[[ #264 INFRA-OBS-PLATS1: det riktiga ridhuset och tjansterna. ]]
+    #[[ #264 INFRA-FORSOK1: samma bank — voltdata ur den riktiga ramen. ]]
+    elif "forsok" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
+    #[[ #264 INFRA-VOLT1: samma bank som ridplats — den riktiga ramen. ]]
+    elif "volt" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
+    elif "ridplats" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
+    elif "hinderobservation" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
+    elif "ridobservation" in spec_rel:
+        moduler, stubbar = INTEGRATION, "tests/stubs.luau"
+    elif "ridlogg" in spec_rel:
+        moduler, stubbar = INTEGRATION, "tests/stubs.luau"
     elif "ridinput" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
     elif "hasthojd" in spec_rel or "avsittning" in spec_rel:
@@ -681,6 +775,21 @@ def valjBunt(spec_rel: str):
     #   som saknar bade varlden och klientens InteractionController. ]]
     elif "promptkonflikt" in spec_rel:
         moduler, stubbar = KOHERENS, "tests/stubs.luau"
+    #[[ MULTI_HORSE: flera ledningar samtidigt. FORE "ledning"-grenen ar
+    #   inte nodvandigt — "flerhast" innehaller inte "ledning" — men den
+    #   behover SAMMA bunt som ledning.spec, alltsa INTEGRATION. ]]
+    elif "flerhast" in spec_rel:
+        moduler, stubbar = INTEGRATION, "tests/stubs.luau"
+    #[[ M3: ankarets takt. Samma bunt som ledning.spec av samma skal —
+    #   provet driver `LedService._steg` pa en riktig rigg. ]]
+    elif "ledtakt" in spec_rel:
+        moduler, stubbar = INTEGRATION, "tests/stubs.luau"
+    #[[ M3: sparet som rutthistorik. Samma bunt, samma skal. ]]
+    elif "ledspar" in spec_rel:
+        moduler, stubbar = INTEGRATION, "tests/stubs.luau"
+    #[[ M3.1: navvagens livslangd i hornet. Samma bunt, samma skal. ]]
+    elif "ledvag" in spec_rel:
+        moduler, stubbar = INTEGRATION, "tests/stubs.luau"
     elif "ledning-integration" in spec_rel:
         moduler, stubbar = KOHERENS, "tests/stubs.luau"
     elif "ledning" in spec_rel:
@@ -714,6 +823,10 @@ def valjBunt(spec_rel: str):
         moduler, stubbar = KLIENT, "tests/stubs.luau"
     elif "klient" in spec_rel:
         moduler, stubbar = KLIENT, "tests/stubs.luau"
+    #[[ #264 INFRA-PLATS1: platsgrunden provas ovanpa det byggda, med
+    #   Ugnetas riktiga vag, alltsa samma bank som gestalten. ]]
+    elif "ridhusplats" in spec_rel:
+        moduler, stubbar = GESTALT, "tests/stubs-bygge.luau"
     elif "gestalt" in spec_rel:
         moduler, stubbar = GESTALT, "tests/stubs-bygge.luau"
     elif "paritet" in spec_rel or "ugneta" in spec_rel:
@@ -729,6 +842,16 @@ def valjBunt(spec_rel: str):
     #   ett namn hamnar i. ]]
     elif "takt" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
+    #[[ #263 Gate 2A: First Ride mater HELA vagen — tilldelning, rigg,
+    #   utrustning, malzon och uppsittning genom riktiga tjanster. Samma
+    #   bunt som takt, av samma skal. ]]
+    elif "forstaritten" in spec_rel:
+        moduler, stubbar = INTEGRATION, "tests/stubs.luau"
+    #[[ #264 INFRA-1: sparschemat v2 och SparService mot den stubbade
+    #   DataStore. FORBEREDELSE ar minsta bunt med bade Sparning och
+    #   SparService; ingen tjanstestack eller rigg behovs. ]]
+    elif "sparning" in spec_rel:
+        moduler, stubbar = FORBEREDELSE, "tests/stubs.luau"
     elif "forberedelse" in spec_rel:
         moduler, stubbar = FORBEREDELSE, "tests/stubs.luau"
     #[[ FORE "spel": strangen "spelbarhet" INNEHALLER "spel", sa den hamnar
@@ -749,6 +872,13 @@ def valjBunt(spec_rel: str):
     #[[ #171: integritetsgrinden mater preflightens punkt 9 och 10 och
     #   behover darfor samma bank som preflighten — inklusive Networking,
     #   den genererade UBRFBuild och Integritet. ]]
+    #[[ ROBLOX_RUNTIME_ROUTING: MinHast far inte bli tva. Provet startar
+    #   SparService och StallService pa riktigt och mater ReplicatedStorage,
+    #   sa det behover samma bunt som forberedelsen -- men INTEGRATION valjs
+    #   for att specen ocksa lasar StallService.hastIdFor mot en riktig
+    #   tilldelning. Ingen annan spec har "fjarrdublett" i namnet. ]]
+    elif "fjarrdublett" in spec_rel:
+        moduler, stubbar = INTEGRATION, "tests/stubs.luau"
     elif "integritet" in spec_rel:
         moduler, stubbar = SPELBARHET, "tests/stubs-bygge.luau"
     elif "topologi" in spec_rel:
@@ -825,7 +955,7 @@ def foga(spec_rel: str, moduler, stubbar: str) -> pathlib.Path:
         # (stubs-bygge.luau) gor inte det: de stubbar huset, inte hastsystemet.
         if har_core and namn in ("Config", "Gaits", "Ridtrappa", "StateMachine", "RigAdapter",
                                 "Riggprofiler", "Utseende",
-                    "Networking", "RidKanon", "Hjalper", "Svar", "Telemetri",
+                    "Networking", "RidKanon", "Gangfas", "Hjalper", "Svar", "Telemetri",
                     "Inspelning", "Kameralage", "Pass", "Sparning"):
             delar.append(f"__Core.{namn} = {namn}\n")
     delar.append(f"--[[ ══ {spec_rel} ══ ]]\n{inlina(las(spec_rel), kanda, spec_rel, spec_rel, har_core)}\n")

@@ -70,6 +70,13 @@ end
 	svara rätt spelare på rätt språk när den måste. ]]
 function Sprak.sprakForSpelare(player: Player?): string
 	if player then
+		--[[ SPELARENS VAL I SPELET GÅR FÖRE (#264 GAIT_READABILITY_AND_UGNETA).
+		     Flaggan i Ugnetas yta skriver attributet genom servern, som bara
+		     tar emot "sv" eller "en". Ett attribut på `Player` överlever
+		     respawn men inte utloggning, och det är hela beständigheten:
+		     ingen DataStore, och Roblox-kontots locale rörs inte. ]]
+		local okVal, val = pcall(function() return player:GetAttribute(Sprak.ATTRIBUT) end)
+		if okVal and (val == "sv" or val == "en") then return val end
 		local ok, locale = pcall(function() return (player :: any).LocaleId end)
 		if ok and type(locale) == "string" and locale ~= "" then
 			return Sprak.sprakFor(locale)
@@ -78,10 +85,35 @@ function Sprak.sprakForSpelare(player: Player?): string
 	return Sprak.sprakFor(Sprak._locale)
 end
 
+--[[ Attributet på `Player` som bär spelarens val. Ett namn, ett ställe. ]]
+Sprak.ATTRIBUT = "UBRFSprak"
+
+--[[ ── SPELARENS EGET VAL, OCH DE SOM MÅSTE RITA OM (#264) ──────────
+
+	`valt` är spelarens uttryckliga val i spelet och går före allt annat.
+	`lyssnare` är ytor som redan visar text: ett byte ska ändra det som
+	STÅR på skärmen, inte bara det som byggs härnäst. ]]
+local valt: string? = nil
+local lyssnare: { [number]: (string) -> () } = {}
+local nastaLyssnare = 0
+
+local function meddela()
+	local sprak = Sprak.eget()
+	--[[ Kopia först: en lyssnare som kopplar ifrån sig själv mitt i
+	     varvet ska inte hoppa över grannen. ]]
+	local kopia = {}
+	for id, fn in pairs(lyssnare) do kopia[id] = fn end
+	for _, fn in pairs(kopia) do
+		local ok, fel = pcall(fn, sprak)
+		if not ok then warn("[Sprak] lyssnare föll: " .. tostring(fel)) end
+	end
+end
+
 --[[ Klientens eget språk, ur `LocalizationService`. Läses en gång och
 	sparas: den ändras inte mitt i en session. ]]
 local eget: string? = nil
 function Sprak.eget(): string
+	if valt then return valt end
 	if eget then return eget end
 	if Sprak._locale then
 		eget = Sprak.sprakFor(Sprak._locale)
@@ -100,6 +132,38 @@ end
 function Sprak.satLocale(localeId: string?)
 	Sprak._locale = localeId
 	eget = nil
+	meddela()
+end
+
+--[[ Spelarens uttryckliga val: "sv", "en" eller nil (tillbaka till
+	locale). Allt annat avvisas, så att ingen yta kan hamna i ett tredje
+	språk som katalogen inte har. Ytor som lyssnar ritas om direkt. ]]
+function Sprak.satVal(sprak: string?): boolean
+	if sprak ~= nil and sprak ~= "sv" and sprak ~= "en" then return false end
+	if valt == sprak then return true end
+	valt = sprak
+	meddela()
+	return true
+end
+
+function Sprak.valt(): string?
+	return valt
+end
+
+--[[ Prenumeration. Returnerar en funktion som kopplar ifrån — ägaren
+	river sin lyssnare, ingen annan. ]]
+function Sprak.vidByte(fn: (string) -> ()): () -> ()
+	nastaLyssnare += 1
+	local id = nastaLyssnare
+	lyssnare[id] = fn
+	return function() lyssnare[id] = nil end
+end
+
+--[[ Provets fönster in: hur många lyssnare som är kopplade. ]]
+function Sprak._antalLyssnare(): number
+	local n = 0
+	for _ in pairs(lyssnare) do n += 1 end
+	return n
 end
 
 --[[ Slår upp och formaterar. Okänd nyckel returnerar NYCKELN, inte tom

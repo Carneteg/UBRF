@@ -78,7 +78,12 @@ do
 	     BROMS, vars etiketter ("DRIV"/"GO", "BROMS"/"SLOW") är riktiga
 	     översättningar. En tom lista är starkast möjliga läge för regeln:
 	     varje sammanfallande sträng är nu ett fynd. ]]
-	local SAMMANFALLER: { [string]: string } = {}
+	--[[ #264 PLAYER_INTERACTION_CONSOLIDATION: `gangart.halt` — panelens
+	     rubrik uppsutten visar gångarten, och "Halt" är samma ridterm på
+	     båda språken, av exakt samma skäl som `touch.halt` stod här förut. ]]
+	local SAMMANFALLER: { [string]: string } = {
+		["gangart.halt"] = "halt är ridtermen på både svenska och engelska",
+	}
 	local samma = {}
 	for _, nyckel in ipairs(nycklar) do
 		if Sprak.iSprak("sv", nyckel) == Sprak.iSprak("en", nyckel)
@@ -324,6 +329,206 @@ end
 	en "attempt to call a nil value" i loggen i stället för ett läsbart
 	slut — rött blev det, men av fel anledning i texten. Här används den
 	om den finns, annars ger `error` den icke-nollskilda exitkoden. ]]
+
+--[[ ══ EN PROMPT LEVER INTE LÄNGRE ÄN SIN DÖRR ═════════════════════
+
+	Robustness Slice E.
+
+	`kopplade` bar tidigare `true` och ingenting mer: fem lyssnare
+	kopplades per prompt och ingen väg fanns tillbaka. En dörr som revs
+	låg kvar som starkt modultillstånd resten av klientsessionen.
+
+	Provet går genom den RIKTIGA livscykeln: `Prompttext.start()`,
+	`workspace.DescendantAdded` och `DescendantRemoving` — inte bara
+	`skrivOm`.
+
+	TVÅ SKILDA LIVSCYKELFALL, och de får inte blandas ihop:
+
+	  LOSSNAR   prompten lämnar världen UTAN att rivas, och kan komma
+	            tillbaka. Det är den enda giltiga återkopplingen.
+	  RIVS      prompten förstörs. Då är den TERMINAL — en förstörd
+	            Instance går inte att sätta tillbaka i Roblox, och
+	            bänken låser numera `Parent` på samma sätt.
+
+	Första versionen bevisade «samma prompt kopplas om» genom att
+	återförälda en RIVEN prompt. Det är inget Roblox tillåter, så
+	mätningen vilade på en övergång som inte finns. ]]
+print("\n── En prompt lever inte längre än sin dörr ──")
+do
+	local foreLocale = Sprak.eget()
+	Sprak.satLocale("en-us")
+	Prompttext._glomForProv()
+
+	local rot = Instance.new("Folder")
+	rot.Name = "SliceE"
+	rot.Parent = workspace
+	--[[ Ett hem UTANFÖR världen, dit en prompt kan lossna utan att rivas. ]]
+	local avsides = Instance.new("Folder")
+	avsides.Name = "SliceEAvsides"
+
+	local function nyPrompt(namn, nyckel)
+		local p = Instance.new("ProximityPrompt")
+		p.Name = namn
+		p:SetAttribute("SprakNyckel", nyckel)
+		return p
+	end
+
+	--[[ ── EN PROMPT SOM FANNS INNAN START ─────────────────────── ]]
+	local forst = nyPrompt("Forst", "dorr.oppna")
+	forst.Parent = rot
+	Prompttext.start()
+	check("en prompt som fanns vid start översätts",
+		forst.ActionText == Sprak.iSprak("en", "dorr.oppna"),
+		tostring(forst.ActionText))
+	check("och modulen äger den", Prompttext._lyssnare(forst) > 0,
+		("%d lyssnare"):format(Prompttext._lyssnare(forst)))
+
+	--[[ ── DE FEM REAKTIVA VÄGARNA ──────────────────────────────── ]]
+	forst:SetAttribute("SprakNyckel", "dorr.stang")
+	check("SprakNyckel slår igenom",
+		forst.ActionText == Sprak.iSprak("en", "dorr.stang"),
+		tostring(forst.ActionText))
+	forst:SetAttribute("SprakObjekt", "dorr.entren")
+	check("SprakObjekt slår igenom",
+		forst.ObjectText == Sprak.iSprak("en", "dorr.entren"),
+		tostring(forst.ObjectText))
+
+	--[[ SprakArg, mätt på en nyckel som FAKTISKT har en platshållare —
+	     `tack.sadel_for` är den `TackForradService` sätter tillsammans
+	     med hästens namn. Utan argumentet skriver modulen medvetet
+	     ingenting, så ett svar som inte innehåller namnet är ett fel. ]]
+	forst:SetAttribute("SprakObjekt", "tack.sadel_for")
+	forst:SetAttribute("SprakArg", "Trixie")
+	check("SprakArg slår igenom och fyller platshållaren",
+		forst.ObjectText == Sprak.iSprak("en", "tack.sadel_for", "Trixie")
+			and string.find(forst.ObjectText, "Trixie") ~= nil,
+		tostring(forst.ObjectText))
+	forst:SetAttribute("SprakArg", "Jack")
+	check("och ett NYTT argument slår igenom av sig självt",
+		forst.ObjectText == Sprak.iSprak("en", "tack.sadel_for", "Jack"),
+		tostring(forst.ObjectText))
+	--[[ Tillbaka till en nyckel utan platshållare för resten. ]]
+	forst:SetAttribute("SprakObjekt", "dorr.entren")
+	forst:SetAttribute("SprakArg", "")
+
+	forst.ActionText = "Pahittat"
+	check("en överskriven ActionText hävdas tillbaka",
+		forst.ActionText == Sprak.iSprak("en", "dorr.stang"),
+		tostring(forst.ActionText))
+	forst.ObjectText = "Pahittat"
+	check("en överskriven ObjectText hävdas tillbaka",
+		forst.ObjectText == Sprak.iSprak("en", "dorr.entren"),
+		tostring(forst.ObjectText))
+
+	--[[ ── EN SOM KOMMER TILL EFTERÅT ───────────────────────────── ]]
+	local antalFore = Prompttext._kopplade()
+	local sen = nyPrompt("Sen", "dorr.oppna")
+	sen.Parent = rot
+	check("EN NY PROMPT KOPPLAS AV DescendantAdded",
+		Prompttext._kopplade() == antalFore + 1,
+		("%d -> %d"):format(antalFore, Prompttext._kopplade()))
+	check("och den översätts",
+		sen.ActionText == Sprak.iSprak("en", "dorr.oppna"),
+		tostring(sen.ActionText))
+	local lyssnareEn = Prompttext._lyssnare(sen)
+
+	--[[ TVÅ SAMTIDIGA ÄR ISOLERADE. ]]
+	forst:SetAttribute("SprakNyckel", "dorr.oppna")
+	sen:SetAttribute("SprakNyckel", "dorr.stang")
+	check("två levande prompter påverkar inte varandra",
+		forst.ActionText == Sprak.iSprak("en", "dorr.oppna")
+			and sen.ActionText == Sprak.iSprak("en", "dorr.stang"),
+		("%s / %s"):format(tostring(forst.ActionText), tostring(sen.ActionText)))
+
+	--[[ ── FALL 1: DEN LOSSNAR, OCH KOMMER TILLBAKA ─────────────── ]]
+	sen.Parent = avsides
+	check("EN PROMPT SOM LÄMNAR VÄRLDEN ÄGS INTE LÄNGRE",
+		Prompttext._kopplade() == antalFore,
+		("%d -> %d"):format(antalFore + 1, Prompttext._kopplade()))
+	check("och inga lyssnare hålls kvar på den",
+		Prompttext._lyssnare(sen) == 0, ("%d"):format(Prompttext._lyssnare(sen)))
+
+	--[[ Stale-händelser MEDAN den ligger utanför. Att tabellen är tom
+	     räcker inte: en kvarlevande koppling hade fortsatt kalla
+	     `skriv`. ]]
+	sen.ActionText = "Kvarlamnat"
+	sen:SetAttribute("SprakNyckel", "dorr.oppna")
+	sen:SetAttribute("SprakObjekt", "dorr.entren")
+	sen:SetAttribute("SprakArg", "Trixie")
+	check("EN LOSSNAD PROMPTS HÄNDELSER RÖR INGENTING",
+		sen.ActionText == "Kvarlamnat", tostring(sen.ActionText))
+
+	sen.ActionText = ""
+	sen.Parent = rot
+	check("SAMMA PROMPT KOPPLAS OM NÄR DEN KOMMER TILLBAKA — EN GÅNG",
+		Prompttext._kopplade() == antalFore + 1
+			and Prompttext._lyssnare(sen) == lyssnareEn,
+		("%d agda, %d lyssnare (var %d)"):format(Prompttext._kopplade(),
+			Prompttext._lyssnare(sen), lyssnareEn))
+	check("och den översätts igen",
+		sen.ActionText == Sprak.iSprak("en", "dorr.oppna"),
+		tostring(sen.ActionText))
+
+	--[[ ── FALL 2: DEN RIVS, OCH ÄR DÄRMED SLUT ─────────────────── ]]
+	local doomed = nyPrompt("Riven", "dorr.oppna")
+	doomed.Parent = rot
+	check("den rivna prompten var ägd innan",
+		Prompttext._lyssnare(doomed) > 0)
+	doomed:Destroy()
+	check("EN RIVEN PROMPT ÄGS INTE LÄNGRE",
+		Prompttext._lyssnare(doomed) == 0,
+		("%d"):format(Prompttext._lyssnare(doomed)))
+	doomed.ActionText = "Kvarlamnat"
+	check("och dess händelser rör ingenting",
+		doomed.ActionText == "Kvarlamnat", tostring(doomed.ActionText))
+	--[[ …och den går INTE att sätta tillbaka. Det är hela skillnaden
+	     mot fallet ovan, och bänken låser den som Roblox gör. ]]
+	local gickAttAterfoda = pcall(function() doomed.Parent = rot end)
+	check("EN RIVEN PROMPT ÄR TERMINAL — DEN GÅR INTE ATT ÅTERFÖDA",
+		gickAttAterfoda == false, tostring(gickAttAterfoda))
+
+	--[[ ── EN PROMPT UNDER ETT SUBTRÄD SOM FLYTTAS ──────────────── ]]
+	do
+		local modell = Instance.new("Model")
+		modell.Name = "Dorrmodell"
+		local ibland = nyPrompt("IModellen", "dorr.oppna")
+		ibland.Parent = modell
+		modell.Parent = rot
+		check("en prompt DJUPT i ett subträd kopplas också",
+			Prompttext._lyssnare(ibland) > 0,
+			("%d lyssnare"):format(Prompttext._lyssnare(ibland)))
+		check("och den översätts",
+			ibland.ActionText == Sprak.iSprak("en", "dorr.oppna"),
+			tostring(ibland.ActionText))
+
+		--[[ Och så flyttas HELA modellen ut. `DescendantRemoving` är
+		     descendant-scopad i Roblox, och dörrar sitter under modeller
+		     — fyrar den bara för roten slipper prompten undan. ]]
+		modell.Parent = avsides
+		check("ETT FLYTTAT SUBTRÄD SLÄPPER OCKSÅ PROMPTEN I SIG",
+			Prompttext._lyssnare(ibland) == 0,
+			("%d lyssnare"):format(Prompttext._lyssnare(ibland)))
+		ibland.ActionText = "Kvarlamnat"
+		check("och dess händelser rör ingenting",
+			ibland.ActionText == "Kvarlamnat", tostring(ibland.ActionText))
+	end
+
+	--[[ ── MÅNGA VARV ───────────────────────────────────────────── ]]
+	local innanVarven = Prompttext._kopplade()
+	for _ = 1, 8 do
+		local t = nyPrompt("Tillfallig", "dorr.oppna")
+		t.Parent = rot
+		t:Destroy()
+	end
+	check("ÅTTA VARV LÄMNAR INGENTING EFTER SIG",
+		Prompttext._kopplade() == innanVarven,
+		("%d -> %d"):format(innanVarven, Prompttext._kopplade()))
+
+	Prompttext._glomForProv()
+	rot:Destroy()
+	Sprak.satLocale(foreLocale)
+end
+
 if fails > 0 then
 	print(string.format("\n%d mätning(ar) föll.", fails))
 	local avsluta = (os :: any).exit

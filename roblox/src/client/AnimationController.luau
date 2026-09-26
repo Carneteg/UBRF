@@ -61,9 +61,23 @@ function AnimationController:_load()
 		end
 	end
 	self.missing = {}
+	--[[ Hur många klipp som FAKTISKT laddades. Talet finns för att den som
+		läser `missing` ska kunna skilja två helt olika lägen åt:
+
+		  · noll laddade — hästen körs procedurellt, se `HastGang`. Det är
+		    projektets valda läge och inget fel.
+		  · några laddade, några inte — då är AnimationConfig halvfylld,
+		    och DÅ är ett saknat id ett verkligt paketeringsfel.
+
+		Utan talet såg de två likadana ut, och `init.client` varnade för
+		arton "saknade" animationer vid varje uppsittning i en build som
+		med flit inte har några. ]]
+	self.laddade = 0
 	for _, key in Config.ANIMATION_KEYS do
 		if not self.tracks[key] then
 			table.insert(self.missing, key)
+		else
+			self.laddade += 1
 		end
 	end
 end

@@ -23,6 +23,9 @@ return {
 	Networking = require(script.Networking),
 	Telemetri = require(script.Telemetri),
 	RidKanon = require(script.RidKanon),
+	--[[ #264: benföljden per gångart. Ben, hovslag och lättridning läser
+	     samma rad och samma fas. ]]
+	Gangfas = require(script.Gangfas),
 	Hjalper = require(script.Hjalper),
 	Svar = require(script.Svar),
 	Kameralage = require(script.Kameralage),

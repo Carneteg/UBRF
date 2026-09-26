@@ -316,6 +316,526 @@ check("och farten är nollad så hon inte slungas iväg",
 	krot.AssemblyLinearVelocity.Magnitude == 0,
 	tostring(krot.AssemblyLinearVelocity.Magnitude))
 
+--[[ ══ 7b. UTFALLET KONTROLLERAS (#264 PLAYABLE_UI_AND_DISMOUNT_R2) ════
+
+	Mätt i Studio: 1 av 5 avsittningar mitt på banan lämnade henne stående
+	på hästryggen — orsaken är inte fastställd. Här skrivs den SENA
+	placeringen över precis så som det såg ut: kroppen hamnar på ryggen
+	igen. Avsittningen ska se det och placera en gång till. ]]
+do
+	krot.CFrame = CFrame.new(rotJ.Position.X + 3, rotJ.Position.Y, rotJ.Position.Z)
+	local okUpp2 = HorseService.tryMount(spelare, jack)
+	check("uppsuttet igen inför provet", okUpp2 == true)
+	local n = 0
+	kar.PivotTo = function(self, cf)
+		n += 1
+		if n == 2 then
+			--[[ Den sena placeringen "tar inte": kroppen står på ryggen. ]]
+			return egenPivot(self, rotJ.CFrame * CFrame.new(0, 4.2, 0))
+		end
+		return egenPivot(self, cf)
+	end
+	HorseService.dismount(spelare)
+	kar.PivotTo = egenPivot
+	check("KONTROLLEN SÅG RYGGEN OCH PLACERADE IGEN", n == 3,
+		string.format("%d placeringar", n))
+	check("och hon står inte på hästryggen efteråt",
+		not HorseService._paHastrygg(jack, kar))
+	check("kontrollen känner igen ryggen när hon står där",
+		(function()
+			local fore = kar:GetPivot()
+			egenPivot(kar, rotJ.CFrame * CFrame.new(0, 4.2, 0))
+			local ja = HorseService._paHastrygg(jack, kar)
+			egenPivot(kar, fore)
+			return ja
+		end)())
+end
+
+--[[ ══ 7c. KLIENTENS GAMLA LÄGE VINNER EFTER ÅTERLÄMNINGEN ══════════════
+
+	Mätt i Studio (kandidat c1946fe, loggat på server OCH klient): i de
+	felande avsittningarna tog klienten aldrig emot serverns placering. Hon
+	hoppade ur sitsen och blev stående på ryggen på klienten, och när
+	ägarskapet lämnats tillbaka replikerades det läget — 17–26 hjärtslag
+	efter återlämningen. Kontrollen vid hjärtslag 10 hade då redan sagt ja.
+
+	Här spelas förloppet upp med samma takt. Bänkens låtsasspelare hittas
+	inte av `GetPlayerFromCharacter`, så själva återlämningen sker inte
+	här; provet ankrar därför på serverns ÖVERTAGANDE, som varje placering
+	gör. Efter det andra (den sena placeringens) skriver "klienten" henne
+	upp på ryggen vid hjärtslag 8 + 17 = 25. Bänkens trådar körs synkront,
+	så provet räknar vidare med egna hjärtslag efteråt — felet slår till
+	även om koden hunnit ge upp. ]]
+do
+	krot.CFrame = CFrame.new(rotJ.Position.X + 3, rotJ.Position.Y, rotJ.Position.Z)
+	check("uppsuttet igen inför 7c", HorseService.tryMount(spelare, jack) == true)
+
+	local hb = RunService.Heartbeat
+	local egenWait = hb.Wait
+	local egenAgare = krot.SetNetworkOwner
+	local overtag, efter, slog = 0, nil :: number?, false
+	krot.SetNetworkOwner = function(self, agare)
+		if agare == nil then
+			overtag += 1
+			if overtag == 2 then efter = 0 end
+		end
+		return egenAgare(self, agare)
+	end
+	hb.Wait = function(self)
+		if efter ~= nil and not slog then
+			efter += 1
+			if efter == 25 then
+				slog = true
+				egenPivot(kar, rotJ.CFrame * CFrame.new(0, 4.2, 0))
+			end
+		end
+		return egenWait(self)
+	end
+
+	HorseService.dismount(spelare)
+	for _ = 1, 30 do hb:Wait() end
+	hb.Wait = egenWait
+	krot.SetNetworkOwner = egenAgare
+
+	check("7c: klientens läge skrev henne upp på ryggen efter återlämningen", slog,
+		string.format("övertaganden %d", overtag))
+	check("7c: BEVAKNINGEN SÅG DET OCH PLACERADE IGEN",
+		not HorseService._paHastrygg(jack, kar),
+		string.format("höjd över hästroten %+.2f", krot.Position.Y - rotJ.Position.Y))
+	check("7c: och den nya placeringen gick samma väg som de andra",
+		overtag == 3, string.format("%d övertaganden", overtag))
+end
+
+--[[ ══ 7d. LUFTBUREN RÖRELSE ÄR INTE EN FASTNAD LANDNING (#264 R5) ══════
+
+	Oberoende prov på 941ffeb, genom riktiga tryMount/dismount: efter de två
+	normala placeringarna, vid hjärtslag 25, står kroppen 6 studs ovanför
+	hästroten med fart uppåt 12 och i luftburet tillstånd — ett hopp. Den
+	gamla bevakningen såg bara «ovanför ryggen» och placerade en tredje gång
+	med fart 0. Ett legitimt hopp ska få fortsätta, med sin fart.
+
+	Samma takt som 7c. Två varianter: tillståndet säger luftburen (utan
+	fart), och farten säger det (utan tillstånd). ]]
+local function luftFall(namn, fart, tillstand)
+	krot.CFrame = CFrame.new(rotJ.Position.X + 3, rotJ.Position.Y, rotJ.Position.Z)
+	khum:ChangeState(Enum.HumanoidStateType.Running)
+	check(namn .. ": uppsuttet", HorseService.tryMount(spelare, jack) == true)
+	local hb = RunService.Heartbeat
+	local egenWait = hb.Wait
+	local egenAgare = krot.SetNetworkOwner
+	local overtag, efter, slog = 0, nil :: number?, false
+	krot.SetNetworkOwner = function(self, agare)
+		if agare == nil then
+			overtag += 1
+			if overtag == 2 then efter = 0 end
+		end
+		return egenAgare(self, agare)
+	end
+	hb.Wait = function(self)
+		if efter ~= nil and not slog then
+			efter += 1
+			if efter == 25 then
+				slog = true
+				egenPivot(kar, rotJ.CFrame * CFrame.new(0, 6, 0))
+				krot.AssemblyLinearVelocity = Vector3.new(0, fart, 0)
+				if tillstand then khum:ChangeState(tillstand) end
+			end
+		end
+		return egenWait(self)
+	end
+	HorseService.dismount(spelare)
+	for _ = 1, 30 do hb:Wait() end
+	hb.Wait = egenWait
+	krot.SetNetworkOwner = egenAgare
+	check(namn .. ": hoppet spelades upp", slog)
+	check(namn .. ": INGEN TREDJE PLACERING under ett hopp", overtag == 2,
+		string.format("%d övertaganden", overtag))
+	check(namn .. ": och farten är bevarad",
+		math.abs(krot.AssemblyLinearVelocity.Y - fart) < 1e-6,
+		string.format("fart %.2f", krot.AssemblyLinearVelocity.Y))
+	khum:ChangeState(Enum.HumanoidStateType.Running)
+end
+luftFall("7d hopp (Freefall, fart 12)", 12, Enum.HumanoidStateType.Freefall)
+luftFall("7d tillstånd (Jumping, fart 0)", 0, Enum.HumanoidStateType.Jumping)
+luftFall("7d fart (inget tillstånd, fart 12)", 12, nil)
+
+--[[ ══ 8. ETT NEJ ÅTERFÖRENAR, OCH DAGSFORMEN REPLIKERAS ════════════
+
+	ChatGPT-re-review av `269bec5`, båda punkterna, genom de RIKTIGA
+	produktionsvägarna: `HorseService.start()` installerar bindningen och
+	provet anropar `DismountRequest.OnServerInvoke` — inte en kopia av
+	den. ]]
+print("\n── Ett nej återförenar, och dagsformen replikeras ──")
+do
+	HorseService.start()
+	local dr = Networking.get("DismountRequest")
+	local mc = Networking.get("MountChanged")
+	check("DismountRequest har en riktig handlare",
+		type(dr.OnServerInvoke) == "function")
+
+	--[[ ── DAGSFORMEN ─────────────────────────────────────────────
+
+		Den räknades ut vid uppsittning och göts in i `session.energi`.
+		Klienten hade ingen väg till den: `init.client` läste
+		`stats.Dagsform`, som ingen någonsin satte. Fältet var alltid
+		`nil` och `UgnetaTema` föll tillbaka på skyggheten — utan att
+		något kunde upptäcka det. ]]
+	local spelare8 = { Name = "DagsformSaga", UserId = 8,
+		Character = kar, CharacterAdded = __signal_ny(),
+		CharacterRemoving = __signal_ny() }
+
+	HorseService.setDagsformHook(function() return 0.30 end)
+	check("hon sitter upp", HorseService.tryMount(spelare8, jack) == true)
+	check("DAGSFORMEN REPLIKERAS SOM ATTRIBUT",
+		jack:GetAttribute("Dagsform") == 0.30,
+		tostring(jack:GetAttribute("Dagsform")))
+
+	--[[ ── ÅTERFÖRENINGEN ─────────────────────────────────────────
+
+		Det värsta fallet är `takt.for_snabbt`: anropet når aldrig
+		tjänsten, så ingenting DÄR kan upptäcka att klienten redan rivit
+		sitt ekipage. Skopan töms därför FÖRST, medan hon sitter upp, och
+		sedan nekas en riktig avsittning. ]]
+	do
+		local tak = Skopa.GRANSER.DismountRequest.tak
+		for _ = 1, tak do dr.OnServerInvoke(spelare8) end
+		--[[ Första anropet satte henne faktiskt av. Upp igen, så att
+		     servern verkligen anser att hon rider när nejet kommer. ]]
+		HorseService.tryMount(spelare8, jack)
+
+		mc._skickat = {}
+		local ok, skal = dr.OnServerInvoke(spelare8)
+		check("den nekas av takten", ok == false and skal == "takt.for_snabbt",
+			("%s / %s"):format(tostring(ok), tostring(skal)))
+
+		local aterforenad = false
+		for _, paket in ipairs(mc._skickat) do
+			if paket[1] == spelare8 and paket[2] == jack then
+				aterforenad = true
+			end
+		end
+		check("ETT NEKAT NEJ SKICKAR MountChanged TILL HENNE",
+			aterforenad == true,
+			("%d paket"):format(#mc._skickat))
+		--[[ …och servern har henne kvar. Det är precis den delade
+		     sanningen återföreningen finns för: klienten har rivit,
+		     servern har inte. ]]
+		check("och servern anser fortfarande att hon rider",
+			sits.Occupant == khum, tostring(sits.Occupant))
+	end
+
+	--[[ INGEN UPPFUNNEN ÅTERFÖRENING. Anser servern INTE att hon rider
+	     var klientens rivning rätt, och då ska ingenting skickas. Utan
+	     den här raden vore grinden uppfylld av en server som alltid
+	     skickar `MountChanged`. ]]
+	do
+		check("hon sitter av på riktigt",
+			HorseService.dismount(spelare8) == true)
+		mc._skickat = {}
+		check("ÅTERFÖRENINGEN AVSTÅR NÄR DET INTE FANNS NÅGOT ATT RÄTTA",
+			HorseService.aterforena(spelare8) == false
+				and #mc._skickat == 0,
+			("%d paket"):format(#mc._skickat))
+		--[[ Och attributet följer med henne ut: nästa ryttare ska inte
+		     ärva föregåendes dagsform. ]]
+		check("dagsformen städas vid avsittning",
+			jack:GetAttribute("Dagsform") == nil,
+			tostring(jack:GetAttribute("Dagsform")))
+	end
+
+	HorseService.setDagsformHook(nil)
+end
+
+--[[ ══ 9. EN TRASIG BOKFÖRING ÄR INTE ETT LÄGE ATT ÅTERVÄNDA TILL ══
+
+	Re-review runda 2, blockerare 2. `hast.oregistrerad` betyder PRECIS
+	att `byRider` ljuger: ryttaren står bokförd på en häst vars session
+	är borta. Att återförena på den uppgiften hade satt upp klienten på
+	en häst servern inte kan köra. ]]
+print("\n── Stale byRider återförenar inte ──")
+do
+	local mc = Networking.get("MountChanged")
+	local spelare9 = { Name = "StaleSaga", UserId = 9, Character = kar,
+		CharacterAdded = __signal_ny(), CharacterRemoving = __signal_ny() }
+
+	check("hon sitter upp", HorseService.tryMount(spelare9, jack) == true)
+	--[[ Sessionen rivs UNDER henne, bokföringen lämnas kvar. Det är
+	     exakt det läge `hast.oregistrerad` rapporterar. ]]
+	HorseService._glomSessionForProv(jack)
+	local ok, skal = HorseService.dismount(spelare9)
+	check("avsittningen svarar hast.oregistrerad",
+		ok == false and skal == "hast.oregistrerad",
+		("%s / %s"):format(tostring(ok), tostring(skal)))
+
+	mc._skickat = {}
+	check("ÅTERFÖRENINGEN VÄGRAR PÅ EN TRASIG BOKFÖRING",
+		HorseService.aterforena(spelare9) == false and #mc._skickat == 0,
+		("%d paket"):format(#mc._skickat))
+	--[[ …och posten är STÄDAD, inte bara ignorerad: nästa uppsittning
+	     ska börja rent i stället för att ärva lögnen. ]]
+	check("och den trasiga posten är städad",
+		HorseService.aterforena(spelare9) == false)
+end
+
+--[[ ══ 10. ETT NEKAT NEJ FÅR INTE TAPPA RITTENS IDENTITET ══════════
+
+	Re-review runda 2, blockerare 1. Servern nollar INGENTING när den
+	nekar — den nekade ju. `session.sekvens` står kvar, och regeln i
+	`onRidingIntent` är `sekvens > session.sekvens`. En klient som
+	startade om sin räknare vid återföreningen hade fått varje hjälp
+	tyst kastad, och hästen hade slutat svara på DRIV och BROMS. ]]
+print("\n── Rittens identitet överlever ett nekat nej ──")
+do
+	local dr = Networking.get("DismountRequest")
+	local intent = Networking.get("RidingIntent")
+	local spelare10 = { Name = "SekvensSaga", UserId = 10, Character = kar,
+		CharacterAdded = __signal_ny(), CharacterRemoving = __signal_ny() }
+
+	--[[ Avsnitt 9 rev jacks session med flit och lamnade henne
+	     oregistrerad. Den registreras om har, annars mater det har
+	     avsnittet foregaendes sopor i stallet for sin egen sak — forsta
+	     korningen gjorde precis det och blev rod pa «hon sitter upp». ]]
+	HorseService._registerForProv(jack)
+	local okUpp10, skalUpp10 = HorseService.tryMount(spelare10, jack)
+	check("hon sitter upp", okUpp10 == true, tostring(skalUpp10))
+	local marke = jack:GetAttribute("RidSession")
+	check("ritten har ett märke", type(marke) == "string", tostring(marke))
+
+	--[[ IMPULSSPÄRREN ÄR ÄKTA TID. `Config.RIDINPUT.ImpulsSparr` minus
+	     serverns marginal, mätt med `os.clock`. Bänken har ingen klocka
+	     att skruva på här, så provet väntar ut den på riktigt. Utan det
+	     hade den andra hjälpen fallit på spärren och provet hade mätt
+	     spärren i stället för sekvensen. ]]
+	local function vantaSparren()
+		local slut = os.clock() + Config.RIDINPUT.ImpulsSparr + 0.02
+		while os.clock() < slut do end
+	end
+
+	--[[ En hjälp accepteras om den ändrar serverns replikerade läge.
+	     `RidVersion` räknas upp i `replikera`, som bara nås av ett
+	     accepterat steg. ]]
+	local function driv(sekvens): boolean
+		local fore = jack:GetAttribute("RidVersion")
+		intent.OnServerEvent:Fire(spelare10, marke, "driv", sekvens)
+		return jack:GetAttribute("RidVersion") ~= fore
+	end
+
+	vantaSparren()
+	check("en hjälp med sekvens 5 accepteras", driv(5) == true)
+
+	--[[ Skopan töms direkt — inte genom `OnServerInvoke`, för det FÖRSTA
+	     anropet hade satt henne av på riktigt och det är inte det här
+	     provet handlar om. Mätningen nedan går ändå genom den riktiga
+	     handlaren. ]]
+	local tak = Skopa.GRANSER.DismountRequest.tak
+	for _ = 1, tak do Skopa.slapp(spelare10, "DismountRequest") end
+
+	local ok, skal = dr.OnServerInvoke(spelare10)
+	check("avsittningen nekas av takten",
+		ok == false and skal == "takt.for_snabbt",
+		("%s / %s"):format(tostring(ok), tostring(skal)))
+	check("MÄRKET ÄR OFÖRÄNDRAT — det är samma ritt",
+		jack:GetAttribute("RidSession") == marke,
+		tostring(jack:GetAttribute("RidSession")))
+
+	vantaSparren()
+	check("NÄSTA HJÄLP I SEKVENSEN ACCEPTERAS FORTFARANDE",
+		driv(6) == true)
+
+	--[[ DEN RAD SOM VISAR VARFÖR DET SPELAR ROLL. Hade klienten startat
+	     om sin räknare vid återföreningen — som den gjorde före den här
+	     rättelsen — vore nästa hjälp en etta. Servern kastar den tyst. ]]
+	vantaSparren()
+	check("men en OMSTARTAD räknare kastas tyst — det var buggen",
+		driv(1) == false)
+
+	HorseService.dismount(spelare10)
+end
+
+--[[ ══ ÄGARSKAPET TILLBAKA TILL SPELAREN — OCH NÄR DET INTE GÅR ═══
+
+	Robustness Slice F.
+
+	Raden löd `pcall(function() krot:SetNetworkOwner(spelare) end)` och
+	kastade både utfallet och skälet. En misslyckad återlämning lämnade
+	kroppen serverstyrd utan ett spår av varför.
+
+	Provet går genom den RIKTIGA avsittningen och dess fördröjda
+	överlämning, inte genom ett direktanrop av hjälparen.
+
+	SCHEMAT BEHÖVS FÖR ETT AV FALLEN. Bänkens `task.spawn` kör synkront,
+	så överlämningen hinner aldrig ligga och vänta — och då går vakten
+	«samma kropp fortfarande?» inte att pröva. `__schemaPa(true)` köar
+	trådarna så att provet kan byta kropp MELLAN avsittningen och
+	överlämningen. ]]
+print("\n── Ägarskapet tillbaka till spelaren ──")
+
+local function varningarMed(text)
+	local n = 0
+	for _, rad in ipairs(__varningar) do
+		if string.find(rad, text, 1, true) then n += 1 end
+	end
+	return n
+end
+
+do
+	HorseService._registerForProv(jack)
+	local kar2 = kar
+	--[[ `Parent` MASTE VARA SATT. Vakten i den fordrojda overlamningen
+	     ar `krot.Parent and spelare.Parent and spelare.Character ==
+	     karaktar`, och en banktabell utan `Parent` faller pa mitten —
+	     da kordes overlamningen aldrig och varenda matning nedan var
+	     tyst i stallet for rod. Forsta versionen gjorde precis det. ]]
+	local Spelartjanst = game:GetService("Players")
+	local spelareF = { Name = "AgarSaga", UserId = 11, Character = kar2,
+		Parent = Spelartjanst,
+		CharacterAdded = __signal_ny(), CharacterRemoving = __signal_ny() }
+	Spelartjanst._spelare = { spelareF }
+	local krotF = kar2:FindFirstChild("HumanoidRootPart")
+	check("kroppen har en rot att äga", krotF ~= nil)
+
+	--[[ ── DET NORMALA FALLET ───────────────────────────────────── ]]
+	do
+		krot.CFrame = CFrame.new(rotJ.Position.X + 3, rotJ.Position.Y, rotJ.Position.Z)
+		check("hon sitter upp", HorseService.tryMount(spelareF, jack) == true)
+		local fore = #__varningar
+		HorseService.dismount(spelareF)
+		check("ÄGARSKAPET ÄR TILLBAKA HOS SPELAREN",
+			krotF:GetNetworkOwner() == spelareF,
+			tostring(krotF:GetNetworkOwner()))
+		local nya = 0
+		for i = fore + 1, #__varningar do
+			if string.find(__varningar[i], "ägarskapet åter", 1, true) then
+				nya += 1
+			end
+		end
+		check("och en lyckad överlämning varnar inte", nya == 0,
+			("%d varningar"):format(nya))
+	end
+
+	--[[ ── EN NY KROPP FÅR INTE DEN GAMLAS ÄGARSKAP ─────────────── ]]
+	do
+		HorseService._registerForProv(jack)
+		krot.CFrame = CFrame.new(rotJ.Position.X + 3, rotJ.Position.Y, rotJ.Position.Z)
+		spelareF.Character = kar2
+		check("hon sitter upp igen", HorseService.tryMount(spelareF, jack) == true)
+		krotF:SetNetworkOwner(nil)
+
+		--[[ MÄTPUNKTEN ÄR FÖRSÖKET, INTE SLUTVÄRDET. Avsittningen gör
+		     TVÅ placeringar, och den andra tar tillbaka ägarskapet till
+		     servern innan den lämnar över igen. Slutägaren blir därför
+		     `nil` oavsett om vakten finns — första versionen mätte det
+		     och kunde inte bli röd. Det som skiljer är om överlämningen
+		     ens FÖRSÖKTE ge kroppen till spelaren. ]]
+		local forsokFore = rawget(krotF, "_agarskapTillSpelare") or 0
+		__schemaPa(true)
+		HorseService.dismount(spelareF)
+		--[[ Överlämningen ligger i kön. NU byter hon kropp. ]]
+		local kar3 = __makeKaraktar and __makeKaraktar() or Instance.new("Model")
+		kar3.Name = "NyKropp"
+		spelareF.Character = kar3
+		__schemaTomKo()
+		__schemaPa(false)
+
+		check("EN GAMMAL KROPP FÅR INTE ÄGARSKAPET NÄR KROPPEN BYTTS",
+			(rawget(krotF, "_agarskapTillSpelare") or 0) == forsokFore,
+			("%d -> %d forsok"):format(forsokFore,
+				rawget(krotF, "_agarskapTillSpelare") or 0))
+		spelareF.Character = kar2
+	end
+
+	--[[ ── FÖRHANDSKONTROLLEN SÄGER NEJ ─────────────────────────── ]]
+	do
+		HorseService._registerForProv(jack)
+		krot.CFrame = CFrame.new(rotJ.Position.X + 3, rotJ.Position.Y, rotJ.Position.Z)
+		HorseService.tryMount(spelareF, jack)
+		krotF:SetNetworkOwner(nil)
+		--[[ Skälet kommer från PROVET. Roblox dokumenterar att en
+		     skälsträng finns men inte vilka de är, så varken bänken
+		     eller koden får låtsas känna dem. ]]
+		rawset(krotF, "_agarskapNekas", "ankrad del (provets skal)")
+		--[[ Bara forsoken att ge kroppen till SPELAREN raknas. Det
+		     avsiktliga `SetNetworkOwner(nil)` mitt i avsittningen ar en
+		     annan sak, och forsta versionen av raden slog ihop dem —
+		     `16 -> 18` sag ut som ett forbjudet forsok men var serverns
+		     egen overlamning. ]]
+		local forsokFore = rawget(krotF, "_agarskapTillSpelare") or 0
+		local fore = #__varningar
+
+		HorseService.dismount(spelareF)
+
+		check("ETT NEJ HINDRAR ÖVERLÄMNINGEN",
+			krotF:GetNetworkOwner() ~= spelareF,
+			tostring(krotF:GetNetworkOwner()))
+		check("och inget förbjudet SetNetworkOwner försöktes",
+			(rawget(krotF, "_agarskapTillSpelare") or 0) == forsokFore,
+			("%d -> %d"):format(forsokFore,
+				rawget(krotF, "_agarskapTillSpelare") or 0))
+		local sagt, skalMed = 0, 0
+		for i = fore + 1, #__varningar do
+			if string.find(__varningar[i], "NEKADES", 1, true) then
+				sagt += 1
+				if string.find(__varningar[i], "provets skal", 1, true) then
+					skalMed += 1
+				end
+			end
+		end
+		check("OCH VARNINGEN SÄGER VAD OCH VARFÖR",
+			sagt >= 1 and skalMed >= 1,
+			("%d varningar, %d med skalet"):format(sagt, skalMed))
+		rawset(krotF, "_agarskapNekas", nil)
+	end
+
+	--[[ ── FÖRHANDSKONTROLLEN KASTAR ────────────────────────────── ]]
+	do
+		HorseService._registerForProv(jack)
+		krot.CFrame = CFrame.new(rotJ.Position.X + 3, rotJ.Position.Y, rotJ.Position.Z)
+		HorseService.tryMount(spelareF, jack)
+		krotF:SetNetworkOwner(nil)
+		rawset(krotF, "_agarskapKastar", true)
+		local fore = #__varningar
+
+		HorseService.dismount(spelareF)
+		rawset(krotF, "_agarskapKastar", nil)
+
+		local sagt = 0
+		for i = fore + 1, #__varningar do
+			if string.find(__varningar[i], "förhandskontrollen", 1, true) then
+				sagt += 1
+			end
+		end
+		check("EN KASTANDE FÖRHANDSKONTROLL DÖDAR INTE TRÅDEN",
+			sagt >= 1, ("%d varningar"):format(sagt))
+		--[[ …och överlämningen gjordes ÄNDÅ. En kontroll som inte går
+		     att göra får inte ta bort en överlämning som fungerar. ]]
+		check("och överlämningen gjordes ändå",
+			krotF:GetNetworkOwner() == spelareF,
+			tostring(krotF:GetNetworkOwner()))
+	end
+
+	--[[ ── SJÄLVA SÄTTNINGEN KASTAR ─────────────────────────────── ]]
+	do
+		HorseService._registerForProv(jack)
+		krot.CFrame = CFrame.new(rotJ.Position.X + 3, rotJ.Position.Y, rotJ.Position.Z)
+		HorseService.tryMount(spelareF, jack)
+		local fore = #__varningar
+		rawset(krotF, "_satAgarskapKastar", true)
+
+		local levde = pcall(function() HorseService.dismount(spelareF) end)
+		rawset(krotF, "_satAgarskapKastar", nil)
+
+		check("en kastande SetNetworkOwner tar inte ner avsittningen",
+			levde == true, tostring(levde))
+		local sagt = 0
+		for i = fore + 1, #__varningar do
+			if string.find(__varningar[i], "MISSLYCKADES", 1, true) then
+				sagt += 1
+			end
+		end
+		check("OCH DEN LÄMNAR ETT SPÅR", sagt >= 1, ("%d varningar"):format(sagt))
+	end
+end
+
 __markyta = nil
 __delarILada = nil
 

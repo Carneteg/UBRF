@@ -289,6 +289,12 @@ local anvandaNu: { [string]: boolean } = {}
 	till exempel fyndets svar — faller panelen tillbaka på den lägsta
 	`LayoutOrder`, vilket är det gamla beteendet. ]]
 local paTurNu: string? = nil
+--[[ #264 PLAYABLE_UI_AND_DISMOUNT_R2: står en FRÅGA på skärmen? Då lyfts
+     inget alternativ fram före svaret — varken serverns första moment
+     (hälsningens första, felaktiga svar fick guld) eller fyndets rätta svar
+     (`not s.fel`, som avslöjade det). Alla alternativ lika, återkopplingen
+     kommer efter svaret genom den befintliga undervisningen. ]]
+local fragaNu = false
 --[[ Är raderna ALTERNATIV (hälsningen, fyndets svar) i stället för en
 	checklista? Härleds ur vyn själv: ett `fel`-märkt alternativ finns bara
 	i en valfas. Används för att kalla hjälpen vid dess rätta namn — en
@@ -343,6 +349,92 @@ local avslagNr = 0
 	som fanns att säga. Sedan är läget spelarens igen. ]]
 local senasteLage: string? = nil
 
+--[[ ══ EN PANEL, EN ÄGARE (#264 PLAYER_INTERACTION_CONSOLIDATION) ═══════
+
+	Kontraktet 2026-09-25: EN sammanhållen panel bär hästen, nästa steg och
+	handlingen. Den här modulen ägde hittills två egna ytor för det — stegkortet
+	(`Sparare`) och interaktionspanelen (`Interaktion`) — bredvid närområdets
+	handlingsrader. Tre ytor för en sak.
+
+	Presentationen flyttar till `Naromrade`. TILLSTÅNDET OCH HANDLINGARNA
+	stannar här: raderna nedan fylls av exakt samma grenar i `rita` som ritar
+	knapparna, och varje val bär sin befintliga `skicka` — ingen kopia av
+	regler, ingen tolkning av översatt text.
+
+	Utan en värd (`satVard`) ritar modulen sina ytor precis som förut, så att
+	varje befintligt layoutprov mäter samma sak. Med en värd är ytorna släckta
+	och innehållet går till värden i stället — flyttat, inte gömt. ]]
+local panelVal: { any } = {}
+local panelSteg: { any } = {}
+local panelData: any = nil
+local panelHastnamn: string? = nil
+local vard: (() -> ())? = nil
+
+--[[ ══ KORTET HÖR TILL KONTEXTEN, INTE TILL SKÄRMEN (PO-order 2026-09-20) ══
+
+	"The top-right «Take care of her» progress card belongs to
+	horse-care/box mode only. It must NOT remain as a permanent riding
+	HUD."
+
+	Spåraren låg uppe så fort spelaren hade en tilldelad häst. Mätt i
+	Studio 2026-09-20 på `a0d6730`, samma session hela vägen:
+
+	    vid boxen, `halsa` på tur   kortet uppe   "Greet her calmly · 0/5"
+	    i kopplet mot ridhuset      kortet uppe   "Greet her calmly · 0/5"
+	    uppsutten på Trixie         hela HUD:en släckt
+
+	Ridningen var alltså redan rätt — `avsluta` släcker ytan på
+	`vy.status == "riding"`. LEDNINGEN var det inte: samma framstegskort
+	stod kvar över en spelare som höll på med en enda sak, att gå med
+	henne, och den saken står redan i nederkanten.
+
+	Kontexten har tre lägen och EN källa var:
+
+	  skotsel   vid hästen, i boxen. Kortet finns.
+	  ledning   hon går i kopplet. Kortet är borta. Nederkanten — som
+	            bär både `leda`-momentet och ledningens egna kvittenser
+	            och nej — står kvar, för det är den relevanta ytan.
+	  ridning   uppsutten. Hela skötsel-HUD:en är släckt, som förut.
+
+	INGEN AV DEM ÄR EN GISSNING. Ridningen läses ur serverns vy och
+	ledningen ur `LedSync`: `init.client` kopplar ledningens enda övergång
+	(`InteractionController.satLeder`) hit, samma väg den beständiga
+	statusraden redan går. Två uppfattningar om "leder jag" var precis det
+	#182 rev ut, och det här får inte lägga tillbaka en tredje.
+
+	ÅTERVÄNDANDET KOSTAR INGENTING. Framstegen bor i serverns state och
+	ritas ur `senasteVy`; kortet kommer tillbaka med exakt den progression
+	som gällde, för klienten kastade den aldrig. ]]
+local leder = false
+
+--[[ Leder spelaren henne? Sätts vid VARJE övergång — knappens eget svar
+	och serverns `LedSync` går båda genom `InteractionController.satLeder`,
+	så det finns bara en väg hit. ]]
+function PreparationController.satLeder(pa: boolean?)
+	local ny = pa == true
+	if ny == leder then return end
+	leder = ny
+	PreparationController.tillampaLayout()
+end
+
+function PreparationController._leder(): boolean
+	return leder
+end
+
+--[[ Rider hon? SERVERNS status, aldrig klientens. ]]
+local function rider(): boolean
+	return senasteVy ~= nil and senasteVy.status == "riding"
+end
+
+--[[ Kontexten som ETT ord. Publik för att provet ska läsa samma svar som
+	layouten ritar med — en grind som bar sin egen härledning hade kunnat
+	vara grön medan skärmen visade något annat. ]]
+function PreparationController.kontext(): string
+	if rider() then return "ridning" end
+	if leder then return "ledning" end
+	return "skotsel"
+end
+
 local FARG_KLAR = Color3.fromRGB(127, 180, 137)
 local FARG_TUR = Color3.fromRGB(214, 174, 60)
 local FARG_VILAR = Color3.fromRGB(120, 124, 128)
@@ -393,7 +485,12 @@ end
 	Provet läser SAMMA funktion som `tillampaLayout` sedan ritar med — två
 	räkningar hade kunnat glida isär, och då hade grinden mätt sin egen
 	kopia av layouten i stället för HUD:ens. ]]
-local function spararLayout(antalSteg: number, ut: boolean): { [string]: number }
+--[[ `medHjalp` säger om hjälpraden faktiskt kommer att RITAS. Höjden
+	reserverades förut alltid när spåraren var utfälld, och sedan
+	PO-ordern 2026-09-20 är raden borta så fort interaktionspanelen bär
+	samma text — se noten i `layout`. Utan flaggan hade kortet behållit ett
+	tomt 34 px-band där texten inte längre står. ]]
+local function spararLayout(antalSteg: number, ut: boolean, medHjalp: boolean): { [string]: number }
 	local B, H = viewport()
 	local bredd = math.clamp(math.floor(B * SPARARE_ANDEL), SPARARE_MIN, SPARARE_MAX)
 	bredd = math.min(bredd, math.max(80, math.floor(B - 2 * MARGINAL)))
@@ -405,7 +502,7 @@ local function spararLayout(antalSteg: number, ut: boolean): { [string]: number 
 			kompakt = kompakt, vpBredd = B, vpHojd = H }
 	end
 	local tak = math.floor(H * SPARARE_TAK) - y - MARGINAL
-	local fast = kompakt + GAP + GAP + HJALP_HOJD
+	local fast = kompakt + GAP + (if medHjalp then GAP + HJALP_HOJD else 0)
 	local stegHojd = 0
 	if antalSteg > 0 then
 		--[[ Minst en rad syns alltid. Ryms inte fler rullar listan; att
@@ -672,8 +769,33 @@ function PreparationController.layout(): { [string]: any }
 	for _, r in pairs(rader) do
 		if r.ram.Visible then antal += 1 end
 	end
-	local S = spararLayout(antal, utvidgad)
-	local K = spararLayout(antal, false)
+	--[[ ── EN INSTRUKTION, EN PLATS (PO-order 2026-09-20) ──────────────
+
+		"The bottom instruction/action area carries the current care
+		instruction and its action. Do not duplicate the same instruction
+		in multiple places."
+
+		`avsluta` skriver SAMMA sträng till spårarens hjälprad och till
+		panelens instruktion. Utfälld stod båda uppe samtidigt. Mätt i
+		Studio 2026-09-20 på `a0d6730`, stående vid Trixie med `halsa` på
+		tur:
+
+		    Sparare.Hjalp        "Walk up from the side. Say her name…"
+		    Interaktion.Instruktion  "Walk up from the side. Say her name…"
+		    båda Visible         true
+
+		Panelen ÄGER texten när den finns: den ligger där handlingen
+		ligger, och ordern säger att nederkanten bär instruktionen.
+
+		HJÄLPRADEN RIVS INTE. Den är kvar för de lägen som inte HAR någon
+		panel — välfärdsstoppet, passet sparat, väntar på hästen, utom
+		räckhåll. Där är texten hela innehållet, och det är därför
+		`avsluta` fäller ut spåraren en gång i just de lägena. Att ta bort
+		raden hade gjort dem stumma. ]]
+	local panelenBarTexten = interaktion ~= nil and interaktion.Visible
+	local visaHjalp = utvidgad and not panelenBarTexten
+	local S = spararLayout(antal, utvidgad, visaHjalp)
+	local K = spararLayout(antal, false, false)
 	local synligaVal = 0
 	for id in pairs(anvandaNu) do
 		if momentRader[id] then synligaVal += 1 end
@@ -695,6 +817,11 @@ function PreparationController.layout(): { [string]: any }
 			y1 = S.vpHojd * PreparationController.SIKTRUTA.y1,
 		},
 		vpBredd = S.vpBredd, vpHojd = S.vpHojd,
+		--[[ Kontexten och de två följderna av den, som TAL. Provet läser
+			samma svar som `tillampaLayout` ritar med. ]]
+		kontext = PreparationController.kontext(),
+		spararSyns = PreparationController.kontext() == "skotsel",
+		spararHjalp = visaHjalp,
 		utvidgad = utvidgad, stegHojd = S.stegHojd, antalSteg = antal,
 		interaktionUt = interaktionUt, interaktionVal = synligaVal,
 		interaktionVisade = I.visade, interaktionText = I.textHojd,
@@ -715,12 +842,18 @@ function PreparationController.tillampaLayout()
 	s.Position = UDim2.fromOffset(L.sparare.x0, L.sparare.y0)
 	s.Size = UDim2.fromOffset(L.sparare.x1 - L.sparare.x0,
 		L.sparare.y1 - L.sparare.y0)
+	--[[ SKÖTSELNS FRAMSTEGSKORT FINNS BARA I SKÖTSELNS KONTEXT. Se noten
+		vid `PreparationController.kontext`. Ytan rivs inte och läget
+		nollställs inte: spelarens utfällning och serverns progression
+		ligger kvar, och kortet kommer tillbaka precis som hon lämnade
+		det. ]]
+	s.Visible = L.spararSyns
 	if stegLista then
 		stegLista.Size = UDim2.new(1, 0, 0, L.stegHojd)
 		stegLista.Visible = utvidgad and L.stegHojd > 0
 	end
 	if hjalp then
-		hjalp.Visible = utvidgad
+		hjalp.Visible = L.spararHjalp
 	end
 	if pil then
 		pil.Text = if utvidgad then "▲" else "▼"
@@ -741,9 +874,35 @@ function PreparationController.tillampaLayout()
 			Ett andra ställe som räknar om panelens höjd hade blivit en
 			andra sanning, och den som glider isär syns först som ett
 			överlapp på en telefon. ]]
+		--[[ ── RUTAN ÄR I SKÄRMENS RUM, INTE I PANELENS (#264 ROBLOX_HUMAN_
+			PLAYTEST_FIX) ──────────────────────────────────────────────
+
+			Speltest 2026-09-25: listan låg över instruktionen «Walk up
+			from the front…». Mätt i Studio, iPad-emulering:
+
+			    UBRFForberedelse   IgnoreGuiInset = true   AbsolutePosition 0, -58
+			    UBRFNaromrade      IgnoreGuiInset = false  AbsolutePosition 0, 0
+			    rutan              y0 = 697   (panelens EGET rum)
+			    instruktionen      y  = 649   (skärmens rum)
+
+			Rutan skrevs i panelens rum och lästes i listans, och de två
+			skiljer sig med topbarens inset. Listans golv hamnade 58 px för
+			lågt — rakt över texten. Rutan räknas därför om till skärmens
+			absoluta rum här, där förskjutningen är känd, och den som läser
+			den räknar om till sitt eget. Utan en förskjutning (bänken) är
+			talen oförändrade. ]]
+		local ox, oy = 0, 0
+		pcall(function()
+			local nod: any = p.Parent
+			while nod ~= nil and not nod:IsA("ScreenGui") do nod = nod.Parent end
+			local ap = nod and nod.AbsolutePosition
+			if ap ~= nil and type(ap.X) == "number" and type(ap.Y) == "number" then
+				ox, oy = ap.X, ap.Y
+			end
+		end)
 		senasteRuta = if p.Visible
-			then { x0 = L.interaktion.x0, y0 = L.interaktion.y0,
-				x1 = L.interaktion.x1, y1 = L.interaktion.y1 }
+			then { x0 = L.interaktion.x0 + ox, y0 = L.interaktion.y0 + oy,
+				x1 = L.interaktion.x1 + ox, y1 = L.interaktion.y1 + oy }
 			else nil
 	end
 	if momentBehallare then
@@ -1142,6 +1301,8 @@ local function rad(steg: any, ordning: number)
 	befintlig.ram.LayoutOrder = ordning
 	befintlig.ram.Visible = true
 	befintlig.namn.Text = steg.namn
+	table.insert(panelSteg, { namn = steg.namn, klar = steg.klar == true,
+		paTur = senasteVy ~= nil and senasteVy.nasta == steg.id })
 	if steg.klar then
 		befintlig.bock.Text = "✓"
 		befintlig.bock.TextColor3 = FARG_KLAR
@@ -1160,6 +1321,7 @@ end
 --[[ En momentknapp. `skicka` är vad ett tryck gör — den skiljer sig mellan
 	skötselmoment, fyndsvar och eftervård, men RADEN är densamma. ]]
 local function momentRad(m: any, ordning: number, paTur: boolean, skicka: () -> ())
+	if fragaNu then paTur = false end
 	local knapp = momentRader[m.id]
 	if not knapp then
 		knapp = Instance.new("TextButton")
@@ -1208,6 +1370,11 @@ local function momentRad(m: any, ordning: number, paTur: boolean, skicka: () -> 
 	knapp.LayoutOrder = ordning
 	knapp.Visible = true
 	knapp.Text = (if m.klar then "✓  " else "")  .. m.namn
+	--[[ Samma val, samma handling, till den enhetliga panelen. `aktiv` är
+	     samma grind som knappen själv har: utom räckhåll skickas ingenting. ]]
+	table.insert(panelVal, { id = m.id, text = m.namn, klar = m.klar == true,
+		fel = m.fel == true, paTur = paTur, aktiv = not utomRackhall and not m.klar,
+		skicka = skicka })
 
 	if utomRackhall and not m.klar then
 		--[[ Död knapp. Sedan PO-ordern 09:36 GÖMS hela interaktionspanelen
@@ -1394,7 +1561,53 @@ local function avsluta(lage: string, antalVal: number, ledtext: string,
 		framsteg.Text = if totalt > 0 then ("%d/%d"):format(klara, totalt) else ""
 	end
 	PreparationController.tillampaLayout()
-	if gui then gui.Enabled = synlig end
+	--[[ TILL VÄRDEN. Samma tal och texter som ytorna nyss fick, som data.
+	     `aterkoppling` skiljer en kvittens och ett nej från en instruktion,
+	     så att panelen kan visa dem i sitt återkopplingsfält i stället för
+	     att de tar över instruktionens plats för gott. ]]
+	panelData = {
+		lage = lage,
+		rubrik = if rubrik then rubrik.Text else "",
+		text = ledtext,
+		aterkoppling = if avslag then "nej" elseif bekraftelse then "ok" else nil,
+		klara = klara, totalt = totalt,
+		synlig = synlig,
+		harVal = interaktionPagar(antalVal),
+		hastnamn = panelHastnamn,
+	}
+	if vard then
+		if gui then gui.Enabled = false end
+		vard()
+	else
+		if gui then gui.Enabled = synlig end
+	end
+end
+
+--[[ ── VÄRDEN (#264 PLAYER_INTERACTION_CONSOLIDATION) ─────────────────
+
+	`satVard(fn)`: den enhetliga panelen tar över presentationen. Modulens egna
+	ytor släcks — innehållet går till värden, som anropas efter varje ny vy.
+	`satVard(nil)` lämnar tillbaka ytorna. ]]
+function PreparationController.satVard(fn: (() -> ())?)
+	vard = fn
+	if gui then
+		gui.Enabled = if fn then false else (panelData ~= nil and panelData.synlig == true)
+	end
+	if fn and panelData then fn() end
+end
+
+--[[ Vad panelen ska visa just nu. Kopior, så att värden inte kan skriva i
+     modulens tillstånd; `skicka` är den befintliga handlingen, orörd. ]]
+function PreparationController.panel(): any
+	if not panelData then return nil end
+	local val = {}
+	for i, v in ipairs(panelVal) do val[i] = table.clone(v) end
+	local steg = {}
+	for i, s in ipairs(panelSteg) do steg[i] = table.clone(s) end
+	local ut = table.clone(panelData)
+	ut.val = val
+	ut.steg = steg
+	return ut
 end
 
 --[[ ── DIREKT FEEDBACK ─────────────────────────────────────────────
@@ -1411,6 +1624,18 @@ end
 	knapp som bara betyder "jag har läst" är en handling till per uppgift.
 	Nedräkningen ritar om samma vy utan kvittensen, och då står nästa
 	instruktion där av sig själv. ]]
+--[[ #264 PLAYER_INTERACTION_CONSOLIDATION: en kvittens eller ett nej som kommer
+     EFTER vyn skrevs direkt i skötselns etiketter och nådde aldrig värden —
+     mätt i Studio: servern sa «Saddle and bridle hang on the stall front» och
+     panelens återkopplingsfält var tomt. Samma text, till värden. ]]
+local function berattaForVarden(sort: string, text: string)
+	if panelData then
+		panelData.aterkoppling = sort
+		panelData.text = text
+	end
+	if vard then vard() end
+end
+
 local function visaBekraftelse(text: string?)
 	if type(text) ~= "string" or text == "" then return end
 	--[[ Ett JA släcker ett nej som står kvar: gjorde hon om momentet och
@@ -1423,6 +1648,7 @@ local function visaBekraftelse(text: string?)
 	if instruktion then instruktion.Text = text end
 	if hjalp then hjalp.Text = text end
 	PreparationController.tillampaLayout()
+	berattaForVarden("ok", text)
 	task.delay(PreparationController.BEKRAFTELSE_TID, function()
 		--[[ En andra kvittens hinner före den förstas nedräkning när
 			spelaren trycker snabbt. Numret gör att bara den SENASTE
@@ -1450,6 +1676,7 @@ local function visaAvslag(text: string?)
 	if instruktion then instruktion.Text = text end
 	if hjalp then hjalp.Text = text end
 	PreparationController.tillampaLayout()
+	berattaForVarden("nej", text)
 	task.delay(PreparationController.AVSLAG_TID, function()
 		if avslagNr ~= nr then return end
 		avslag = nil
@@ -1500,6 +1727,10 @@ function rita(vy: any)
 		inte har är samma sak som ingen tur alls, men den syns senare och
 		är svårare att läsa. ]]
 	paTurNu, arValNu, allaNu = nil, false, false
+	fragaNu = false
+	table.clear(panelVal)
+	table.clear(panelSteg)
+	panelHastnamn = if type(vy.hastnamn) == "string" then vy.hastnamn else nil
 
 	local anvanda: { [string]: boolean } = {}
 
@@ -1544,6 +1775,7 @@ function rita(vy: any)
 			raka motsatsen till ordern: en handling, ja, men inte spelarens
 			egen. Här väger alternativen tyngre än höjden. ]]
 		arValNu, allaNu = true, true
+		fragaNu = true
 		for i, s in ipairs(vy.svar) do
 			anvanda[s.id] = true
 			momentRad(lokalt({ id = s.id, namn = s.namn, klar = false, fel = s.fel }),
@@ -1594,6 +1826,11 @@ function rita(vy: any)
 	local nasta = vy.nastaMoment
 	paTurNu = nasta
 	local momenttext = ""
+	--[[ En valfas är en fråga: den känns igen på att något alternativ är
+	     fel (`m.fel`), samma igenkänning som `arValNu` nedan. ]]
+	for _, m in ipairs(vy.moment or {}) do
+		if m.fel then fragaNu = true end
+	end
 	for i, m in ipairs(vy.moment or {}) do
 		anvanda[m.id] = true
 		if m.fel then arValNu = true end
@@ -1724,6 +1961,9 @@ end
 	Ren avläsning: den sätts där panelen faktiskt läggs ut, och ingen
 	annan modul räknar om den. ]]
 function PreparationController.interaktionsruta(): { [string]: number }?
+	--[[ Med en värd syns inte panelen, och en osynlig ruta ska ingen väja
+	     för (#264 PLAYER_INTERACTION_CONSOLIDATION). ]]
+	if vard then return nil end
 	return senasteRuta
 end
 
@@ -1891,6 +2131,89 @@ function PreparationController.hastId(): string?
 	return senasteVy and senasteVy.hastId or nil
 end
 
+--[[ ══ STÅR ETT SKÖTSELSTEG OCH VÄNTAR PÅ ETT TRYCK? ════════════════
+
+	Panelen finns bara när det gör det: `interaktionPagar` kräver både
+	något att välja på och att spelaren är inom serverns räckvidd, så
+	ytans egen synlighet ÄR svaret. Att räkna om villkoret hade gett en
+	andra sanning om samma sak. ]]
+function PreparationController.skotselstegVantar(): boolean
+	return interaktion ~= nil and interaktion.Visible
+end
+
+--[[ ══ 1 MÅL → 1 INSTRUKTION → 1 HANDLING ═══════════════════════════
+
+	PO-order 2026-09-20, PRODUCT CLARIFICATION:
+
+	  "Treat prompt visibility by current task relevance, not by «care
+	   panel visible» as a blanket rule."
+
+	Första försöket gömde ledknappen så länge skötselpanelen stod uppe.
+	Det backades ut (`8aba0f3`) och ska inte återuppstå: den regeln var
+	en YTREGEL — den frågade om en panel, inte om vad spelaren håller på
+	med — och den svarade därför likadant i det läge där ledningen ÄR
+	handlingen. Den här funktionen frågar i stället EN sak:
+
+	    vad är spelarens uppgift just nu?
+
+	Tre svar, med var sin källa:
+
+	  "leda"     hon går i kopplet (`LedSync`, via `satLeder`), ELLER
+	             `leda` är den fas servern säger står på tur. I båda
+	             fallen ÄR ledningen uppgiften.
+	  "skotsel"  ett skötsel- eller eftervårdsmoment väntar på ett tryck
+	             och det momentet är inte ledningen.
+	  "rida"     inget moment väntar. Sadeln är nästa relevanta steg.
+
+	ORDNINGEN ÄR INTE GODTYCKLIG. `leder` prövas först, för en spelare som
+	redan håller repet måste alltid kunna släppa det — samma regel som
+	`InteractionController.removeLed` redan bär. `nastaFas() == "leda"`
+	prövas före panelen, för `GameplayService` bockar av `leda` genom att
+	hon FYSISKT leds till ridhuset (`LedService.harNattMal`): göms knappen
+	i den fasen låser loopen, och det är #162 blockerare 2. ]]
+function PreparationController.aktuellUppgift(): string
+	if leder then return "leda" end
+	if PreparationController.nastaFas() == "leda" then return "leda" end
+	if PreparationController.skotselstegVantar() then return "skotsel" end
+	return "rida"
+end
+
+--[[ Äger skötselsteget spelarens fokus just nu?
+
+	EN regel, två konsumenter. `init.client` frågar den för både
+	ledknappen och uppsittningsprompten; att skriva den två gånger hade
+	gett två sanningar om samma sak, och det är precis vad #182 rev ut ur
+	ledningen.
+
+	LEDKNAPPEN: skötsel är det enda läget som stänger den. I "rida" står
+	den kvar som den gjort sedan produktbeslutet 2026-09-17 — klienten
+	ritar knappen på spelarens egen häst, servern äger allt annat. Ordern
+	bär sin egen gräns: «No care UI rule may make the lead step
+	unreachable.» Ledsteget ÄR `leda`-fasen, och den ger "leda" ovan. Det
+	som smalnas är alltså faserna före den, och bara i det ögonblick de
+	själva står i nederkanten och ber om ett tryck.
+
+	UPPSITTNINGEN: servern äger fortfarande OM man får sitta upp (`redo`,
+	`Pass.farSittaUpp`); det här är enbart frågan om knappen ska
+	konkurrera med en instruktion som väntar. Skälet att den behövs är
+	eftervården, och det är precis bilden Tobias skickade: efter ritten är
+	`redo` sant och `Pass.farSittaUpp` släpper med flit en andra
+	uppsittning — så «Sitt upp» stod bredvid «Lossa sadelgjorden». Ordern
+	punkt 3: «During post-ride care, do not show Mount beside an active
+	care instruction merely because a second ride is technically
+	allowed.»
+
+	ATT «leda» SLÄPPER IGENOM UPPSITTNINGEN ÄR MED FLIT. `LedService`
+	släpper kopplet med skälet `led.rider` när man sitter upp, alltså är
+	"led henne till ridhuset och sitt upp" en väg servern själv bygger.
+	Göms knappen medan repet är i handen tas den vägen bort.
+
+	Handlingarna finns kvar på servern i båda leden. Det är knapparna som
+	får vika. ]]
+function PreparationController.skotselstegAgerFokus(): boolean
+	return PreparationController.aktuellUppgift() == "skotsel"
+end
+
 --[[ Provets fönster in. Tilldelningen kommer ur serverns vy; den som
 	mäter en ANNAN moduls hänsyn till dagens häst ska slippa bygga upp hela
 	vyn. Hooken sätter bara identiteten — reglerna som läser den är
@@ -1966,6 +2289,11 @@ function PreparationController.start()
 		lyssnade än hade missat att eftervården väntade. ]]
 	Net.get("PreparationSync").OnClientEvent:Connect(ritaOmNyare)
 	Net.get("PassSync").OnClientEvent:Connect(PreparationController.tillampaPass)
+	--[[ #264 GAIT_READABILITY_AND_UGNETA: språkflaggan. Samma vy, ritad om
+	     på det nya språket — ingenting skickas, ingenting går vidare. ]]
+	Sprak.vidByte(function()
+		if senasteVy then rita(senasteVy) end
+	end)
 
 	task.spawn(function()
 		local ok, vy = pcall(function()

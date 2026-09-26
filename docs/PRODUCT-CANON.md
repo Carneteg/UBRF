@@ -137,6 +137,77 @@ Plattformskontrakt:
 - Webb får användas för snabb iteration, men beslut får inte leda till att Roblox behandlas som en framtida eftertanke.
 - Roblox får inte heller bli skäl att låta HTML/webbversionen förfalla till en icke-spelbar demo.
 
+### Tidsbegränsat produktbeslut 2026-09-22: Roblox först
+
+**Under etappen fram till verifierad First Playable är Roblox det enda aktiva
+leveransmålet.** Beslutet är Tobias och förmedlat i PR #264, kommentar
+`5779749429`. Det tar tillfälligt företräde framför kravet ovan att en ny
+kärnfeature måste hållas möjlig på båda ytorna innan Roblox går vidare.
+Tvåplattformsmålbilden står kvar; det är ordningen som ändras, inte målet.
+
+**1 · Aktivt mål och vad pausen omfattar.** PC och iPad är två kontrollsätt i
+samma Roblox-spel, inte två spelimplementationer. Pausat: nya webbfeatures, och
+kravet att varje ny Roblox-funktion samtidigt implementeras på webben. Webben
+bevaras i befintligt skick som spelbar referens och framtida distribution.
+Pausen är **inte** tillstånd att radera, avveckla, publicera om eller medvetet
+försämra webbversionen.
+
+**2 · Undantaget.** Gemensamma ridregler, hästdata och källstyrd geometri
+behåller sin kanoniska källa. Nödvändiga ändringar i delade källfiler,
+generering och export är tillåtna inom aktivt scope även när filen ligger under
+`src/`. Ingen andra Luau-sanning får skapas och ingen befintlig synkkontroll
+kopplas bort. Befintliga tester och regressionsskydd behålls: en fallerande
+kontroll får inte raderas, hoppas över eller kallas godkänd, och en
+webbregression som våra ändringar orsakar ska fortfarande åtgärdas.
+
+**3 · Nuvarande arbetsorder och ansvarig.** First Playable Session Closure,
+PR #264, kommentar `5779419152`. Implementatör: **Claude**, en skrivande ägare.
+Review: ChatGPT. Acceptans: Tobias.
+
+**4 · Vad som återstår för First Playable, och vilket bevis som krävs.**
+Åtkomlighet för Roblox touchkontroller, inklusive närområdeslistan mot
+gåspaken. Därefter ett sammanhängande spelpass i en **fryst, identifierad
+testbuild**: start, rörelse, gångarter, styrning, broms, avsittning, ny
+ritt/respawn, och stall → utrustning → dörr → ledning → ridhus. PC, fysisk
+touch och två spelare redovisas **separat**. Rörelsesäkerheten ska lösas före
+öppet multiplayer. Robotkörda tester, DataModel-kontroller, faktisk fysik,
+UI-interaktion och Tobias game feel hålls åtskilda; `NOT_TESTED` är inte PASS.
+
+**5 · Återstart.** Att ta upp webbfeatures igen kräver ett **nytt**
+produktägarbeslut. Ingen arbetsström startar automatiskt när den här etappen
+levererats.
+
+Beskriv aldrig en saknad webbimplementation som genomförd paritet. Under
+etappen redovisas den som en **medveten, tidsbegränsad avvikelse** med
+hänvisning hit.
+
+### Produktbeslut 2026-09-26: completion first
+
+Beslutet är Tobias, förmedlat i PR #264, kommentar `5843082008`.
+
+**Ordning:**
+1. infrastruktur
+2. instruktör
+3. tävling
+4. hus
+5. byggnader och området
+6. utrustning
+7. häst
+8. ett samlat slutspeltest
+
+**Scope:** hela anläggningen och alla arbetspaket i #266, inklusive F1–F3,
+NPC-medtävlare och multiplayer.
+
+**Ersätter:**
+- punkt 3–4 ovan, som krävde upprepade speltest inför varje steg,
+- kravet att #264 ska vara accepterad och mergad innan #266 påbörjas. Det
+  gäller för implementation, inte för release.
+
+**Gäller fortfarande:** pausen för webbfeatures och undantaget i punkt 2.
+
+Status, grindar och slutprovfall per komponent finns i den låsta
+leveransmatrisen, `docs/LEVERANSMATRIS.md`.
+
 Se även `docs/ASSET-SOURCE-OF-TRUTH.md` för material- och datakällor.
 
 ## Beslutsfilter

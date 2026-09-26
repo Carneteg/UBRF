@@ -79,13 +79,28 @@ local MARKMATERIAL: { [string]: Enum.Material } = {
 -- portbla = de blågrå skjutportarna, portplat = durkplåtsdörrarna, dorrgul =
 -- den ockragula stalldörren under förstukvisten.
 local OPPNINGSFARG: { [string]: Color3 } = {
-	portbla    = Color3.fromRGB(94, 108, 122),
-	portplat   = Color3.fromRGB(150, 152, 156),
-	portsilver = Color3.fromRGB(196, 198, 202),
-	dorrgul    = Color3.fromRGB(206, 158, 62),
-	dorrvit    = Color3.fromRGB(238, 236, 228),
-	dorrmork   = Color3.fromRGB(58, 48, 44),
-	dorr       = Color3.fromRGB(228, 226, 218),
+	--[[ Paletträttelsen ur `c40849e`, återförd 2026-09-24 sedan G8 visade
+	     att `tools/kolla-dorrfarg.py` aldrig körts: kontrollen kom i samma
+	     omergade gren som rättelsen, och `if [ -f ]`-skölden dolde att
+	     ingen av dem fanns i main.
+
+	     `dorr` stod på (228, 226, 218) — nästan vit. Kortet mäter
+	     ridhusets entrédörr som svart. `dorrgul` stod på (206, 158, 62),
+	     en mättad gul; kortet mäter den ockragula furun. Båda följer nu
+	     korten, och korten följer verifierat originalmaterial. ]]
+	-- VERIFIED: references/buildings/ridhus/KORT.md — Entrédörr (24, 24, 26)
+	dorr       = Color3.fromRGB(24, 24, 26),
+	-- VERIFIED: references/buildings/stall/KORT.md — Entrédörr (168, 118, 80)
+	dorrgul    = Color3.fromRGB(168, 118, 80),
+	--[[ [REFERENCE GAP] korten ger inget mätt värde för de här. Tonerna är
+	     valda så att typerna går att skilja åt och så att de matchar
+	     webbens. ATT DE ÄR I PARITET GÖR DEM INTE FOTOMÄTTA — märkningen
+	     står kvar tills verkligheten kan verifieras. ]]
+	portbla    = Color3.fromRGB(126, 147, 166),
+	portplat   = Color3.fromRGB(180, 183, 185),
+	portsilver = Color3.fromRGB(196, 199, 201),
+	dorrvit    = Color3.fromRGB(232, 226, 212),
+	dorrmork   = Color3.fromRGB(70, 63, 56),
 }
 
 local function arFonster(typ: string): boolean
@@ -2084,6 +2099,9 @@ local function byggRidhusInre(model: Model, base: CFrame)
 		R.sandFarg or INRE.sand, Enum.Material.Sand)
 	sand.CanCollide = false
 	sand:SetAttribute("Matt", string.format("%.0fx%.1f", b.w, b.h))
+	--[[ #264 INFRA-PLATS1: bara METADATA — den stabila identitet som
+		`Ridhusplats` löser upp platsen ur. Läge, mått och material orörda. ]]
+	sand:SetAttribute("PlatsId", "ridhus_bana")
 	if R.dressyr then
 		local dr = R.dressyr
 		sand:SetAttribute("Dressyr", string.format("%.0fx%.0f", dr.w, dr.h))
@@ -2093,6 +2111,7 @@ local function byggRidhusInre(model: Model, base: CFrame)
 		layout.CanCollide = false
 		layout.Transparency = 1
 		layout:SetAttribute("Forankring", dr.forankring or "A")
+		layout:SetAttribute("PlatsId", "ridhus_dressyr")
 	end
 
 	-- Sargen runt banan, med porten som en lucka i norra kortsidan.
@@ -2758,9 +2777,14 @@ local function byggRidhusInre(model: Model, base: CFrame)
 				bx + s * h.b / 2 - 0.05, 0, bz - 0.05, 0.10, 1.5, 0.10,
 				Color3.fromRGB(240, 237, 230), Enum.Material.SmoothPlastic)
 		end
-		BK.box(model, base, "Hinderbom " .. i,
+		local bom = BK.box(model, base, "Hinderbom " .. i,
 			bx - h.b / 2, math.max(0.02, h.h), bz - 0.045, h.b, 0.09, 0.09,
-			bomFarg, Enum.Material.SmoothPlastic).CanCollide = false
+			bomFarg, Enum.Material.SmoothPlastic)
+		bom.CanCollide = false
+		--[[ #264 INFRA-2B2: bara METADATA. Hindrets stabila id ur källdatan,
+			så att serverns hinderregister hittar bommen efter bygget och
+			speglingen. Läge, mått, material och kollision är oförändrade. ]]
+		if h.id then bom:SetAttribute("HinderId", h.id) end
 	end
 	for i, k in ipairs(R.koner or {}) do
 		BK.box(model, base, "Kon " .. i,

@@ -78,6 +78,10 @@ TackForradService.start(GameplayService.valjEn)
 	registret sjalvt i stallet for den vag en spelare som stanger spelet
 	faktiskt tar. ]]
 GameplayService.start()
+--[[ Slice C: `CharacterRemoving`-kopplingen bor i `SparService`s
+	`efterLaddning`-hook, sa datalagret maste vara igang for att den vagen
+	ska finnas. Efter `GameplayService.start()`, som registrerar hooken. ]]
+SparService.start()
 
 local HAST = "trixie"
 local lage = TackForradService.lage(HAST)
@@ -259,6 +263,109 @@ do
 	check("och hon bär ingen sadel",
 		TackService.barBuren(tredje, "sadel") == nil,
 		tostring(TackService.barBuren(tredje, "sadel")))
+end
+
+print("\n── Kroppen dör med sadeln i handen ──")
+
+--[[ Robustness Slice C.
+
+	Den burna sadeln är en fysisk del under KARAKTÄREN. Dör hon, eller
+	byts kroppen vid en respawn, försvinner delen med den — men
+	`burenAv` stod kvar och pekade på spelaren. Sadeln var då reserverad
+	av någon som inte hade den, och ingen annan kunde ta den förrän
+	ägaren själv rörde förrådet igen eller kopplade ner helt.
+
+	Provet går genom PRODUKTIONENS EGEN väg: `player.CharacterRemoving`,
+	samma signal Roblox fyrar. Ingen hjälpare anropas direkt. ]]
+do
+	local a, karA = nySpelare("Fas1c", 9310, vid + Vector3.new(3, 0, 0))
+	Players._spelare = { a }
+	--[[ SAMMA VAG IN SOM EN RIKTIG SPELARE. `CharacterRemoving` kopplas
+	     inne i `SparService.efterLaddning`-hooken, och den kors nar saven
+	     laddats — alltsa via `PlayerAdded`. Att anropa kroken direkt hade
+	     varit att prova en genvag forbi den koppling som ar under test. ]]
+	Players.PlayerAdded:Fire(a)
+	task.wait()
+
+	local ok = TackForradService.tagSadel(a, HAST, "Trixie")
+	check("A tar sadeln", ok == true)
+	check("registret pekar på A",
+		GameplayService.barasAv("sadel", HAST) == a)
+	check("och fronten är tom",
+		TackForradService.paFronten(HAST, "sadel") == false)
+	check("och valet säger att hon bär den",
+		(GameplayService.valdFor(a) or {}).sadel == HAST,
+		tostring((GameplayService.valdFor(a) or {}).sadel))
+
+	--[[ KROPPEN FÖRSVINNER. Produktionens signal, inget direktanrop. ]]
+	a.CharacterRemoving:Fire(karA)
+	task.wait()
+
+	check("REGISTRET SLÄPPTE SADELN",
+		GameplayService.barasAv("sadel", HAST) == nil,
+		tostring(GameplayService.barasAv("sadel", HAST)))
+	check("den burna delen är borta ur karaktären",
+		TackRigg.hittaBuren(karA, "sadel") == nil,
+		tostring(TackRigg.hittaBuren(karA, "sadel")))
+	check("sadeln hänger tillbaka på fronten",
+		TackForradService.paFronten(HAST, "sadel") == true)
+	--[[ PRESENTATIONEN OCKSÅ. Registret kan vara rensat medan vyn
+	     fortfarande påstår att hon bär något som inte finns. ]]
+	check("OCH VYN PÅSTÅR INTE LÄNGRE ATT HON BÄR DEN",
+		(GameplayService.valdFor(a) or {}).sadel == nil,
+		tostring((GameplayService.valdFor(a) or {}).sadel))
+
+	--[[ Beviset på att registret verkligen SLÄPPTE och inte bara
+	     nollades: någon annan kan ta sadeln direkt. ]]
+	local b, karB = nySpelare("Fas1e", 9311, vid + Vector3.new(4, 0, 0))
+	Players._spelare = { a, b }
+	check("B KAN TA SAMMA SADEL DIREKT EFTERÅT",
+		TackForradService.tagSadel(b, HAST, "Trixie") == true)
+	GameplayService.slappBuret(b)
+
+	--[[ ── PASSET MÄTS INTE HÄR, OCH DET ÄR ETT MEDVETET VAL ──────
+
+		Slice C är tack och ingenting annat: `state`, `passState` och
+		`bunden` ska överleva ett kroppsbyte precis som förut.
+
+		Men det går inte att mäta i DEN HÄR bänken. Ingen spelare här har
+		en bunden häst — `tack-fas1` arbetar mot `TackForradService`
+		direkt — så `statusFor` svarar `waiting_model` oavsett om passet
+		nollställs eller inte. Jag skrev först två rader som jämförde
+		`waiting_model` med `waiting_model`; falsifieringen kunde inte få
+		dem röda, och då mätte de ingenting.
+
+		Kravet mäts i stället där det GÅR: `integration.spec:663-665`
+		(«skötseln räknas fortfarande som gjord efter respawnen») kör
+		samma `CharacterRemoving`-väg med en riktig bunden häst och
+		avbockade moment. Falsifieringsarmen «passet nollställs också»
+		riktas därför mot den specen, inte mot den här. ]]
+
+	--[[ ── IDEMPOTENS ──────────────────────────────────────────────
+		Två kroppsbyten i rad ska inte ge ett fel, och inte heller ta
+		tillbaka något från den som hunnit ta sadeln. ]]
+	Players._spelare = { a, b }
+	check("B tar sadeln igen inför idempotensprovet",
+		TackForradService.tagSadel(b, HAST, "Trixie") == true)
+	a.CharacterRemoving:Fire(karA)
+	task.wait()
+	check("A:s ANDRA KROPPSBYTE RÖR INTE B:s SADEL",
+		GameplayService.barasAv("sadel", HAST) == b,
+		tostring(GameplayService.barasAv("sadel", HAST)))
+
+	--[[ ── OCH FRÅNKOPPLINGEN GÖR FORTFARANDE HELA JOBBET ─────────
+		`PlayerRemoving` ska stada resten även när kroppsstädningen
+		redan körts, och den ska inte återuppliva något. ]]
+	Players.PlayerRemoving:Fire(a)
+	task.wait()
+	check("A:s frånkoppling går igenom efter kroppsstädningen",
+		GameplayService.valdFor(a) == nil)
+	check("och den återupplivar inte A:s sadel",
+		GameplayService.barasAv("sadel", HAST) == b,
+		tostring(GameplayService.barasAv("sadel", HAST)))
+	GameplayService.slappBuret(b)
+	Players.PlayerRemoving:Fire(b)
+	Players._spelare = { spelare }
 end
 
 print("\n── Reset och disconnect lämnar ingen orphan ──")

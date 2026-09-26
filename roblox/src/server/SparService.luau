@@ -94,6 +94,9 @@ local skriver: { [Player]: boolean } = {}
 local laddadRev: { [Player]: number } = {}
 -- Identiteten gör ett sent nätverkssvar ogiltigt när sessionen avslutas.
 local laddningar: { [Player]: {} } = {}
+--[[ Varför den senaste skrivningen nekades, eller nil. Läsbart så att en
+	anropare kan skilja "fullt" från "nätet föll" (granskning R1, fynd 1). ]]
+local senasteNej: { [Player]: string? } = {}
 
 --[[ Studio utan API-åtkomst, och alla lokala prov, ska INTE krascha på
 	rad ett. `GetDataStore` kastar då, och resultatet är nil — vilket
@@ -198,6 +201,48 @@ end
 
 function SparService.anmarkning(player: Player): string?
 	return anmarkning[player]
+end
+
+--[[ Skälet till att den SENASTE `skriv` nekades avsiktligt: "fullt_resultat",
+	"fullt_priser", "fullt_framsteg" eller "framtida sparfil i lagret". Nil
+	efter en lyckad skrivning. Ett nätfel är inte ett avsiktligt nej och
+	lämnar det tidigare värdet. ]]
+function SparService.senasteNej(player: Player): string?
+	return senasteNej[player]
+end
+
+--[[ ── ÄR LÄSNINGEN BETRODD? (#263 re-review, P1-1) ─────────────────
+
+	`redo` betyder bara att laddningen nått ETT SLUTLÄGE. Den säger
+	ingenting om att slutläget bar riktig data, och skillnaden är inte
+	akademisk: vid saknat datalager, läsfel, framtida sparfil eller en
+	oläsbar rad publicerar `ladda` en `Sparning.tom()` — alltså exakt
+	samma nollpassbild som en verkligt ny spelare har.
+
+	Den som frågar "har hon ridit förut?" får då svaret "nej" om en
+	hämtning strulade, och en spelare med tio pass bakom sig behandlas
+	som nybörjare. #263 kräver uttryckligen motsatsen: saknad, trasig
+	eller oladdad save får aldrig tolkas som `pass == 0`.
+
+	BETRODD ÄR ETT SMALT BEGREPP här, och med flit:
+
+	  `nil`    en ren läsning av en befintlig rad
+	  `"tom"`  ingen rad fanns — hon ÄR ny, och det är ett svar
+
+	Allt annat är ett nej. `"trasig"` nekas trots att `kanSpara` är
+	sant: raden fanns, den gick inte att läsa, och att då kalla henne
+	ny är en gissning åt spelarens fördel om något vi inte vet.
+
+	Funktionen svarar bara på om läsningen går att lita på. VAD som
+	står i saven är frågarens sak. ]]
+local BETRODDA: { [string]: boolean } = { tom = true }
+
+function SparService.betroddLasning(player: Player): boolean
+	if not SparService.redo(player) then return false end
+	if sparade[player] == nil then return false end
+	local a = anmarkning[player]
+	if a == nil then return true end
+	return BETRODDA[a] == true
 end
 
 --[[ ── SKRIVNINGEN ────────────────────────────────────────────────── ]]
@@ -351,6 +396,26 @@ function SparService.skriv(player: Player, andra: ((Sparning.Save) -> ())?): boo
 				end
 			end
 
+			--[[ v2-TAKET MOT DEN AUKTORITATIVA RADEN (granskning R1, fynd 1).
+				Varje session prövar taket mot sitt eget minne; två sessioner
+				kan då var för sig hålla sig under och tillsammans gå över.
+				Här prövas det mot det som FAKTISKT ligger i lagret. Går
+				sammanslagningen över nekas HELA skrivningen — ingen delcommit,
+				inget gammalt kvitto kastas och ingen ny post tappas tyst — och
+				det som väntar ligger kvar i minnet. `bas` är en färsk kopia ur
+				lagret, så inget av det som gjorts med den ovan når någonstans. ]]
+			local ryms, full = Sparning.ryms(bas, minnet)
+			if not ryms then
+				konflikt = full
+				return nil
+			end
+
+			--[[ v2: framsteg, resultat och priser ur minnet. Union för
+				resultat och priser (det som redan ligger i lagret vinner),
+				högsta talet för framsteg. Samma på båda vägarna: ingen av
+				dem kan sänka något eller spara samma priskvitto två gånger. ]]
+			Sparning.slaIhopV2(bas, minnet)
+
 			if andra then andra(bas) end
 
 			--[[ Ny revision, räknad från den rad som FAKTISKT ligger i
@@ -371,6 +436,7 @@ function SparService.skriv(player: Player, andra: ((Sparning.Save) -> ())?): boo
 	end))
 
 	skriver[player] = false
+	if ok and not konflikt then senasteNej[player] = nil end
 	if konflikt then
 		--[[ Ingenting skrevs, och det var avsiktligt. Framstegen ligger kvar
 			i minnet. Den framtida sparfilen gör dessutom sessionen
@@ -380,6 +446,10 @@ function SparService.skriv(player: Player, andra: ((Sparning.Save) -> ())?): boo
 			kanSpara[player] = false
 			anmarkning[player] = "spar.framtida_sparfil"
 		end
+		--[[ Ett fullt tak (`fullt_*`) lämnar `kanSpara` sann: lagret är
+			läsbart och rätt version, det är bara de väntande posterna som
+			inte ryms. Utfallet är läsbart för anroparen via `senasteNej`. ]]
+		senasteNej[player] = konflikt
 		warn(("[Spar] %s sparades INTE: %s. Inget skrevs över.")
 			:format(player.Name, konflikt))
 		return false
@@ -389,6 +459,66 @@ function SparService.skriv(player: Player, andra: ((Sparning.Save) -> ())?): boo
 			.. "och försöks igen."):format(player.Name))
 	end
 	return ok
+end
+
+--[[ ══ SISTA SKRIVNINGEN FÖR EN SPELARE VID NEDSTÄNGNING ═══════
+
+	Robustness Slice D.
+
+	`skriv` vägrar när en skrivning redan är i luften på samma nyckel —
+	och det är rätt i drift: ändringen ligger kvar i minnet och följer med
+	nästa skrivning. Men vid NEDSTÄNGNING finns ingen nästa. Ett naket
+	`skriv` där hade tyst tappat allt spelaren gjort sedan den pågående
+	skrivningen startade.
+
+	Vi väntar därför ut den som är i luften och gör sedan vår egen. Det
+	är också skälet att vi inte bara startar en andra `UpdateAsync` på
+	samma nyckel: två samtidiga skrivningar ger throttling och kan landa i
+	fel ordning, vilket är precis vad `skriver`-vakten finns för.
+
+	VÄNTAN ÄR BEGRÄNSAD. Roblox ger nedstängningen en budget, och en
+	skrivning som hänger får inte äta upp den för alla andra. Efter taket
+	gör vi försöket ändå — `skriv` svarar då `false` på vakten, och det
+	är ett ärligt nej i stället för en oändlig väntan. ]]
+local STANGNING_VANTETAK = 200
+
+function SparService.stangningFor(player: Player): boolean
+	local varv = 0
+	while skriver[player] and varv < STANGNING_VANTETAK do
+		task.wait()
+		varv += 1
+	end
+	return SparService.skriv(player)
+end
+
+--[[ ══ NEDSTÄNGNINGEN: ALLA STARTAS, SEDAN VÄNTAR VI IN DEM ═════
+
+	Loopen här var serieell: `skriv` yieldar mot lagret och gör upp till
+	tre försök med 1-2-4 sekunders backoff, så EN långsam spelare sköt
+	alla bakom sig framåt i kön. Svansen av listan var risken — med några
+	spelare och en trög nyckel räcker Roblox nedstängningsbudget inte till
+	de sista.
+
+	Varje spelare får därför sin egen tråd, och callbacken returnerar
+	först när de är klara. Det är hela ändringen: samma `skriv`, samma
+	vakt, samma retry — bara inte i kö.
+
+	RÄKNAREN ÄR INTE EN MÄTPUNKT, den är hur vi vet när vi får returnera.
+	`task.wait()` i väntan gör att de startade trådarna faktiskt får köra. ]]
+function SparService.stangning()
+	local kvar = 0
+	for _, player in Players:GetPlayers() do
+		kvar += 1
+		task.spawn(function()
+			--[[ `pcall`: en spelare som kastar får inte lämna räknaren
+			     hängande och därmed hålla kvar hela nedstängningen. ]]
+			pcall(SparService.stangningFor, player)
+			kvar -= 1
+		end)
+	end
+	while kvar > 0 do
+		task.wait()
+	end
 end
 
 --[[ ── BARRIÄREN: LADDNINGEN ÄR KLAR ─────────────────────────────
@@ -494,6 +624,7 @@ local function glom(player: Player)
 	skriver[player] = nil
 	redo[player] = nil
 	laddadRev[player] = nil
+	senasteNej[player] = nil
 end
 
 --[[ ── LIVSCYKEL ──────────────────────────────────────────────────── ]]
@@ -513,11 +644,7 @@ function SparService.start()
 	end
 
 	if not RunService:IsStudio() then
-		game:BindToClose(function()
-			for _, player in Players:GetPlayers() do
-				SparService.skriv(player)
-			end
-		end)
+		game:BindToClose(SparService.stangning)
 	end
 
 	print("[Spar] Datalagret igång (" .. BUTIK .. ")")
@@ -531,6 +658,11 @@ end
 	produktion — `GetDataStore` ska inte anropas per spelare — men den gör
 	att fallet "Studio utan API-åtkomst" inte går att prova efter ett
 	lyckat fall i samma process, och det fallet måste gå att prova. ]]
+--[[ Retrytaket, utlamnat for proven. Ett prov som vill fella EN hel
+     skrivning maste fella alla dess forsok, och att skriva siffran 3 i
+     ett prov hade blivit en andra sanning som glider isar. ]]
+SparService._FORSOK_FOR_PROV = FORSOK
+
 function SparService._glomForProv(player: Player)
 	glom(player)
 end
