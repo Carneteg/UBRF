@@ -43,7 +43,8 @@
 	`voltHogsta` (högsta voltavsnitts-nr som fanns, 0 om inget). Ett
 	voltavsnitt kan tillskrivas försöket bara om dess nr > startens
 	`voltHogsta` — alltså om det BÖRJADE efter starten — och, för ett
-	stängt försök, nr ≤ slutets `voltHogsta`.
+	stängt försök, bara ur ögonblicksbilden från stängningen (se
+	SLUTGRÄNSEN nedan).
 	  · Bevisar: att avsnittet inte innehåller något segment från före
 	    starten (avsnitt numreras strikt stigande och ett avsnitt som
 	    pågick vid starten har ett nr ≤ `voltHogsta`).
@@ -135,8 +136,10 @@ local function stang(r: Ritt, orsak: string, rittTid: number, volt: any): boolea
 	f.slut = markor(t, volt)
 	--[[ R1: voltbilden VID stängningen, fryst i sin helhet. Ett stängt
 		försöks underlag läses bara ur den — ett avsnitt som fortsätter
-		efter slutet (samma nr) får inte ge det gamla försöket senare data. ]]
-	f.slutVolt = if type(volt) == "table" and volt.rittId == f.rittId then volt else nil
+		efter slutet (samma nr) får inte ge det gamla försöket senare data.
+		Om bilden hör till rätt ritt prövas vid läsningen, samma prov som
+		för den levande bilden. ]]
+	f.slutVolt = volt
 	r.aktivt = nil
 	bygg(f)
 	return true
@@ -270,21 +273,22 @@ function RidForsok.voltUnderlag(forsokId: string?, volt: any): (any, string?)
 	--[[ Stängt: bara ögonblicksbilden från stängningen, aldrig den levande. ]]
 	if f.slut then volt = f.slutVolt end
 	if type(volt) ~= "table" or volt.rittId ~= f.rittId then return nil, "forsok.ingen_observation" end
+	--[[ Ingen övre gräns behövs: ett stängt försök läser ögonblicksbilden
+		från stängningen, och den innehåller inga nyare avsnitt. ]]
 	local fran = f.start.voltHogsta + 1
-	local till = if f.slut then f.slut.voltHogsta else math.huge
 	local valda = {}
 	local lagst = math.huge
 	for _, a in ipairs(volt.avslutade or {}) do
 		lagst = math.min(lagst, a.nr)
-		if a.nr >= fran and a.nr <= till then table.insert(valda, a) end
+		if a.nr >= fran then table.insert(valda, a) end
 	end
 	if volt.pagar then
 		lagst = math.min(lagst, volt.pagar.nr)
-		if volt.pagar.nr >= fran and volt.pagar.nr <= till then table.insert(valda, volt.pagar) end
+		if volt.pagar.nr >= fran then table.insert(valda, volt.pagar) end
 	end
 	--[[ Ett avsnitt i försökets spann som redan har gallrats: det äldsta
 		kvarvarande är nyare än försökets första möjliga. ]]
-	if lagst ~= math.huge and lagst > fran and fran <= till then
+	if lagst ~= math.huge and lagst > fran then
 		return nil, "forsok.historik_gallrad"
 	end
 	return table.freeze(valda), nil

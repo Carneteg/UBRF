@@ -345,6 +345,11 @@ do
 	check("MODUL: en stängd ritt tar inte emot en start", okS == false and skalS == "forsok.inaktuell_ritt")
 	local okA, skalA = RidForsok.avbryt("kontrakt", 3, kid, 6, nil)
 	check("MODUL: en stängd ritt tar inte emot ett avbryt", okA == false and skalA == "forsok.inaktuell_ritt")
+	RidForsok.rittStart("kontrakt2", "h", 1)
+	local _, _, kid2 = RidForsok.starta("kontrakt2", 1, "storvolt", "server-referens-1", 1, nil)
+	RidForsok.rittSlut("kontrakt2", "x", 2, table.freeze({ rittId = "annan", avslutade = {} }))
+	check("MODUL: en annan ritts bild vid stängningen ger inget underlag",
+		select(2, RidForsok.voltUnderlag(kid2, nil)) == "forsok.ingen_observation")
 end
 
 print("\n── R1: slutgränsen — ett stängt försök får inga data efter slutet ──")
