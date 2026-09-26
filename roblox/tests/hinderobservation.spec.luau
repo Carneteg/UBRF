@@ -383,6 +383,19 @@ do
 		return true
 	end)())
 
+	--[[ Det SENASTE planmötet gäller: först planet vid u=0 och tillbaka,
+		sedan en korsning vid u=5 i samma försök. ]]
+	uv({ { 0, -12 }, { 0, -8 }, { 0, -4 }, { 0, 0 }, { 0, -4 }, { 5, -4 }, { 5, 0 }, { 5, 4 }, { 5, 8 }, { 5, 12 } })
+	check("planmöte vid u=0 och tillbaka, sedan korsning vid u=5: sidan om", utfall() == "sidan_om", utfall())
+	uv({ { 5, -12 }, { 5, -8 }, { 5, -4 }, { 5, 0 }, { 5, -4 }, { 0, -4 }, { 0, 0 }, { 0, 4 }, { 0, 8 }, { 0, 12 } })
+	check("planmöte vid u=5 och tillbaka, sedan korsning vid u=0: passage", utfall() == "passage", utfall())
+
+	--[[ Ett försök vars första läge ligger PÅ planet har ingen bekräftad
+		sida än; den första bekräftelsen är ingen sidväxling. ]]
+	uv({ { 12, 0 }, { 10, 0 }, { 5, 0 }, { 3, 0 }, { 3, 4 }, { 3, 8 }, { 3, 12 } })
+	check("första läget på planet: den första bekräftade sidan är ingen passage",
+		utfall() == "ingen_passage", utfall())
+
 	--[[ Ett brott tar kandidaten med sig: planet nås vid u=0, roten
 		saknas, och hästen dyker upp på andra sidan. Ingen passage. ]]
 	uv({ { 0, -12 }, { 0, -8 }, { 0, -4 }, { 0, 0 } })
