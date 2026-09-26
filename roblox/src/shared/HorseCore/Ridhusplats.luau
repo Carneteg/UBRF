@@ -84,9 +84,14 @@ end
 
 	Toleranser (spelantaganden, i dagens byggda bana uppfyllda med marginal):
 	  · TOL_AXEL     basaxlarnas längd och inbördes vinkelräthet (1e-3),
-	  · TOL_RIKTNING |cos| för horisontell yta och samriktade längdaxlar
-	                 (1 − 1e-4, alltså under ~0,8°),
-	  · TOL_LAGE     A-förankring och "inom banan", i studs (0,1). ]]
+	  · TOL_RIKTNING |cos| för horisontell yta (uppaxeln mot världens upp;
+	                 1 − 1e-4, alltså under ~0,8°),
+	  · TOL_LAGE     största tillåtna rumsliga fel, i studs (0,1): för
+	                 A-förankring, för layoutens hörn i banan, och för
+	                 relativ girning mätt som sin θ · banans halva diagonal
+	                 (dagens bana: ~102,8 studs, alltså under ~0,056°).
+	  Ytornas medlemskap (`inom`) prövas i varje ytas egna axlar, med 1e-6
+	  studs flyttalsmarginal. ]]
 Ridhusplats.TOL_AXEL = 1e-3
 Ridhusplats.TOL_RIKTNING = 1e-4
 Ridhusplats.TOL_LAGE = 0.1
@@ -168,8 +173,16 @@ function Ridhusplats.los(ridhus: Instance?): (any, string?)
 	local rd, fd = ram(dressyr, Ridhusplats.ID.dressyr)
 	if not rd then return nil, fd end
 
-	--[[ Samriktade längdaxlar (tecknet spelar ingen roll här). ]]
-	if math.abs(dot(rb.langs, rd.langs)) < 1 - Ridhusplats.TOL_RIKTNING then
+	--[[ SAMRIKTADE, MÄTT SOM FÖRSKJUTNING (granskning R2). Vid relativ
+		girning θ ligger banans verkliga hörn högst sin θ · (banans halva
+		diagonal) från var de hade legat i layoutens ram. Paret godtas bara
+		om den förskjutningen ryms i TOL_LAGE — en vinkeltolerans hade tillåtit
+		0,6 studs fel på en lång bana. Därtill används banans EGNA axlar för
+		allt som rör banans yta (se `inom` och hörnkontrollen nedan), så ingen
+		omskrivande ruta räknas som bana. ]]
+	local sinTheta = math.abs(rb.langs.X * rd.langs.Z - rb.langs.Z * rd.langs.X)
+	local halvDiag = math.sqrt(rb.halvLangs ^ 2 + rb.halvTvars ^ 2)
+	if sinTheta * halvDiag > Ridhusplats.TOL_LAGE then
 		return nil, "ej_samriktade"
 	end
 
@@ -188,10 +201,16 @@ function Ridhusplats.los(ridhus: Instance?): (any, string?)
 	local banaA = rb.p - motC * rb.halvLangs
 	local layoutA = rd.p - motC * rd.halvLangs
 	if math.abs(dot(layoutA - banaA, motC)) > Ridhusplats.TOL_LAGE then return nil, "ej_a_forankrad" end
-	local tvarsFors = math.abs(dot(fors, tvars))
-	if tvarsFors + rd.halvTvars > rb.halvTvars + Ridhusplats.TOL_LAGE
-		or rd.halvLangs * 2 > rb.halvLangs * 2 + Ridhusplats.TOL_LAGE then
-		return nil, "layout_utanfor_bana"
+	--[[ Layoutens fyra hörn, i banans EGNA ram. ]]
+	for _, sl in ipairs({ -1, 1 }) do
+		for _, st in ipairs({ -1, 1 }) do
+			local horn = rd.p + rd.langs * (sl * rd.halvLangs) + rd.tvarsAxel * (st * rd.halvTvars)
+			local d = horn - rb.p
+			if math.abs(dot(d, rb.langs)) > rb.halvLangs + Ridhusplats.TOL_LAGE
+				or math.abs(dot(d, rb.tvarsAxel)) > rb.halvTvars + Ridhusplats.TOL_LAGE then
+				return nil, "layout_utanfor_bana"
+			end
+		end
 	end
 
 	local golvY = rb.p.Y + rb.halvHojd
@@ -216,10 +235,12 @@ function Ridhusplats.los(ridhus: Instance?): (any, string?)
 		bana = table.freeze({
 			id = Ridhusplats.ID.bana, centrum = rb.p,
 			halvLangs = rb.halvLangs, halvTvars = rb.halvTvars,
+			langsAxel = rb.langs, tvarsAxel = rb.tvarsAxel,
 		}),
 		dressyr = table.freeze({
 			id = Ridhusplats.ID.dressyr, centrum = dC, forankring = "A",
 			halvLangs = dLangs, halvTvars = dTvars, A = aKant, C = cKant,
+			langsAxel = motC, tvarsAxel = tvars,
 		}),
 	}), nil
 end
@@ -243,9 +264,10 @@ end
 function Ridhusplats.inom(plats: any, yta: string, varld: Vector3): boolean
 	local r = if yta == "bana" then plats.bana elseif yta == "dressyr" then plats.dressyr else nil
 	if not r then return false end
+	--[[ Varje yta prövas i sina EGNA axlar; 1e-6 studs är flyttalsmarginal. ]]
 	local d = varld - r.centrum
-	return math.abs(dot(d, plats.motC)) <= r.halvLangs + 1e-6
-		and math.abs(dot(d, plats.tvars)) <= r.halvTvars + 1e-6
+	return math.abs(dot(d, r.langsAxel)) <= r.halvLangs + 1e-6
+		and math.abs(dot(d, r.tvarsAxel)) <= r.halvTvars + 1e-6
 end
 
 return Ridhusplats

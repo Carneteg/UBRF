@@ -262,6 +262,68 @@ do
 	prova("KONTROLL: en ensam ersättare godtas", Ridhusplats.los(m9) ~= nil)
 end
 
+print("\n── R2: relativ girning mätt som rumsligt fel ──")
+do
+	local BANA_P = Vector3.new(0, 0.09, -8.295)
+	local function vriden(grader)
+		local m, lb = syntetisk(Vector3.new(0, 0, 0), 0, true)
+		lb.CFrame = CFrame.new(BANA_P) * CFrame.Angles(0, math.rad(grader), 0)
+		return m, lb
+	end
+	--[[ Ett läge i banans EGNA ram (x tvärs, z längs), i världen. ]]
+	local function iBanansRam(lb, x, z)
+		return (lb.CFrame * CFrame.new(x, 0.09, z)).Position
+	end
+
+	--[[ Granskningens reproduktion, båda tecknen. ]]
+	for _, fall in ipairs({ { 0.5, 29.9 }, { -0.5, -29.9 } }) do
+		local m = vriden(fall[1])
+		local s, k = Ridhusplats.los(m)
+		prova(("%+.1f° relativ girning: inte samriktade"):format(fall[1]), s == nil and k == "ej_samriktade", k)
+		prova(("%+.1f°: och Ugneta får ingen plats"):format(fall[1]), UgnetaGestalt.plats(m) == nil)
+		local m0 = vriden(0)
+		local s0 = Ridhusplats.los(m0)
+		prova(("KONTROLL 0°: punkten (%.1f, −88,295) ligger verkligen i banan"):format(fall[2]),
+			s0 ~= nil and Ridhusplats.inom(s0, "bana", Vector3.new(fall[2], 0.18, -88.295)))
+	end
+
+	--[[ Precis innanför och utanför toleransen: sin θ · halvdiagonalen mot
+		TOL_LAGE (0,1 studs). Banans halva diagonal är √(98,295² + 30²). ]]
+	local halvDiag = math.sqrt(98.295 ^ 2 + 30 ^ 2)
+	local innanfor = math.deg(math.asin(0.08 / halvDiag))
+	local utanfor = math.deg(math.asin(0.12 / halvDiag))
+	for _, tecken in ipairs({ 1, -1 }) do
+		local mIn, lbIn = vriden(tecken * innanfor)
+		local sIn, kIn = Ridhusplats.los(mIn)
+		prova(("%+.4f° (0,08 studs): godtas"):format(tecken * innanfor), sIn ~= nil, kIn)
+		if sIn then
+			prova("och banans medlemskap följer banans EGNA axlar: 29,99 tvärs är inom",
+				Ridhusplats.inom(sIn, "bana", iBanansRam(lbIn, tecken * 29.99, -80)))
+			prova("och 30,01 tvärs är utanför", not Ridhusplats.inom(sIn, "bana", iBanansRam(lbIn, tecken * 30.01, -80)))
+			prova("långa änden: 98,29 längs är inom", Ridhusplats.inom(sIn, "bana", iBanansRam(lbIn, 0, -98.29))
+				and Ridhusplats.inom(sIn, "bana", iBanansRam(lbIn, 0, 98.29)))
+			prova("och 98,30 längs är utanför", not Ridhusplats.inom(sIn, "bana", iBanansRam(lbIn, 0, -98.30))
+				and not Ridhusplats.inom(sIn, "bana", iBanansRam(lbIn, 0, 98.30)))
+			prova("och Ugneta står kvar mitt på, 1,4 m bortom C", UgnetaGestalt.plats(mIn) ~= nil
+				and naraV(Ridhusplats.tillLokal(sIn, UgnetaGestalt.plats(mIn).pos), Vector3.new(0, 0, 61.4), 1e-6))
+		end
+		local mUt = vriden(tecken * utanfor)
+		local sUt, kUt = Ridhusplats.los(mUt)
+		prova(("%+.4f° (0,12 studs): avvisas"):format(tecken * utanfor), sUt == nil and kUt == "ej_samriktade", kUt)
+	end
+
+	--[[ Gemensam girning 37° plus flytt: fortfarande giltig, A/C och
+		lokal ↔ värld. ]]
+	local m37 = syntetisk(Vector3.new(250, -4, -60), math.rad(37), true)
+	local s37 = Ridhusplats.los(m37)
+	prova("KONTROLL: gemensam girning 37° och flytt godtas", s37 ~= nil)
+	if s37 then
+		prova("KONTROLL: A → C är 60 m", nara((s37.dressyr.C - s37.dressyr.A).Magnitude / 3, 60, 1e-6))
+		prova("KONTROLL: lokal ↔ värld", naraV(Ridhusplats.tillLokal(s37, Ridhusplats.tillVarld(s37,
+			Vector3.new(-3, 0.5, 44))), Vector3.new(-3, 0.5, 44), 1e-6))
+	end
+end
+
 print("\n── Bilden går inte att skriva om ──")
 if rp then
 	prova("platsen är fryst", pcall(function() rp.golvY = 0 end) == false
