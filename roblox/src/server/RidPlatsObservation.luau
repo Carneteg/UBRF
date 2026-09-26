@@ -269,6 +269,9 @@ function RidPlatsObservation.sampla(rittId: string?, status: string?, fran: Vect
 			igen får ramen alltid ett NYTT id (den ogiltiga ramen har ingen
 			plats att vara "samma" som), så inget segment kan brygga brottet. ]]
 	else
+		--[[ INFRA-VOLT1: dressyrlayoutens mitt i samma lokala ram, så att en
+			referensmätning kan läsa den ur samma bild som segmentet. ]]
+		b.dressyrMitt = lokal(plats, plats.dressyr.centrum)
 		if posOk then
 			b.punkt = lokal(plats, pos :: Vector3)
 			b.iBana = Ridhusplats.inom(plats, "bana", pos :: Vector3)

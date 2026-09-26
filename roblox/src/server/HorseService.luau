@@ -35,6 +35,7 @@ local RidLogg = require(script.Parent.RidLogg)
 local RidObservation = require(script.Parent.RidObservation)
 local HinderObservation = require(script.Parent.HinderObservation)
 local RidPlatsObservation = require(script.Parent.RidPlatsObservation)
+local VoltObservation = require(script.Parent.VoltObservation)
 
 local HorseService = {}
 
@@ -294,6 +295,8 @@ local function unregister(model: Model)
 		if not ok3 then warn("[Horse] hinderobservationen kastade: " .. tostring(fel3)) end
 		local ok4, fel4 = pcall(RidPlatsObservation.avsluta, session.rittId, "avbruten")
 		if not ok4 then warn("[Horse] ridplatsobservationen kastade: " .. tostring(fel4)) end
+		local ok5, fel5 = pcall(VoltObservation.avsluta, session.rittId, "avbruten")
+		if not ok5 then warn("[Horse] voltobservationen kastade: " .. tostring(fel5)) end
 	end
 	sessions[model] = nil
 end
@@ -536,6 +539,7 @@ local function setRider(session: Session, player: Player?, orsak: string?)
 		logga(RidObservation.avsluta, gammalRitt, if vanlig then "avslutad" else "avbruten")
 		logga(HinderObservation.avsluta, gammalRitt, if vanlig then "avslutad" else "avbruten")
 		logga(RidPlatsObservation.avsluta, gammalRitt, if vanlig then "avslutad" else "avbruten")
+		logga(VoltObservation.avsluta, gammalRitt, if vanlig then "avslutad" else "avbruten")
 	end
 	if player and session.rittId then
 		local hastId = tostring(session.rig.model:GetAttribute("HorseId") or session.rig.model.Name)
@@ -547,6 +551,7 @@ local function setRider(session: Session, player: Player?, orsak: string?)
 		logga(RidObservation.starta, session.rittId, hastId, player.UserId)
 		logga(HinderObservation.starta, session.rittId, hastId, player.UserId)
 		logga(RidPlatsObservation.starta, session.rittId, hastId, player.UserId)
+		logga(VoltObservation.starta, session.rittId, hastId, player.UserId)
 	end
 	--[[ ── MÄRKET REPLIKERAS, OCH DET ÄR INTE EN BEKVÄMLIGHET ──────────
 	     Första utkastet lämnade märket ENBART i `tryMount`-returen. Det
@@ -1376,6 +1381,8 @@ local function stepStamina(session: Session, dt: number)
 		--[[ INFRA-OBS-PLATS1: samma besked, löst i ridhusets platsram. ]]
 		if okObs then
 			logga(RidPlatsObservation.sampla, session.rittId, status, fran, obsPos, rittTid)
+			--[[ INFRA-VOLT1: referensmätningen läser just den bilden, en gång. ]]
+			logga(VoltObservation.sampla, session.rittId, RidPlatsObservation.ogonblick(session.rittId))
 		end
 		--[[ Utan `current`: hysteresen finns för att animationen inte ska
 		     flimra, och den får inte kunna hålla kvar ett påstått "halt"
@@ -1834,6 +1841,12 @@ end
 	Ingen konsument ännu. ]]
 function HorseService.ridplats(rittId: string?): any
 	return RidPlatsObservation.ogonblick(rittId)
+end
+
+--[[ INFRA-VOLT1: serverns referensmätning för `storvolt` (egen version,
+	se VoltObservation). Fryst bild; ingen poäng, lektion eller belöning. ]]
+function HorseService.volt(rittId: string?): any
+	return VoltObservation.ogonblick(rittId)
 end
 
 return HorseService
