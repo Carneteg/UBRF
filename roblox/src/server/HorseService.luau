@@ -32,6 +32,7 @@ local Aktor = require(game:GetService("ReplicatedStorage").HorseCore.Aktor)
 	RemoteEvents och deras tal speglas av klientens prediktion. ]]
 local Skopa = require(script.Parent.Skopa)
 local RidLogg = require(script.Parent.RidLogg)
+local RidObservation = require(script.Parent.RidObservation)
 
 local HorseService = {}
 
@@ -285,6 +286,8 @@ local function unregister(model: Model)
 	if session.rittId then
 		local ok, fel = pcall(RidLogg.avsluta, session.rittId, "avbruten", "hast_avregistrerad", os.clock())
 		if not ok then warn("[Horse] ridloggen kastade: " .. tostring(fel)) end
+		local ok2, fel2 = pcall(RidObservation.avsluta, session.rittId, "avbruten")
+		if not ok2 then warn("[Horse] ridobservationen kastade: " .. tostring(fel2)) end
 	end
 	sessions[model] = nil
 end
@@ -524,11 +527,16 @@ local function setRider(session: Session, player: Player?, orsak: string?)
 		local vanlig = orsak == nil or orsak == "avsittning"
 		logga(RidLogg.avsluta, gammalRitt, if vanlig then "avslutad" else "avbruten",
 			orsak or "avsittning", logNu)
+		logga(RidObservation.avsluta, gammalRitt, if vanlig then "avslutad" else "avbruten")
 	end
 	if player and session.rittId then
-		logga(RidLogg.starta, session.rittId,
-			tostring(session.rig.model:GetAttribute("HorseId") or session.rig.model.Name),
+		local hastId = tostring(session.rig.model:GetAttribute("HorseId") or session.rig.model.Name)
+		logga(RidLogg.starta, session.rittId, hastId,
 			player.UserId, Ridtrappa.gangart(session.stegIndex), logNu)
+		--[[ INFRA-2B1: observationen börjar utan baslinje. Första giltiga
+			läget i nästa uthållighetssteg blir baslinjen, så ingen sträcka
+			från före uppsittningen kan räknas in. ]]
+		logga(RidObservation.starta, session.rittId, hastId, player.UserId)
 	end
 	--[[ ── MÄRKET REPLIKERAS, OCH DET ÄR INTE EN BEKVÄMLIGHET ──────────
 	     Första utkastet lämnade märket ENBART i `tryMount`-returen. Det
@@ -1323,6 +1331,15 @@ local function stepStamina(session: Session, dt: number)
 	local energiGangart = gaitR
 	if session.rider then
 		local observerad = observera(session, dt)
+		--[[ INFRA-2B1: samma hjärtslagssteg, samma rot och samma
+			teleportgräns som `observera` — men en EGEN baslinje per ritt,
+			så att uthållighetens mätpunkt inte rörs. Observationen läser
+			bara; den ändrar inte rörelse, uthållighet eller ägarskap. ]]
+		local obsRot = session.rig.root
+		logga(RidObservation.sampla, session.rittId,
+			if obsRot and obsRot.Parent then obsRot.Position else nil,
+			dt, Ridtrappa.gangart(session.stegIndex), Ridtrappa.ryggar(session.stegIndex),
+			TELEPORT_GRANS)
 		--[[ Utan `current`: hysteresen finns för att animationen inte ska
 		     flimra, och den får inte kunna hålla kvar ett påstått "halt"
 		     en bit upp i skrittbandet. Auktoriteten mäter på bandet. ]]
@@ -1751,6 +1768,13 @@ end
 	konsument ännu (INFRA-2A). ]]
 function HorseService.ridlogg(rittId: string?): any
 	return RidLogg.ogonblick(rittId)
+end
+
+--[[ Ridobservationen för en ritt (INFRA-2B1): fryst djupkopia, eller nil.
+	Serverns observation av klientägd fysik — inget fuskskydd, ingen
+	belöning. Ingen konsument ännu. ]]
+function HorseService.ridobservation(rittId: string?): any
+	return RidObservation.ogonblick(rittId)
 end
 
 return HorseService
