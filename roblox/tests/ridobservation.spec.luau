@@ -229,6 +229,79 @@ do
 	HorseService.dismount(anna)
 end
 
+print("\n── R1: tempot går inte över ett brott ──")
+do
+	--[[ Per brottstyp, genom produktionsvägen: jämnt trav först (positiv
+		kontroll), sedan brottet, sedan ett OJÄMNT avsnitt — så att ett
+		gammalt jämnt tempo (variation 0) inte kan gömma felet. ]]
+	local function scenario(namn, bryt)
+		local m = sitUpp(anna, hastA)
+		avsikt(anna, m, "driv"); avsikt(anna, m, "driv")
+		local z = 0
+		steg(hastA, vec(0, 0, z))
+		for _ = 1, 10 do z += 2; steg(hastA, vec(0, 0, z)) end
+		local fore = obs(m)
+		check(namn .. ": KONTROLL jämnt trav ger numeriskt tempo", fore.tempo.variation ~= nil
+			and nara(fore.tempo.variation, 0, 1e-9) and fore.tempo.n == 10)
+		local distFore = fore.distans
+
+		z = bryt(z)
+		local efter = obs(m).tempo
+		check(namn .. ": inget numeriskt tempo direkt efter brottet", efter.variation == nil
+			and efter.brott ~= nil, tostring(efter.skal) .. " " .. tostring(efter.brott))
+		check(namn .. ": och ingen påhittad halt", efter.skal ~= "ingen_rorelse")
+
+		--[[ Första färska läget: baslinje eller ett första segment, beroende
+			på brottstypen. Kör tills exakt ett nytt segment finns. ]]
+		local seg0 = obs(m).giltighet.segment
+		while obs(m).giltighet.segment == seg0 do z += 1; steg(hastA, vec(0, 0, z)) end
+		local ett = obs(m).tempo
+		check(namn .. ": ett färskt segment räcker inte", ett.variation == nil and ett.skal == "for_fa_prov"
+			and ett.n == 1, tostring(ett.skal) .. " n=" .. tostring(ett.n))
+
+		--[[ Ojämnt efter brottet: 1 och 3 studs omväxlande. ]]
+		for i = 1, RidObservation.MIN_TEMPO_PROV - 1 do
+			z += if i % 2 == 0 then 1 else 3
+			steg(hastA, vec(0, 0, z))
+		end
+		local nu = obs(m).tempo
+		check(namn .. ": med nog många nya segment kommer tempot tillbaka",
+			nu.variation ~= nil and nu.n == RidObservation.MIN_TEMPO_PROV,
+			"n=" .. tostring(nu.n))
+		check(namn .. ": och det speglar BARA avsnittet efter brottet (ojämnt)",
+			nu.variation ~= nil and nu.variation > 0.3, tostring(nu.variation))
+		check(namn .. ": summorna för hela ritten är kvar", obs(m).distans > distFore
+			and obs(m).giltighet.obruten == false)
+		HorseService.dismount(anna)
+	end
+
+	scenario("lucka", function(z)
+		steg(hastA, vec(0, 0, z + 2), 5)
+		return z + 2
+	end)
+	scenario("saknad rot", function(z)
+		local r = rot(hastA)
+		local foralder = r.Parent
+		r.Parent = nil
+		steg(hastA, nil)
+		r.Parent = foralder
+		return z
+	end)
+	scenario("NaN-läge", function(z)
+		steg(hastA, vec(0 / 0, 0, z))
+		return z
+	end)
+	scenario("teleport", function(z)
+		steg(hastA, vec(0, 0, z + 300))
+		return z + 300
+	end)
+
+	--[[ En ny ritt ärver inget tempo. ]]
+	local m = sitUpp(anna, hastA)
+	check("en ny ritt börjar utan tempo", obs(m).tempo.variation == nil and obs(m).tempo.skal == "inga_prov")
+	HorseService.dismount(anna)
+end
+
 print("\n── Klientens fart är inte evidens ──")
 do
 	local m = sitUpp(anna, hastA)
@@ -306,6 +379,20 @@ do
 	RidObservation.sampla("k", vec(0, 0, 1), 0 / 0, "walk", false, 33)
 	local o = RidObservation.ogonblick("k")
 	check("dt = 0, negativt och NaN räknas inte", o.giltighet.ogiltigaDt == 3 and o.distans == 0 and nara(o.tid, 0.25))
+	--[[ R1: ett förkastat dt bryter avsnittet. Utan det kunde nästa giltiga
+		steg bilda ett segment över det okontade intervallet. ]]
+	RidObservation.starta("k2", "cosmo", 1)
+	RidObservation.sampla("k2", vec(0, 0, 0), 0.25, "trot", false, 33)
+	RidObservation.sampla("k2", vec(0, 0, 2), 0.25, "trot", false, 33)
+	RidObservation.sampla("k2", vec(0, 0, 3), 0, "trot", false, 33)
+	local fore = RidObservation.ogonblick("k2")
+	check("ett ogiltigt dt tömmer tempofönstret", fore.tempo.variation == nil
+		and fore.tempo.brott == "ogiltigt_dt", tostring(fore.tempo.brott))
+	RidObservation.sampla("k2", vec(0, 0, 9), 0.25, "trot", false, 33)
+	local efter = RidObservation.ogonblick("k2")
+	check("nästa läge är baslinje, inte ett segment över luckan", efter.distans == 2
+		and efter.giltighet.segment == 1, tostring(efter.distans))
+
 	check("KONTROLL: ett första avslut stänger", RidObservation.avsluta("k", "avslutad") == true)
 	check("en stängd observation tar inte emot ett steg",
 		RidObservation.sampla("k", vec(0, 0, 2), 0.25, "walk", false, 33) == false

@@ -36,6 +36,12 @@
 	Saknad observation är aldrig en halt: stillastående räknas bara ur
 	GILTIGA segment med liten fart.
 
+	Varje brott (ogiltigt dt, lucka, saknat läge, teleport) tömmer också
+	tempofönstret. Tempot gäller bara det pågående sammanhängande
+	avsnittet: inget numeriskt tempo förrän avsnittet har MIN_TEMPO_PROV
+	nya segment i samma gångart, och under tiden bär tempot brottets skäl.
+	Summorna för hela ritten påverkas inte.
+
 	Höjdled räknas för sig (`hojdSumma` = Σ|dy|) och aldrig som fart
 	eller sträcka.
 
@@ -80,7 +86,7 @@ type Obs = {
 	tidPerGangart: { [string]: number },
 	ogiltigaDt: number, luckor: number, saknade: number, teleporter: number, segment: number,
 	rutt: { Punkt }, ruttTrunkerad: boolean, del: number,
-	_fonster: { Sampel }, _fonsterNasta: number,
+	_fonster: { Sampel }, _fonsterNasta: number, _sistaBrott: string?,
 	_bas: Vector3?, _kurs: number?, _ruttSist: Vector3?,
 }
 
@@ -106,11 +112,21 @@ local function omslag(v: number): number
 	return v
 end
 
-local function brott(o: Obs)
+--[[ ETT BROTT I OBSERVATIONEN (granskning R1). Baslinje, kurs och rutt
+	börjar om — och det gör TEMPOFÖNSTRET också. Tempot beskriver det
+	pågående, sammanhängande avsnittet; prov från andra sidan en lucka får
+	aldrig blandas in i det, och ett gammalt jämnt tempo får inte stå kvar
+	som "nu" efter ett avbrott. Summorna för hela ritten, räknarna och
+	ruttens delar rörs inte. `skal` blir tempots besked tills avsnittet
+	har MIN_TEMPO_PROV nya segment. ]]
+local function brott(o: Obs, skal: string)
 	o._bas = nil
 	o._kurs = nil
 	o._ruttSist = nil
 	o.del += 1
+	o._fonster = {}
+	o._fonsterNasta = 1
+	o._sistaBrott = skal
 end
 
 function RidObservation.starta(rittId: string, hastId: string, userId: number): boolean
@@ -124,7 +140,7 @@ function RidObservation.starta(rittId: string, hastId: string, userId: number): 
 		tidPerGangart = {},
 		ogiltigaDt = 0, luckor = 0, saknade = 0, teleporter = 0, segment = 0,
 		rutt = {}, ruttTrunkerad = false, del = 1,
-		_fonster = {}, _fonsterNasta = 1,
+		_fonster = {}, _fonsterNasta = 1, _sistaBrott = nil,
 		_bas = nil, _kurs = nil, _ruttSist = nil,
 	}
 	return true
@@ -147,7 +163,11 @@ function RidObservation.sampla(rittId: string?, pos: Vector3?, dt: number, ganga
 	local o = rittId and poster[rittId]
 	if not o or not o.oppen then return false end
 	if not andligt(dt) or dt <= 0 then
+		--[[ Ett förkastat steg är också ett brott: annars kunde nästa
+			giltiga steg bilda ett segment över ett intervall som aldrig
+			räknades. ]]
 		o.ogiltigaDt += 1
+		brott(o, "ogiltigt_dt")
 		return false
 	end
 	o.tid += dt
@@ -159,14 +179,14 @@ function RidObservation.sampla(rittId: string?, pos: Vector3?, dt: number, ganga
 	if dt > RidObservation.MAX_DT then
 		o.luckor += 1
 		o.oobsTid += dt
-		brott(o)
+		brott(o, "lucka")
 		if pos and andligVektor(pos) then o._bas = pos end
 		return false
 	end
 	if not pos or not andligVektor(pos) then
 		o.saknade += 1
 		o.oobsTid += dt
-		brott(o)
+		brott(o, "saknat_lage")
 		return false
 	end
 	local bas = o._bas
@@ -181,7 +201,7 @@ function RidObservation.sampla(rittId: string?, pos: Vector3?, dt: number, ganga
 	if plan > teleportGrans * dt then
 		o.teleporter += 1
 		o.oobsTid += dt
-		brott(o)
+		brott(o, "teleport")
 		o._bas = pos
 		laggRutt(o, pos)
 		return false
@@ -250,9 +270,14 @@ end
 	det senaste, och bara om hästen rör sig. Variationskoefficienten
 	(std/medel) för den observerade planfarten. Nil med ett skäl när
 	underlaget inte räcker — aldrig ett påhittat tal. ]]
-local function tempo(f: { Sampel }): any
+local function tempo(f: { Sampel }, sistaBrott: string?): any
 	local sist = f[#f]
-	if not sist then return { skal = "inga_prov" } end
+	--[[ Tomt fönster efter ett brott: inget "nu" att beskriva, och
+		framför allt ingen halt — saknad observation är inte stillastående. ]]
+	if not sist then
+		return if sistaBrott then { skal = "brott_i_observationen", brott = sistaBrott }
+			else { skal = "inga_prov" }
+	end
 	if sist.ryggar or sist.gangart == "halt" then return { skal = "ingen_rorelse", gangart = sist.gangart } end
 	local farter = {}
 	for i = #f, 1, -1 do
@@ -261,7 +286,7 @@ local function tempo(f: { Sampel }): any
 		table.insert(farter, s.fart)
 	end
 	if #farter < RidObservation.MIN_TEMPO_PROV then
-		return { skal = "for_fa_prov", gangart = sist.gangart, n = #farter }
+		return { skal = "for_fa_prov", gangart = sist.gangart, n = #farter, brott = sistaBrott }
 	end
 	local summa = 0
 	for _, v in ipairs(farter) do summa += v end
@@ -311,7 +336,7 @@ function RidObservation.ogonblick(rittId: string?): any
 		},
 		fonster = f,
 		rutt = o.rutt,
-		tempo = tempo(f),
+		tempo = tempo(f, o._sistaBrott),
 	})
 end
 
