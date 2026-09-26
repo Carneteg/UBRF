@@ -617,4 +617,4 @@ if fails > 0 then
 	if avsluta then avsluta(1) end
 	error(("%d mätning(ar) föll."):format(fails), 0)
 end
-print("\nALLA VOLTMÄTNINGAR OK")
+print("\nvolt.spec: alla gröna")

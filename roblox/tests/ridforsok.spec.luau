@@ -487,4 +487,4 @@ if fails > 0 then
 	if avsluta then avsluta(1) end
 	error(("%d mätning(ar) föll."):format(fails), 0)
 end
-print("\nALLA FÖRSÖKSMÄTNINGAR OK")
+print("\nridforsok.spec: alla gröna")
