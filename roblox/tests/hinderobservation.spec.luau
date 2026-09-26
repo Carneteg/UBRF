@@ -345,6 +345,61 @@ do
 	HorseService.dismount(anna)
 end
 
+print("\n── R2: korsningen ur den observerade vägen, inte kordan ──")
+do
+	local m = sitUpp(anna, hastA, start)
+	local ID = "ridhus_hinder_bla_24"
+	--[[ Ett läge i (u, v); samma höjd, mark, 0,25 s. Halva bredden är 4,2. ]]
+	local function uv(par)
+		for _, p in ipairs(par) do steg(hastA, lage(H, p[1], p[2]), 0.25, "Sand") end
+	end
+	local function utfall() return sistaVid(m, ID).utfall end
+
+	uv({ { 0, -12 }, { 0, -8 }, { 0, -4 }, { 5, 0 }, { 0, 4 }, { 0, 8 }, { 0, 12 } })
+	check("1: planet nås vid u=5, utanför bommen: sidan om", utfall() == "sidan_om", utfall())
+	uv({ { 0, 12 }, { 0, 8 }, { 0, 4 }, { 5, 0 }, { 0, -4 }, { 0, -8 }, { 0, -12 } })
+	check("1 baklänges: sidan om", utfall() == "sidan_om", utfall())
+
+	uv({ { 5, -12 }, { 5, -8 }, { 5, -4 }, { 0, 0 }, { 5, 4 }, { 5, 8 }, { 5, 12 } })
+	check("2: korsningen vid u=0 fast ändarna är utanför: passage", utfall() == "passage"
+		and sistaVid(m, ID).riktning == "fram", utfall())
+	uv({ { 5, 12 }, { 5, 8 }, { 5, 4 }, { 0, 0 }, { 5, -4 }, { 5, -8 }, { 5, -12 } })
+	check("2 baklänges: passage bak", utfall() == "passage" and sistaVid(m, ID).riktning == "bak", utfall())
+
+	uv({ { 0, -12 }, { 0, -8 }, { 0, -4 }, { 5, -0.1 }, { 5, 0.1 }, { 0, 4 }, { 0, 8 }, { 0, 12 } })
+	check("3: ett observerat segment korsar vid u=5 inne i toleransbandet: sidan om",
+		utfall() == "sidan_om", utfall())
+	uv({ { 0, -12 }, { 0, -8 }, { 0, -4 }, { 5, -0.1 }, { 5, 0.05 }, { 5, 0.2 }, { 0, 4 }, { 0, 8 }, { 0, 12 } })
+	check("3 med flera punkter inom bandet: sidan om", utfall() == "sidan_om", utfall())
+	uv({ { 5, -12 }, { 5, -8 }, { 5, -4 }, { 0, -0.1 }, { 0, 0.1 }, { 5, 4 }, { 5, 8 }, { 5, 12 } })
+	check("3 omvänt: korsning vid u=0 inne i bandet är passage", utfall() == "passage", utfall())
+
+	uv({ { 0, -12 }, { 0, -8 }, { 0, -4 }, { 0, 0 }, { 0, 4 }, { 0, 8 }, { 0, 12 } })
+	check("KONTROLL: rak väg genom u=0 är passage", utfall() == "passage", utfall())
+	uv({ { 5, -12 }, { 5, -8 }, { 5, -4 }, { 5, 0 }, { 5, 4 }, { 5, 8 }, { 5, 12 } })
+	check("KONTROLL: rak väg vid u=5 är sidan om", utfall() == "sidan_om", utfall())
+	check("ingen rivning i något av fallen", (function()
+		for _, f in ipairs(forsokVid(m, ID)) do if f.rivning ~= false then return false end end
+		return true
+	end)())
+
+	--[[ Ett brott tar kandidaten med sig: planet nås vid u=0, roten
+		saknas, och hästen dyker upp på andra sidan. Ingen passage. ]]
+	uv({ { 0, -12 }, { 0, -8 }, { 0, -4 }, { 0, 0 } })
+	local r = sess(hastA).rig.root
+	local foralder = r.Parent
+	r.Parent = nil
+	steg(hastA, nil)
+	r.Parent = foralder
+	--[[ Efter brottet: baslinje vid v=4, sedan in i zonen och ut. ]]
+	uv({ { 0, 4 }, { 0, 5 }, { 0, 12 } })
+	local alla = forsokVid(m, ID)
+	check("brott efter planträff: det avbrutna försöket är okänt", alla[#alla - 1].giltighet == "brott"
+		and alla[#alla - 1].utfall == "okant", alla[#alla - 1].giltighet)
+	check("och nästa försök ärver ingen kandidat", alla[#alla].utfall ~= "passage", alla[#alla].utfall)
+	HorseService.dismount(anna)
+end
+
 print("\n── R1 fynd 2: okänd markevidens bryter landningskedjan ──")
 do
 	local m = sitUpp(anna, hastA, start)

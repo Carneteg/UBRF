@@ -36,9 +36,10 @@
 
 	Utfall:
 	  · `passage`       hästen har BEKRÄFTAT varit på båda sidor om planet
-	                    (|v| > SID_TOL, 0,25 studs, spelantagande) och
-	                    korsningen mellan de två bekräftade lägena ligger
-	                    INNANFÖR bredden; `riktning` "fram" (−v → +v) eller
+	                    (|v| > SID_TOL, 0,25 studs, spelantagande) och det
+	                    senaste OBSERVERADE segmentet som nådde planet före
+	                    bytet gjorde det INNANFÖR bredden (granskning R2 —
+	                    aldrig kordan mellan två bekräftade lägen); `riktning` "fram" (−v → +v) eller
 	                    "bak". Att nå planet och vända är ingen passage,
 	  · `sidan_om`      planet korsas utanför bredden,
 	  · `ingen_passage` zonen lämnades utan korsning,
@@ -93,7 +94,7 @@ type Forsok = {
 	luftfas: string, landning: string, overlapp: boolean, overlappAntal: number,
 	kontakt: string, rivning: boolean, bom: string,
 	_korsat: boolean, _sidanOm: boolean, _luftAktiv: boolean, _markEfterLuft: boolean,
-	_sida: number?, _su: number, _sv: number, _sy: number,
+	_sida: number?, _kandU: number?, _kandY: number?,
 }
 type Ritt = {
 	v: number, rittId: string, hastId: string, userId: number,
@@ -328,7 +329,7 @@ local function nyttForsok(r: Ritt, h: Hinder, t: number): Forsok?
 		luftfas = "okand", landning = "okand", overlapp = false, overlappAntal = 0,
 		kontakt = "otillganglig", rivning = false, bom = "okand",
 		_korsat = false, _sidanOm = false, _luftAktiv = false, _markEfterLuft = false,
-		_sida = nil, _su = 0, _sv = 0, _sy = 0,
+		_sida = nil, _kandU = nil, _kandY = nil,
 	}
 	table.insert(r.forsok, f)
 	r._aktiva[h.id] = f
@@ -377,21 +378,35 @@ function HinderObservation.segment(rittId: string?, fran: Vector3, till: Vector3
 				f.okandSampel += 1
 				f._luftAktiv = false
 			end
+			--[[ KORSNINGSKANDIDATEN (granskning R2). Varje OBSERVERAT segment
+				som når eller korsar planet sparar var det gjorde det, ur sin
+				egen geometri. Kordan mellan två avlägsna bekräftade lägen
+				används aldrig: den kan hoppa över bommens ände åt båda hållen.
+				Det är det SENASTE planmötet som gäller: ett sidbyte kräver att v
+				byter tecken, alltså ett nytt observerat planmöte, som skriver
+				över det gamla. Kandidaten dör med försöket vid ett brott.
+				Minnet är ett läge. ]]
+			if (v0 <= 0 and v1 >= 0) or (v0 >= 0 and v1 <= 0) then
+				local k = if v0 == v1 then 1 else v0 / (v0 - v1)
+				f._kandU = u0 + k * (u1 - u0)
+				f._kandY = fran.Y + k * (till.Y - fran.Y)
+			end
 			--[[ SIDBYTE (granskning R1): passage kräver att hästen BEKRÄFTAT
 				varit på båda sidor, med |v| > SID_TOL. Prov på planet eller i
 				bruset kring det ändrar ingen sida, så att nå planet och vända
-				är inte en passage. Korsningens läge räknas mellan det senaste
-				bekräftade läget på ena sidan och det första på den andra. ]]
+				är inte en passage. Var korsningen skedde avgörs av kandidaten. ]]
 			if forst and math.abs(v0) > HinderObservation.SID_TOL then
-				f._sida, f._su, f._sv, f._sy = (if v0 > 0 then 1 else -1), u0, v0, fran.Y
+				f._sida = if v0 > 0 then 1 else -1
 			end
 			local sida = if v1 > HinderObservation.SID_TOL then 1
 				elseif v1 < -HinderObservation.SID_TOL then -1 else 0
 			if sida ~= 0 then
 				if f._sida ~= nil and sida ~= f._sida then
-					local k = f._sv / (f._sv - v1)
-					local uX = f._su + k * (u1 - f._su)
-					local yX = f._sy + k * (till.Y - f._sy)
+					--[[ Kandidaten finns alltid här: ett bekräftat sidbyte betyder
+						att v bytt tecken, och försökets segment är sammanhängande
+						(ett brott stänger försöket), så något observerat segment
+						har nått planet. ]]
+					local uX, yX = f._kandU :: number, f._kandY :: number
 					if math.abs(uX) <= h.bredd / 2 then
 						if not f._korsat then
 							f._korsat = true
@@ -406,7 +421,7 @@ function HinderObservation.segment(rittId: string?, fran: Vector3, till: Vector3
 						f._sidanOm = true
 					end
 				end
-				f._sida, f._su, f._sv, f._sy = sida, u1, v1, till.Y
+				f._sida = sida
 			end
 			if overlappar(h, u1, v1, till.Y, halv) then
 				f.overlapp = true
