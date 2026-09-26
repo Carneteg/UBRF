@@ -172,6 +172,8 @@ FORBEREDELSE = SPEL + [
     ("RidLogg",      "src/server/RidLogg.luau"),  # #264 INFRA-2A: HorseService require:ar den
     ("RidObservation", "src/server/RidObservation.luau"),  # #264 INFRA-2B1
     ("HinderObservation", "src/server/HinderObservation.luau"),  # #264 INFRA-2B2
+    ("Ridhusplats",   "src/shared/HorseCore/Ridhusplats.luau"),  # #264 INFRA-OBS-PLATS1: RidPlatsObservation require:ar den
+    ("RidPlatsObservation", "src/server/RidPlatsObservation.luau"),  # #264 INFRA-OBS-PLATS1
     # AKTOREN (#252 DEL C) FORE tjansterna: GameplayService, HorseService
     # och LedService fragar den om aktoren har en klient att skicka till.
     ("Aktor",        "src/shared/HorseCore/Aktor.luau"),
@@ -430,6 +432,7 @@ KOHERENS = GEOMETRI + [
     ("RidLogg",      "src/server/RidLogg.luau"),  # #264 INFRA-2A: HorseService require:ar den
     ("RidObservation", "src/server/RidObservation.luau"),  # #264 INFRA-2B1
     ("HinderObservation", "src/server/HinderObservation.luau"),  # #264 INFRA-2B2
+    ("RidPlatsObservation", "src/server/RidPlatsObservation.luau"),  # #264 INFRA-OBS-PLATS1
     # AKTOREN (#252 DEL C) FORE tjansterna: GameplayService, HorseService
     # och LedService fragar den om aktoren har en klient att skicka till.
     ("Aktor",        "src/shared/HorseCore/Aktor.luau"),
@@ -737,6 +740,9 @@ def valjBunt(spec_rel: str):
     #   samma bank som ridinput. ]]
     #[[ #264 INFRA-2B2: KOHERENS, for att hindren ska komma ur det RIKTIGA
     #   anlaggningsbygget (med speglingen) och registreras av HorseService. ]]
+    #[[ #264 INFRA-OBS-PLATS1: det riktiga ridhuset och tjansterna. ]]
+    elif "ridplats" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
     elif "hinderobservation" in spec_rel:
         moduler, stubbar = KOHERENS, "tests/stubs.luau"
     elif "ridobservation" in spec_rel:

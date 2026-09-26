@@ -34,6 +34,7 @@ local Skopa = require(script.Parent.Skopa)
 local RidLogg = require(script.Parent.RidLogg)
 local RidObservation = require(script.Parent.RidObservation)
 local HinderObservation = require(script.Parent.HinderObservation)
+local RidPlatsObservation = require(script.Parent.RidPlatsObservation)
 
 local HorseService = {}
 
@@ -291,6 +292,8 @@ local function unregister(model: Model)
 		if not ok2 then warn("[Horse] ridobservationen kastade: " .. tostring(fel2)) end
 		local ok3, fel3 = pcall(HinderObservation.avsluta, session.rittId, "avbruten")
 		if not ok3 then warn("[Horse] hinderobservationen kastade: " .. tostring(fel3)) end
+		local ok4, fel4 = pcall(RidPlatsObservation.avsluta, session.rittId, "avbruten")
+		if not ok4 then warn("[Horse] ridplatsobservationen kastade: " .. tostring(fel4)) end
 	end
 	sessions[model] = nil
 end
@@ -532,6 +535,7 @@ local function setRider(session: Session, player: Player?, orsak: string?)
 			orsak or "avsittning", logNu)
 		logga(RidObservation.avsluta, gammalRitt, if vanlig then "avslutad" else "avbruten")
 		logga(HinderObservation.avsluta, gammalRitt, if vanlig then "avslutad" else "avbruten")
+		logga(RidPlatsObservation.avsluta, gammalRitt, if vanlig then "avslutad" else "avbruten")
 	end
 	if player and session.rittId then
 		local hastId = tostring(session.rig.model:GetAttribute("HorseId") or session.rig.model.Name)
@@ -542,6 +546,7 @@ local function setRider(session: Session, player: Player?, orsak: string?)
 			från före uppsittningen kan räknas in. ]]
 		logga(RidObservation.starta, session.rittId, hastId, player.UserId)
 		logga(HinderObservation.starta, session.rittId, hastId, player.UserId)
+		logga(RidPlatsObservation.starta, session.rittId, hastId, player.UserId)
 	end
 	--[[ ── MÄRKET REPLIKERAS, OCH DET ÄR INTE EN BEKVÄMLIGHET ──────────
 	     Första utkastet lämnade märket ENBART i `tryMount`-returen. Det
@@ -1368,6 +1373,10 @@ local function stepStamina(session: Session, dt: number)
 		elseif status == "brott" then
 			logga(HinderObservation.brott, session.rittId, rittTid)
 		end
+		--[[ INFRA-OBS-PLATS1: samma besked, löst i ridhusets platsram. ]]
+		if okObs then
+			logga(RidPlatsObservation.sampla, session.rittId, status, fran, obsPos, rittTid)
+		end
 		--[[ Utan `current`: hysteresen finns för att animationen inte ska
 		     flimra, och den får inte kunna hålla kvar ett påstått "halt"
 		     en bit upp i skrittbandet. Auktoriteten mäter på bandet. ]]
@@ -1765,6 +1774,9 @@ function HorseService.start()
 		före HorseService (se `Start.luau`), och senare bommar fångas av
 		`DescendantAdded`. ]]
 	logga(HinderObservation.start, workspace)
+	--[[ INFRA-OBS-PLATS1: ridhusets platsram, hittad en gång och hållen i
+		cache (se RidPlatsObservation). ]]
+	logga(RidPlatsObservation.start, workspace)
 	--[[ #233 Fas 4b. Den semantiska vägen in. Ligger bredvid StateSync med
 	     flit: de två är nu tydligt olika saker — den ena är en AVSIKT som
 	     ändrar sanning, den andra en OBSERVATION som bara presenteras. ]]
@@ -1814,6 +1826,14 @@ end
 	hinder — inte rivning, inte poäng, inte fuskskydd. Ingen konsument ännu. ]]
 function HorseService.hinderobservation(rittId: string?): any
 	return HinderObservation.ogonblick(rittId)
+end
+
+--[[ Ridplatsobservationen för en ritt (INFRA-OBS-PLATS1): det aktuella
+	observerade läget i ridhusets platsram, fryst, eller nil. Serverns
+	observation av klientägd fysik; planärt medlemskap, inte markkontakt.
+	Ingen konsument ännu. ]]
+function HorseService.ridplats(rittId: string?): any
+	return RidPlatsObservation.ogonblick(rittId)
 end
 
 return HorseService

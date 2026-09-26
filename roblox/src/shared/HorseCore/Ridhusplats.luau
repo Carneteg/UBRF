@@ -88,8 +88,12 @@ end
 	                 1 − 1e-4, alltså under ~0,8°),
 	  · TOL_LAGE     största tillåtna rumsliga fel, i studs (0,1): för
 	                 A-förankring, för layoutens hörn i banan, och för
-	                 relativ girning mätt som sin θ · banans halva diagonal
-	                 (dagens bana: ~102,8 studs, alltså under ~0,056°).
+	                 relativ girning. Girningen mäts med det valda
+	                 småvinkelkriteriet sin θ · banans halva diagonal (dagens
+	                 bana: ~102,8 studs, alltså under ~0,056°). Det är ett
+	                 kriterium, inte en exakt allmän gräns för varje hörns
+	                 förflyttning — den exakta förflyttningen för en punkt på
+	                 radien r vid en stel girning är 2 · sin(θ/2) · r.
 	  Ytornas medlemskap (`inom`) prövas i varje ytas egna axlar, med 1e-6
 	  studs flyttalsmarginal. ]]
 Ridhusplats.TOL_AXEL = 1e-3
@@ -157,9 +161,12 @@ local function hitta(ridhus: Instance): ({ [string]: BasePart }?, string?)
 	return ut, nil
 end
 
---[[ Löser ridhusets plats ur de byggda delarna. (plats, nil) eller
-	(nil, skäl). ]]
-function Ridhusplats.los(ridhus: Instance?): (any, string?)
+--[[ Löser ridhusets plats ur de byggda delarna. (plats, nil, delar) eller
+	(nil, skäl). `delar` ({ bana, dressyr }) är de levande delar platsen
+	löstes ur — för den som vill hålla platsen i cache och upptäcka att de
+	flyttats eller tagits bort (INFRA-OBS-PLATS1). De ingår inte i den
+	frysta platsen. ]]
+function Ridhusplats.los(ridhus: Instance?): (any, string?, any)
 	if not ridhus then return nil, "ingen_byggnad" end
 	local d, skal = hitta(ridhus)
 	if not d then return nil, skal end
@@ -173,11 +180,12 @@ function Ridhusplats.los(ridhus: Instance?): (any, string?)
 	local rd, fd = ram(dressyr, Ridhusplats.ID.dressyr)
 	if not rd then return nil, fd end
 
-	--[[ SAMRIKTADE, MÄTT SOM FÖRSKJUTNING (granskning R2). Vid relativ
-		girning θ ligger banans verkliga hörn högst sin θ · (banans halva
-		diagonal) från var de hade legat i layoutens ram. Paret godtas bara
-		om den förskjutningen ryms i TOL_LAGE — en vinkeltolerans hade tillåtit
-		0,6 studs fel på en lång bana. Därtill används banans EGNA axlar för
+	--[[ SAMRIKTADE, MÄTT SOM FÖRSKJUTNING (granskning R2). Det valda
+		småvinkelkriteriet är sin θ · (banans halva diagonal), jämfört med
+		TOL_LAGE; en vinkeltolerans hade tillåtit 0,6 studs fel på en lång
+		bana. (Den exakta förflyttningen för en punkt på radien r vid en
+		stel girning är 2 · sin(θ/2) · r — kriteriet är inte en exakt
+		allmän gräns, se toleranserna ovan.) Därtill används banans EGNA axlar för
 		allt som rör banans yta (se `inom` och hörnkontrollen nedan), så ingen
 		omskrivande ruta räknas som bana. ]]
 	local sinTheta = math.abs(rb.langs.X * rd.langs.Z - rb.langs.Z * rd.langs.X)
@@ -242,7 +250,7 @@ function Ridhusplats.los(ridhus: Instance?): (any, string?)
 			halvLangs = dLangs, halvTvars = dTvars, A = aKant, C = cKant,
 			langsAxel = motC, tvarsAxel = tvars,
 		}),
-	}), nil
+	}), nil, { bana = bana, dressyr = dressyr }
 end
 
 --[[ Världsläge (studs) → lokalt (meter): u tvärs, h över golvet, v från A. ]]
