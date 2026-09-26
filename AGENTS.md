@@ -30,6 +30,13 @@ If any document conflicts with Tobias' latest explicit product decision, Tobias'
 
 ## Roles
 
+**Current mandate, 2026-09-26:** after the verified #264 handover, Codex is
+the sole production implementer and Claude the independent design/code
+reviewer. This supersedes older writer assignments below and in historical
+documents. Use `docs/LOCAL-DELIVERY-CHECKS.md` for the shared local/CI entry
+point and the acceptance/falsification/review routine. Future push, merge
+and publication are not authorized by the handover alone.
+
 ### Tobias — Product Owner
 Owns scope, priority, product acceptance and subjective game feel.
 

@@ -70,6 +70,8 @@ JOBB = ("grindar", "ridning")
 #[[ KONTRAKTET. (jobb, obligatorisk sokvag, kommandoraderna i ordning).
 #   Genererad ur filen nar grinden infordes, sedan fast. ]]
 INVENTARIE = [
+    # New mandatory runner regression; existing checks/arguments unchanged.
+    ('grindar', 'tools/testa-fore-leverans.py', ['python3 tools/testa-fore-leverans.py']),
     ('grindar', 'tools/testa-grindar-workflow.py', ['python3 -m pip install --quiet pyyaml', 'python3 tools/testa-grindar-workflow.py --forhandskoll']),
     ('grindar', 'tools/kolla-material.py', ['python3 tools/kolla-material.py']),
     ('grindar', 'tools/bygg-identitet.py', ['python3 tools/bygg-identitet.py --kontrollera']),

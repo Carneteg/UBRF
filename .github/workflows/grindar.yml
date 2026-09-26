@@ -60,6 +60,12 @@ jobs:
           python3 -m pip install --quiet pyyaml
           python3 tools/testa-grindar-workflow.py
 
+      - name: Lokal leveranskontroll foljer CI
+        run: |
+          set -euo pipefail
+          test -f tools/testa-fore-leverans.py || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/testa-fore-leverans.py" >&2; exit 1; }
+          python3 tools/testa-fore-leverans.py
+
       # G8 (#264): FORHANDSKOLL. Stegen nedan fäller var och en på sin egen
       # saknade indata, men GitHub stoppar jobbet vid det första röda steget
       # — saknas tre kontroller upptäcks de en CI-körning i taget. Det här
