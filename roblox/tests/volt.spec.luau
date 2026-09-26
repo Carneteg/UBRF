@@ -211,6 +211,13 @@ do
 	check("stillastående: tid och segment redovisas ändå", nara(still.tid, 12 * 0.25, 1e-9)
 		and still.segment == 12 and still.stracka == 0)
 
+	nytt(hastA, CU + R, CV)
+	steg(hastA, lage(CU + R, CV + 1.5)); steg(hastA, lage(CU + R, CV + 3))
+	local kort = pagar(marke)
+	check("kort avsnitt (2 segment, 0,5 s): otillräckligt, inga mått", kort.underlag == "otillrackligt"
+		and kort.skal[1] == "for_kort" and kort.medelAvvikelse == nil and kort.netto == nil
+		and kort.segment == 2 and nara(kort.stracka, 3, 1e-6), kort.underlag)
+
 	cirkel(hastA, CU, CV, R, N, 0.5, 1)
 	check("halvvarv: π, inget varv", pagar(marke).varv == 0 and nara(pagar(marke).netto, math.pi, 1e-6))
 
@@ -408,6 +415,9 @@ do
 	check("DIREKT: referensbyte i samma ram avslutar avsnittet", o.pagar.segment == 1
 		and o.pagar.referens.u == 0.5 and o.avslutade[3].slut == "ram_eller_referens_bytt")
 	VoltObservation.avsluta(id, "avslutad")
+	local stangd = VoltObservation.ogonblick(id)
+	check("DIREKT: en stängd ritt tar inte emot en bild", VoltObservation.sampla(id, pb(2, 10, 33, 10, 34, 2)) == false
+		and VoltObservation.ogonblick(id) == stangd and stangd.pagar == nil)
 
 	--[[ Referensens u är 0 i båda verkliga ramarna; en referens flyttad
 		i u-led visar att båda koordinaterna används. ]]

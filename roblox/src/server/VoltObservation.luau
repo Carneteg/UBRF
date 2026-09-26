@@ -250,9 +250,11 @@ function VoltObservation.sampla(rittId: string?, plats: any): boolean
 		local nu, nv = au + du * k, avc + dv * k
 		narmast = math.min(narmast, math.sqrt(nu * nu + nv * nv))
 	end
+	--[[ Ett stillastående segment (a = b) behöver ingen egen gren:
+		a × b = 0 och a · b = |a|² > 0 ger atan2 exakt 0. ]]
 	if narmast < VoltObservation.R_MIN then
 		av.obestamda += 1
-	elseif langd > 0 then
+	else
 		local d = math.atan2(au * bvc - avc * bu, au * bu + avc * bvc)
 		av.netto += d
 		if d > 0 then av.positiv += d else av.negativ -= d end
