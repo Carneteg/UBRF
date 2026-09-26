@@ -378,10 +378,11 @@ end
 print("\n── DIREKT: vakter som produktionsvägen inte når ──")
 do
 	local id = "direkt_prov"
+	local pbId = id
 	VoltObservation.starta(id, "h", 1)
 	local function pb(t, fu, fv, tu, tv, ramId, cu, cv)
 		return table.freeze({
-			rittId = id, status = "segment", ramId = ramId or 1, t = t,
+			rittId = pbId, status = "segment", ramId = ramId or 1, t = t,
 			dressyrMitt = table.freeze({ u = cu or 0, h = 0, v = cv or 30 }),
 			segment = table.freeze({ fran = table.freeze({ u = fu, h = 0, v = fv }), till = table.freeze({ u = tu, h = 0, v = tv }) }),
 		})
@@ -407,6 +408,21 @@ do
 	check("DIREKT: referensbyte i samma ram avslutar avsnittet", o.pagar.segment == 1
 		and o.pagar.referens.u == 0.5 and o.avslutade[3].slut == "ram_eller_referens_bytt")
 	VoltObservation.avsluta(id, "avslutad")
+
+	--[[ Referensens u är 0 i båda verkliga ramarna; en referens flyttad
+		i u-led visar att båda koordinaterna används. ]]
+	local id2 = "direkt_u"
+	VoltObservation.starta(id2, "h", 1)
+	pbId = id2
+	for i = 1, N do
+		local a0, a1 = TAU * (i - 1) / N, TAU * i / N
+		VoltObservation.sampla(id2, pb(i * 0.25, 5 + R * math.cos(a0), 30 + R * math.sin(a0),
+			5 + R * math.cos(a1), 30 + R * math.sin(a1), 1, 5, 30))
+	end
+	local u5 = VoltObservation.ogonblick(id2).pagar
+	check("DIREKT: referens i (5, 30) — cirkeln runt den är ett varv med kordans avvikelse", u5.varv == 1
+		and nara(u5.medelAvvikelse, bias, 1e-6) and u5.referens.u == 5, f(u5.medelAvvikelse))
+	VoltObservation.avsluta(id2, "avslutad")
 end
 
 print("\n── KEDJAN utan Heartbeat: ogiltigt dt ──")
