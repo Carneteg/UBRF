@@ -33,7 +33,10 @@
 	är smutsig: ett barn har lagts till i eller tagits bort ur ridhusets
 	modell, eller en av de två cachade delarnas avtryck (läge, axlar, mått)
 	har ändrats — det senare kontrolleras per steg på två delar, inget
-	svep. En ny eller ändrad ram får ett NYTT ram-id och bryter
+	svep. Även METADATA följs (granskning R1): de två cachade delarnas
+	`PlatsId` och `Forankring` prövas per steg, och en `PlatsId`-lyssnare
+	per barn i modellen fångar en sent tilldelad markering på en annan del
+	(t.ex. en dubblett). En ny eller ändrad ram får ett NYTT ram-id och bryter
 	kontinuiteten; en oförändrad ram behåller sitt id. Är platsen ogiltig
 	prövas den om högst var FORSOK_VANTA:e steg.
 
@@ -69,6 +72,16 @@ local ram = {
 	losningar = 0,
 }
 local ritter: { [string]: Ritt } = {}
+--[[ METADATALYSSNARE (granskning R1). En lyssnare per barn i ridhusets
+	modell och attribut (`PlatsId`, `Forankring`), så att en SENT tilldelad
+	markering på en befintlig del (t.ex. en dubblettmärkning) — eller en
+	återställd — gör ramen smutsig direkt. Kopplas en gång per
+	modell, kopplas för nya barn, rivs för borttagna barn och rivs alla vid
+	modellbyte — aldrig två lyssnare på samma barn. ]]
+local lyssnare = {
+	modell = nil :: Instance?,
+	per = {} :: { [Instance]: any },
+}
 local avslutade: { string } = {}
 
 local function andligt(v: any): boolean
@@ -99,11 +112,51 @@ local function avtryckFor(delar: any): string
 	return avtryck(delar.bana) .. "#" .. avtryck(delar.dressyr)
 end
 
+local BEVAKADE_ATTRIBUT = { "PlatsId", "Forankring" }
+
+local function rivBarn(c: Instance)
+	local ks = lyssnare.per[c]
+	if ks then
+		for _, k in ipairs(ks) do pcall(function() k:Disconnect() end) end
+		lyssnare.per[c] = nil
+	end
+end
+
+local function kopplaBarn(c: Instance)
+	if lyssnare.per[c] then return end
+	local ks = {}
+	for _, namn in ipairs(BEVAKADE_ATTRIBUT) do
+		local ok, k = pcall(function()
+			return c:GetAttributeChangedSignal(namn):Connect(function()
+				ram.smutsig = true
+			end)
+		end)
+		if ok and k then table.insert(ks, k) end
+	end
+	lyssnare.per[c] = ks
+end
+
+local function kopplaModell(m: Instance?)
+	if lyssnare.modell == m then return end
+	for c in pairs(lyssnare.per) do rivBarn(c) end
+	lyssnare.per = {}
+	lyssnare.modell = m
+	if m then
+		for _, c in ipairs(m:GetChildren()) do kopplaBarn(c) end
+	end
+end
+
 --[[ Den aktuella ramen: (plats, ramId) eller (nil, nil, skäl). ]]
 local function aktuellRam(): (any, number?, string?)
 	if ram.delar and not ram.smutsig then
 		local d = ram.delar
+		--[[ Metadata på de två cachade delarna prövas också per steg (tre
+			attributläsningar): en ändrad förankring eller ett ändrat id gör
+			platsen ogiltig även om geometrin är densamma. ]]
 		if d.bana.Parent ~= ram.modell or d.dressyr.Parent ~= ram.modell
+			or d.bana:GetAttribute("PlatsId") ~= Ridhusplats.ID.bana
+			or d.dressyr:GetAttribute("PlatsId") ~= Ridhusplats.ID.dressyr
+			or d.dressyr:GetAttribute("Forankring") ~= "A"
 			or avtryckFor(d) ~= ram.avtryck then
 			ram.smutsig = true
 		end
@@ -116,6 +169,7 @@ local function aktuellRam(): (any, number?, string?)
 	if ram.smutsig then
 		ram.smutsig = false
 		ram.losningar += 1
+		kopplaModell(ram.modell)
 		local plats, skal, delar = Ridhusplats.los(ram.modell)
 		if not plats then
 			ram.plats, ram.delar, ram.avtryck = nil, nil, nil
@@ -149,6 +203,7 @@ function RidPlatsObservation.start(r: Instance)
 	r.DescendantAdded:Connect(function(d)
 		if ram.modell ~= nil and d.Parent == ram.modell then
 			ram.smutsig = true
+			if lyssnare.modell == ram.modell then kopplaBarn(d) end
 		elseif ram.modell == nil then
 			local ok, id = pcall(function() return d:GetAttribute("PlatsId") end)
 			if ok and id == Ridhusplats.ID.bana then
@@ -162,8 +217,10 @@ function RidPlatsObservation.start(r: Instance)
 		if d == ram.modell then
 			ram.modell = nil
 			ram.smutsig = true
+			kopplaModell(nil)
 		elseif d.Parent == ram.modell then
 			ram.smutsig = true
+			rivBarn(d)
 		end
 	end)
 end
@@ -281,6 +338,13 @@ end
 	oförändrad (inget svep per hjärtslag). ]]
 function RidPlatsObservation._losningarForProv(): number
 	return ram.losningar
+end
+
+--[[ Hur många barnlyssnare som är kopplade, och på vilken modell. ]]
+function RidPlatsObservation._lyssnareForProv(): (number, Instance?)
+	local n = 0
+	for _ in pairs(lyssnare.per) do n += 1 end
+	return n, lyssnare.modell
 end
 
 function RidPlatsObservation._glomRitterForProv()

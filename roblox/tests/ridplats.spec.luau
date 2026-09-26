@@ -222,6 +222,66 @@ do
 	check("och segment igen", bild(marke1).status == "segment")
 end
 
+print("\n── R1: metadata utan geometriändring, genom produktionsvägen ──")
+do
+	--[[ Inget `satModell`, ingen tvingad omlösning: bara ändringen och
+		nästa hjärtslag. Varje fall: giltigt segment före, `ingen_plats`
+		utan gammal punkt eller segment under, och efter återställning
+		först en punkt utan segment och sedan ett nytt segment. ]]
+	local function fall(namn, forstor, aterstall, skalVantat)
+		steg(hastA, lage(RP, 0, 20)); steg(hastA, lage(RP, 0, 22))
+		check(namn .. ": KONTROLL giltigt segment före", bild(marke1).status == "segment")
+		forstor()
+		steg(hastA, lage(RP, 0, 24))
+		local b = bild(marke1)
+		check(namn .. ": ingen plats, utan gammal punkt eller segment", b.status == "ingen_plats"
+			and b.skal == skalVantat and b.punkt == nil and b.segment == nil,
+			b.status .. " " .. tostring(b.skal))
+		aterstall()
+		steg(hastA, lage(RP, 0, 26))
+		local e = bild(marke1)
+		check(namn .. ": återställd — första punkten utan segment (inget brygg över brottet)",
+			e.punkt ~= nil and e.segment == nil and e.status ~= "segment", e.status)
+		steg(hastA, lage(RP, 0, 28))
+		check(namn .. ": och sedan ett nytt giltigt segment", bild(marke1).status == "segment"
+			and nara(bild(marke1).segment.fran.v, 26, 1e-6))
+	end
+	local banaNu = hus:FindFirstChild("Ridbanan")
+	local layNu = hus:FindFirstChild("Dressyrlayout 20x60")
+	fall("förankring A → C", function() layNu:SetAttribute("Forankring", "C") end,
+		function() layNu:SetAttribute("Forankring", "A") end, "fel_forankring")
+	fall("banans id byts", function() banaNu:SetAttribute("PlatsId", "annat") end,
+		function() banaNu:SetAttribute("PlatsId", "ridhus_bana") end, "saknas:ridhus_bana")
+	--[[ En del som redan finns i modellen får en dubblettmarkning i
+		efterhand — ingen del läggs till eller tas bort. ]]
+	local befintlig
+	for _, c in ipairs(hus:GetChildren()) do
+		if c:IsA("BasePart") and c:GetAttribute("PlatsId") == nil and c.Name == "Sarg väst" then befintlig = c break end
+	end
+	check("KONTROLL: en omärkt befintlig del finns", befintlig ~= nil)
+	fall("sent tilldelad dubblettmarkning", function() befintlig:SetAttribute("PlatsId", "ridhus_dressyr") end,
+		function() befintlig:SetAttribute("PlatsId", nil) end, "dubbelt_id:ridhus_dressyr")
+
+	--[[ Lyssnarnas livscykel: en per barn, inga dubbletter, rivs vid
+		modellbyte. ]]
+	local n0, m0 = RidPlatsObservation._lyssnareForProv()
+	check("en lyssnare per barn i ridhusets modell", m0 == hus and n0 == #hus:GetChildren(),
+		("%d lyssnare, %d barn"):format(n0, #hus:GetChildren()))
+	local tillagd = Instance.new("Part")
+	tillagd.Name = "Provdel"
+	tillagd.Parent = hus
+	workspace.DescendantAdded:Fire(tillagd)
+	steg(hastA, lage(RP, 0, 30))
+	local n1 = RidPlatsObservation._lyssnareForProv()
+	check("ett nytt barn får EN lyssnare", n1 == n0 + 1, ("%d → %d"):format(n0, n1))
+	workspace.DescendantAdded:Fire(tillagd)
+	steg(hastA, lage(RP, 0, 32))
+	check("samma barn igen ger ingen dubbel lyssnare", RidPlatsObservation._lyssnareForProv() == n0 + 1)
+	tillagd:Destroy()
+	steg(hastA, lage(RP, 0, 34))
+	check("ett borttaget barn rivs", RidPlatsObservation._lyssnareForProv() == n0)
+end
+
 print("\n── 37° vriden och flyttad ram ──")
 do
 	local th = math.rad(37)
