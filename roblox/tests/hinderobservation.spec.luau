@@ -303,6 +303,147 @@ do
 	HorseService.dismount(anna)
 end
 
+--[[ ══ GRANSKNING R1 ════════════════════════════════════════════════ ]]
+
+--[[ En väg genom en lista v-värden vid u, med ett golv per läge. ]]
+local function sekvens(modell, h, u, vs, golvlista)
+	for i, v in ipairs(vs) do
+		local g = if golvlista then golvlista[i] else "Sand"
+		if g == false then g = nil end
+		steg(modell, lage(h, u, v), 0.25, g)
+	end
+end
+local function sistaVid(m, id)
+	local f = forsokVid(m, id)
+	return f[#f], #f
+end
+
+print("\n── R1 fynd 1: att nå planet och vända är inte passage ──")
+do
+	local m = sitUpp(anna, hastA, start)
+	local ID = "ridhus_hinder_bla_24"
+	sekvens(hastA, H, 0, { -12, -8, -4, 0, -4, -8, -12 })
+	local f = sistaVid(m, ID)
+	check("planet nått och tillbaka: ingen passage", f.utfall == "ingen_passage", f.utfall)
+	sekvens(hastA, H, 0, { -12, -8, -4, 0, 0, 0, -4, -8, -12 })
+	f = sistaVid(m, ID)
+	check("stilla på planet och tillbaka: ingen passage", f.utfall == "ingen_passage", f.utfall)
+	sekvens(hastA, H, 0, { -12, -8, -4, 0.1, -0.1, 0.2, -4, -8, -12 })
+	f = sistaVid(m, ID)
+	check("brus kring planet: ingen passage", f.utfall == "ingen_passage", f.utfall)
+	sekvens(hastA, H, 0, { -12, -8, -4, 0, 2, 4, 8, 12 })
+	f = sistaVid(m, ID)
+	check("KONTROLL: genom planet via exakt noll är passage framåt", f.utfall == "passage"
+		and f.riktning == "fram", f.utfall .. " " .. tostring(f.riktning))
+	sekvens(hastA, H, 0, { 12, 8, 4, 0, 0, -2, -4, -8, -12 })
+	f = sistaVid(m, ID)
+	check("KONTROLL: baklänges via planet (två prov på det) är passage bak", f.utfall == "passage"
+		and f.riktning == "bak", f.utfall .. " " .. tostring(f.riktning))
+	sekvens(hastA, H, H.bredd / 2 + 1, { -12, -8, -4, 0, 2, 4, 8, 12 })
+	f = sistaVid(m, ID)
+	check("utanför bredden via planet: sidan om", f.utfall == "sidan_om", f.utfall)
+	HorseService.dismount(anna)
+end
+
+print("\n── R1 fynd 2: okänd markevidens bryter landningskedjan ──")
+do
+	local m = sitUpp(anna, hastA, start)
+	local ID = "ridhus_hinder_bla_24"
+	local vag = { -12, -8, -4, -2, 2, 4, 8, 12 }
+	sekvens(hastA, H, 0, vag, { "Sand", "Sand", "Sand", "Air", false, "Sand", "Sand", "Sand" })
+	local f = sistaVid(m, ID)
+	check("luft → okänt → mark: landningen är okänd, inte observerad",
+		f.luftfas == "observerad" and f.landning == "okand", f.luftfas .. "/" .. f.landning)
+	sekvens(hastA, H, 0, vag, { "Sand", "Sand", "Air", false, false, "Sand", "Sand", "Sand" })
+	f = sistaVid(m, ID)
+	check("upprepat okänt: fortfarande okänd", f.landning == "okand", f.landning)
+	sekvens(hastA, H, 0, vag, { "Sand", "Air", false, "Sand", "Air", "Sand", "Sand", "Sand" })
+	f = sistaVid(m, ID)
+	check("återhämtning: en NY luft → mark efter luckan är en observerad landning",
+		f.landning == "observerad", f.landning)
+	sekvens(hastA, H, 0, vag, { "Sand", "Sand", "Sand", "Air", "Sand", "Sand", "Sand", "Sand" })
+	f = sistaVid(m, ID)
+	check("KONTROLL: luft direkt följd av mark är observerad", f.landning == "observerad", f.landning)
+	sekvens(hastA, H, 0, vag, { "Sand", "Sand", "Sand", "Air", false, false, false, false })
+	f = sistaVid(m, ID)
+	check("luft → okänt utan senare mark: okänd", f.landning == "okand", f.landning)
+	HorseService.dismount(anna)
+end
+
+print("\n── R1 fynd 3: registrets livscykel genom de riktiga callbackarna ──")
+do
+	local ID = "ridhus_hinder_bla_24"
+	local original = perId[ID]
+	local function kopia()
+		local p = Instance.new("Part")
+		p.Name = "Ersattningsbom"
+		p.Size = original.Size
+		p.CFrame = original.CFrame
+		p:SetAttribute("HinderId", ID)
+		return p
+	end
+	--[[ Dubblett under en aktiv ritt. ]]
+	local m = sitUpp(anna, hastA, start)
+	sekvens(hastA, H, 0, { -12, -8, -4 })
+	check("KONTROLL: ett försök pågår", sistaVid(m, ID).utfall == "pagar")
+	local dubblett = kopia()
+	dubblett.Parent = workspace
+	workspace.DescendantAdded:Fire(dubblett)
+	local f = sistaVid(m, ID)
+	check("en ny del med samma id: pågående försök stängs som ogiltigt", f.giltighet == "hinder_ogiltigt"
+		and f.utfall == "okant", f.giltighet .. " " .. f.utfall)
+	check("och båda avvisas", HinderObservation.register().hinder[ID] == nil
+		and HinderObservation.register().avvisade[ID] == "dubbelt_id")
+	local _, antal = sistaVid(m, ID)
+	sekvens(hastA, H, 0, { -2, 2, 4, 8, 12 })
+	local _, antal2 = sistaVid(m, ID)
+	check("inga nya försök och ingen retroaktiv passage under dubbletten", antal2 == antal
+		and sistaVid(m, ID).utfall == "okant")
+
+	--[[ Dubbletten tas bort: originalet blir giltigt igen. ]]
+	workspace.DescendantRemoving:Fire(dubblett)
+	dubblett.Parent = nil
+	check("dubbletten borta: originalet är giltigt igen", HinderObservation.register().hinder[ID] ~= nil
+		and HinderObservation.register().avvisade[ID] == nil)
+	check("och registret håller en del för id:t", HinderObservation._delarForProv(ID) == 1,
+		tostring(HinderObservation._delarForProv(ID)))
+
+	--[[ Borttagning och ensam ersättare med samma id. ]]
+	sekvens(hastA, H, 0, { -12, -8, -4 })
+	workspace.DescendantRemoving:Fire(original)
+	local gammal = sistaVid(m, ID)
+	check("borttagningen stänger det pågående försöket", gammal.giltighet == "hinder_borttaget")
+	check("registret är tomt för id:t mellan borttagning och ersättning",
+		HinderObservation.register().hinder[ID] == nil and HinderObservation._delarForProv(ID) == 0)
+	local ersattare = kopia()
+	ersattare.Parent = workspace
+	workspace.DescendantAdded:Fire(ersattare)
+	check("en ensam ersättare med samma id godtas", HinderObservation.register().hinder[ID] ~= nil
+		and HinderObservation.register().avvisade[ID] == nil)
+	sekvens(hastA, H, 0, { -12, -8, -4, 0, 2, 4, 8, 12 })
+	local nu, antal3 = sistaVid(m, ID)
+	check("ersättaren ger ett NYTT försök, och det gamla ärvs inte", nu.utfall == "passage"
+		and gammal.utfall == "okant" and antal3 >= 2)
+
+	--[[ Upprepad cykel: minnet växer inte. ]]
+	local senast = ersattare
+	for _ = 1, 20 do
+		workspace.DescendantRemoving:Fire(senast)
+		senast.Parent = nil
+		senast = kopia()
+		senast.Parent = workspace
+		workspace.DescendantAdded:Fire(senast)
+	end
+	check("tjugo cykler: en levande del, giltigt hinder", HinderObservation._delarForProv(ID) == 1
+		and HinderObservation.register().hinder[ID] ~= nil)
+
+	--[[ Återställ originalet för block efter detta. ]]
+	workspace.DescendantRemoving:Fire(senast)
+	senast.Parent = nil
+	workspace.DescendantAdded:Fire(original)
+	HorseService.dismount(anna)
+end
+
 print("\n── MODULKONTRAKT (inte produktionsväg): register och brott ──")
 do
 	HinderObservation._glomForProv()

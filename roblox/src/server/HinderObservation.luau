@@ -21,6 +21,13 @@
 	över ett brott finns alltså aldrig, och ett brott stänger varje pågående
 	försök som `brott` — utfallet är då okänt, aldrig en passage.
 
+	REGISTRETS LIVSCYKEL (granskning R1): registret håller de LEVANDE delar
+	som bär varje id. En del → giltigt hinder; två eller fler → alla
+	avvisas och pågående försök stängs som `hinder_ogiltigt`. När en del
+	försvinner släpps referensen, dess försök stängs som `hinder_borttaget`,
+	och en ensam kvarvarande eller ersättande del med samma id blir giltig.
+	Ingen ersättare ärver ett gammalt försök.
+
 	Försök: hästen kommer in i hindrets zon (|u| ≤ bredd/2 + ZON_SIDA,
 	|v| ≤ ZON_DJUP i hindrets eget system), eller ett segment korsar
 	hindrets plan. Försöket står tills hon lämnar zonen, och ger då ETT
@@ -28,8 +35,11 @@
 	försök med eget löpnummer per hinder.
 
 	Utfall:
-	  · `passage`       segmentet korsar hindrets plan INNANFÖR bredden;
-	                    `riktning` "fram" (−v → +v) eller "bak",
+	  · `passage`       hästen har BEKRÄFTAT varit på båda sidor om planet
+	                    (|v| > SID_TOL, 0,25 studs, spelantagande) och
+	                    korsningen mellan de två bekräftade lägena ligger
+	                    INNANFÖR bredden; `riktning` "fram" (−v → +v) eller
+	                    "bak". Att nå planet och vända är ingen passage,
 	  · `sidan_om`      planet korsas utanför bredden,
 	  · `ingen_passage` zonen lämnades utan korsning,
 	  · och giltighet `brott`, `ritten_slut` eller `hinder_borttaget`, där
@@ -38,7 +48,8 @@
 	Luftfas och landning är OBSERVATIONER av hästens `FloorMaterial` på
 	servern ("luft" = Air, "mark" = annat, okänd = saknas). För en häst vars
 	fysik ägs av ryttarens klient kan serverns värde vara inaktuellt; det är
-	inte provat i motorn. Observerad luftfas är inte ett bevis på ett
+	inte provat i motorn. En landning är observerad bara när luft följs
+	DIREKT av mark; okänd evidens bryter kedjan (granskning R1). Observerad luftfas är inte ett bevis på ett
 	korrekt hopp, och saknad markevidens är aldrig en lyckad landning.
 
 	ÖVERLAPP ÄR INTE RIVNING. Bommen har `CanCollide = false`, så någon
@@ -62,6 +73,8 @@ local HinderObservation = {}
 HinderObservation.VERSION = 1
 HinderObservation.ZON_SIDA = 1.5
 HinderObservation.ZON_DJUP = 6
+--[[ Spelantagande: inom så här många studs från planet är sidan obestämd. ]]
+HinderObservation.SID_TOL = 0.25
 HinderObservation.MAX_FORSOK = 64
 HinderObservation.MAX_AVSLUTADE = 32
 local MAX_ID = 64
@@ -79,7 +92,8 @@ type Forsok = {
 	sampel: number, luftSampel: number, markSampel: number, okandSampel: number,
 	luftfas: string, landning: string, overlapp: boolean, overlappAntal: number,
 	kontakt: string, rivning: boolean, bom: string,
-	_korsat: boolean, _sidanOm: boolean, _luftSist: number?, _markEfterLuft: boolean,
+	_korsat: boolean, _sidanOm: boolean, _luftAktiv: boolean, _markEfterLuft: boolean,
+	_sida: number?, _su: number, _sv: number, _sy: number,
 }
 type Ritt = {
 	v: number, rittId: string, hastId: string, userId: number,
@@ -89,7 +103,7 @@ type Ritt = {
 
 local hinder: { [string]: Hinder } = {}
 local avvisade: { [string]: string } = {}
-local sedda: { [string]: any } = {}
+local delar: { [string]: { [any]: boolean } } = {}
 local ritter: { [string]: Ritt } = {}
 local avslutade: { string } = {}
 local gallrade = 0
@@ -135,33 +149,6 @@ local function geometri(del: any): Hinder?
 	}
 end
 
-function HinderObservation.registrera(del: any): (boolean, string?)
-	local ok, id = pcall(function() return del:GetAttribute("HinderId") end)
-	if not ok or type(id) ~= "string" or id == "" or #id > MAX_ID then
-		return false, "ogiltigt_id"
-	end
-	--[[ En DUBBLETT är en ANNAN del med samma id — då avvisas båda. Samma
-		del som registreras igen (den flyttas i trädet, eller ett tidigare
-		försök föll på geometrin) är ingen dubblett. ]]
-	local forst = sedda[id]
-	if forst == nil then
-		sedda[id] = del
-	elseif forst ~= del or avvisade[id] == "dubbelt_id" then
-		hinder[id] = nil
-		avvisade[id] = "dubbelt_id"
-		return false, "dubbelt_id"
-	end
-	local h = geometri(del)
-	if not h then
-		avvisade[id] = "ogiltig_geometri"
-		return false, "ogiltig_geometri"
-	end
-	h.id = id
-	hinder[id] = h
-	avvisade[id] = nil
-	return true, nil
-end
-
 local function stangForsok(r: Ritt, f: Forsok, giltighet: string, t: number?)
 	f.giltighet = giltighet
 	f.tUt = t
@@ -192,13 +179,94 @@ local function stangForsok(r: Ritt, f: Forsok, giltighet: string, t: number?)
 	r._aktiva[f.hinderId] = nil
 end
 
---[[ Ett hinder som tagits bort: varje pågående försök vid det stängs. ]]
-function HinderObservation.avregistrera(id: string)
+--[[ Varje pågående försök vid hindret stängs med okänt utfall. Anropas
+	INNAN registret glömmer hindret, så att bommens läge kan läsas. ]]
+local function stangAktiva(id: string, giltighet: string)
 	for _, r in pairs(ritter) do
 		local f = r._aktiva[id]
-		if f then stangForsok(r, f, "hinder_borttaget", nil) end
+		if f then stangForsok(r, f, giltighet, nil) end
 	end
+end
+
+local function antalDelar(id: string): (number, any)
+	local n, en = 0, nil
+	for d in pairs(delar[id] or {}) do n += 1; en = d end
+	return n, en
+end
+
+--[[ Registrerar EN levande del som bär id:t (granskning R1). Registret
+	följer vilka delar som FINNS med varje id:
+	  · en del           → giltigt hinder (om geometrin håller),
+	  · två eller fler   → alla avvisas (`dubbelt_id`), och pågående
+	                       försök stängs som `hinder_ogiltigt`,
+	  · samma del igen   → ingen dubblett; geometrin läses om.
+	Pågående försök ärvs aldrig av en annan geometri. ]]
+local function prova(id: string)
+	local n, del = antalDelar(id)
+	if n == 0 then
+		delar[id] = nil
+		avvisade[id] = nil
+		return false, "saknas"
+	end
+	if n > 1 then
+		stangAktiva(id, "hinder_ogiltigt")
+		hinder[id] = nil
+		avvisade[id] = "dubbelt_id"
+		return false, "dubbelt_id"
+	end
+	local h = geometri(del)
+	if not h then
+		stangAktiva(id, "hinder_ogiltigt")
+		hinder[id] = nil
+		avvisade[id] = "ogiltig_geometri"
+		return false, "ogiltig_geometri"
+	end
+	local fore = hinder[id]
+	if fore and fore._del ~= del then
+		--[[ En annan del har tagit över id:t: det gamla försöket hör till
+			den gamla bommen. ]]
+		stangAktiva(id, "hinder_ogiltigt")
+	end
+	h.id = id
+	hinder[id] = h
+	avvisade[id] = nil
+	return true, nil
+end
+
+function HinderObservation.registrera(del: any): (boolean, string?)
+	local ok, id = pcall(function() return del:GetAttribute("HinderId") end)
+	if not ok or type(id) ~= "string" or id == "" or #id > MAX_ID then
+		return false, "ogiltigt_id"
+	end
+	delar[id] = delar[id] or {}
+	delar[id][del] = true
+	return prova(id)
+end
+
+--[[ En del som försvinner. Referensen släpps, pågående försök vid den
+	stängs som `hinder_borttaget`, och finns exakt en annan del kvar med
+	samma id prövas den — så att en ensam ersättare, eller den kvarvarande
+	efter en dubblett, blir giltig igen. ]]
+function HinderObservation.avregistreraDel(del: any)
+	for id, set in pairs(delar) do
+		if set[del] then
+			set[del] = nil
+			local h = hinder[id]
+			if h and h._del == del then
+				stangAktiva(id, "hinder_borttaget")
+				hinder[id] = nil
+			end
+			prova(id)
+		end
+	end
+end
+
+--[[ Hela id:t bort, med alla dess delar. ]]
+function HinderObservation.avregistrera(id: string)
+	stangAktiva(id, "hinder_borttaget")
 	hinder[id] = nil
+	delar[id] = nil
+	avvisade[id] = nil
 end
 
 function HinderObservation.start(rot: Instance)
@@ -213,9 +281,7 @@ function HinderObservation.start(rot: Instance)
 		end
 	end)
 	rot.DescendantRemoving:Connect(function(d)
-		for id, h in pairs(hinder) do
-			if h._del == d then HinderObservation.avregistrera(id) end
-		end
+		HinderObservation.avregistreraDel(d)
 	end)
 end
 
@@ -264,7 +330,8 @@ local function nyttForsok(r: Ritt, h: Hinder, t: number): Forsok?
 		sampel = 0, luftSampel = 0, markSampel = 0, okandSampel = 0,
 		luftfas = "okand", landning = "okand", overlapp = false, overlappAntal = 0,
 		kontakt = "otillganglig", rivning = false, bom = "okand",
-		_korsat = false, _sidanOm = false, _luftSist = nil, _markEfterLuft = false,
+		_korsat = false, _sidanOm = false, _luftAktiv = false, _markEfterLuft = false,
+		_sida = nil, _su = 0, _sv = 0, _sy = 0,
 	}
 	table.insert(r.forsok, f)
 	r._aktiva[h.id] = f
@@ -296,31 +363,55 @@ function HinderObservation.segment(rittId: string?, fran: Vector3, till: Vector3
 			f = nyttForsok(r, h, t)
 		end
 		if f then
+			local forst = f.sampel == 0
 			f.sampel += 1
+			--[[ LANDNINGSKEDJAN (granskning R1): luft följd DIREKT av mark är
+				en observerad landning. Okänd evidens bryter kedjan — en senare
+				mark återupplivar inte den gamla luften. En ny luft → mark efter
+				luckan räknas igen. ]]
 			if luft == "luft" then
 				f.luftSampel += 1
-				f._luftSist = t
+				f._luftAktiv = true
 			elseif luft == "mark" then
 				f.markSampel += 1
-				if f._luftSist then f._markEfterLuft = true end
+				if f._luftAktiv then f._markEfterLuft = true end
+				f._luftAktiv = false
 			else
 				f.okandSampel += 1
+				f._luftAktiv = false
 			end
-			if korsar and uK then
-				if math.abs(uK) <= h.bredd / 2 then
-					if not f._korsat then
-						f._korsat = true
-						f.tPassage = t
-						f.riktning = if v0 < 0 then "fram" else "bak"
+			--[[ SIDBYTE (granskning R1): passage kräver att hästen BEKRÄFTAT
+				varit på båda sidor, med |v| > SID_TOL. Prov på planet eller i
+				bruset kring det ändrar ingen sida, så att nå planet och vända
+				är inte en passage. Korsningens läge räknas mellan det senaste
+				bekräftade läget på ena sidan och det första på den andra. ]]
+			if forst and math.abs(v0) > HinderObservation.SID_TOL then
+				f._sida, f._su, f._sv, f._sy = (if v0 > 0 then 1 else -1), u0, v0, fran.Y
+			end
+			local sida = if v1 > HinderObservation.SID_TOL then 1
+				elseif v1 < -HinderObservation.SID_TOL then -1 else 0
+			if sida ~= 0 then
+				if f._sida ~= nil and sida ~= f._sida then
+					local k = f._sv / (f._sv - v1)
+					local uX = f._su + k * (u1 - f._su)
+					local yX = f._sy + k * (till.Y - f._sy)
+					if math.abs(uX) <= h.bredd / 2 then
+						if not f._korsat then
+							f._korsat = true
+							f.tPassage = t
+							f.riktning = if f._sida < 0 then "fram" else "bak"
+						end
+						if overlappar(h, uX, 0, yX, halv) then
+							f.overlapp = true
+							f.overlappAntal += 1
+						end
+					else
+						f._sidanOm = true
 					end
-					if overlappar(h, uK, 0, yK or till.Y, halv) then
-						f.overlapp = true
-						f.overlappAntal += 1
-					end
-				else
-					f._sidanOm = true
 				end
-			elseif overlappar(h, u1, v1, till.Y, halv) then
+				f._sida, f._su, f._sv, f._sy = sida, u1, v1, till.Y
+			end
+			if overlappar(h, u1, v1, till.Y, halv) then
 				f.overlapp = true
 				f.overlappAntal += 1
 			end
@@ -392,10 +483,15 @@ end
 function HinderObservation._glomForProv()
 	hinder = {}
 	avvisade = {}
-	sedda = {}
+	delar = {}
 	ritter = {}
 	avslutade = {}
 	gallrade = 0
+end
+
+--[[ Provkrok: hur många levande delar registret håller för ett id. ]]
+function HinderObservation._delarForProv(id: string): number
+	return (antalDelar(id))
 end
 
 function HinderObservation._glomRitterForProv()
