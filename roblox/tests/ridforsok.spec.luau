@@ -301,6 +301,52 @@ do
 	HorseService.dismount(bea)
 end
 
+print("\n── Inaktuell bokföring, stängt försök och modulkontrakt ──")
+do
+	--[[ En inaktuell `byRider`: hästen avregistreras tyst och registreras
+		om, och en annan ryttare sitter upp. Den förra ryttarens bokföring
+		pekar fortfarande på hästen — hon får ändå aldrig nå den nya
+		ryttarens ritt. ]]
+	local ma = sitUpp(anna, hastA)
+	HorseService._glomSessionForProv(hastA)
+	HorseService._registerForProv(hastA)
+	local mb = sitUpp(bea, hastA)
+	check("KONTROLL: bokföringen pekar kvar på hästen", HorseService.horseOf(anna) == hastA and mb ~= ma)
+	local ok, skal = HorseService.startaForsok(anna, mb, 1, "storvolt", "server-referens-1")
+	check("den förra ryttaren når inte den nya ryttarens ritt", ok == false and skal == "forsok.ingen_ritt"
+		and RidForsok.aktivt(mb) == nil, tostring(skal))
+	local okB = HorseService.startaForsok(bea, mb, 1, "storvolt", "server-referens-1")
+	check("den nya ryttaren kan", okB == true)
+	HorseService.dismount(bea)
+	--[[ Städning: `aterforena` rensar en bokföring vars session saknas,
+		så sessionen tas bort en stund och registreras sedan om. ]]
+	HorseService._glomSessionForProv(hastA)
+	HorseService.aterforena(anna)
+	HorseService._registerForProv(hastA)
+	check("KONTROLL: städat", HorseService.horseOf(anna) == nil)
+
+	--[[ Ett avbrutet försök ändras inte av att ritten sedan tar slut. ]]
+	local m = sitUpp(anna, hastA)
+	local _, _, id = HorseService.startaForsok(anna, m, 1, "storvolt", "server-referens-1")
+	HorseService.avbrytForsok(anna, m, 2, id)
+	local fore = HorseService.forsok(id)
+	HorseService.dismount(anna)
+	check("avsittning efter avbrott: försöket behåller sin orsak och bild", HorseService.forsok(id) == fore
+		and fore.orsak == "avbrutet")
+
+	--[[ MODULKONTRAKT (inte produktionsväg): en stängd ritt i modulen,
+		och en slutmarkör som inte får gå bakåt. ]]
+	RidForsok.rittStart("kontrakt", "h", 1)
+	local _, _, kid = RidForsok.starta("kontrakt", 1, "storvolt", "server-referens-1", 5, nil)
+	RidForsok.rittSlut("kontrakt", "x", 0 / 0, nil)
+	local kb = RidForsok.ogonblick(kid)
+	check("MODUL: en ogiltig sluttid ger startens tid, aldrig bakåt eller NaN", kb.slut.t == 5 and kb.start.t == 5)
+	local okS, skalS = RidForsok.starta("kontrakt", 2, "storvolt", "server-referens-1", 6, nil)
+	check("MODUL: en stängd ritt tar inte emot en start", okS == false and skalS == "forsok.inaktuell_ritt")
+	local okA, skalA = RidForsok.avbryt("kontrakt", 3, kid, 6, nil)
+	check("MODUL: en stängd ritt tar inte emot ett avbryt", okA == false and skalA == "forsok.inaktuell_ritt")
+end
+
 print("\n── Gallrad historik, minnestak och ring ──")
 do
 	local m = sitUpp(anna, hastA)
