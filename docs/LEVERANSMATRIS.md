@@ -118,9 +118,10 @@ Kolumner:
 
 | Paket | Källor | Finns | Gap | Beror på | Teknisk acceptans | Slutprov | Status |
 |---|---|---|---|---|---|---|---|
-| INFRA-1 Sparning v2 | denna order, #266 §5/§8, granskning R1 | `Sparning` v1 med `rev` och `passId`-kvitton; `SparService` med UpdateAsync, omförsök, fail-closed läsning | framsteg, resultat och sparade priskvitton — **lokal förberedelse, ingen utdelning** | — | v1→v2 förlustfritt; trasigt och oändligt nekas; kvitton idempotenta även vid omförsök och omkörd transformator; taket prövas mot lagrets rad (hel skrivning nekas); pris utan giltigt resultat karantänsätts; inaktuell skrivare skriver inte över; framtida rad orörd; 19 mutationer röda (`sparning-v2.spec`, BANK_ONLY) | framsteg och kvitton finns kvar efter riktig återanslutning | `BYGGT` (lokalt) |
-| INFRA-2 Händelselogg (serverägd) | #266 §6–7, B3/B4 | `Inspelning.handelse` finns men anropas aldrig; klientägd | deterministisk logg `{t, typ, data}` som bara läggs till; delad av instruktör (observationer) och domare (protokoll) med skilda uppgifter | INFRA-1 | samma händelser ger samma utfall; serialiserbar; klient kan inte skriva poäng | — | `EJ_PÅBÖRJAD` |
-| INFRA-3 Regelprofilformat | #266 D1/E1, G-REGEL | inget | schema och validering: gren, klass, bedömning, version, feltabell, olydnad, tid, lika resultat, placeringstabell, rosetter | INFRA-2 | ogiltig profil nekas; ingen klass får innehåll före G-REGEL | — | `EJ_PÅBÖRJAD` |
+| INFRA-1 Sparning v2 | denna order, #266 §5/§8, granskning R1 | `Sparning` v1 med `rev` och `passId`-kvitton; `SparService` med UpdateAsync, omförsök, fail-closed läsning | framsteg, resultat och sparade priskvitton — **lokal förberedelse, ingen utdelning** | — | v1→v2 förlustfritt; trasigt och oändligt nekas; kvitton idempotenta även vid omförsök och omkörd transformator; taket prövas mot lagrets rad (hel skrivning nekas); pris utan giltigt resultat karantänsätts; inaktuell skrivare skriver inte över; framtida rad orörd; 19 mutationer röda (`sparning-v2.spec`, BANK_ONLY); CODE_REVIEW_PASS `85f4b89`. Taket KAN nås: väntande poster över taket blockerar hela skrivningen, och varje konsument måste hantera det. Återanvänt id för ett avvisat resultat följs upp i D3 | framsteg och kvitton finns kvar efter riktig återanslutning | `GRANSKAT` (grund; konsumenter pending) |
+| INFRA-2A Serverägd ridlogg | order `5843292675` | `Inspelning.handelse` (klientägd, oanropad) | — | INFRA-1 | post per ritt (`RidLogg`), inkopplad i `HorseService`: lyckad uppsittning, accepterad hjälp, trötthetstak, stopp under ritt, avslut en gång (avslutad/avbruten); nej, inaktuella märken och rättelser loggas inte; tak per ritt med reserverat avslut och synligt överflöde; ring om 32 avslutade poster; frysta djupkopior; 13 mutationer röda (`ridlogg.spec`, BANK_ONLY). Ingen persistens. **Mäter inte väg, rytm eller hinder.** | — | `BYGGT` (lokalt) |
+| INFRA-2B Mätning av väg, rytm och hinder | order `5843292675`, #266 B3/B4 | fas och telemetri på klienten | faktisk, serverägd observation av ridväg, rytm och hinder, som händelser i ridloggen | INFRA-2A | fel plats fångas; ingen rytm påstås förrän den mäts; klientens fart och inspelning är inte evidens | — | `EJ_PÅBÖRJAD` |
+| INFRA-3 Regelprofilformat | #266 D1/E1, G-REGEL | inget | schema och validering: gren, klass, bedömning, version, feltabell, olydnad, tid, lika resultat, placeringstabell, rosetter | INFRA-2A | ogiltig profil nekas; ingen klass får innehåll före G-REGEL | — | `EJ_PÅBÖRJAD` |
 | INFRA-4 Hästens assetkontrakt | G-ASSET | K3-mesh och procedurella ben | källa och rättigheter för HRAG, skala, ben, fästpunkter | — | kontraktet dokumenterat och statiskt kontrollerat; ingen uppladdning | — | `EJ_PÅBÖRJAD` |
 | INFRA-5 Bänk mot runtime (#252 DEL D) | #252 | runtime-grinden fungerar (CI-place `121231609290409`) | 0 av 76 specar märkta `BANK_ONLY` eller med runtime-motsvarighet | — | varje spec märkt; ingen kritisk grind vilar bara på bänken | — | `EJ_PÅBÖRJAD` |
 | INFRA-6 Inaktuella dokument | inventering `5842982274` | — | `ASSET-SOURCE-OF-TRUTH.md:139` (rbxmx "saknas"), BESLUT-162 och `Svar.luau:306` ("ingen dagsform") | — | rättat med källa | — | `EJ_PÅBÖRJAD` |
@@ -137,14 +138,14 @@ touch bevaras.
 | Område: skötsel | #266 C, #161 | `Preparation`, momentvägen | framsteg per område (INFRA-1) | INFRA-1 | framsteg skrivs vid avslutad skötsel | lär sig och minns | `EJ_PÅBÖRJAD` |
 | Område: utrustning | #266 C, BESLUT-162 | tackkedjan, felnekande | uppgift, framsteg, vägledning vid fel | INFRA-1, Utrustning | fel nekas med vägledning utan dolt straff | — | `EJ_PÅBÖRJAD` |
 | Område: ledning | #266 C | `LedService`, målzon | uppgiftsslut, framsteg | INFRA-1 | — | R4/R5-ledningsfallen | `EJ_PÅBÖRJAD` |
-| Område: start/halt | #266 C, `RidKanon` halt_skritt | övning, 22 s-försök | uppgiftsbaserat slut (C3) | INFRA-2, B3 | halt på avsedd plats avslutar | — | `EJ_PÅBÖRJAD` |
-| Område: väg | #266 C/B3 | linje = svängradie | position och figur | INFRA-2, B3 | fel plats ger inte rätt linjebetyg | — | `EJ_PÅBÖRJAD` |
+| Område: start/halt | #266 C, `RidKanon` halt_skritt | övning, 22 s-försök | uppgiftsbaserat slut (C3) | INFRA-2A, INFRA-2B, B3 | halt på avsedd plats avslutar | — | `EJ_PÅBÖRJAD` |
+| Område: väg | #266 C/B3 | linje = svängradie | position och figur | INFRA-2A, INFRA-2B, B3 | fel plats ger inte rätt linjebetyg | — | `EJ_PÅBÖRJAD` |
 | Område: tempo | #266 C/B3 | `rytm = nil` (`Lektion.luau:148`) | rytm faktiskt mätt | B3 | ingen rytmbedömning förrän den mäts | — | `EJ_PÅBÖRJAD` |
 | Område: övergångar | #266 C | skritt_trav, trav_skritt | plats för övergången | B3 | — | — | `EJ_PÅBÖRJAD` |
 | Område: volter och serpentiner | #266 C | storvolt, hörn | form, storlek och plats | B3 | — | — | `EJ_PÅBÖRJAD` |
 | Område: galoppfattning | #266 C/§3.1 | galoppsidan följer varvet | igenkänning; egen hjälp om modellen stöder det | B1 | — | — | `EJ_PÅBÖRJAD` |
 | Område: hoppning | #266 C/B4 | generellt hopp | bommar → hinder → linje → bana | B4 | — | — | `EJ_PÅBÖRJAD` |
-| C1 konkreta råd | #266 C1, #236 | temafokus, cooldown 8/14 s, attribution | råd knutna till händelser; bekräftelse av förbättring; länk till replay | INFRA-2, B3 | råd bara när mätningen stöder det | ett råd leder till ett bättre försök | `EJ_PÅBÖRJAD` |
+| C1 konkreta råd | #266 C1, #236 | temafokus, cooldown 8/14 s, attribution | råd knutna till händelser; bekräftelse av förbättring; länk till replay | INFRA-2A, INFRA-2B, B3 | råd bara när mätningen stöder det | ett råd leder till ett bättre försök | `EJ_PÅBÖRJAD` |
 | C2 repliker, mängd tal, text | #266 C2, #234 | kanonens LIVE-tabell | reglage för mängd tal, textlägen; #234:s startreplik och NPC-blick (port via #265) | C1 | SV/EN-nycklar; ingen påhittad orsak | — | `EJ_PÅBÖRJAD` |
 | C3 uppgiftsbaserade lektioner | #266 C3, §5 | 22 s-klocka | uppgiftsslut, tidsgräns bara som reserv, fri ridning | B3 | klockan ensam godkänner aldrig | — | `EJ_PÅBÖRJAD` |
 | C4 färdighetsminne | #266 C4 | inget | framsteg → nästa lektion | INFRA-1 | sparat och återläst | — | `EJ_PÅBÖRJAD` |
@@ -155,7 +156,7 @@ touch bevaras.
 |---|---|---|---|---|---|---|---|
 | D1 klass och regelprofil | #266 D1 | — | profiler för clear round, A, A:0 | INFRA-3, G-REGEL | räkneprov per profil | — | `EJ_PÅBÖRJAD` |
 | D2 tävlingsdagen | #266 D2, §6 | — | tillstånd på servern: anmälan → bangång → framridning → startlista → signal → ritt → resultat → prisutdelning → eftervård; UI för PC och touch | D1, Hus/Byggnader (platser) | ingen klient kan hoppa ett steg | hela dagen | `EJ_PÅBÖRJAD` |
-| D3 domare och protokoll | #266 D3, §7 | webbens `domaRitt` som referens | deterministisk domare på servern ur händelser | INFRA-2, B4 | samma händelser ger samma resultat; fel, vägran, tid, lika resultat | protokollet begripligt | `EJ_PÅBÖRJAD` |
+| D3 domare och protokoll | #266 D3, §7 | webbens `domaRitt` som referens | deterministisk domare på servern ur händelser | INFRA-2A, INFRA-2B, B4 | samma händelser ger samma resultat; fel, vägran, tid, lika resultat | protokollet begripligt | `EJ_PÅBÖRJAD` |
 | D4 placering, rosett och persistens | #266 D4, §8 | kvitton i INFRA-1 | placering efter startfält; rosettordning 1 blågul, 2 blå, 3 gul, 4 röd, 5 grön, 6+ vit; clear round och deltagarminne åtskilda | INFRA-1, D3, D4-RÄTT | inga dubbla priser vid återanslutning, omförsök, tvetydig skrivning eller samtidiga sessioner | pris finns kvar | `EJ_PÅBÖRJAD` |
 | D5 tävlingskläder | #248, #266 D5 | `TavlingskladerService` utan anropare | på/av inom tävlingssammanhanget | D2 | fail-closed återställning | kläder på och av | `EJ_PÅBÖRJAD` |
 | NPC-medtävlare | order 5843082008 | webbens simulering som referens | deterministiska, märkta, samma regelmodell | D3 | resultat ändras inte i efterhand | — | `EJ_PÅBÖRJAD` |
@@ -196,8 +197,8 @@ konstruktion hittas på.
 | Asset: Horse Rigged All Gaits | G-ASSET, #247 | K3-mesh | byte till vald asset; nuvarande hästar och ID:n behålls | INFRA-4 | ID:n oförändrade; kontraktet uppfyllt | ser rätt ut, glider inte | `EJ_PÅBÖRJAD` |
 | B1 ridkänsla | #266 B1 | ridkärna | helhet och galoppfattning | — | — | känns levande | `EJ_PÅBÖRJAD` |
 | B2 animation, hovljud, kamera | #266 B2 | procedurella ben; ljudet läser en `Sounds`-konfiguration som ingen skapar | ljud kopplat; klipp | G-ASSET | ljudkällan finns i bygget | hovljud hörs | `EJ_PÅBÖRJAD` |
-| B3 mätning av väg och rytm | #266 B3 | fas och telemetri | övningsspecifik mätning | INFRA-2 | fel plats fångas | — | `EJ_PÅBÖRJAD` |
-| B4 hoppkedja | #266 B4 | generellt klienthopp | anridning, avsprång, hinderkontakt, landning, händelser på servern | INFRA-2 | bommen som ligger kvar räknas inte som riven | hoppet känns förberett | `EJ_PÅBÖRJAD` |
+| B3 mätning av väg och rytm | #266 B3 | fas och telemetri | övningsspecifik mätning | INFRA-2B | fel plats fångas | — | `EJ_PÅBÖRJAD` |
+| B4 hoppkedja | #266 B4 | generellt klienthopp | anridning, avsprång, hinderkontakt, landning, händelser på servern | INFRA-2B | bommen som ligger kvar räknas inte som riven | hoppet känns förberett | `EJ_PÅBÖRJAD` |
 | F1 personligheter och variation | #266 F1 | temperament i `Config`, tom `HorseStats` | verkliga hästars profiler (underlag krävs) | G-REFERENS | — | — | `EJ_PÅBÖRJAD` |
 | F2 vidare innehåll | #266 F2 | — | fler övningar och klasser | kärnan klar | — | — | `EJ_PÅBÖRJAD` |
 
