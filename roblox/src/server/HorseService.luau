@@ -37,6 +37,7 @@ local HinderObservation = require(script.Parent.HinderObservation)
 local RidPlatsObservation = require(script.Parent.RidPlatsObservation)
 local VoltObservation = require(script.Parent.VoltObservation)
 local RidForsok = require(script.Parent.RidForsok)
+local VoltLektion = require(script.Parent.VoltLektion)
 
 local HorseService = {}
 
@@ -118,6 +119,7 @@ export type Session = {
 	     aldrig på det — den MATCHAR det. Hästen slås ändå upp ur `byRider`
 	     på avsändaren, så en annan spelares märke öppnar ingenting. ]]
 	rittId: string?,
+	voltLektion: any?,
 }
 
 local sessions: { [Model]: Session } = {}
@@ -535,6 +537,7 @@ local function setRider(session: Session, player: Player?, orsak: string?)
 	     är redan satt, så `replikera` når den nya ryttaren med hennes
 	     utgångsläge i stället för att den förra får ett sista svar. ]]
 	nollstallRitt(session)
+	session.voltLektion = nil
 	session.rittId = if player then nyttRittId() else nil
 	--[[ Ridloggen: den gamla ritten stängs (en gång — `avsluta` är ett
 		nej andra gången) och en ny öppnas för den nya ryttaren. ]]
@@ -1762,6 +1765,7 @@ function HorseService.start()
 
 	Net.get("MountRequest").OnServerInvoke = Skopa.grind("MountRequest",
 		HorseService.mountRequest)
+	Net.get("VoltLektion").OnServerInvoke = Skopa.grind("VoltLektion", HorseService.voltLektionsBegaran)
 	--[[ ── ETT NEJ MÅSTE ÅTERFÖRENA, INTE BARA NEKA ──────────────────
 
 	     ChatGPT-re-review av `269bec5`. Klienten river LOKALT innan den
@@ -1816,6 +1820,14 @@ function HorseService.start()
 		accumulator = 0
 		for _, session in sessions do
 			stepStamina(session, step)
+			local lesson = session.voltLektion
+			if lesson and session.rider and lesson.rittId == session.rittId then
+				local rev = lesson.revision
+				VoltLektion.steg(lesson, os.clock())
+				if rev ~= lesson.revision then
+					Net.get("VoltLektionSync"):FireClient(session.rider, VoltLektion.bild(lesson))
+				end
+			end
 		end
 	end)
 end
@@ -1911,6 +1923,20 @@ function HorseService.forsokVolt(forsokId: string?): (any, string?)
 	local f = RidForsok.ogonblick(forsokId)
 	if not f then return nil, "forsok.okant" end
 	return RidForsok.voltUnderlag(forsokId, VoltObservation.ogonblick(f.rittId))
+end
+
+function HorseService.voltLektionsBegaran(player: any, rittId: any, op: any, seq: any): (boolean, string?, any)
+	if type(rittId) ~= "string" or #rittId > 128 then return false, "stale", nil end
+	local session = forsokRitt(player, rittId)
+	if not session then return false, "stale", nil end
+	if op ~= "sync" and op ~= "start" and op ~= "retry" and op ~= "finish" then
+		return false, "unknown", nil
+	end
+	if not session.voltLektion then
+		session.voltLektion = VoltLektion.ny(rittId, player.UserId,
+			tostring(session.rig.model:GetAttribute("HorseId") or session.rig.model.Name))
+	end
+	return VoltLektion.begar(session.voltLektion, op, seq, os.clock())
 end
 
 return HorseService

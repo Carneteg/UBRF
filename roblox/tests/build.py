@@ -176,6 +176,7 @@ FORBEREDELSE = SPEL + [
     ("RidPlatsObservation", "src/server/RidPlatsObservation.luau"),  # #264 INFRA-OBS-PLATS1
     ("VoltObservation", "src/server/VoltObservation.luau"),  # #264 INFRA-VOLT1
     ("RidForsok", "src/server/RidForsok.luau"),  # #264 INFRA-FORSOK1
+    ("VoltLektion", "src/server/VoltLektion.luau"),
     # AKTOREN (#252 DEL C) FORE tjansterna: GameplayService, HorseService
     # och LedService fragar den om aktoren har en klient att skicka till.
     ("Aktor",        "src/shared/HorseCore/Aktor.luau"),
@@ -295,6 +296,7 @@ PARITET = [
     ("UgnetaGestalt",    "src/client/UgnetaGestalt.luau"),
     ("ReplayController", "src/client/ReplayController.luau"),
     # Kedjan som binder ihop dem. Utan den var HUD:en bara anropbar.
+    ("VoltLektionController", "src/client/VoltLektionController.luau"),
     ("LektionController", "src/client/LektionController.luau"),
 ]
 
@@ -375,6 +377,7 @@ KLIENT = SPEL + [
     ("Ridhusplats",   "src/shared/HorseCore/Ridhusplats.luau"),  # #264 INFRA-PLATS1: UgnetaGestalt require:ar den
     ("UgnetaGestalt",       "src/client/UgnetaGestalt.luau"),
     ("ReplayController",    "src/client/ReplayController.luau"),
+    ("VoltLektionController", "src/client/VoltLektionController.luau"),
     ("LektionController",   "src/client/LektionController.luau"),
     # Kontrollhjalpen: bara init.client.luau require:ar den, sa den behovs
     # bara i KLIENT. Star har och inte i PARITET av det skalet -- inte av
@@ -437,6 +440,7 @@ KOHERENS = GEOMETRI + [
     ("RidPlatsObservation", "src/server/RidPlatsObservation.luau"),  # #264 INFRA-OBS-PLATS1
     ("VoltObservation", "src/server/VoltObservation.luau"),  # #264 INFRA-VOLT1
     ("RidForsok", "src/server/RidForsok.luau"),  # #264 INFRA-FORSOK1
+    ("VoltLektion", "src/server/VoltLektion.luau"),
     # AKTOREN (#252 DEL C) FORE tjansterna: GameplayService, HorseService
     # och LedService fragar den om aktoren har en klient att skicka till.
     ("Aktor",        "src/shared/HorseCore/Aktor.luau"),

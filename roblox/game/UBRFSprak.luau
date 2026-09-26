@@ -613,6 +613,78 @@ Sprak.text = {
 		sv = "Prova igen",
 		en = "Try again",
 	},
+	["voltlektion.choose"] = {
+		sv = "Träna volt",
+		en = "Practice a circle",
+	},
+	["voltlektion.lessons"] = {
+		sv = "Andra övningar",
+		en = "Other exercises",
+	},
+	["voltlektion.start"] = {
+		sv = "Starta volten",
+		en = "Start circle",
+	},
+	["voltlektion.retry"] = {
+		sv = "Prova igen",
+		en = "Try again",
+	},
+	["voltlektion.finish"] = {
+		sv = "Avsluta voltlektionen",
+		en = "Finish circle lesson",
+	},
+	["voltlektion.sync"] = {
+		sv = "Hämta lektionsläget",
+		en = "Check lesson state",
+	},
+	["voltlektion.intro"] = {
+		sv = "Rid en volt kring mitten av dressyrbanan. Välj själv åt vilket håll.",
+		en = "Ride a circle around the centre of the dressage arena. Choose either direction.",
+	},
+	["voltlektion.approach"] = {
+		sv = "Rid fram till det gröna bandet. Där börjar vi följa ditt varv.",
+		en = "Ride to the green band. We will follow your circle from there.",
+	},
+	["voltlektion.ride"] = {
+		sv = "Titta runt volten och följ bandet hela vägen.",
+		en = "Look around the circle and follow the band all the way.",
+	},
+	["voltlektion.line"] = {
+		sv = "Hitta bandet igen, så börjar vi ett nytt varv tillsammans.",
+		en = "Find the band again and we will start a fresh circle together.",
+	},
+	["voltlektion.unknown"] = {
+		sv = "Jag tappade en bit av din väg. Hitta bandet igen för ett nytt varv.",
+		en = "I missed part of your path. Find the band again for a fresh circle.",
+	},
+	["voltlektion.complete"] = {
+		sv = "Volt klar! Du red ett helt varv och höll dig nära voltlinjen.",
+		en = "Circle completed! You rode a full circle and stayed close to the line.",
+	},
+	["voltlektion.timeout"] = {
+		sv = "Vi har inget helt varv att bedöma ännu. Ta en paus eller prova igen.",
+		en = "We do not have a full circle to assess yet. Take a break or try again.",
+	},
+	["voltlektion.closed"] = {
+		sv = "Voltlektionen är avslutad.",
+		en = "The circle lesson has ended.",
+	},
+	["voltlektion.pending"] = {
+		sv = "Väntar på lektionsbesked…",
+		en = "Waiting for the lesson response…",
+	},
+	["voltlektion.network"] = {
+		sv = "Lektionsbeskedet saknas. Hämta läget igen eller avsluta.",
+		en = "The lesson response is missing. Check the state again or finish.",
+	},
+	["voltlektion.place"] = {
+		sv = "Rid in på dressyrbanan innan du startar volten.",
+		en = "Enter the dressage arena before starting the circle.",
+	},
+	["voltlektion.active"] = {
+		sv = "Ett ridförsök pågår redan. Avsluta det innan du börjar ett nytt.",
+		en = "A riding attempt is already active. Finish it before starting another.",
+	},
 	["ugneta.se_ritten"] = {
 		sv = "Se ritten",
 		en = "Watch the ride",

@@ -68,6 +68,7 @@ local Inspelning = require(game:GetService("ReplicatedStorage").HorseCore.Inspel
 local Sprak = require(game:GetService("ReplicatedStorage").HorseCore.Sprak)
 
 local LektionController = {}
+local VoltLektionController = require(script.Parent.VoltLektionController)
 
 local LIVE_CD = require(game:GetService("ReplicatedStorage").HorseCore.RidKanon).UGNETA.LIVE_CD
 
@@ -177,6 +178,7 @@ end
      som spöke. Ridningen fryses av init.client medan panelen är uppe —
      inte här: den här modulen äger lektionen, inte rörelsen. ]]
 local function oppnaReplay()
+	if VoltLektionController.tarOver() then return end
 	local id = senasteOvning
 	if not id then return end
 	local lista = inspelningar[id]
@@ -185,6 +187,7 @@ local function oppnaReplay()
 end
 
 local function fortsattning()
+	if VoltLektionController.tarOver() then return end
 	local p = pass
 	if not p then return end
 	--[[ En ny mätning börjar. Inspelaren nollas HÄR, i samma handling som
@@ -300,6 +303,7 @@ function LektionController.start(ridhus: Instance?, marke: any)
 	     hoppar över omridningen, inte bedömningen. Lifecyclens regel ligger
 	     i Lektion.hoppaOver — HUD:en flyttar inte passet själv. ]]
 	UgnetaController.vidVidare(function()
+		if VoltLektionController.tarOver() then return end
 		local p = pass
 		if not p then return end
 		inspelare = nil
@@ -311,9 +315,17 @@ function LektionController.start(ridhus: Instance?, marke: any)
 		liveCd, liveSagt = 0, ""
 	end)
 	UgnetaGestalt.visa(ridhus)
+	VoltLektionController.start(marke, function()
+		pass = Lektion.nyttPass()
+		tema, lage = nil, "ny"
+		inspelare, senasteOvning = nil, nil
+		inspelningar = {}
+	end)
+	UgnetaController.satLektionsVal(VoltLektionController.panel)
 end
 
 function LektionController.pagar(): boolean
+	if VoltLektionController.tarOver() then return VoltLektionController.lektion() end
 	return pass ~= nil and not (pass :: Lektion.Pass).klar
 end
 
@@ -329,6 +341,7 @@ end
      tolkar tangenten, så att samma knapp kan betyda något annat när
      inget kort står uppe. ]]
 function LektionController.vantar(): boolean
+	if VoltLektionController.tarOver() then return false end
 	return pass ~= nil and UgnetaController.vantar()
 end
 
@@ -336,6 +349,7 @@ end
      går in genom knappens eget Activated. Returnerar false när det inte
      fanns någon väntan — då har tangenten inte betytt något här. ]]
 function LektionController.fortsatt(): boolean
+	if VoltLektionController.tarOver() then return false end
 	if not pass then return false end
 	return UgnetaController.fortsatt()
 end
@@ -344,11 +358,13 @@ end
      `fortsatt`: returnerar false när det inte fanns något val att göra, så
      att tangenten faller igenom till sin vanliga betydelse. ]]
 function LektionController.replay(): boolean
+	if VoltLektionController.tarOver() then return false end
 	if not pass then return false end
 	return UgnetaController.replay()
 end
 
 function LektionController.gaVidare(): boolean
+	if VoltLektionController.tarOver() then return false end
 	if not pass then return false end
 	return UgnetaController.gaVidare()
 end
@@ -416,6 +432,8 @@ end
 --[[ ETT STEG. Anropas varje bildruta med ritt-telemetrin. ]]
 function LektionController.steg(dt: number, tm: { [string]: any }?,
 	pose: { [string]: any }?)
+	VoltLektionController.steg(dt)
+	if VoltLektionController.tarOver() then return end
 	local p = pass
 	if not p or p.klar then return end
 	UgnetaController.steg(dt)
@@ -526,6 +544,8 @@ end
      chipet släcks, kortet stängs, den väntande fortsättningen kastas och
      gestalten tas bort. ]]
 function LektionController.avbryt(skal: string?)
+	local separatLektion = VoltLektionController.tarOver()
+	VoltLektionController.avbryt()
 	--[[ ── EFTERRITTENS SUMMERING (Teaching Loop) ──────────────────
 
 		Bara efter en avsittning spelaren själv bad om, och bara om det
@@ -548,7 +568,7 @@ function LektionController.avbryt(skal: string?)
 		`pass` nollas tre rader ner, och då finns historiken inte kvar
 		att summera. En ögonblicksbild överlever rivningen; en referens
 		till `pass` hade inte gjort det. ]]
-	local summering = Ugneta.efterrittFor(skal, if pass then pass.historik else nil)
+	local summering = if separatLektion then nil else Ugneta.efterrittFor(skal, if pass then pass.historik else nil)
 
 	--[[ SPARAS FÖR EN EVENTUELL ÅTERFÖRENING. Se noten vid `avbrutet`.
 	     Rivningen nedan sker oavsett — det här är en KOPIA av vad som

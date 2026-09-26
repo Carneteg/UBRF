@@ -259,6 +259,21 @@ function RidForsok.ogonblick(forsokId: string?): any
 	return if f then f.bild else nil
 end
 
+-- Server-only consumers allocate independently of untrusted request sequences.
+function RidForsok.nastaSekvens(rittId: string): number?
+	local r = ritter[rittId]
+	return if r and r.oppen then r.hogstaSekvens + 1 else nil
+end
+
+function RidForsok.slutfor(rittId: string, forsokId: string, orsak: string,
+	rittTid: number, volt: any): boolean
+	local r = ritter[rittId]
+	if not r or not r.oppen or not r.aktivt or r.aktivt.forsokId ~= forsokId then return false end
+	if orsak ~= "slutford" and orsak ~= "tidsgrans" then return false end
+	if not andligt(rittTid) then return false end
+	return stang(r, orsak, rittTid, volt)
+end
+
 function RidForsok.aktivt(rittId: string?): any
 	local r = rittId and ritter[rittId]
 	return if r and r.aktivt then r.aktivt.bild else nil

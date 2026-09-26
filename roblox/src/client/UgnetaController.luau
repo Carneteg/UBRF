@@ -61,6 +61,12 @@ local TouchControls = require(script.Parent.TouchControls)
 local CoachBanner = require(script.Parent.CoachBanner)
 
 local UgnetaController = {}
+local lektionsVal: (() -> any)? = nil
+
+-- Explicit panel choices do not participate in help-to-continue or vantarPa.
+function UgnetaController.satLektionsVal(fn: (() -> any)?)
+	lektionsVal = fn
+end
 
 local player = Players.LocalPlayer
 
@@ -1050,6 +1056,8 @@ end
 	  4. ridraden utanför lektionen (nyckel + argument, översätts vid ritning).
 	Uppgiftens nej står INTE här: det hör till handlingen, i panelen. ]]
 local function lararMeddelande(): string?
+	local extra = if lektionsVal then lektionsVal() else nil
+	if extra and extra.ersatt then return extra.text end
 	local c = chip
 	--[[ Kommentaren slogs upp ur sin nyckel när den kom, på det språk som
 	     gällde då; ett språkbyte släcker den (`sprakBytt`), så den står
@@ -1233,6 +1241,8 @@ function UgnetaController.satVard(fn: (() -> ())?)
 end
 
 function UgnetaController.panel(): any
+	local extra = if lektionsVal then lektionsVal() else nil
+	if extra and extra.ersatt then return extra end
 	local knappar = {}
 	local v = valrad
 	if v and v.Visible then
@@ -1265,6 +1275,9 @@ function UgnetaController.panel(): any
 	     visar den så länge lektionen pågår. ]]
 	local m, d = CoachBanner.text()
 	local ovning = if m ~= "" and d ~= "" then (m .. " — " .. d) else (m .. d)
+	if extra then
+		for _, k in ipairs(extra.knappar or {}) do table.insert(knappar, k) end
+	end
 	return { text = text, knappar = knappar, vantar = vantarPa, ovning = ovning }
 end
 

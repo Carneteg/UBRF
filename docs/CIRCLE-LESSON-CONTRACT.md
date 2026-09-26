@@ -1,6 +1,8 @@
 # One playable circle lesson
 
-Status: DESIGN_R1_READY_FOR_REVIEW, 2026-09-26. No gameplay code changed yet.
+Status: implementation after [conditional DESIGN_PASS](https://github.com/Carneteg/UBRF/pull/264#issuecomment-5848762860)
+on00ec03a, 2026-09-26. The conditions below are mandatory code-review cases,
+not a code or gameplay PASS. No further design-only round is required.
 Base: 24eae8df2eb5477f01d22c728d8b3b68037d3ade.
 Authority: Tobias' [playable-slice decision](https://github.com/Carneteg/UBRF/pull/264#issuecomment-5848553215).
 Codex implements; Claude reviews independently; Tobias accepts the experience.
@@ -24,6 +26,9 @@ This is a visible session-local lesson outcome, NOT currency, XP, an unlock,
 a saved achievement or product acceptance. Retry and Finish are explicit choices.
 Finishing returns to free riding; the existing lesson sequence remains reachable.
 No automatic advance/retry; no requirement to attempt twice.
+Start/Retry/Finish use explicit buttons, never the legacy vantar()/fortsatt()
+auto-action on a riding aid. A drive aid with any of these choices visible sends
+NO lesson request. Preserve the legacy help-to-continue behaviour for other lessons.
 
 ## Existing paths and bounded changes
 
@@ -88,6 +93,10 @@ a monotonically newer section. This deliberately excludes both pre-button riding
 and the approach. No yield between deciding to arm and setting the boundary.
 Do not re-arm every sample while inside the band: `approach -> baseline -> riding`
 is a one-time transition until an explicit recovery or a new attempt.
+The baseline flag is consumed by the next fresh same-ride observation regardless
+of status, including a break or baseline. It must not eat a later valid segment.
+Before sufficient observations expose aggregate metrics, the actual point-radius
+guard still applies; nil aggregate metrics never mean zero or a successful circle.
 
 Only the current armed section can succeed. If its maximum radial deviation >4m,
 opposite angle >pi/4, or a complete net turn fails the other success thresholds,
