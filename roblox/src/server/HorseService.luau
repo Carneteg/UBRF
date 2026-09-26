@@ -1356,9 +1356,10 @@ local function stepStamina(session: Session, dt: number)
 			local okGolv, luft = pcall(function(): string?
 				local golv = hum and hum.FloorMaterial
 				if golv == nil then return nil end
-				--[[ Jämför namnet: `Enum.Material.Air.Name == "Air"` i motorn,
-					och bänkens strikta materiallista (byggmaterial) behöver
-					inte få ett material som ingen byggnad ska använda. ]]
+				--[[ Jämför NAMNET: i motorn heter luftmaterialet "Air". Då
+					behöver varken koden eller bänkens strikta materiallista
+					(byggmaterial, `kolla-material`) nämna ett material som
+					ingen byggnad ska använda. ]]
 				return if golv.Name == "Air" then "luft" else "mark"
 			end)
 			if not okGolv then luft = nil end
