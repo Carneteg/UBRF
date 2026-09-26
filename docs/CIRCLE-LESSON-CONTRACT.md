@@ -1,6 +1,6 @@
 # One playable circle lesson
 
-Status: DESIGN_READY_FOR_REVIEW, 2026-09-26. No gameplay code changed yet.
+Status: DESIGN_R1_READY_FOR_REVIEW, 2026-09-26. No gameplay code changed yet.
 Base: 24eae8df2eb5477f01d22c728d8b3b68037d3ade.
 Authority: Tobias' [playable-slice decision](https://github.com/Carneteg/UBRF/pull/264#issuecomment-5848553215).
 Codex implements; Claude reviews independently; Tobias accepts the experience.
@@ -12,7 +12,8 @@ From the existing mounted lesson presentation the player can explicitly choose
 "Practice a circle" (SV/EN). No prerequisite completion of other lessons. This
 selects a single optional lesson, not a new mandatory onboarding sequence.
 Ugneta invites one circle around the existing dressage-layout centre, in either
-direction. A non-colliding client guide shows the actual server reference;
+direction. A non-colliding client guide shows the actual server reference as a
+tolerance band, clipped visually to the arena interior (not a line in the wall);
 it does not move the horse, change arena geometry or create an asset dependency.
 No attempt starts until the player presses Start. Free riding remains available.
 
@@ -73,28 +74,65 @@ FORSOK1 excludes the whole observation section that was already running at start
 Ordinary riding inside the arena may keep that section alive indefinitely. Simply
 calling startaForsok and waiting is therefore not a playable consumer.
 
-On a genuinely NEW accepted lesson start, record the existing FORSOK1 marker,
-archive (do not reset/rewrite) the prior VOLT1 section, and mark a fresh baseline.
-The first server observation after start is baseline-only: discard its crossing
-segment, since its start endpoint can predate the button request. Only subsequent
-segments belong to the attempt. Keep monotonic section IDs and prior history.
-No yield between accepted start and boundary setup. Rejected or duplicate starts
-must not split any section. This is one lesson integration hook, not INFRA-3.
-An alternative must demonstrate the same usable fresh-start invariant without
-making the player leave/re-enter the arena or silently crediting pre-start data.
+Start first opens FORSOK1 with its existing marker, then puts the lesson in
+`approach` state. It does not split observations or credit the approach path.
+Only a genuinely new accepted attempt enters this state; rejected and duplicate
+starts never change a section, arm state, marker or existing result.
+
+After each server observation, while approaching, require a fresh valid current
+point in the reference frame with abs(radius - referenceRadius) <=2m. Then archive
+the old VOLT1 section without rewriting it, record its highest ID as `armAfter`,
+pin the frame/centre/radius and set a fresh-baseline flag. The next observation
+is baseline-only (discard the crossing segment). Subsequent known segments start
+a monotonically newer section. This deliberately excludes both pre-button riding
+and the approach. No yield between deciding to arm and setting the boundary.
+Do not re-arm every sample while inside the band: `approach -> baseline -> riding`
+is a one-time transition until an explicit recovery or a new attempt.
+
+Only the current armed section can succeed. If its maximum radial deviation >4m,
+opposite angle >pi/4, or a complete net turn fails the other success thresholds,
+archive that section, clear armed evidence and return to approach with one useful
+tip. Centre/gap/teleport/reference/frame breaks likewise clear the armed section;
+never join it to a later section. A later qualifying point can arm again, but
+only a fresh full circle counts. Re-arming does not extend the 120s attempt deadline.
+An outside point beyond4m also invalidates the current arm even if its segment
+midpoint happens to be within tolerance. Approach and incomplete attempts are
+not bad-riding grades. The player need not leave the arena or press Retry to recover.
+
+FORSOK1's start marker stays immutable. Store armAfter separately in the lesson;
+the chosen section must be newer than BOTH start.voltHogsta and armAfter. No callback
+inside RidForsok.starta or marker relocation is required: its markor reads the
+highest ID from BOTH archived and current sections. Archiving an existing section
+does not change that ID; only creating the next section increments it. This fixes
+ordering explicitly without adding an unnecessary start-hook abstraction.
 
 At success, freeze the selected evidence and close the attempt exactly once before
 sending the outcome. Current API only has `avbrytForsok` (reason `avbrutet`): do not
 mislabel successful completion as cancellation. Reuse its close/snapshot primitive
-with a server-only completion path and distinct reason; no new result-store layer.
+with one server-only close path restricted to `slutford` and `tidsgrans`, in addition
+to existing explicit `avbrutet` and lifecycle `ritt_slut:*`; no result-store layer.
+Finish/cancel during an active attempt uses `avbrutet`. Deadline uses `tidsgrans`.
+Before evaluation/close require that this exact attempt is still active and owned
+by the current session. Teardown/cancel already accepted wins over later success;
+at now >= deadline, timeout wins over a newly sampled candidate. Evaluate, snapshot
+the exact chosen section, close and publish without yielding. Failed close means
+no success. A late Finish after a frozen success only dismisses the lesson surface.
 FORSOK1 remains lifecycle-only (`bedomning=ingen`); lesson verdict is separate.
 An externally cancelled/closed attempt is never automatically promoted to success.
 Later riding, retry or history pruning cannot change the frozen lesson result.
 
 ## Assessment v1: explicit gameplay assumptions
 
-Use only `forsokVolt` from the current attempt, `server-referens-1`, correct rider,
-horse, ride and reference frame. Success requires ONE fresh uninterrupted known
+Read the current immutable `HorseService.volt(rittId)` snapshot after server sampling,
+not historical aggregates. Validate its version `server-referens-1`, rider, horse,
+ride and pinned reference/frame against the active FORSOK1/lesson. Its `pagar` section
+must be the armed fresh section above. Never select an archived completed circle.
+`forsokVolt` remains a strict historical API: a pruned earlier section can make that
+API unavailable without invalidating a fully observed current armed section. Do not
+weaken its error semantics or require old history to score a new circle. Freeze the
+selected section in the bounded lesson result together with its identities/markers;
+FORSOK1 still freezes its own close snapshot. Later reads do not recompute a verdict.
+Success requires ONE fresh uninterrupted known
 section, `underlag=tillrackligt`, at least one net revolution, mean radial deviation
 <=2.0m, maximum radial deviation <=4.0m, return distance <=3.0m and opposite-direction
 angle <=pi/4. Reference radius remains the existing RidKanon value (currently10m).
@@ -102,7 +140,7 @@ Limits are provisional training tolerances, NOT official riding rules or measure
 venue dimensions. Test equality and either side of every limit. Do not average
 across sections or invent missing values. Both directions must pass symmetrically.
 
-Unknown/insufficient/pruned evidence means no verdict, never zero error. Centre
+Unknown/insufficient/missing current evidence means no verdict, never zero error. Centre
 crossings, frame changes, sample gaps and teleports cannot join arcs. Recovery
 requires an entirely fresh qualifying section. Partial arc + elapsed time or
 standing still never completes the lesson. No deadline produces success.
@@ -111,6 +149,11 @@ sample freeze cannot keep an attempt alive forever. Finish/cancel remains usable
 No rhythmic/balance/hand praise is inferred from circle geometry. Praise only what
 is observed; use one useful next action for a wide/incomplete/unknown circle.
 Live guidance is throttled, not a repeated stream of corrections.
+
+The nominal 20m circle spans the nominal20m arena width. Neither feedback nor
+completion demands zero radial error at the walls. Test an inward-offset path
+within these tolerances in both directions. Actual horse clearance is unmeasured:
+do not turn the reviewer's approximate0.5-1m estimate into a physical fact.
 
 Accepted dismount/death/leave/horse teardown closes the attempt, clears guide and
 pending UI, and cannot award completion afterwards. A denied dismount preserves
@@ -123,19 +166,29 @@ must not share state, evidence, messages or results.
 1. Real HorseService path: explicit start, fresh baseline, clockwise and opposite
    circle, frozen success, visible keyed outcome, retry new ID and Finish exit.
 2. Pre-start full/half circle + post-start remainder cannot pass; a fresh full
-   circle after pressing Start while already in the arena can pass.
+   circle after pressing Start while already in the arena can pass. Start at A
+   far from the line, approach then circle must pass; one >4m excursion must not
+   pass that section, but recovery and a fresh circle can pass without Retry.
 3. Half circles linked through centre, reverse arcs, stationary timeout, wrong
    centre/radius, frame replacement, sparse samples and old version cannot pass.
 4. No mutation or false success from other player/old ride, duplicate/reordered
    requests, sequence reuse with different payload, lost reply or stale callback.
 5. Cancellation vs success ordering, accepted/denied dismount, death, teardown,
    retry and ring eviction retain exactly the correct frozen result or no result.
+   More than8 discarded sections followed by a fresh circle must still pass.
+   Deadline equality means tidsgrans, not slutford; Finish means avbrutet. Denied
+   and duplicate starts preserve the exact current section and arm state.
 6. Client integration: start refusal/pending/recovery, language switch in each
    state, existing mouse/keyboard/touch controls, no movement lock while riding,
    no legacy 22-second verdict/unsupported replay; other exercises regressions.
 7. Isolated falsification removes start boundary, enables legacy timer success,
    joins unknown sections, swaps ownership and reads a live result after close:
    each mutation must be killed with unchanged positive controls.
+
+Include exact arming threshold and outward-endpoint cases, repeated in-band samples
+without endless baseline resets, failed full-turn recovery, an inward wall-clearance
+path and immutable result after pruning. These are proposed executable acceptance
+cases, not claims of tests already run.
 
 Use focused service/client tests first, then the shared full relevant delivery
 chain and exact-SHA independent code review. Design review is not code PASS.
