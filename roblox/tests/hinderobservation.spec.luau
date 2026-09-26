@@ -235,6 +235,15 @@ do
 	check("okänd markevidens: luftfas och landning okända, aldrig lyckade",
 		sist.utfall == "passage" and sist.luftfas == "okand" and sist.landning == "okand",
 		sist.luftfas .. "/" .. sist.landning)
+
+	--[[ Luft observerad, sedan INGEN markevidens: landningen är okänd,
+		inte observerad. ]]
+	rid(hastA, H, 0, -10, 10, 2, function(v) return if v < -2 then "Sand" elseif v <= 2 then "Air" else nil end)
+	u = forsokVid(m, "ridhus_hinder_bla_24")
+	sist = u[#u]
+	check("luft sedan okänt: landningen är okänd, inte lyckad",
+		sist.utfall == "passage" and sist.luftfas == "observerad" and sist.landning == "okand",
+		sist.luftfas .. "/" .. sist.landning)
 	HorseService.dismount(anna)
 end
 
