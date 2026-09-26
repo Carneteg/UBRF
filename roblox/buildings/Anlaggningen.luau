@@ -2099,6 +2099,9 @@ local function byggRidhusInre(model: Model, base: CFrame)
 		R.sandFarg or INRE.sand, Enum.Material.Sand)
 	sand.CanCollide = false
 	sand:SetAttribute("Matt", string.format("%.0fx%.1f", b.w, b.h))
+	--[[ #264 INFRA-PLATS1: bara METADATA — den stabila identitet som
+		`Ridhusplats` löser upp platsen ur. Läge, mått och material orörda. ]]
+	sand:SetAttribute("PlatsId", "ridhus_bana")
 	if R.dressyr then
 		local dr = R.dressyr
 		sand:SetAttribute("Dressyr", string.format("%.0fx%.0f", dr.w, dr.h))
@@ -2108,6 +2111,7 @@ local function byggRidhusInre(model: Model, base: CFrame)
 		layout.CanCollide = false
 		layout.Transparency = 1
 		layout:SetAttribute("Forankring", dr.forankring or "A")
+		layout:SetAttribute("PlatsId", "ridhus_dressyr")
 	end
 
 	-- Sargen runt banan, med porten som en lucka i norra kortsidan.

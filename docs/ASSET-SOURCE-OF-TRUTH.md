@@ -133,8 +133,8 @@ och kollisionsfritt omskrivna referenser — se `tools/testa-modellimport.py`.
 `tools/kolla-hastmodell.py` vaktar resultatet och slår på sig själv så
 snart `default.project.json` mappar modellen.
 
-**Kvarvarande blockerare:** själva filen. `k3` finns bara i startplacen,
-och den vägen ut kräver Studio. Se `[REFERENCE GAP]` nedan.
+*(historiskt, 2026-09-24 — löst, se nedan)* **Kvarvarande blockerare:** själva filen. `k3` fanns då bara i startplacen,
+och den vägen ut krävde Studio. Se `[REFERENCE GAP]` nedan.
 
 - **LÖST, verifierat 2026-09-26 (INFRA-4A):** `roblox/assets/hastvisualer-k3.rbxmx`
   finns i repot sedan `e9c28d5`: 238 888 byte, SHA256
@@ -211,7 +211,8 @@ Det bevisar ändå inte att en lokal fil är just den filen.
 
 **Resultat:**
 - `Downloads\Horse Rigged All Gaits.blend` **finns inte**. Ingen `.blend`-fil
-  finns någonstans i Downloads.
+  finns inom det sökta djupet (två nivåer). Djupare mappar och andra
+  enheter är inte sökta, så frånvaron där är inte belagd.
 - `Downloads\UBRF-20260828T143052Z-1-001.zip` (Drive-export, 297 304 470 byte)
   innehåller `UBRF/Models/Blends/Horse.blend` (2 850 084 byte),
   `Horse_White.blend` och tio andra djur, med `UBRF/Models/License.txt`:
@@ -222,7 +223,8 @@ Det bevisar ändå inte att en lokal fil är just den filen.
     den valda filen.
 - `download.zip`, `OneDrive_2026-08-03.zip` och `UBRF-main.zip` innehåller ingen
   `.blend`-fil och inget material från BlendSwap.
-- Desktop och repot innehåller ingen `.blend`-fil.
+- Ingen `.blend`-fil finns på Desktop inom tre nivåer, och ingen bland repots spårade filer.
+- Kontrollerade platser för Blender: `PATH` och `C:\Program Files\Blender Foundation`.
 
 Sökningen är avslutad. Ingen ny sökning görs utan en ny ledtråd.
 
@@ -232,8 +234,12 @@ Blender är inte installerat. Python saknar `bpy` och `blender_asset_tracer`.
 Ingen installation har gjorts, så verktyget är `BLOCKED` tills filen finns.
 
 När filen finns ska en säker statisk läsning göras i en egen granskningsmapp.
-Filen får inte öppnas i ett Blender-läge som kör inbäddade skript: använd till
-exempel `--factory-startup` med avstängd autorun, eller en ren blend-parser.
+Filen får inte öppnas i ett Blender-läge som kör inbäddade skript. Det kräver
+uttryckligen `--disable-autoexec` FÖRE filargumentet, till exempel
+`blender --background --disable-autoexec --factory-startup <fil> --python-expr …`.
+`--factory-startup` ensamt stänger INTE av inbäddade skript (Blenders manual,
+Command Line Arguments, 5.1). Alternativet är en ren blend-parser som inte kör
+kod ur filen.
 
 ### Status per område
 
@@ -259,9 +265,11 @@ exempel `--factory-startup` med avstängd autorun, eller en ren blend-parser.
 
 1. **Filen:** `Horse Rigged All Gaits.blend` (eller BlendSwap-zipen) på en
    angiven plats. Nedladdningen, cirka 584 MB och med konto, görs inte i 4A.
-2. **Rättsunderlag:** ett beslut om hur den oklara kedjan CC0/CC-BY ska
-   hanteras. Till exempel att attribuera Tarnyloo, att bara använda
-   animationerna efter en jämförelse, eller att avstå.
+2. **Rättsunderlag:** BELÄGG för rättigheterna per beståndsdel, till exempel
+   upphovspersonernas licenstext med version. Attribution eller ett riskbeslut
+   ersätter INTE belagda rättigheter. Proveniens och licens per beståndsdel
+   förblir `[REFERENCE GAP]` tills belägg finns, och inget generellt
+   riskgodkännande begärs.
 3. **Verktyget:** tillåtelse att installera Blender (gratis) eller ett
    parserbibliotek för den statiska läsningen.
 

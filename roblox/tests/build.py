@@ -287,6 +287,7 @@ PARITET = [
     #[[ #264: sprakflaggan fragar servern genom Networking. ]]
     ("Networking",       "src/shared/HorseCore/Networking.luau"),
     ("UgnetaController", "src/client/UgnetaController.luau"),
+    ("Ridhusplats",   "src/shared/HorseCore/Ridhusplats.luau"),  # #264 INFRA-PLATS1: UgnetaGestalt require:ar den
     ("UgnetaGestalt",    "src/client/UgnetaGestalt.luau"),
     ("ReplayController", "src/client/ReplayController.luau"),
     # Kedjan som binder ihop dem. Utan den var HUD:en bara anropbar.
@@ -299,6 +300,7 @@ PARITET = [
 # huset, vilket ar precis det placeringen undviker.
 GESTALT = BYGGE + [
     ("RidKanon",      "src/shared/HorseCore/RidKanon.luau"),
+    ("Ridhusplats",   "src/shared/HorseCore/Ridhusplats.luau"),  # #264 INFRA-PLATS1: UgnetaGestalt require:ar den
     ("UgnetaGestalt", "src/client/UgnetaGestalt.luau"),
 ]
 
@@ -366,6 +368,7 @@ KLIENT = SPEL + [
     #   "attempt to index nil" langt fran orsaken. ]]
     ("CoachBanner",         "src/client/CoachBanner.luau"),
     ("UgnetaController",    "src/client/UgnetaController.luau"),
+    ("Ridhusplats",   "src/shared/HorseCore/Ridhusplats.luau"),  # #264 INFRA-PLATS1: UgnetaGestalt require:ar den
     ("UgnetaGestalt",       "src/client/UgnetaGestalt.luau"),
     ("ReplayController",    "src/client/ReplayController.luau"),
     ("LektionController",   "src/client/LektionController.luau"),
@@ -804,6 +807,10 @@ def valjBunt(spec_rel: str):
         moduler, stubbar = KLIENT, "tests/stubs.luau"
     elif "klient" in spec_rel:
         moduler, stubbar = KLIENT, "tests/stubs.luau"
+    #[[ #264 INFRA-PLATS1: platsgrunden provas ovanpa det byggda, med
+    #   Ugnetas riktiga vag, alltsa samma bank som gestalten. ]]
+    elif "ridhusplats" in spec_rel:
+        moduler, stubbar = GESTALT, "tests/stubs-bygge.luau"
     elif "gestalt" in spec_rel:
         moduler, stubbar = GESTALT, "tests/stubs-bygge.luau"
     elif "paritet" in spec_rel or "ugneta" in spec_rel:
