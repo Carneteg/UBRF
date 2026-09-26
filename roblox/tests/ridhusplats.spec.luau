@@ -312,6 +312,22 @@ do
 		prova(("%+.4f° (0,12 studs): avvisas"):format(tecken * utanfor), sUt == nil and kUt == "ej_samriktade", kUt)
 	end
 
+	--[[ Layoutens hörn prövas i BANANS ram: en smalare bana (59,86 studs)
+		och en godtagen liten girning. I layoutens ram hade hörnet sett ut
+		att rymmas (30 mot 29,93 + 0,1); i banans ram ligger det 30,07 från
+		mitten, 0,14 utanför — mer än TOL_LAGE. ]]
+	local function smal(grader)
+		local m, lb = syntetisk(Vector3.new(0, 0, 0), 0, true)
+		lb.Size = Vector3.new(59.86, 0.18, 196.59)
+		lb.CFrame = CFrame.new(BANA_P) * CFrame.Angles(0, math.rad(grader), 0)
+		return m
+	end
+	local sSmal0 = Ridhusplats.los(smal(0))
+	prova("KONTROLL: smal bana utan girning godtas (hörnet 0,07 utanför, inom TOL_LAGE)", sSmal0 ~= nil)
+	local sSmal, kSmal = Ridhusplats.los(smal(innanfor))
+	prova("smal bana med godtagen girning: hörnet prövat i banans ram ligger utanför",
+		sSmal == nil and kSmal == "layout_utanfor_bana", kSmal)
+
 	--[[ Gemensam girning 37° plus flytt: fortfarande giltig, A/C och
 		lokal ↔ värld. ]]
 	local m37 = syntetisk(Vector3.new(250, -4, -60), math.rad(37), true)
