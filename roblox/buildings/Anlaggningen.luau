@@ -2773,9 +2773,14 @@ local function byggRidhusInre(model: Model, base: CFrame)
 				bx + s * h.b / 2 - 0.05, 0, bz - 0.05, 0.10, 1.5, 0.10,
 				Color3.fromRGB(240, 237, 230), Enum.Material.SmoothPlastic)
 		end
-		BK.box(model, base, "Hinderbom " .. i,
+		local bom = BK.box(model, base, "Hinderbom " .. i,
 			bx - h.b / 2, math.max(0.02, h.h), bz - 0.045, h.b, 0.09, 0.09,
-			bomFarg, Enum.Material.SmoothPlastic).CanCollide = false
+			bomFarg, Enum.Material.SmoothPlastic)
+		bom.CanCollide = false
+		--[[ #264 INFRA-2B2: bara METADATA. Hindrets stabila id ur källdatan,
+			så att serverns hinderregister hittar bommen efter bygget och
+			speglingen. Läge, mått, material och kollision är oförändrade. ]]
+		if h.id then bom:SetAttribute("HinderId", h.id) end
 	end
 	for i, k in ipairs(R.koner or {}) do
 		BK.box(model, base, "Kon " .. i,

@@ -157,18 +157,23 @@ local function laggRutt(o: Obs, p: Vector3)
 end
 
 --[[ Ett uthållighetssteg för en riden häst. `pos` är rotens läge eller
-	nil när roten saknas; `gangart`/`ryggar` är serverns accepterade läge. ]]
+	nil när roten saknas; `gangart`/`ryggar` är serverns accepterade läge.
+
+	Returnerar (giltigt segment?, status, från, ritt-tid). Status är
+	"segment", "baslinje", "brott" eller "stangd". Bara vid "segment" finns
+	`fran` — föregående giltiga läge — så att en konsument (hinder-
+	observationen, INFRA-2B2) aldrig kan bygga ett segment över ett brott. ]]
 function RidObservation.sampla(rittId: string?, pos: Vector3?, dt: number, gangart: string,
-	ryggar: boolean, teleportGrans: number): boolean
+	ryggar: boolean, teleportGrans: number): (boolean, string, Vector3?, number?)
 	local o = rittId and poster[rittId]
-	if not o or not o.oppen then return false end
+	if not o or not o.oppen then return false, "stangd" end
 	if not andligt(dt) or dt <= 0 then
 		--[[ Ett förkastat steg är också ett brott: annars kunde nästa
 			giltiga steg bilda ett segment över ett intervall som aldrig
 			räknades. ]]
 		o.ogiltigaDt += 1
 		brott(o, "ogiltigt_dt")
-		return false
+		return false, "brott", nil, o.tid
 	end
 	o.tid += dt
 	--[[ Tid i ACCEPTERAD gångart räknas alltid — det är serverns trappa,
@@ -181,20 +186,20 @@ function RidObservation.sampla(rittId: string?, pos: Vector3?, dt: number, ganga
 		o.oobsTid += dt
 		brott(o, "lucka")
 		if pos and andligVektor(pos) then o._bas = pos end
-		return false
+		return false, "brott", nil, o.tid
 	end
 	if not pos or not andligVektor(pos) then
 		o.saknade += 1
 		o.oobsTid += dt
 		brott(o, "saknat_lage")
-		return false
+		return false, "brott", nil, o.tid
 	end
 	local bas = o._bas
 	if not bas then
 		o._bas = pos
 		o.oobsTid += dt
 		laggRutt(o, pos)
-		return false
+		return false, "baslinje", nil, o.tid
 	end
 	local dx, dy, dz = pos.X - bas.X, pos.Y - bas.Y, pos.Z - bas.Z
 	local plan = math.sqrt(dx * dx + dz * dz)
@@ -204,7 +209,7 @@ function RidObservation.sampla(rittId: string?, pos: Vector3?, dt: number, ganga
 		brott(o, "teleport")
 		o._bas = pos
 		laggRutt(o, pos)
-		return false
+		return false, "brott", nil, o.tid
 	end
 
 	o._bas = pos
@@ -235,7 +240,7 @@ function RidObservation.sampla(rittId: string?, pos: Vector3?, dt: number, ganga
 	o._fonster[o._fonsterNasta] = { t = o.tid, x = pos.X, y = pos.Y, z = pos.Z, fart = fart,
 		gangart = gangart, ryggar = ryggar }
 	o._fonsterNasta = (o._fonsterNasta % RidObservation.FONSTER) + 1
-	return true
+	return true, "segment", bas, o.tid
 end
 
 function RidObservation.avsluta(rittId: string?, satt: string): boolean
@@ -311,7 +316,9 @@ function RidObservation.ogonblick(rittId: string?): any
 	local o = rittId and poster[rittId]
 	if not o then return nil end
 	local f = fonster(o)
-	local antalBrott = o.luckor + o.saknade + o.teleporter
+	--[[ Ogiltigt dt räknas också: sedan R1 bryter det avsnittet, och två
+		olika svar om giltigheten ska inte kunna ges (INFRA-2B2). ]]
+	local antalBrott = o.luckor + o.saknade + o.teleporter + o.ogiltigaDt
 	return frys({
 		v = o.v, rittId = o.rittId, hastId = o.hastId, userId = o.userId,
 		oppen = o.oppen, satt = o.satt,

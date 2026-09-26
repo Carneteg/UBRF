@@ -2056,11 +2056,15 @@ const RIDHUSINNE = {
   domarbas:{x:23.2, y:0, b:2.0, h:2.3, trappa:true, exit:true},
   /* Hindren som står framme mellan lektionerna, ur interiörfotona:
      vita stöd, blå-vita och röd-vita bommar, en bom på marken och
-     uppsittningspallen vid sargen. Koordinaterna är i banans system. */
+     uppsittningspallen vid sargen. Koordinaterna är i banans system.
+     `id` är hindrets STABILA identitet (#264 INFRA-2B2): serverns
+     hinderregister och ridobservationen känner igen hindret på den, aldrig
+     på plats i listan, namn eller byggordning. Byt den inte när ett hinder
+     flyttas; ett nytt hinder får ett nytt id. */
   hinder:[
-    {x:6.5, y:24, b:2.8, h:0.68, farg:"bla"},
-    {x:13.5,y:38, b:2.8, h:0.52, farg:"rod"},
-    {x:9.0, y:50, b:3.0, h:0,    farg:"rod"},
+    {id:"ridhus_hinder_bla_24", x:6.5, y:24, b:2.8, h:0.68, farg:"bla"},
+    {id:"ridhus_hinder_rod_38", x:13.5,y:38, b:2.8, h:0.52, farg:"rod"},
+    {id:"ridhus_hinder_rod_50", x:9.0, y:50, b:3.0, h:0,    farg:"rod"},
   ],
   koner:[[4.0,17],[16.6,44],[11.0,58]],
   pall:{x:18.9, y:20},

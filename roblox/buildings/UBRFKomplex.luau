@@ -2956,6 +2956,7 @@ return {
 		},
 		hinder = {
 			{
+				id = "ridhus_hinder_bla_24",
 				x = 6.5,
 				y = 24,
 				b = 2.8,
@@ -2963,6 +2964,7 @@ return {
 				farg = "bla",
 			},
 			{
+				id = "ridhus_hinder_rod_38",
 				x = 13.5,
 				y = 38,
 				b = 2.8,
@@ -2970,6 +2972,7 @@ return {
 				farg = "rod",
 			},
 			{
+				id = "ridhus_hinder_rod_50",
 				x = 9,
 				y = 50,
 				b = 3,

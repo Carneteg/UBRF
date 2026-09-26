@@ -388,6 +388,8 @@ do
 	local fore = RidObservation.ogonblick("k2")
 	check("ett ogiltigt dt tömmer tempofönstret", fore.tempo.variation == nil
 		and fore.tempo.brott == "ogiltigt_dt", tostring(fore.tempo.brott))
+	check("och avsnittet räknas inte längre som obrutet (INFRA-2B2)", fore.giltighet.obruten == false
+		and fore.giltighet.ogiltigaDt == 1)
 	RidObservation.sampla("k2", vec(0, 0, 9), 0.25, "trot", false, 33)
 	local efter = RidObservation.ogonblick("k2")
 	check("nästa läge är baslinje, inte ett segment över luckan", efter.distans == 2

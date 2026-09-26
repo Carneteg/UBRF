@@ -171,6 +171,7 @@ FORBEREDELSE = SPEL + [
     ("Skopa",        "src/server/Skopa.luau"),
     ("RidLogg",      "src/server/RidLogg.luau"),  # #264 INFRA-2A: HorseService require:ar den
     ("RidObservation", "src/server/RidObservation.luau"),  # #264 INFRA-2B1
+    ("HinderObservation", "src/server/HinderObservation.luau"),  # #264 INFRA-2B2
     # AKTOREN (#252 DEL C) FORE tjansterna: GameplayService, HorseService
     # och LedService fragar den om aktoren har en klient att skicka till.
     ("Aktor",        "src/shared/HorseCore/Aktor.luau"),
@@ -425,6 +426,7 @@ KOHERENS = GEOMETRI + [
     ("Skopa",        "src/server/Skopa.luau"),
     ("RidLogg",      "src/server/RidLogg.luau"),  # #264 INFRA-2A: HorseService require:ar den
     ("RidObservation", "src/server/RidObservation.luau"),  # #264 INFRA-2B1
+    ("HinderObservation", "src/server/HinderObservation.luau"),  # #264 INFRA-2B2
     # AKTOREN (#252 DEL C) FORE tjansterna: GameplayService, HorseService
     # och LedService fragar den om aktoren har en klient att skicka till.
     ("Aktor",        "src/shared/HorseCore/Aktor.luau"),
@@ -730,6 +732,10 @@ def valjBunt(spec_rel: str):
     #   reconcile-matningen behover MovementController ur samma bunt. ]]
     #[[ #264 INFRA-2A: ridloggen mats genom HorseService pa en riktig rigg,
     #   samma bank som ridinput. ]]
+    #[[ #264 INFRA-2B2: KOHERENS, for att hindren ska komma ur det RIKTIGA
+    #   anlaggningsbygget (med speglingen) och registreras av HorseService. ]]
+    elif "hinderobservation" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
     elif "ridobservation" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
     elif "ridlogg" in spec_rel:

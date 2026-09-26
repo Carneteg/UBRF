@@ -33,6 +33,7 @@ local Aktor = require(game:GetService("ReplicatedStorage").HorseCore.Aktor)
 local Skopa = require(script.Parent.Skopa)
 local RidLogg = require(script.Parent.RidLogg)
 local RidObservation = require(script.Parent.RidObservation)
+local HinderObservation = require(script.Parent.HinderObservation)
 
 local HorseService = {}
 
@@ -288,6 +289,8 @@ local function unregister(model: Model)
 		if not ok then warn("[Horse] ridloggen kastade: " .. tostring(fel)) end
 		local ok2, fel2 = pcall(RidObservation.avsluta, session.rittId, "avbruten")
 		if not ok2 then warn("[Horse] ridobservationen kastade: " .. tostring(fel2)) end
+		local ok3, fel3 = pcall(HinderObservation.avsluta, session.rittId, "avbruten")
+		if not ok3 then warn("[Horse] hinderobservationen kastade: " .. tostring(fel3)) end
 	end
 	sessions[model] = nil
 end
@@ -528,6 +531,7 @@ local function setRider(session: Session, player: Player?, orsak: string?)
 		logga(RidLogg.avsluta, gammalRitt, if vanlig then "avslutad" else "avbruten",
 			orsak or "avsittning", logNu)
 		logga(RidObservation.avsluta, gammalRitt, if vanlig then "avslutad" else "avbruten")
+		logga(HinderObservation.avsluta, gammalRitt, if vanlig then "avslutad" else "avbruten")
 	end
 	if player and session.rittId then
 		local hastId = tostring(session.rig.model:GetAttribute("HorseId") or session.rig.model.Name)
@@ -537,6 +541,7 @@ local function setRider(session: Session, player: Player?, orsak: string?)
 			läget i nästa uthållighetssteg blir baslinjen, så ingen sträcka
 			från före uppsittningen kan räknas in. ]]
 		logga(RidObservation.starta, session.rittId, hastId, player.UserId)
+		logga(HinderObservation.starta, session.rittId, hastId, player.UserId)
 	end
 	--[[ ── MÄRKET REPLIKERAS, OCH DET ÄR INTE EN BEKVÄMLIGHET ──────────
 	     Första utkastet lämnade märket ENBART i `tryMount`-returen. Det
@@ -1336,10 +1341,32 @@ local function stepStamina(session: Session, dt: number)
 			så att uthållighetens mätpunkt inte rörs. Observationen läser
 			bara; den ändrar inte rörelse, uthållighet eller ägarskap. ]]
 		local obsRot = session.rig.root
-		logga(RidObservation.sampla, session.rittId,
-			if obsRot and obsRot.Parent then obsRot.Position else nil,
-			dt, Ridtrappa.gangart(session.stegIndex), Ridtrappa.ryggar(session.stegIndex),
+		local obsPos = if obsRot and obsRot.Parent then obsRot.Position else nil
+		local okObs, _giltigt, status, fran, rittTid = pcall(RidObservation.sampla, session.rittId,
+			obsPos, dt, Ridtrappa.gangart(session.stegIndex), Ridtrappa.ryggar(session.stegIndex),
 			TELEPORT_GRANS)
+		if not okObs then
+			warn("[Horse] ridobservationen kastade: " .. tostring(_giltigt))
+		elseif status == "segment" and fran and obsPos then
+			--[[ INFRA-2B2: hindren får BARA giltiga segment ur ridobservationen,
+				så en passage kan aldrig byggas över ett brott. Luft/mark är
+				serverns `FloorMaterial` på hästen — en observation, som för en
+				klientägd häst kan vara inaktuell. ]]
+			local hum = session.rig.humanoid
+			local okGolv, luft = pcall(function(): string?
+				local golv = hum and hum.FloorMaterial
+				if golv == nil then return nil end
+				--[[ Jämför namnet: `Enum.Material.Air.Name == "Air"` i motorn,
+					och bänkens strikta materiallista (byggmaterial) behöver
+					inte få ett material som ingen byggnad ska använda. ]]
+				return if golv.Name == "Air" then "luft" else "mark"
+			end)
+			if not okGolv then luft = nil end
+			logga(HinderObservation.segment, session.rittId, fran, obsPos, rittTid, luft,
+				obsRot.Size / 2)
+		elseif status == "brott" then
+			logga(HinderObservation.brott, session.rittId, rittTid)
+		end
 		--[[ Utan `current`: hysteresen finns för att animationen inte ska
 		     flimra, och den får inte kunna hålla kvar ett påstått "halt"
 		     en bit upp i skrittbandet. Auktoriteten mäter på bandet. ]]
@@ -1733,6 +1760,10 @@ function HorseService.start()
 		return ok, skal
 	end
 	Net.get("StateSync").OnServerEvent:Connect(onStateSync)
+	--[[ INFRA-2B2: hinderregistret läser de byggda bommarna. Världen är byggd
+		före HorseService (se `Start.luau`), och senare bommar fångas av
+		`DescendantAdded`. ]]
+	logga(HinderObservation.start, workspace)
 	--[[ #233 Fas 4b. Den semantiska vägen in. Ligger bredvid StateSync med
 	     flit: de två är nu tydligt olika saker — den ena är en AVSIKT som
 	     ändrar sanning, den andra en OBSERVATION som bara presenteras. ]]
@@ -1775,6 +1806,13 @@ end
 	belöning. Ingen konsument ännu. ]]
 function HorseService.ridobservation(rittId: string?): any
 	return RidObservation.ogonblick(rittId)
+end
+
+--[[ Hinderobservationen för en ritt (INFRA-2B2): fryst djupkopia, eller
+	nil. Passage, observerad luftfas och geometrisk överlapp vid befintliga
+	hinder — inte rivning, inte poäng, inte fuskskydd. Ingen konsument ännu. ]]
+function HorseService.hinderobservation(rittId: string?): any
+	return HinderObservation.ogonblick(rittId)
 end
 
 return HorseService
