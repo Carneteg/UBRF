@@ -89,9 +89,30 @@ function V.valj()
 	skicka("sync")
 end
 
+local function text(key)
+	if key=="choose" then return Sprak.t("voltlektion.choose") end
+	if key=="lessons" then return Sprak.t("voltlektion.lessons") end
+	if key=="start" then return Sprak.t("voltlektion.start") end
+	if key=="retry" then return Sprak.t("voltlektion.retry") end
+	if key=="finish" then return Sprak.t("voltlektion.finish") end
+	if key=="sync" then return Sprak.t("voltlektion.sync") end
+	if key=="intro" then return Sprak.t("voltlektion.intro") end
+	if key=="approach" then return Sprak.t("voltlektion.approach") end
+	if key=="ride" then return Sprak.t("voltlektion.ride") end
+	if key=="line" then return Sprak.t("voltlektion.line") end
+	if key=="unknown" then return Sprak.t("voltlektion.unknown") end
+	if key=="complete" then return Sprak.t("voltlektion.complete") end
+	if key=="timeout" then return Sprak.t("voltlektion.timeout") end
+	if key=="closed" then return Sprak.t("voltlektion.closed") end
+	if key=="pending" then return Sprak.t("voltlektion.pending") end
+	if key=="place" then return Sprak.t("voltlektion.place") end
+	if key=="active" then return Sprak.t("voltlektion.active") end
+	return Sprak.t("voltlektion.network")
+end
+
 local function val(key, fn)
 	local gen, id, token = generation, ritt, requestNr
-	return { text=Sprak.t("voltlektion."..key), aktiv=true,
+	return { text=text(key), aktiv=true,
 		skicka=function() if attached and gen==generation and id==ritt and token==requestNr then fn() end end }
 end
 
@@ -110,7 +131,7 @@ function V.panel()
 	local key = if pending then "pending" elseif fel then fel
 		elseif b.lage=="ready" or b.lage=="closed" then "intro"
 		else b.tips
-	local txt = Sprak.t("voltlektion."..key)
+	local txt = text(key)
 	if b.lage=="riding" and not pending and not fel then txt ..= " "..tostring(b.progress).."%" end
 	local knappar = {}
 	if not pending then

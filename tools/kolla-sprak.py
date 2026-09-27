@@ -28,6 +28,7 @@ LOKALISERADE = [
     "roblox/src/client/PreparationController.luau",
     "roblox/src/client/KontrollHjalp.luau",
     "roblox/src/client/UgnetaController.luau",
+    "roblox/src/client/VoltLektionController.luau",
     #[[ #244: bannern ritar spelartext. Den har inga egna literaler —
     #   orden kommer fran den som ropar Show — men listan ar stallet
     #   dar man TANKER pa saken, och en ny fil som ritar text hor
