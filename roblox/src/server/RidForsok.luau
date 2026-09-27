@@ -82,6 +82,8 @@ RidForsok.OVNINGAR = table.freeze({
 	jamn_skritt = table.freeze({ ["server-tempo-1"] = true }),
 	-- Ridvägarna mittlinjen och diagonalen (docs/RIDING-PATH-LESSON-CONTRACT.md).
 	ridvag = table.freeze({ ["server-vag-1"] = true }),
+	-- Halvvolt tillbaka till spåret (docs/HALF-CIRCLE-LESSON-CONTRACT.md).
+	halvvolt = table.freeze({ ["server-halvvolt-1"] = true }),
 })
 RidForsok.MAX_PER_RITT = 8
 RidForsok.MAX_BEGARAN = 16

@@ -321,8 +321,9 @@ for n = 0, 3 do
 		{ grupp = "lektionsval.gangart", text = Sprak.t("overganglektion.choose"), slut = Sprak.t("overganglektion.finish") },
 		{ grupp = "lektionsval.gangart", text = Sprak.t("tempolektion.choose"), slut = Sprak.t("tempolektion.finish") },
 		{ grupp = "lektionsval.vagar", text = Sprak.t("serpentinlektion.choose"), slut = Sprak.t("serpentinlektion.finish") },
-		{ grupp = "lektionsval.vagar", text = Sprak.t("vaglektion.choose_mitt"), slut = Sprak.t("vaglektion.finish") },
-		{ grupp = "lektionsval.vagar", text = Sprak.t("vaglektion.choose_diag"), slut = Sprak.t("vaglektion.finish") },
+		-- Sedan halvvolten ligger mittlinjen och diagonalen i undergruppen.
+		{ grupp = "lektionsval.vagar", under = "lektionsval.linjer", text = Sprak.t("vaglektion.choose_mitt"), slut = Sprak.t("vaglektion.finish") },
+		{ grupp = "lektionsval.vagar", under = "lektionsval.linjer", text = Sprak.t("vaglektion.choose_diag"), slut = Sprak.t("vaglektion.finish") },
 	}
 	for _, b in ipairs(blad) do
 		V.avbryt(); V.start("meny-prov-" .. n .. "-" .. b.text, nil)
@@ -332,6 +333,11 @@ for n = 0, 3 do
 		if oppna then oppna.skicka(); sida = UgnetaController.panel(KAP).knappar end
 		if b.grupp then
 			local g = hitta(sida, Sprak.t(b.grupp))
+			if not g then menyOk = false else g.skicka(); sida = UgnetaController.panel(KAP).knappar end
+		end
+		if b.under then
+			if #sida > KAP then menyOk = false end
+			local g = hitta(sida, Sprak.t(b.under))
 			if not g then menyOk = false else g.skicka(); sida = UgnetaController.panel(KAP).knappar end
 		end
 		if #sida > KAP then menyOk = false end

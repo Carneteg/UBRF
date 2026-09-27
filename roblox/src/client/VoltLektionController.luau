@@ -19,10 +19,10 @@ local gaLektion: (() -> ())? = nil
 -- Vald lektion: "volt" (voltlektionen), "halt" (start/halt vid X),
 -- "overgang" (övergångar vid T1/T2), "serpentin" (träningsserpentin) eller
 -- "tempo" (jämn fart i skritt; ingen guide), "vag_mitt" eller "vag_diag"
--- (ridvägarna; figuren är typen).
+-- (ridvägarna; figuren är typen) eller "halvvolt" (halvvolt tillbaka till spåret).
 local typ = "volt"
 -- Valsidan före en vald lektion: nil = toppnivån, "topp" (ersättningssidan
--- bakom "Välj övning"), "gangart" eller "vagar". Naromrade visar högst fyra
+-- bakom "Välj övning"), "gangart", "vagar" eller "linjer" (undergrupp i vagar). Naromrade visar högst fyra
 -- val (MAX_VAL) och Ugnetas 0..3 kortknappar kommer först; toppnivån ger
 -- därför också en kompakt lista med EN post (R1), som Ugneta väljer när den
 -- fulla inte ryms. Varje sida har högst tre val plus Tillbaka.
@@ -120,6 +120,54 @@ local function vagGuide(m, ref, delmal)
 	end
 end
 
+-- Half-circle back to the track: the server's route parameters (track, arc,
+-- return line), direction chevrons on the straight parts, and the start and end
+-- rings. delmal: 0 start ring, 1 track, 2 half-circle, 3 return, 4 end ring.
+local function halvvoltGuide(m, ref, delmal)
+	local p = ref.plats
+	local function lokalt(u, v) return Plats.tillVarld(p, Vector3.new(u, 0.035, v)) end
+	local function rak(au, av, bu, bv, stark)
+		local L = math.sqrt((bu - au) ^ 2 + (bv - av) ^ 2)
+		local du, dv = (bu - au) / L, (bv - av) / L
+		local riktning = lokalt(au + du, av + dv) - lokalt(au, av)
+		local korsVek = lokalt(au + dv, av - du) - lokalt(au, av)
+		local antal = math.max(2, math.floor(L / 1.5))
+		for i = 1, antal - 1 do
+			local t = L * i / antal
+			streck(m, p, lokalt(au + du * t, av + dv * t), riktning, 0.45 * p.studsPerMeter, stark)
+		end
+		local t = 4
+		while t < L - 2 do
+			local spets = lokalt(au + du * t, av + dv * t)
+			for _, sida in ipairs({ 1, -1 }) do
+				local fot = spets - riktning * 0.8 + korsVek * (0.8 * sida)
+				streck(m, p, (spets + fot) / 2, spets - fot, 0.4 * p.studsPerMeter, stark)
+			end
+			t += 5
+		end
+	end
+	rak(ref.uT, ref.p0v, ref.uT, ref.t1v, delmal == 1)
+	local cu, cv = ref.uT - ref.r, ref.t1v
+	local antal = 16
+	for i = 0, antal - 1 do
+		local th = math.pi * (i + 0.5) / antal
+		local pos = lokalt(cu + ref.r * math.cos(th), cv + ref.r * math.sin(th))
+		local fram = lokalt(cu + ref.r * math.cos(th + 0.05), cv + ref.r * math.sin(th + 0.05))
+		streck(m, p, pos, fram - pos, 0.45 * p.studsPerMeter, delmal == 2)
+	end
+	rak(ref.uT - 2 * ref.r, ref.t1v, ref.uT, ref.ev, delmal == 3 or delmal == 4)
+	for j, c in ipairs({ { ref.uT, ref.p0v }, { ref.uT, ref.ev } }) do
+		local n = 12
+		for i = 0, n - 1 do
+			local a = 2 * math.pi * i / n
+			local pos = lokalt(c[1] + ref.ring*math.cos(a), c[2] + ref.ring*math.sin(a))
+			local fram = lokalt(c[1] + ref.ring*math.cos(a + 0.05), c[2] + ref.ring*math.sin(a + 0.05))
+			streck(m, p, pos, fram - pos, 0.3 * p.studsPerMeter,
+				(j == 1 and delmal == 0) or (j == 2 and delmal == 4))
+		end
+	end
+end
+
 local function vagTyp(t: string?): boolean
 	return t == "vag_mitt" or t == "vag_diag"
 end
@@ -129,8 +177,10 @@ local function visaGuide(ref, delmal)
 	if guideRef and guideRef.ramId == ref.ramId and guideTyp == typ and guideDel == delmal then return end
 	rivGuide()
 	local m = Instance.new("Model"); m.Name = "Voltguide"
-	if typ == "serpentin" or vagTyp(typ) then
-		if typ == "serpentin" then serpentinGuide(m, ref, delmal) else vagGuide(m, ref, delmal) end
+	if typ == "serpentin" or vagTyp(typ) or typ == "halvvolt" then
+		if typ == "serpentin" then serpentinGuide(m, ref, delmal)
+		elseif typ == "halvvolt" then halvvoltGuide(m, ref, delmal)
+		else vagGuide(m, ref, delmal) end
 		m.Parent = workspace; guide, guideRef, guideTyp, guideDel = m, ref, typ, delmal
 		return
 	end
@@ -179,7 +229,8 @@ local function mottag(b)
 		or b.lage=="halt1" or b.lage=="walk"
 		or b.lage=="walk1" or b.lage=="trot" or b.lage=="walk2"
 		or b.lage=="to_start" or b.lage=="route") then
-		visaGuide(b.referens, if typ == "serpentin" or vagTyp(typ) then b.delmal else nil)
+		visaGuide(b.referens, if typ == "serpentin" or vagTyp(typ) or typ == "halvvolt"
+			then b.delmal else nil)
 	else rivGuide() end
 end
 
@@ -209,11 +260,34 @@ end
 function V.valj(vald: string?)
 	if not ritt then return end
 	local ny = if vald == "halt" or vald == "overgang" or vald == "serpentin" or vald == "tempo"
-		or vald == "vag_mitt" or vald == "vag_diag" then vald else "volt"
+		or vald == "vag_mitt" or vald == "vag_diag" or vald == "halvvolt" then vald else "volt"
 	if ny ~= typ then typ, bild = ny, nil; rivGuide() end
 	valt, fri, fel, meny = true, false, nil, nil
 	Ugneta.dolj()
 	skicka("sync")
+end
+
+-- Halvvoltens egna texter; gemensamma nycklar faller igenom.
+local function halvvoltText(key): string?
+	if key=="choose_halvvolt" then return Sprak.t("halvvoltlektion.choose") end
+	if typ ~= "halvvolt" then return nil end
+	if key=="start" then return Sprak.t("halvvoltlektion.start") end
+	if key=="finish" then return Sprak.t("halvvoltlektion.finish") end
+	if key=="intro" then return Sprak.t("halvvoltlektion.intro") end
+	if key=="to_start" then return Sprak.t("halvvoltlektion.to_start") end
+	if key=="track" then return Sprak.t("halvvoltlektion.track") end
+	if key=="half_circle" then return Sprak.t("halvvoltlektion.half_circle") end
+	if key=="return" then return Sprak.t("halvvoltlektion.return") end
+	if key=="to_end" then return Sprak.t("halvvoltlektion.to_end") end
+	if key=="off_route" then return Sprak.t("halvvoltlektion.off_route") end
+	if key=="reverse" then return Sprak.t("halvvoltlektion.reverse") end
+	if key=="walk_or_trot" then return Sprak.t("halvvoltlektion.walk_or_trot") end
+	if key=="unknown" then return Sprak.t("halvvoltlektion.unknown") end
+	if key=="complete" then return Sprak.t("halvvoltlektion.complete") end
+	if key=="timeout" then return Sprak.t("halvvoltlektion.timeout") end
+	if key=="closed" then return Sprak.t("halvvoltlektion.closed") end
+	if key=="place" then return Sprak.t("halvvoltlektion.place") end
+	return nil
 end
 
 -- Valsidornas och ridvägarnas egna texter; gemensamma nycklar faller igenom.
@@ -223,6 +297,7 @@ local function vagText(key): string?
 	if key=="back" then return Sprak.t("lektionsval.tillbaka") end
 	if key=="pick" then return Sprak.t("lektionsval.valj") end
 	if key=="choose_lesson" then return Sprak.t("lektionsval.oppna") end
+	if key=="group_linjer" then return Sprak.t("lektionsval.linjer") end
 	if key=="choose_vag_mitt" then return Sprak.t("vaglektion.choose_mitt") end
 	if key=="choose_vag_diag" then return Sprak.t("vaglektion.choose_diag") end
 	if not vagTyp(typ) then return nil end
@@ -341,6 +416,8 @@ local function haltText(key): string?
 end
 
 local function text(key)
+	local hv = halvvoltText(key)
+	if hv then return hv end
 	local va = vagText(key)
 	if va then return va end
 	local te = tempoText(key)
@@ -393,9 +470,15 @@ function V.panel()
 		elseif meny == "vagar" then
 			return { ersatt=true, text=text("pick"), ovning="", vantar=false, knappar={
 				val("choose_serpentin",function() V.valj("serpentin") end),
+				val("choose_halvvolt",function() V.valj("halvvolt") end),
+				val("group_linjer",function() meny = "linjer" end),
+				val("back",function() meny = nil end) } }
+		elseif meny == "linjer" then
+			-- Undergrupp: Tillbaka leder till Ridvägar.
+			return { ersatt=true, text=text("pick"), ovning="", vantar=false, knappar={
 				val("choose_vag_mitt",function() V.valj("vag_mitt") end),
 				val("choose_vag_diag",function() V.valj("vag_diag") end),
-				val("back",function() meny = nil end) } }
+				val("back",function() meny = "vagar" end) } }
 		elseif meny == "topp" then
 			return { ersatt=true, text=text("pick"), ovning="", vantar=false, knappar={
 				val("choose",function() V.valj("volt") end),
