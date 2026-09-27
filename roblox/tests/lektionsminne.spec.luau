@@ -169,19 +169,23 @@ local function tillKlarIBegar(op)
 	for v = 19, X.v - 1 do step(X.u, v) end
 	aid("broms")
 	local fore = s.voltLektion and s.voltLektion.forsokId
-	local acc, iBegar, iHjarta = 0, false, false
-	for _ = 1, math.ceil((G.HALT_EFTER + 2) / 0.0625) do
-		if acc + 0.0625 >= 0.25 then
-			request(op)
-			local l = s.voltLektion
-			if op == "sync" and l and l.lage == "complete" then iBegar = true; break end
-			if op == "retry" and l and l.forsokId ~= fore then iBegar = true; break end
-		end
-		step(X.u, X.v - 0.5, 0.0625)
-		acc += 0.0625
-		if acc >= 0.25 then acc = 0 end
+	--[[ R1-kontrollpunkt: bildrutejusteringen (begäran precis före den ruta
+		som skulle stega lektionen) höll inte — observationen flyttas i samma
+		0,25 s-takt, så Heartbeaten fullföljde alltid först. PÅHITTAT men
+		deterministiskt: lektionen kopplas ur sessionen under varje hjärtslag
+		(observationerna går vidare som vanligt), så att BARA begäran kan stega
+		den. KONTROLLEN nedan säger fortfarande om Heartbeaten ändå hann. ]]
+	local iBegar, iHjarta = false, false
+	for _ = 1, math.ceil((G.HALT_EFTER + 2) / 0.25) do
+		local lektion = s.voltLektion
+		s.voltLektion = nil
+		step(X.u, X.v - 0.5)
+		s.voltLektion = lektion
+		if lektion and lektion.lage == "complete" then iHjarta = true; break end
+		request(op)
 		local l = s.voltLektion
-		if l and l.lage == "complete" then iHjarta = true; break end
+		if op == "sync" and l and l.lage == "complete" then iBegar = true; break end
+		if op == "retry" and l and l.forsokId ~= fore then iBegar = true; break end
 	end
 	return iBegar, iHjarta, fore
 end
@@ -625,6 +629,7 @@ do
 	l.galopp = "ej_klarad"
 	push(l)
 	VC.avbryt(); VC.start(id, nil)
+	UC.satLektionsVal(VC.panel) -- som LektionController efter varje start
 	UC.dolj()
 	VC.valj("halt")
 	local fin = hitta(VC.panel().knappar, Sprak.t("haltlektion.finish"))
