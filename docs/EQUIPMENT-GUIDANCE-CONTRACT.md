@@ -121,6 +121,35 @@ item is returned, the assigned horse changes or the character is lost.
   buttons are absent. Corrections are at most two entries, within the four
   rows.
 
+## R2 (source review #5856458359): replies bound to their moment
+
+History: R1 bound a reply only to its own request number. That was not enough.
+A delayed old success could replace newer feedback, and a delayed refusal could
+overwrite a priority question.
+
+- **Context generation.** `kontextGen` is bumped at the end of every view whose
+  context differs from the previous one: the assigned horse, or whether a
+  PRIORITY view is shown. The priority views are a care question, welfare
+  stop, finding, aftercare and a counted pass. `prioritetNu` is true while
+  one is shown.
+- **At dispatch** a return captures `kontextGen`, the character and the
+  panel's feedback counters (`avslagNr`, `bekraftelseNr`).
+- **A reply** (success or refusal) is shown ONLY if all of these hold:
+  - it is the same request;
+  - the context generation is unchanged;
+  - the character is the same;
+  - no newer feedback has been shown;
+  - no priority view is shown now.
+
+  Otherwise nothing is shown.
+- **Its own removal view** changes none of these, so a legitimate success whose
+  view arrived first still confirms.
+- **Queued clicks.** Validity (render generation and no priority view) is
+  checked again immediately before dispatch, so a queued click that crossed
+  such a change is not sent.
+- **Unchanged:** the server's acquisition guard, the real-held producer, the
+  10 s pending bound, and ownership, reach and rollback.
+
 ## Deferred verification (written, NOT run)
 
 `roblox/tests/utrustning-rattelse.spec.luau` (KOHERENS, set up like
@@ -168,11 +197,20 @@ tack-fas2) contains these written cases.
   - an open care question keeps priority;
   - after the returns the corrections are gone.
 
+**R2, written** (using a local deferred-transport fixture: `InvokeServer` is
+replaced by one that captures the call and yields its coroutine, and replies
+are delivered in a chosen order; this assumes the bench's `task.spawn` runs a
+coroutine, which a KONTROLL checks):
+- a normal success whose removal view came first still confirms;
+- an old success after an assignment change shows nothing;
+- an older success never replaces a newer refusal;
+- an old refusal never overwrites an open care question, nor a welfare stop;
+- reversed replies after the timeout: the newer reply confirms, and the older
+  reply arriving later is dropped.
+
 **Planned, not written:**
-- two delayed replies arriving backwards, and a success view before its reply:
-  the bench runs `task.spawn` and RemoteFunction invocations at once, so reply
-  order cannot be controlled there (the logic is `lamnaVantar.nr` and
-  `harDel`);
+- an old reply after a real character replacement (the check is the same
+  identity comparison, but the fixture keeps one character);
 - the full LocalPlayer chain (server push through PreparationSync to the
   client): the view is built with the real producer's data but sent through
   the listener;

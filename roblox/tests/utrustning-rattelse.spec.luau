@@ -218,5 +218,82 @@ stall(rot, front(C)); lamna(p, "trans", C)
 sync.OnClientEvent:Fire(vy(GameplayService._burnaForProv(p)))
 check("after the returns the corrections are gone", #PreparationController._rattelserForProv() == 0)
 
+-- ── R2: svaren är bundna till sin stund (lokal fördröjd transport) ──
+--[[ FIXTUR: bänken svarar annars direkt. Den här InvokeServer fångar anropet
+	och ger efter i sin korutin; `svara(i, ...)` levererar svar i vald ordning.
+	Förutsätter att bänkens task.spawn kör i en korutin (KONTROLL nedan). ]]
+local remoteL = Networking.get("LamnaTillbaka")
+local ko = {}
+local riktigInvoke = remoteL.InvokeServer
+remoteL.InvokeServer = function(_self, ...)
+	table.insert(ko, coroutine.running())
+	return coroutine.yield()
+end
+local function svara(i, ...)
+	local c = ko[i]
+	ko[i] = false
+	if c then coroutine.resume(c, ...) end
+end
+local function del(namn, nr)
+	return { { typ = "sadel", hastId = "hast" .. namn, hastnamn = namn, registrerad = true, forvarv = nr } }
+end
+local function tryck() local v = PreparationController.panel().val[1]; if v and v.rattelse then v.skicka() end end
+local function lamnadeText(namn) return Sprak.t("tack.lamnade_sadel", namn) end
+
+-- Vanlig framgång: borttagningsvyn kommer FÖRE svaret.
+sync.OnClientEvent:Fire(vy(del("Larry", 1)))
+tryck()
+check("KONTROLL: the deferred transport captured the request", #ko == 1)
+sync.OnClientEvent:Fire(vy({}))
+svara(1, true, nil)
+check("R2: a normal success whose removal view came first still confirms",
+	PreparationController._bekraftelse() == lamnadeText("Larry"))
+
+-- Gammal framgång efter byte av tilldelning.
+sync.OnClientEvent:Fire(vy(del("Bosse", 2)))
+tryck()
+sync.OnClientEvent:Fire(vy(del("Bosse", 2), { hastId = D }))
+svara(#ko, true, nil)
+check("R2: an old success after an assignment change shows nothing",
+	PreparationController._bekraftelse() ~= lamnadeText("Bosse"))
+
+-- Äldre framgång efter ett nyare, orelaterat nej.
+sync.OnClientEvent:Fire(vy(del("Kalle", 3)))
+tryck()
+PreparationController.visaAvslagFor("tack.for_langt")
+local nyttNej = PreparationController._avslag()
+svara(#ko, true, nil)
+check("R2: an older success never replaces a newer refusal",
+	PreparationController._avslag() == nyttNej and PreparationController._bekraftelse() ~= lamnadeText("Kalle"))
+
+-- Gammalt nej under en öppen skötselfråga och under ett välfärdsstopp.
+sync.OnClientEvent:Fire(vy(del("Olle", 4)))
+tryck()
+sync.OnClientEvent:Fire(vy(del("Olle", 4), { moment = { { id = "q1", namn = "Svar", fel = true } } }))
+svara(#ko, false, "tack.ga_till_fronten")
+check("R2: an old refusal never overwrites an open care question",
+	PreparationController._avslag() ~= PreparationController.skalText("tack.ga_till_fronten"))
+sync.OnClientEvent:Fire(vy(del("Olle", 4)))
+tryck()
+sync.OnClientEvent:Fire(vy(del("Olle", 4), { stoppad = "Välfärdsstopp" }))
+svara(#ko, false, "tack.ga_till_fronten")
+check("R2: nor a welfare stop", PreparationController._avslag() ~= PreparationController.skalText("tack.ga_till_fronten"))
+
+-- Omvända svar efter tidsgränsen.
+sync.OnClientEvent:Fire(vy(del("Pelle", 5)))
+tryck()
+local forsta = #ko
+PreparationController._forfallLamnaForProv()
+tryck()
+local andra = #ko
+check("KONTROLL: after the timeout a second request is sent", andra == forsta + 1)
+svara(andra, true, nil)
+check("R2: the newer reply confirms", PreparationController._bekraftelse() == lamnadeText("Pelle"))
+svara(forsta, false, "tack.ga_till_fronten")
+check("R2: the older reply arriving later is dropped",
+	PreparationController._avslag() ~= PreparationController.skalText("tack.ga_till_fronten")
+	and PreparationController._bekraftelse() == lamnadeText("Pelle"))
+remoteL.InvokeServer = riktigInvoke
+
 if fails > 0 then error(tostring(fails) .. " FEL") end
 print(string.format("\nUTRUSTNING-RATTELSE: %d prov, alla gröna", total))

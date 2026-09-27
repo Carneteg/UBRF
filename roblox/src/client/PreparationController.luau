@@ -377,8 +377,19 @@ local rattelseAktiv = false
 	bara sin egen begäran; ett äldre svar kastas. Kommer den lyckade vyn
 	FÖRE svaret är delen redan borta — då visas inget nej, och kvittensen
 	kommer med svaret. Efter 10 s utan svar får en ny begäran skickas. ]]
-local lamnaVantar: { nr: number, nyckel: string, typ: string, hastnamn: string, tid: number }? = nil
+local lamnaVantar: any = nil
 local lamnaNr = 0
+--[[ R2: SVARET ÄR BUNDET TILL SIN STUND. `kontextGen` räknas upp när
+	tilldelningen byts eller när en PRIORITERAD vy tar över (skötselfråga,
+	välfärdsstopp, fynd, eftervård, räknat pass); `prioritetNu` är sant
+	medan en sådan visas. En återlämning fångar kontexten, karaktären och
+	panelens återkopplingsräknare (`avslagNr`, `bekraftelseNr`) när den
+	skickas; ett svar — lyckat eller nej — visas bara om ALLT är oförändrat.
+	Den egna borttagningsvyn ändrar inget av det, så en legitim framgång
+	vars vy kom först visas fortfarande. ]]
+local kontextGen = 0
+local kontextSig: string? = nil
+local prioritetNu = false
 local panelSteg: { any } = {}
 local panelData: any = nil
 local panelHastnamn: string? = nil
@@ -1575,6 +1586,11 @@ end
 	första ändringen — precis som rubriken och servern gjorde i P0-3. ]]
 local function avsluta(lage: string, antalVal: number, ledtext: string,
 	synlig: boolean)
+	--[[ R2: kontexten för väntande återlämningar, i slutet av VARJE vy. ]]
+	prioritetNu = lage == "stoppad" or lage == "fynd" or lage == "eftervard" or lage == "raknat"
+		or fragaNu
+	local sig = tostring(senasteVy and senasteVy.hastId) .. "|" .. tostring(prioritetNu)
+	if sig ~= kontextSig then kontextSig = sig; kontextGen += 1 end
 	--[[ Ett läge utan något att trycka på men med något att förklara
 		fäller UT spåraren EN gång. Sedan är läget spelarens igen. ]]
 	if lage ~= senasteLage then
@@ -1943,12 +1959,16 @@ function rita(vy: any)
 		table.insert(panelVal, i, { id = "lamna:" .. r.typ, text = Sprak.t("tack.lamna_" .. r.typ, r.hastnamn),
 			klar = false, fel = false, paTur = i == 1, aktiv = true, rattelse = true,
 			skicka = function()
-				if gen ~= rattelseGen then return end
+				--[[ Prövas igen PRECIS före utskicket: ett köat tryck som
+					korsat en ny vy eller en prioriterad vy skickas inte. ]]
+				if gen ~= rattelseGen or prioritetNu then return end
 				local v = lamnaVantar
 				if v and os.clock() - v.tid < 10 then return end
 				lamnaNr += 1
 				local nr = lamnaNr
-				lamnaVantar = { nr = nr, nyckel = r.nyckel, typ = r.typ, hastnamn = r.hastnamn, tid = os.clock() }
+				lamnaVantar = { nr = nr, nyckel = r.nyckel, typ = r.typ, hastnamn = r.hastnamn, tid = os.clock(),
+					kontextGen = kontextGen, karaktar = player.Character,
+					avslagNr = avslagNr, bekraftelseNr = bekraftelseNr }
 				task.spawn(function()
 					local transport, ok, skal = pcall(function()
 						return Net.get("LamnaTillbaka"):InvokeServer(r.typ, r.hastId, r.forvarv, r.tilldelad)
@@ -1956,6 +1976,13 @@ function rita(vy: any)
 					local vant = lamnaVantar
 					if not (vant and vant.nr == nr) then return end -- ett äldre svar
 					lamnaVantar = nil
+					--[[ R2: samma kontext, samma karaktär, ingen nyare återkoppling
+						och ingen prioriterad vy — annars visas ingenting. ]]
+					if vant.kontextGen ~= kontextGen or vant.karaktar ~= player.Character
+						or vant.avslagNr ~= avslagNr or vant.bekraftelseNr ~= bekraftelseNr
+						or prioritetNu then
+						return
+					end
 					if transport and ok == true then
 						visaBekraftelse(Sprak.t("tack.lamnade_" .. r.typ, r.hastnamn))
 					elseif harDel(senasteVy, r.nyckel) then
@@ -2316,6 +2343,11 @@ end
 function PreparationController._rattelseForProv(): any
 	return if rattelseAktiv then rattelserFor(senasteVy)[1] else nil
 end
+--[[ Provkrok: låt den väntande återlämningens 10 s-gräns gå ut. ]]
+function PreparationController._forfallLamnaForProv()
+	if lamnaVantar then lamnaVantar.tid = -math.huge end
+end
+
 function PreparationController._rattelserForProv(): { any }
 	return if rattelseAktiv then rattelserFor(senasteVy) else {}
 end
