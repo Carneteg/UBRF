@@ -23,6 +23,10 @@ local Tags = game:GetService("CollectionService")
 local vec = Vector3.new
 local RP = assert(Ridhusplats.los(workspace:FindFirstChild("Anläggning"):FindFirstChild("UBRF")))
 Tags:nollstall(); Run._server = true; Run.Heartbeat:nollstall()
+--[[ Bänken har ingen riktig tid: klientavsnitten skickar många begäranden i
+	rad, och takten nekade dem (takt.for_snabbt). Skopas klocka hoppas fram vid
+	varje läsning, som i instruktorstart.spec. ]]
+Skopa._satKlockaForProv((function() local k = 0; return function() k += 100; return k end end)())
 HorseService.setMountGate(nil); HorseService.start()
 local writes = __datastore.forsok and __datastore.forsok.skriv or 0
 local G = TempoLektion.GRANSER
@@ -366,7 +370,13 @@ do
 	VCj.avbryt(); VCj.start(id, nil)
 	UCj.satLektionsVal(VCj.panel)
 	UCj.dolj()
-	VCj.valj("tempo")
+	--[[ Ett typbyte på klienten släpper dess gamla bild (som ett riktigt val gör);
+		utan det kunde en bild från ett tidigare lektionsobjekt med högre revision
+		vinna över serverns nya. Avsluta gick direkt till servern (inte genom
+		klienten), så klienten får den stängda bilden som en push. ]]
+	VCj.valj("volt"); VCj.valj("tempo")
+	Networking.get("VoltLektionSync").OnClientEvent:Fire(
+		select(3, HorseService.voltLektionsBegaran(p, id, "sync", nil, "tempo")))
 	local start = jKnapp("tempolektion.start")
 	check("KONTROLL J: Start finns i den sammansatta värden", start ~= nil)
 	if start then start.skicka() end
@@ -491,5 +501,6 @@ do
 end
 
 UC.satLektionsVal(nil)
+Skopa._satKlockaForProv(nil)
 if fails > 0 then error(tostring(fails) .. " FEL") end
 print(string.format("\nTEMPOCOACHNING: %d prov, alla gröna", total))

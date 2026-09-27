@@ -46,6 +46,10 @@ Players._spelare = { p }
 SparService._glomHookarForProv()
 SparService._glomForProv(p)
 SparService.start()
+--[[ Bänken har ingen riktig tid: klientavsnitten skickar många begäranden i
+	rad, och takten nekade dem (takt.for_snabbt). Skopas klocka hoppas fram vid
+	varje läsning, som i instruktorstart.spec. ]]
+Skopa._satKlockaForProv((function() local k = 0; return function() k += 100; return k end end)())
 HorseService.setMountGate(nil); HorseService.start()
 local function tillstand() return LM._tillstandForProv(p) end
 local function proj() return LM._projektion(tillstand()) end
@@ -650,5 +654,6 @@ do
 	VC.avbryt()
 end
 
+Skopa._satKlockaForProv(nil)
 if fails > 0 then error(tostring(fails) .. " FEL") end
 print(string.format("\nLEKTIONSMINNE: %d prov, alla gröna", total))
