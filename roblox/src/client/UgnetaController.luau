@@ -453,7 +453,8 @@ local function byggInstallning(l: Frame)
 	local function rubrik(nyckel: string)
 		ordning += 1
 		local e = Instance.new("TextLabel")
-		e.Name = "Rubrik"
+		-- Inte "Rubrik": det namnet hör till den rivna nederpanelen (kolla-nederpanel.py).
+		e.Name = "InstallRubrik"
 		e.BackgroundTransparency = 1
 		e.Size = UDim2.new(1, 0, 0, 18)
 		e.Font = Enum.Font.GothamBold

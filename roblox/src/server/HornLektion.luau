@@ -106,6 +106,9 @@ local function referens(s, p, plats)
 	local cu, cv = uT - R, (L :: number) - T - R
 	return table.freeze({ ramId = p.ramId, figur = "hornet", uT = uT, cu = cu, cv = cv, r = R,
 		p0u = uT, p0v = cv - IN_M, p3u = cu - UT_M, p3v = cv + R,
+		--[[ R1: geometrins nyckel. Klientens guidecache jämför den, så en ny
+			referens i samma ram (ny start efter en ändrad layout) ritas om. ]]
+		nyckel = string.format("hornet|%.6f|%.6f|%.6f|%.6f", uT, cu, cv, R),
 		mu = cu + R * math.cos(math.pi / 4), mv = cv + R * math.sin(math.pi / 4),
 		inM = IN_M, utM = UT_M, langd = IN_M + BAGE + UT_M, korr = KORR, ring = ZON, mitt = MITT,
 		plats = plats })
@@ -280,8 +283,10 @@ function HornLektion.steg(s, now: number, gangart: string?, ryggar: boolean?)
 	if (gangart == "walk" or gangart == "trot") and sL > s.langst then
 		s.langst = math.min(sL, ref.langd)
 	end
-	--[[ Kontrollpunkten mitt i bågen, i ordning: bara efter inridningen. ]]
-	if not s.mittNadd and (gangart == "walk" or gangart == "trot") then
+	--[[ Kontrollpunkten mitt i bågen, i ordning: bara efter inridningen.
+		R1: ordningen är nu ett uttryckligt villkor (`langst >= IN_M`), inte
+		bara en följd av korridoren, backgränsen och segmenttaket. ]]
+	if not s.mittNadd and s.langst >= IN_M and (gangart == "walk" or gangart == "trot") then
 		for _, q in ipairs({ mid, ti }) do
 			if math.sqrt((q.u - ref.mu) ^ 2 + (q.v - ref.mv) ^ 2) <= MITT then s.mittNadd = true end
 		end

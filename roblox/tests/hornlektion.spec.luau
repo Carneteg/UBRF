@@ -246,6 +246,15 @@ do
 	check("H12 projektionen: kordans mittpunkt ligger utanför korridoren",
 		select(2, HornLektion._projektionForProv(ref, { u = (ref.uT + ref.cu) / 2, v = (ref.cv + ref.cv + ref.r) / 2 }))
 			> G.KORR)
+	--[[ R1: geometrins nyckel. Samma indata ger samma nyckel, en flyttad
+		dressyrmitt ger en annan — klientens guidecache ritar då om. ]]
+	local function refMed(u) return HornLektion._referensForProv(nil,
+		{ ramId = ref.ramId, dressyrMitt = { u = u } }, ref.plats) end
+	-- Dressyrmittens u ur referensen: uT = u0 + W − T.
+	local u0 = ref.uT - ref.plats.dressyr.halvTvars / ref.plats.studsPerMeter + G.T
+	check("H12 referensen bär en geometrinyckel", type(ref.nyckel) == "string" and ref.nyckel ~= "")
+	check("H12 samma geometri ger samma nyckel", refMed(u0).nyckel == ref.nyckel)
+	check("H12 en flyttad geometri ger en ny nyckel", refMed(u0 - 1).nyckel ~= ref.nyckel)
 	avslutaNu()
 	VC.avbryt()
 end
