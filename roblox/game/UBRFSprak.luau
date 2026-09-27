@@ -1133,6 +1133,74 @@ Sprak.text = {
 		sv = "Rid in på dressyrbanan innan du startar.",
 		en = "Enter the dressage arena before you start.",
 	},
+	["lektionsval.overgangar"] = {
+		sv = "Övergångar",
+		en = "Transitions",
+	},
+	["galopplektion.choose"] = {
+		sv = "Galoppfattning",
+		en = "Canter departure",
+	},
+	["galopplektion.start"] = {
+		sv = "Starta galoppfattningen",
+		en = "Start the canter departure",
+	},
+	["galopplektion.finish"] = {
+		sv = "Avsluta galoppfattningen",
+		en = "Finish the canter departure",
+	},
+	["galopplektion.intro"] = {
+		sv = "Trava en bit, be om galopp inne i den gröna ringen K på mittlinjen och galoppera vidare. Galoppsidan bedöms inte här.",
+		en = "Trot for a while, ask for canter inside the green ring K on the centre line and canter on. The canter lead is not judged here.",
+	},
+	["galopplektion.trot_on"] = {
+		sv = "Trava på med jämn takt mot ringen K.",
+		en = "Trot on with an even rhythm towards the ring K.",
+	},
+	["galopplektion.trot_first"] = {
+		sv = "Bra försök! Trava lite längre först, sedan galopp i ringen K.",
+		en = "Good try! Trot a little longer first, then canter in the ring K.",
+	},
+	["galopplektion.canter_at_k"] = {
+		sv = "Fint! Be om galopp när du är inne i ringen K.",
+		en = "Nice! Ask for canter when you are inside the ring K.",
+	},
+	["galopplektion.canter_outside"] = {
+		sv = "Galoppen kom utanför ringen. Trava igen och prova i ringen K.",
+		en = "The canter came outside the ring. Trot again and try in the ring K.",
+	},
+	["galopplektion.canter_on"] = {
+		sv = "Galopp! Rid vidare en bit i galopp.",
+		en = "Canter! Ride on for a while in canter.",
+	},
+	["galopplektion.canter_longer"] = {
+		sv = "Galoppera lite längre nästa gång. Trava igen så börjar vi om.",
+		en = "Canter a little longer next time. Trot again and we start over.",
+	},
+	["galopplektion.tired"] = {
+		sv = "Hon blev trött och föll av sig själv. Vila en stund och börja om i trav.",
+		en = "She got tired and dropped on her own. Rest a while and start again in trot.",
+	},
+	["galopplektion.unknown"] = {
+		sv = "Jag tappade en bit av ritten. Trava vidare så börjar vi om.",
+		en = "I missed part of the ride. Keep trotting and we start over.",
+	},
+	["galopplektion.complete"] = {
+		sv = "Galoppfattningen klar! Du fattade galopp vid K och galopperade vidare.",
+		en = "Canter departure completed! You picked up canter at K and cantered on.",
+	},
+	["galopplektion.timeout"] = {
+		sv = "Vi hann inte klart. Ta en paus eller prova igen.",
+		en = "We did not finish in time. Take a break or try again.",
+	},
+	["galopplektion.closed"] = {
+		sv = "Galoppfattningen är avslutad.",
+		en = "The canter departure has ended.",
+	},
+	["galopplektion.place"] = {
+		sv = "Rid in på dressyrbanan innan du startar.",
+		en = "Enter the dressage arena before you start.",
+	},
 	["ugneta.se_ritten"] = {
 		sv = "Se ritten",
 		en = "Watch the ride",

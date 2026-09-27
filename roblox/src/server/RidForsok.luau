@@ -84,6 +84,8 @@ RidForsok.OVNINGAR = table.freeze({
 	ridvag = table.freeze({ ["server-vag-1"] = true }),
 	-- Halvvolt tillbaka till spåret (docs/HALF-CIRCLE-LESSON-CONTRACT.md).
 	halvvolt = table.freeze({ ["server-halvvolt-1"] = true }),
+	-- Galoppfattning vid K, delvis (docs/CANTER-DEPARTURE-LESSON-CONTRACT.md).
+	galoppfattning = table.freeze({ ["server-galopp-1"] = true }),
 })
 RidForsok.MAX_PER_RITT = 8
 RidForsok.MAX_BEGARAN = 16

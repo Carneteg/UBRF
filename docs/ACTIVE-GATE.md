@@ -52,7 +52,10 @@ and test policy. This index is dated 2026-09-26; it is not product acceptance.
   Codex source review only. The half-circle back to the track
   ([contract](HALF-CIRCLE-LESSON-CONTRACT.md)) is built on it, with a
   "Centre line and diagonal" subgroup under Riding paths; BUILT_NOT_VERIFIED,
-  spec written, not run.
+  spec written, not run. Half-circle R2 8c500cf passed Codex source review
+  only. Canter departure at K ([contract](CANTER-DEPARTURE-LESSON-CONTRACT.md),
+  partial: no lead recognition) is built on it, with a "Transitions" subgroup
+  under Gaits and pace; BUILT_NOT_VERIFIED, spec written, not run.
   Deferred before Tobias' playtest: full42, runtime smoke in engine, both lesson
   flows, guides, entrance door, SV/EN and touch.
 - 2026-09-27: the entrance correction 93e16f5 received BANK_ONLY code PASS and a

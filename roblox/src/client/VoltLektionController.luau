@@ -19,10 +19,12 @@ local gaLektion: (() -> ())? = nil
 -- Vald lektion: "volt" (voltlektionen), "halt" (start/halt vid X),
 -- "overgang" (övergångar vid T1/T2), "serpentin" (träningsserpentin) eller
 -- "tempo" (jämn fart i skritt; ingen guide), "vag_mitt" eller "vag_diag"
--- (ridvägarna; figuren är typen) eller "halvvolt" (halvvolt tillbaka till spåret).
+-- (ridvägarna; figuren är typen), "halvvolt" (halvvolt tillbaka till spåret)
+-- eller "galopp" (galoppfattning vid K, utan galoppsida).
 local typ = "volt"
 -- Valsidan före en vald lektion: nil = toppnivån, "topp" (ersättningssidan
--- bakom "Välj övning"), "gangart", "vagar" eller "linjer" (undergrupp i vagar). Naromrade visar högst fyra
+-- bakom "Välj övning"), "gangart", "overgangar" (undergrupp i gangart),
+-- "vagar" eller "linjer" (undergrupp i vagar). Naromrade visar högst fyra
 -- val (MAX_VAL) och Ugnetas 0..3 kortknappar kommer först; toppnivån ger
 -- därför också en kompakt lista med EN post (R1), som Ugneta väljer när den
 -- fulla inte ryms. Varje sida har högst tre val plus Tillbaka.
@@ -191,6 +193,9 @@ local function visaGuide(ref, delmal)
 	local ringar
 	if typ == "overgang" then
 		ringar = { { u = ref.u, v = ref.v1, r = ref.halv }, { u = ref.u, v = ref.v2, r = ref.halv } }
+	elseif typ == "galopp" then
+		-- Canter departure: one ring at K, the same radius as the server zone.
+		ringar = { { u = ref.u, v = ref.v, r = ref.radie } }
 	elseif typ == "halt" then
 		ringar = { { u = ref.u, v = ref.v, r = ref.radie } }
 	else
@@ -228,7 +233,7 @@ local function mottag(b)
 	if valt and (b.lage=="approach" or b.lage=="baseline" or b.lage=="riding"
 		or b.lage=="halt1" or b.lage=="walk"
 		or b.lage=="walk1" or b.lage=="trot" or b.lage=="walk2"
-		or b.lage=="to_start" or b.lage=="route") then
+		or b.lage=="to_start" or b.lage=="route" or b.lage=="canter") then
 		visaGuide(b.referens, if typ == "serpentin" or vagTyp(typ) or typ == "halvvolt"
 			then b.delmal else nil)
 	else rivGuide() end
@@ -260,11 +265,34 @@ end
 function V.valj(vald: string?)
 	if not ritt then return end
 	local ny = if vald == "halt" or vald == "overgang" or vald == "serpentin" or vald == "tempo"
-		or vald == "vag_mitt" or vald == "vag_diag" or vald == "halvvolt" then vald else "volt"
+		or vald == "vag_mitt" or vald == "vag_diag" or vald == "halvvolt" or vald == "galopp"
+		then vald else "volt"
 	if ny ~= typ then typ, bild = ny, nil; rivGuide() end
 	valt, fri, fel, meny = true, false, nil, nil
 	Ugneta.dolj()
 	skicka("sync")
+end
+
+-- Galoppfattningens egna texter; gemensamma nycklar faller igenom.
+local function galoppText(key): string?
+	if key=="choose_galopp" then return Sprak.t("galopplektion.choose") end
+	if typ ~= "galopp" then return nil end
+	if key=="start" then return Sprak.t("galopplektion.start") end
+	if key=="finish" then return Sprak.t("galopplektion.finish") end
+	if key=="intro" then return Sprak.t("galopplektion.intro") end
+	if key=="trot_on" then return Sprak.t("galopplektion.trot_on") end
+	if key=="trot_first" then return Sprak.t("galopplektion.trot_first") end
+	if key=="canter_at_k" then return Sprak.t("galopplektion.canter_at_k") end
+	if key=="canter_outside" then return Sprak.t("galopplektion.canter_outside") end
+	if key=="canter_on" then return Sprak.t("galopplektion.canter_on") end
+	if key=="canter_longer" then return Sprak.t("galopplektion.canter_longer") end
+	if key=="tired" then return Sprak.t("galopplektion.tired") end
+	if key=="unknown" then return Sprak.t("galopplektion.unknown") end
+	if key=="complete" then return Sprak.t("galopplektion.complete") end
+	if key=="timeout" then return Sprak.t("galopplektion.timeout") end
+	if key=="closed" then return Sprak.t("galopplektion.closed") end
+	if key=="place" then return Sprak.t("galopplektion.place") end
+	return nil
 end
 
 -- Halvvoltens egna texter; gemensamma nycklar faller igenom.
@@ -299,6 +327,7 @@ local function vagText(key): string?
 	if key=="pick" then return Sprak.t("lektionsval.valj") end
 	if key=="choose_lesson" then return Sprak.t("lektionsval.oppna") end
 	if key=="group_linjer" then return Sprak.t("lektionsval.linjer") end
+	if key=="group_overgangar" then return Sprak.t("lektionsval.overgangar") end
 	if key=="choose_vag_mitt" then return Sprak.t("vaglektion.choose_mitt") end
 	if key=="choose_vag_diag" then return Sprak.t("vaglektion.choose_diag") end
 	if not vagTyp(typ) then return nil end
@@ -417,6 +446,8 @@ local function haltText(key): string?
 end
 
 local function text(key)
+	local ga = galoppText(key)
+	if ga then return ga end
 	local hv = halvvoltText(key)
 	if hv then return hv end
 	local va = vagText(key)
@@ -465,9 +496,15 @@ function V.panel()
 		if meny == "gangart" then
 			return { ersatt=true, text=text("pick"), ovning="", vantar=false, knappar={
 				val("choose_halt",function() V.valj("halt") end),
-				val("choose_overgang",function() V.valj("overgang") end),
 				val("choose_tempo",function() V.valj("tempo") end),
+				val("group_overgangar",function() meny = "overgangar" end),
 				val("back",function() meny = nil end) } }
+		elseif meny == "overgangar" then
+			-- Undergrupp: Tillbaka leder till Gångarter och fart.
+			return { ersatt=true, text=text("pick"), ovning="", vantar=false, knappar={
+				val("choose_overgang",function() V.valj("overgang") end),
+				val("choose_galopp",function() V.valj("galopp") end),
+				val("back",function() meny = "gangart" end) } }
 		elseif meny == "vagar" then
 			return { ersatt=true, text=text("pick"), ovning="", vantar=false, knappar={
 				val("choose_serpentin",function() V.valj("serpentin") end),
@@ -507,7 +544,8 @@ function V.panel()
 		else b.tips
 	local txt = text(key)
 	if (b.lage=="riding" or b.lage=="halt1" or b.lage=="walk" or b.lage=="walk1"
-		or b.lage=="trot" or b.lage=="walk2" or b.lage=="route" or b.lage=="steady")
+		or b.lage=="trot" or b.lage=="walk2" or b.lage=="route" or b.lage=="steady"
+		or b.lage=="canter")
 		and not pending and not fel then
 		txt ..= " "..tostring(b.progress).."%"
 	end

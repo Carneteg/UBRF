@@ -318,7 +318,8 @@ for n = 0, 3 do
 	local blad = {
 		{ grupp = nil, text = Sprak.t("voltlektion.choose"), slut = Sprak.t("voltlektion.finish") },
 		{ grupp = "lektionsval.gangart", text = Sprak.t("haltlektion.choose"), slut = Sprak.t("haltlektion.finish") },
-		{ grupp = "lektionsval.gangart", text = Sprak.t("overganglektion.choose"), slut = Sprak.t("overganglektion.finish") },
+		-- Sedan galoppfattningen ligger övergångarna i undergruppen.
+		{ grupp = "lektionsval.gangart", under = "lektionsval.overgangar", text = Sprak.t("overganglektion.choose"), slut = Sprak.t("overganglektion.finish") },
 		{ grupp = "lektionsval.gangart", text = Sprak.t("tempolektion.choose"), slut = Sprak.t("tempolektion.finish") },
 		{ grupp = "lektionsval.vagar", text = Sprak.t("serpentinlektion.choose"), slut = Sprak.t("serpentinlektion.finish") },
 		-- Sedan halvvolten ligger mittlinjen och diagonalen i undergruppen.

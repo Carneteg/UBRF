@@ -353,7 +353,7 @@ end
 local blad = {
 	{ vag = {}, text = "voltlektion.choose", slut = "voltlektion.finish" },
 	{ vag = { "lektionsval.gangart" }, text = "haltlektion.choose", slut = "haltlektion.finish" },
-	{ vag = { "lektionsval.gangart" }, text = "overganglektion.choose", slut = "overganglektion.finish" },
+	{ vag = { "lektionsval.gangart", "lektionsval.overgangar" }, text = "overganglektion.choose", slut = "overganglektion.finish" },
 	{ vag = { "lektionsval.gangart" }, text = "tempolektion.choose", slut = "tempolektion.finish" },
 	{ vag = { "lektionsval.vagar" }, text = "serpentinlektion.choose", slut = "serpentinlektion.finish" },
 	{ vag = { "lektionsval.vagar" }, text = "halvvoltlektion.choose", slut = "halvvoltlektion.finish" },
