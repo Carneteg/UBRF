@@ -42,7 +42,7 @@ intended place, NOT a square or biomechanically correct halt.
   - Trot, canter or reversing clears the walk evidence.
   - RidLogg overflow makes the attempt unknown: no success, Retry offered.
 - **Motion:** RidObservation cumulative observed distance and observed time.
-  - A step without observation (gap, missing root, teleport, invalid dt) is neither still nor walking. The stillness timers reset; walk distance does not grow.
+  - A step without observation (gap, missing root, teleport, invalid dt) is neither still nor walking, and resets the attempt to the first task (see R1 below).
 - **Position:** RidPlatsObservation point and frame id.
   - The frame is pinned at Start.
   - A frame change resets to the first task with the new frame (recovery without Retry). Points are never joined across frames.
@@ -69,22 +69,49 @@ intended place, NOT a square or biomechanically correct halt.
 - The request handler takes an optional 5th argument `typ`.
 - The client adds a second choice and passes `typ`.
 - Circle behaviour, keys and replies are unchanged when `typ` is absent.
+- **R1, ride-scoped requests:** one request ledger per ride, shared by both lesson types, is validated BEFORE any lesson state changes.
+  - Sequences are monotonic over the ride.
+  - A duplicate replays its answer only if both operation and type match; otherwise it is refused.
+  - An older unknown sequence is stale.
+  - A type switch therefore cannot let a delayed old start open an attempt, and an invalid or stale request never replaces the current lesson or its frozen result.
+  - `sync` reads the current lesson without changing it; Finish always acts on the current lesson.
+
+## R1: observation breaks (evidence rule)
+
+- **Break signal:** RidObservation's break counters (gap, missing root, teleport, invalid dt), a changed or missing frame, and a ridplats image without a valid position are all checked BEFORE the observation-time equality. An invalid dt increments its counter without moving `tid`.
+- **Reset:** any such break returns the attempt to the first task with new baselines and the SAME deadline. Walking or halt evidence from before the break can never be combined with evidence after it.
+- **Recovery:** needs fresh evidence in order (halt, requested walk ≥ 4 m, requested halt at X).
 
 ## Deferred verification (written, NOT run, by decision)
 
-`roblox/tests/haltlektion.spec.luau` covers:
+`roblox/tests/haltlektion.spec.luau` contains exactly these written cases.
 
-- the happy path at X;
-- a halt outside X that recovers;
+**Base cases:**
+- happy path at X, with the frozen result unchanged by later riding;
+- Retry opens a fresh attempt;
+- a halt outside X that recovers without Retry;
 - standing still throughout;
-- a fatigue-only walk;
-- trot clearing the walk evidence;
-- an unobserved step resetting stillness;
-- a frame change;
+- trot is not walk, and trot distance is not evidence;
+- a gap is never stillness;
 - the deadline;
-- Finish;
 - a lesson switch refused while active;
-- no owner event to a client-less actor;
-- the frozen result.
+- Finish;
+- the circle lesson still starts;
+- owner events addressed only to the owner;
+- no persistent writes.
+
+**R1 cases:**
+- 4 m of walking before a teleport into X, then fresh recovery;
+- walking split around a gap;
+- a missing root;
+- invalid dt with unchanged observation time (module-contract injection);
+- a fatigue-only walk (unit-boundary injection into RidLogg and the accepted gait);
+- a frame change;
+- the delayed old halt start after halt → volt;
+- the same sequence and operation with another type;
+- an invalid sequence on a type switch;
+- ordinary volt → halt → volt selection with Finish.
+
+**Not covered by this spec:** a client-less actor (the circle spec has that case for the shared owner-event path).
 
 Engine, client rendering, SV/EN layout and the player flow are unverified.

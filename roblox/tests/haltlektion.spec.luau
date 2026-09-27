@@ -137,6 +137,117 @@ check("finish cancels the active attempt", okFin and fin.lage == "closed")
 local okVolt = request("start", "volt")
 check("circle lesson still starts afterwards", okVolt == true)
 
+-- ── R1: observationsbrott lämnar ingen återanvändbar bevisning ──
+-- (Finish med typ "halt" avslutar den pågående voltlektionen: avsluta gäller
+-- alltid den lektion som faktiskt pågår.)
+local function borja()
+	request("finish")
+	local okB, _, bB = request("start")
+	return okB == true and bB.lage == "halt1"
+end
+local function haltOchSkritt(u, v)
+	still(u, v, G.HALT_FORE + 0.5)
+	aid("driv")
+end
+local function avslutaIX()
+	aid("broms")
+	still(X.u, X.v, G.HALT_EFTER + 0.75)
+end
+
+check("R1 setup: fresh halt attempt", borja())
+haltOchSkritt(X.u - 6, X.v - 11)
+for v = X.v - 10, X.v - 6 do step(X.u - 6, v) end
+step(X.u, X.v) -- teleport into X (far above the per-step limit)
+avslutaIX()
+check("4 m before a teleport into X never completes", image().lage ~= "complete")
+still(X.u, X.v, G.HALT_FORE + 0.5)
+aid("driv")
+for v = X.v + 1, X.v + 3 do step(X.u, v) end
+for v = X.v + 2, X.v, -1 do step(X.u, v) end
+avslutaIX()
+check("fresh post-break evidence recovers without Retry", image().lage == "complete")
+
+check("R1 setup: gap attempt", borja())
+haltOchSkritt(X.u, X.v - 6)
+for v = X.v - 5, X.v - 3 do step(X.u, v) end
+step(X.u, X.v - 3, 5) -- observation gap
+for v = X.v - 2, X.v do step(X.u, v) end
+avslutaIX()
+check("walking split around a gap is not joined", image().lage ~= "complete")
+
+check("R1 setup: missing-root attempt", borja())
+haltOchSkritt(X.u, X.v - 6)
+for v = X.v - 5, X.v - 1 do step(X.u, v) end
+local rot = s.rig.root
+local forald = rot.Parent
+rot.Parent = nil; s.energi = 1; Run.Heartbeat:Fire(0.25); rot.Parent = forald
+avslutaIX()
+check("a missing root breaks the walking evidence", image().lage ~= "complete")
+
+-- MODULKONTRAKT, inte produktionsväg: HorseService släpper aldrig igenom
+-- dt = 0 (4 Hz-ackumulatorn), så det ogiltiga dt:t matas direkt till
+-- RidObservation. Det räknas upp utan att `tid` ändras.
+check("R1 setup: invalid-dt attempt", borja())
+haltOchSkritt(X.u, X.v - 6)
+for v = X.v - 5, X.v - 1 do step(X.u, v) end
+local tidFore = HorseService.ridobservation(id).tid
+RidObservation.sampla(id, point(X.u, X.v - 1), 0, "walk", false, 33)
+check("KONTROLL: invalid dt leaves observation time unchanged",
+	HorseService.ridobservation(id).tid == tidFore)
+avslutaIX()
+check("invalid dt with unchanged time still resets the evidence", image().lage ~= "complete")
+
+-- ENHETSGRÄNS, inte spelarväg: en trötthetsövergång till skritt injiceras i
+-- RidLogg och i den accepterade gångarten, eftersom tröttheten i banken
+-- inte kan framkallas på bestämd plats.
+check("R1 setup: fatigue attempt", borja())
+still(X.u, X.v - 6, G.HALT_FORE + 0.5)
+RidLogg.gangart(id, { fran = "halt", franRyggar = false, till = "walk", tillRyggar = false,
+	orsak = "trotthet" }, os.clock())
+s.stegIndex = Ridtrappa.index("walk")
+for v = X.v - 5, X.v do step(X.u, v) end
+RidLogg.gangart(id, { fran = "walk", franRyggar = false, till = "halt", tillRyggar = false,
+	orsak = "hjalp" }, os.clock())
+s.stegIndex = Ridtrappa.index("halt")
+still(X.u, X.v, G.HALT_EFTER + 0.75)
+check("a fatigue-only walk is not walking evidence", image().lage ~= "complete")
+
+check("R1 setup: frame-change attempt", borja())
+haltOchSkritt(X.u, X.v - 6)
+for v = X.v - 5, X.v - 3 do step(X.u, v) end
+local hus = workspace:FindFirstChild("Anläggning"):FindFirstChild("UBRF")
+local bana, lay = hus:FindFirstChild("Ridbanan"), hus:FindFirstChild("Dressyrlayout 20x60")
+local d = vec(0, 0, 0.5)
+bana.CFrame = CFrame.new(bana.Position + d); lay.CFrame = CFrame.new(lay.Position + d)
+step(X.u, X.v - 2)
+local efterRam = image()
+check("a frame change returns to the first task", efterRam.lage == "halt1" and efterRam.tips == "unknown")
+bana.CFrame = CFrame.new(bana.Position - d); lay.CFrame = CFrame.new(lay.Position - d)
+step(X.u, X.v - 2)
+
+-- ── R1: rittens begäranbok överlever typbyte ──
+request("finish")
+local base = seq
+HorseService.voltLektionsBegaran(p, id, "start", base + 1, "halt")
+HorseService.voltLektionsBegaran(p, id, "finish", base + 2, "halt")
+HorseService.voltLektionsBegaran(p, id, "start", base + 3, "volt")
+HorseService.voltLektionsBegaran(p, id, "finish", base + 4, "volt")
+seq = base + 4
+HorseService.voltLektionsBegaran(p, id, "start", base + 1, "halt")
+check("a delayed old halt start after a type switch opens no attempt", RidForsok.aktivt(id) == nil)
+local okDiff, felDiff = HorseService.voltLektionsBegaran(p, id, "finish", base + 4, "halt")
+check("same sequence and operation with another type is refused", okDiff == false and felDiff == "request")
+local objFore = s.voltLektion
+local okBad, felBad = HorseService.voltLektionsBegaran(p, id, "start", 2.5, "halt")
+check("an invalid sequence on a type switch changes no lesson state", okBad == false
+	and felBad == "request" and s.voltLektion == objFore)
+local okH = request("start")
+local okHF, _, hf = request("finish")
+local okV = request("start", "volt")
+local okVF = request("finish", "volt")
+check("ordinary volt -> halt -> volt selection and Finish still work", okH == true and okHF == true
+	and hf.lage == "closed" and okV == true and okVF == true)
+
 local sync = Networking.get("VoltLektionSync")
 local toOther = 0
 for _, rad in ipairs(sync._skickat) do if rad[1] ~= p then toOther += 1 end end

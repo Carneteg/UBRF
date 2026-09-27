@@ -121,6 +121,8 @@ export type Session = {
 	     på avsändaren, så en annan spelares märke öppnar ingenting. ]]
 	rittId: string?,
 	voltLektion: any?,
+	-- Rittens begäranbok för lektionerna, gemensam för alla lektionstyper.
+	lektionsBegaran: any?,
 }
 
 local sessions: { [Model]: Session } = {}
@@ -539,6 +541,7 @@ local function setRider(session: Session, player: Player?, orsak: string?)
 	     utgångsläge i stället för att den förra får ett sista svar. ]]
 	nollstallRitt(session)
 	session.voltLektion = nil
+	session.lektionsBegaran = nil
 	session.rittId = if player then nyttRittId() else nil
 	--[[ Ridloggen: den gamla ritten stängs (en gång — `avsluta` är ett
 		nej andra gången) och en ny öppnas för den nya ryttaren. ]]
@@ -1944,29 +1947,69 @@ function HorseService.voltLektionsBegaran(player: any, rittId: any, op: any, seq
 		return false, "unknown", nil
 	end
 	--[[ Lektionstyp: utelämnad = volt (oförändrat beteende), "halt" =
-		start/halt. Byte av typ nekas medan ett försök pågår; annars får
-		ritten ett nytt lektionsläge för den valda typen. ]]
+		start/halt. En lektion per ritt. ]]
 	if typ == nil then typ = "volt" end
 	if typ ~= "volt" and typ ~= "halt" then return false, "unknown", nil end
+	local hastId = tostring(session.rig.model:GetAttribute("HorseId") or session.rig.model.Name)
+	local gangart, ryggar = Ridtrappa.gangart(session.stegIndex), Ridtrappa.ryggar(session.stegIndex)
 	local nu = session.voltLektion
-	if nu and (nu.typ or "volt") ~= typ then
-		if op == "finish" or op == "sync" then
-			--[[ Avsluta och läsa gäller alltid den lektion som faktiskt
-				pågår, så att ett aktivt försök aldrig blir oavslutbart. ]]
-			typ = nu.typ or "volt"
-		elseif RidForsok.aktivt(rittId) then
-			return false, "active", nil
-		else
-			session.voltLektion = nil
+
+	--[[ Läsa ändrar aldrig lektionsläget: den pågående lektionen läses,
+		och finns ingen skapas den valda. ]]
+	if op == "sync" then
+		if not nu then
+			nu = (if typ == "halt" then HaltLektion else VoltLektion).ny(rittId, player.UserId, hastId)
+			session.voltLektion = nu
 		end
+		local L = if nu.typ == "halt" then HaltLektion else VoltLektion
+		return L.begar(nu, op, seq, os.clock(), gangart, ryggar)
 	end
-	local Lektion = if typ == "halt" then HaltLektion else VoltLektion
-	if not session.voltLektion then
-		session.voltLektion = Lektion.ny(rittId, player.UserId,
-			tostring(session.rig.model:GetAttribute("HorseId") or session.rig.model.Name))
+
+	--[[ RITTENS BEGÄRANBOK, gemensam för lektionstyperna och prövad INNAN
+		lektionsläget ändras. Sekvensen är monoton över hela ritten: en
+		dubblett ger sitt tidigare svar bara om både operation och typ
+		stämmer, och en äldre okänd begäran är inaktuell. Annars kunde ett
+		typbyte (nytt lektionsobjekt med tom historik) låta en fördröjd
+		gammal start öppna ett försök ingen bad om nu. ]]
+	if type(seq) ~= "number" or seq ~= seq or seq < 1 or seq > 2147483647 or seq % 1 ~= 0 then
+		return false, "request", nil
 	end
-	return Lektion.begar(session.voltLektion, op, seq, os.clock(),
-		Ridtrappa.gangart(session.stegIndex), Ridtrappa.ryggar(session.stegIndex))
+	local bok = session.lektionsBegaran
+	if not bok then
+		bok = { hogsta = 0, svar = {}, ordning = {} }
+		session.lektionsBegaran = bok
+	end
+	local tidigare = bok.svar[seq]
+	if tidigare then
+		if tidigare.op ~= op or tidigare.typ ~= typ then return false, "request", nil end
+		return tidigare.ok, tidigare.fel, tidigare.bild
+	end
+	if seq <= bok.hogsta then return false, "stale", nil end
+	bok.hogsta = seq
+
+	local ok, fel, bild = false, nil, nil
+	local anvand = typ
+	local byte = nu ~= nil and (nu.typ or "volt") ~= typ
+	if byte and op == "finish" then
+		--[[ Avsluta gäller alltid den lektion som faktiskt pågår, så att ett
+			aktivt försök aldrig blir oavslutbart. ]]
+		anvand = nu.typ or "volt"
+	elseif byte and RidForsok.aktivt(rittId) then
+		fel = "active"
+	elseif byte then
+		session.voltLektion = nil
+	end
+	if fel == nil then
+		local L = if anvand == "halt" then HaltLektion else VoltLektion
+		if not session.voltLektion then
+			session.voltLektion = L.ny(rittId, player.UserId, hastId)
+		end
+		ok, fel, bild = L.begar(session.voltLektion, op, seq, os.clock(), gangart, ryggar)
+	end
+	bok.svar[seq] = { op = op, typ = typ, ok = ok, fel = fel, bild = bild }
+	table.insert(bok.ordning, seq)
+	while #bok.ordning > 16 do bok.svar[table.remove(bok.ordning, 1)] = nil end
+	return ok, fel, bild
 end
 
 return HorseService

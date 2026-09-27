@@ -74,14 +74,31 @@ local function referens(s, p)
 		radie = ZON_R, plats = Plats.lektionsRam(s.rittId) })
 end
 
+--[[ Antalet observationsbrott hittills (lucka, saknad rot, teleport,
+	ogiltigt dt). Ett ogiltigt dt räknas upp UTAN att `tid` ändras, så
+	räknaren — inte tiden — avgör om något hänt sedan förra steget. ]]
+local function brottAntal(o): number
+	local g = o.giltighet
+	if type(g) ~= "table" then return -1 end
+	return (g.luckor or 0) + (g.saknade or 0) + (g.teleporter or 0) + (g.ogiltigaDt or 0)
+end
+
 --[[ Nollställer uppgiften till första steget i samma försök: nya
-	baslinjer, ingen gammal bevisning. Används vid Start och när ramen
-	byts (återhämtning utan Retry). ]]
+	baslinjer, ingen gammal bevisning, samma tidsgräns. Används vid Start,
+	efter ett observationsbrott och när ramen byts eller saknas
+	(återhämtning utan Retry). Saknas en giltig ram hålls `ramId` tomt, så
+	att nästa giltiga ram baslinjeras på nytt i stället för att fogas ihop
+	med den gamla. ]]
 local function nyBaslinje(s, o, p, logg)
 	s.sistaT, s.sistaD, s.sistaObs = o.tid, o.distans, o.obsTid
+	s.sistaBrott = brottAntal(o)
 	s.loggSett = #logg.handelser
-	s.ramId = p.ramId
-	s.referens = referens(s, p)
+	if p.ramId ~= nil and p.dressyrMitt ~= nil then
+		s.ramId = p.ramId
+		s.referens = referens(s, p)
+	else
+		s.ramId = nil
+	end
 	s.stilla1, s.haltTid, s.skritt = 0, 0, 0
 	s.harSkritt, s.haltHjalp, s.okant = false, false, false
 end
@@ -133,17 +150,28 @@ function HaltLektion.steg(s, now: number, gangart: string?, ryggar: boolean?)
 	local p = Plats.ogonblick(s.rittId)
 	local logg = Logg.ogonblick(s.rittId)
 	if not (agare(s, o) and agare(s, p) and logg and logg.rittId == s.rittId) then return end
+
+	--[[ AVBROTT FÖRE TIDSJÄMFÖRELSEN. Ett observationsbrott (också ett
+		ogiltigt dt som inte flyttar `tid`), en ram som bytts eller saknas,
+		eller en ridplatsbild utan giltigt läge lämnar ingen återanvändbar
+		bevisning: tillbaka till första uppgiften med nya baslinjer, samma
+		tidsgräns. Okänt är inte uppmätt noll — inget räknas över brottet. ]]
+	local brott = brottAntal(o) ~= s.sistaBrott
+	local ramFel = p.ramId == nil or p.ramId ~= s.ramId
+	local lageFel = p.punkt == nil or (p.status ~= "segment" and p.status ~= "baslinje")
+	if brott or ramFel or lageFel then
+		local redanNollad = s.lage == "halt1" and s.stilla1 == 0 and not brott
+			and s.ramId ~= nil and p.ramId == s.ramId
+		nyBaslinje(s, o, p, logg)
+		if not redanNollad then
+			andra(s, "halt1", "unknown")
+			satProgress(s, 0)
+		end
+		return
+	end
 	if o.tid == s.sistaT then return end
 
 	lasOvergangar(s, logg)
-	if p.ramId ~= nil and p.ramId ~= s.ramId and p.dressyrMitt then
-		--[[ Ny ram: ingen bevisning korsar den. Tillbaka till första
-			uppgiften i SAMMA försök, med ramen som den är nu. ]]
-		nyBaslinje(s, o, p, logg)
-		andra(s, "halt1", "unknown")
-		satProgress(s, 0)
-		return
-	end
 
 	local dt = o.tid - s.sistaT
 	local observerad = o.obsTid > s.sistaObs
