@@ -290,18 +290,27 @@ check("every guide part is nonphysical", safeGuide)
 step(0,20); step(0,20); step(0,20)
 circle(1,9)
 render()
-check("server completion visibly reaches Ugneta", UgnetaController.panel().text==Sprak.t("voltlektion.complete")
+--[[ C1 (5878f03): klar-sidan bär den konkreta återkopplingen ur det frysta
+	resultatet i stället för den allmänna klartexten. ]]
+local completedAttempt
+do -- Egen räckvidd: huvudchunken har högst 200 lokala register.
+local function klarText() return LektionsAterkoppling.text(image(), { typ = "volt", ritt = id }) end
+local klarEn = klarText()
+check("KONTROLL: the frozen result gives concrete feedback", type(klarEn) == "string" and klarEn ~= "")
+check("server completion visibly reaches Ugneta", UgnetaController.panel().text==klarEn
 	and button("retry")~=nil)
 check("real teacher label renders completion", UgnetaController._larare().synlig
-	and UgnetaController._larare().text==Sprak.t("voltlektion.complete"))
-local completedAttempt=image().forsokId
+	and UgnetaController._larare().text==klarEn)
+completedAttempt=image().forsokId
 check("guide removed on completion", workspace:FindFirstChild("Voltguide")==nil)
 n=#remote._skickat; nu+=2
 cas._bound[Input.DRIV](Input.DRIV,Enum.UserInputState.Begin,{})
 render()
 check("drive aid cannot retry or finish", #remote._skickat==n and button("retry")~=nil)
 Sprak.satVal("sv")
-check("result changes language without recomputation", UgnetaController.panel().text==Sprak.t("voltlektion.complete"))
+check("result changes language without recomputation", UgnetaController.panel().text==klarText()
+	and klarText() ~= klarEn)
+end
 click("retry")
 local current=RidForsok.aktivt(id)
 check("explicit retry creates actual new attempt", current~=nil and current.forsokId~=completedAttempt)
