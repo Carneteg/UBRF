@@ -56,7 +56,7 @@ local aktuelltAvsnitt = "-"
 local DEL = tostring(_G.UBRF_DEL or "alla")
 local AVSNITT = {
 	"identitet", "boot", "varldsintegritet", "bindning", "tackkedjan",
-	"ridanu", "mountrequest", "boxfront", "dorrar", "ledning",
+	"ridanu", "mountrequest", "voltlektion", "boxfront", "dorrar", "ledning",
 	"flerledning", "stadning",
 }
 
@@ -192,6 +192,7 @@ local Preparation = require(ReplicatedStorage.HorseCore.Preparation)
 local Networking = require(ReplicatedStorage.HorseCore.Networking)
 local Sprak = require(ReplicatedStorage.HorseCore.Sprak)
 local Spel = require(ReplicatedStorage.UBRFSpel)
+local Ridhusplats = require(ReplicatedStorage.HorseCore.Ridhusplats)
 
 local M = 3 -- studs per meter, som BuildKit.M och LedService
 
@@ -816,6 +817,107 @@ skyddat("mountrequest", function()
 		kolla("den förberedda hästen släpper upp ryttaren genom remotens handlare",
 			false, "ingen bunden modell")
 	end
+end)
+
+--[[ ══════════════════════════════════════════════════════════════════
+	7b. VOLTLEKTIONEN I MOTORN   [#264 voltlektion]
+	══════════════════════════════════════════════════════════════════
+
+	Serverns lektionsväg i riktig motor: HorseServices eget hjärtslag
+	stegar RidObservation → RidPlatsObservation → VoltObservation och
+	lektionen, mot ridhuset som faktiskt byggts. Aktören från avsnitt 7
+	sitter upp och gör sina val genom den namngivna handlaren
+	`HorseService.voltLektionsBegaran`, samma som remoten når.
+
+	SYNTETISK RUTT: hästens läge SÄTTS mellan hjärtslagen (fysiken
+	integrerar inte i Luau Execution). Det här mäter att servern
+	observerar, armerar, bedömer och stänger rätt i motorn — inte att en
+	spelare kan rida volten. Den skillnaden redovisas som ej mätbar.
+
+	Aktören sitter kvar när avsnittet är klart: `stadning` mäter
+	avsittningen på samma säte.
+	══════════════════════════════════════════════════════════════════ ]]
+skyddat("voltlektion", function()
+	avsnitt("voltlektion")
+	local hast = if sateR then HorseService.horseOf(sateR) else nil
+	local session = if hast then HorseService.sessionFor(hast) else nil
+	local ritt = if session then session.rittId else nil
+	kolla("aktören från mountrequest sitter upp", type(ritt) == "string", tostring(ritt))
+	if not (hast and ritt) then return end
+	local anl = workspace:FindFirstChild("Anläggning")
+	local plats = Ridhusplats.los(anl and anl:FindFirstChild("UBRF"))
+	kolla("ridhusets platsram löses i motorn", plats ~= nil)
+	if not plats then return end
+
+	local ursprung = hast:GetPivot()
+	local y = ursprung.Position.Y
+	--[[ Ett läge per observationssteg. HorseService samlar hjärtslagen
+		till steg om 0,25 s; 0,27 s per läge ger ett steg, och varje
+		förflyttning hålls under teleportgränsen (33 studs/s). ]]
+	local function stegTill(u: number, v: number)
+		local w = Ridhusplats.tillVarld(plats, Vector3.new(u, 0, v))
+		hast:PivotTo(CFrame.new(w.X, y, w.Z) * ursprung.Rotation)
+		local t = 0
+		while t < 0.27 do t += RunService.Heartbeat:Wait() end
+	end
+	local function begar(op: string, sekvens: number?)
+		return HorseService.voltLektionsBegaran(sateR, ritt, op, sekvens)
+	end
+	local function bild()
+		local _, _, b = begar("sync")
+		return b
+	end
+
+	stegTill(0, 10); stegTill(0, 10)
+	local rp = HorseService.ridplats(ritt)
+	local mitt = rp and rp.dressyrMitt
+	kolla("ridplatsen observeras i layouten", rp ~= nil and rp.iDressyr == true and mitt ~= nil,
+		if rp then tostring(rp.status) else "ingen bild")
+	if not mitt then hast:PivotTo(ursprung); return end
+	local R = 10
+
+	local ok1, fel1, b1 = begar("start", 1)
+	kolla("Start öppnar ett försök i läget approach", ok1 == true and b1 ~= nil and b1.lage == "approach",
+		("%s %s"):format(tostring(fel1), tostring(b1 and b1.lage)))
+	if ok1 ~= true then hast:PivotTo(ursprung); return end
+
+	--[[ Fram till voltlinjen (u 0, v mitt − R), sedan ett helt varv
+		plus marginal i 9°-steg. ]]
+	local v = 10
+	while v < mitt.v - R do
+		v = math.min(v + 1.5, mitt.v - R)
+		stegTill(mitt.u, v)
+	end
+	for i = 1, 44 do
+		local a = -math.pi / 2 + 2 * math.pi * i / 40
+		stegTill(mitt.u + R * math.cos(a), mitt.v + R * math.sin(a))
+	end
+	local b2 = bild()
+	kolla("en hel volt på referensen blir complete i motorn", b2 ~= nil and b2.lage == "complete",
+		if b2 then ("%s %s%%"):format(tostring(b2.lage), tostring(b2.progress)) else "ingen bild")
+	local f2 = b2 and HorseService.forsok(b2.forsokId)
+	kolla("försöket stängs som slutford, inte avbrutet", f2 ~= nil and f2.orsak == "slutford",
+		tostring(f2 and f2.orsak))
+	kolla("stängt försök är ingen bedömning", f2 ~= nil and f2.bedomning == "ingen")
+	kolla("resultatet är fryst med ett helt varv", b2 ~= nil and b2.resultat ~= nil
+		and b2.resultat.avsnitt ~= nil and (b2.resultat.avsnitt.varv or 0) >= 1
+		and table.isfrozen(b2.resultat))
+
+	local ok3, _, b3 = begar("retry", 2)
+	kolla("Retry öppnar ett nytt försök", ok3 == true and b3 ~= nil and b3.lage == "approach"
+		and b2 ~= nil and b3.forsokId ~= b2.forsokId)
+	local ok4, _, b4 = begar("finish", 3)
+	local f3 = b3 and HorseService.forsok(b3.forsokId)
+	kolla("Finish stänger det aktiva försöket som avbrutet", ok4 == true and b4 ~= nil
+		and b4.lage == "closed" and f3 ~= nil and f3.orsak == "avbrutet",
+		tostring(f3 and f3.orsak))
+	kolla("aktören sitter kvar efter Finish", HorseService.horseOf(sateR) == hast)
+
+	ejMatbar("spelarens egen ridning av volten",
+		"hästens läge sätts av provet; fysiken integrerar inte i Luau Execution")
+	ejMatbar("Ugneta-ytan, voltguiden och fjärranropet VoltLektion",
+		"klientside; ingen klient i Luau Execution")
+	hast:PivotTo(ursprung)
 end)
 
 --[[ ══════════════════════════════════════════════════════════════════
