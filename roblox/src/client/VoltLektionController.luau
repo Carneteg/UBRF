@@ -41,6 +41,19 @@ local valGen = 0
 	tar bort en synlig hälsning direkt. Den är redan förbrukad (försöket är
 	markerat), så den kommer inte tillbaka vid Inga -> Normalt/Färre. ]]
 local installLyssnare: (() -> ())? = nil
+
+--[[ ══ TEMPOCOACHNINGEN — docs/TEMPO-COACHING-CONTRACT.md ═══════════════
+	Bara jämn skritt (typ "tempo"). `coachForsok`/`coachSedd` är baslinjen
+	för det försök som visas: första bilden av ett försök sätter den utan
+	att visa något; en HÖGRE `coachNr` i en godtagen bild av samma försök är
+	en ny händelse. `coachCd` är spärren (LIVE_CD.fel), `coachning` den
+	visade (LIVE_CD.visa). Ingen kö, ingen uppspelning. ]]
+local COACH_SKAL = { too_slow = true, too_fast = true, steadier = true }
+local COACH_CD = require(game:GetService("ReplicatedStorage").HorseCore.RidKanon).UGNETA.LIVE_CD
+local coachForsok: any = nil
+local coachSedd = 0
+local coachCd = 0
+local coachning: { forsokId: any, ritt: string, skal: string, kvar: number }? = nil
 local AKTIVA_LAGEN = { approach = true, baseline = true, riding = true, halt1 = true, walk = true,
 	walk1 = true, trot = true, walk2 = true, to_start = true, route = true, steady = true,
 	canter = true, crossing = true, exit = true }
@@ -363,6 +376,23 @@ local function mottag(b)
 	if (b.typ or "volt") ~= typ then return end
 	if bild and b.revision < bild.revision then return end
 	bild = b
+	--[[ Tempocoachning: baslinje eller ny händelse, bara i en GODTAGEN bild. ]]
+	if typ == "tempo" and b.forsokId ~= nil then
+		local nr = if type(b.coachNr) == "number" and b.coachNr == b.coachNr then b.coachNr else 0
+		if coachForsok ~= b.forsokId then
+			coachForsok, coachSedd, coachning = b.forsokId, nr, nil
+		elseif nr > coachSedd then
+			coachSedd = nr
+			local halsar = halsning ~= nil and halsning.forsokId == b.forsokId
+			if b.lage == "steady" and COACH_SKAL[b.coachSkal] and coachCd <= 0 and not halsar
+				and not pending and not fel then
+				coachCd = COACH_CD.fel
+				if Ugneta.valfriKommentar() then
+					coachning = { forsokId = b.forsokId, ritt = ritt :: string, skal = b.coachSkal, kvar = COACH_CD.visa }
+				end
+			end
+		end
+	end
 	sekvens = math.max(sekvens,b.sekvens or 0)
 	if valt and (b.lage=="approach" or b.lage=="baseline" or b.lage=="riding"
 		or b.lage=="halt1" or b.lage=="walk"
@@ -425,6 +455,7 @@ function V.valj(vald: string?)
 	if ny ~= typ then typ, bild = ny, nil; rivGuide() end
 	halsning = nil
 	valGen += 1
+	coachning, coachForsok = nil, nil
 	valt, fri, fel, meny = true, false, nil, nil
 	Ugneta.dolj()
 	skicka("sync")
@@ -834,6 +865,19 @@ function V.panel()
 	--[[ R1: Inga tar bort hälsningen även här (en läsning av valet, inte
 		`valfriKommentar` — Färre-räknaren rörs inte av en omritning). ]]
 	if halsning and Installning.kommentarer() == "inga" then halsning = nil end
+	if coachning and Installning.kommentarer() == "inga" then coachning = nil end
+	--[[ Tempocoachningen: bara för exakt det försöket, i steady, utan
+		vänta/fel och utan en synlig hälsning (hälsningen vinner). ]]
+	local cg = coachning
+	if cg then
+		if cg.ritt == ritt and typ == "tempo" and b.forsokId == cg.forsokId and b.lage == "steady"
+			and not pending and not fel and halsning == nil then
+			txt = Sprak.t("tempocoach." .. cg.skal) .. " " .. txt
+		elseif pending or fel or cg.ritt ~= ritt or typ ~= "tempo" or b.forsokId ~= cg.forsokId
+			or b.lage ~= "steady" then
+			coachning = nil
+		end
+	end
 	local h = halsning
 	if h then
 		if h.ritt == ritt and h.typ == typ and b.forsokId == h.forsokId and AKTIVA_LAGEN[b.lage]
@@ -870,10 +914,13 @@ function V.start(marke, legacy)
 		NY ritt glöms även det senast hälsade försöket (ritten avgränsar det). ]]
 	halsning = nil
 	valGen += 1
+	--[[ Återkoppling eller ny ritt: coachningen bort och baslinjen om (nästa
+		bild sätter den, utan att visa något). ]]
+	coachning, coachForsok = nil, nil
 	if not samma then halsadForsok = nil end
 	if not installLyssnare then
 		installLyssnare = Installning.vidByte(function()
-			if Installning.kommentarer() == "inga" then halsning = nil end
+			if Installning.kommentarer() == "inga" then halsning = nil; coachning = nil end
 		end)
 	end
 	if not samma then valt,fri,bild,sekvens,meny=false,false,nil,0,nil end
@@ -895,6 +942,13 @@ function V.start(marke, legacy)
 end
 
 function V.steg(dt)
+	local steglangd = if type(dt) == "number" and dt == dt and dt > 0 then math.min(dt, 1) else 0
+	if coachCd > 0 then coachCd -= steglangd end
+	local cg = coachning
+	if cg then
+		cg.kvar -= steglangd
+		if cg.kvar <= 0 then coachning = nil end
+	end
 	local h = halsning
 	if h then
 		h.kvar -= (if type(dt) == "number" and dt == dt and dt > 0 then math.min(dt, 1) else 0)
@@ -913,6 +967,7 @@ function V.tarOver(): boolean return attached and (valt or fri) end
 function V._minneForProv(): any return minne end
 --[[ Provkrok: hälsningens läge. ]]
 function V._halsningForProv(): any return halsning end
+function V._coachningForProv(): any return coachning end
 function V.lektion(): boolean return attached and valt end
 
 function V.avbryt()
@@ -920,6 +975,7 @@ function V.avbryt()
 	generation+=1; requestNr+=1; pending=false; attached=false; rivGuide()
 	halsning = nil
 	valGen += 1
+	coachning, coachForsok = nil, nil
 	Ugneta.satLektionsVal(nil)
 end
 

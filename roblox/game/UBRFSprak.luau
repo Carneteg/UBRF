@@ -1717,6 +1717,30 @@ Sprak.text = {
 		sv = "Jag kan inte läsa din ledningshistorik just nu.",
 		en = "I can't read your leading history right now.",
 	},
+	["tempocoach.too_slow"] = {
+		sv = "Håll framåt (W eller spaken) lite mer – det ökar farten inom skritten.",
+		en = "Hold forward (W or the stick) a little more – it speeds her up within the walk.",
+	},
+	["tempocoach.too_fast"] = {
+		sv = "Släpp lite på framåt (W eller spaken) – då går hon i lugnare skritt.",
+		en = "Ease off forward (W or the stick) – she then walks at a calmer pace.",
+	},
+	["tempocoach.steadier"] = {
+		sv = "Håll framåt (W eller spaken) jämnt, utan ryck, så farten håller sig jämn.",
+		en = "Keep forward (W or the stick) even, without jerks, so the speed stays even.",
+	},
+	["tempocoach.jamnare"] = {
+		sv = "Jämnare än förra försöket: spridningen var %s %%, nu %s %%.",
+		en = "More even than your previous attempt: the spread was %s %%, now %s %%.",
+	},
+	["tempocoach.forra"] = {
+		sv = "Förra försöket: %s %% spridning, nu %s %%.",
+		en = "Previous attempt: %s %% spread, now %s %%.",
+	},
+	["tempocoach.jamnare_kort"] = {
+		sv = "Jämnare än förra gången.",
+		en = "More even than last time.",
+	},
 	["halsning.volt"] = {
 		sv = "Nu rider vi volten: följ linjen runt mitten ett helt varv.",
 		en = "Now for the circle: follow the line around the middle for one full circle.",

@@ -130,6 +130,21 @@ function A.text(b: any, kontext: any): string?
 		if Installning.detalj() == "kort" then
 			s = Sprak.t("aterkoppling." .. typ .. ".kort")
 		end
+		--[[ Tempocoachning: jämförelsen med förra DISTINKTA fullföljningen i
+			samma ritt — bara när den är bunden till det här försöket och
+			talen är ändliga. "Jämnare" bara när de avrundade procenten
+			faktiskt skiljer sig åt rätt håll; annars neutralt. ]]
+		local j = b.jamforelse
+		if typ == "tempo" and type(j) == "table" and j.forsokId == b.forsokId and j.forraForsokId ~= b.forsokId
+			and fin(j.spridning) and j.spridning >= 0 and fin(j.forraSpridning) and j.forraSpridning >= 0 then
+			local nu, forr = math.floor(j.spridning * 100 + 0.5), math.floor(j.forraSpridning * 100 + 0.5)
+			if Installning.detalj() == "kort" then
+				if nu < forr then s ..= " " .. Sprak.t("tempocoach.jamnare_kort") end
+			else
+				s ..= " " .. Sprak.t(if nu < forr then "tempocoach.jamnare" else "tempocoach.forra",
+					tostring(forr), tostring(nu))
+			end
+		end
 		return s .. " " .. Sprak.t("aterkoppling." .. typ .. ".nasta")
 	elseif b.lage == "timeout" then
 		--[[ Neutralt: ingen gratulation, inget lånat resultat, ingen påhittad

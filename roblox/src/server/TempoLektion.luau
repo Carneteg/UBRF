@@ -33,13 +33,20 @@ TempoLektion.GRANSER = table.freeze({ GOLV = GOLV, TAK = TAK, SPRIDNING = SPRIDN
 
 function TempoLektion.ny(rittId: string, userId: number, hastId: string): any
 	return { typ = "tempo", rittId = rittId, userId = userId, hastId = hastId, lage = "ready",
-		revision = 0, hogsta = 0, svar = {}, ordning = {}, progress = 0, tips = "intro" }
+		revision = 0, hogsta = 0, svar = {}, ordning = {}, progress = 0, tips = "intro",
+		--[[ Tempocoachning (docs/TEMPO-COACHING-CONTRACT.md): händelseräknaren
+			för det aktuella försöket, och den förra DISTINKTA fullföljningen i
+			det här lektionsobjektet (samma ritt, häst och definition). ]]
+		coachNr = 0, coachSkal = nil, forraKlar = nil, jamforelse = nil }
 end
 
 function TempoLektion.bild(s): any
+	local j = s.jamforelse
 	return table.freeze({ typ = "tempo", rittId = s.rittId, forsokId = s.forsokId,
 		revision = s.revision, sekvens = s.hogsta, lage = s.lage, progress = s.progress,
-		tips = s.tips, resultat = s.resultat })
+		tips = s.tips, resultat = s.resultat,
+		coachNr = s.coachNr or 0, coachSkal = s.coachSkal,
+		jamforelse = if s.lage == "complete" and j and j.forsokId == s.forsokId then j else nil })
 end
 
 local function andra(s, lage, tips)
@@ -92,6 +99,22 @@ local function omSerie(s, tips)
 	satProgress(s, 0)
 end
 
+--[[ Tempocoachning: en HÄNDELSE — bara vid de tre fartklassningarna, som
+	redan ligger efter varje avbrotts- och färskhetsprövning. En revision per
+	händelse, så att klienten kan skilja en ny händelse från en omritning. ]]
+local function coach(s, skal: string)
+	s.coachNr = (s.coachNr or 0) + 1
+	s.coachSkal = skal
+	s.revision += 1
+end
+
+local function andligtPositivt(x: any): boolean
+	return type(x) == "number" and x == x and x ~= math.huge and x > 0
+end
+local function andligtIckeNeg(x: any): boolean
+	return type(x) == "number" and x == x and x ~= math.huge and x >= 0
+end
+
 --[[ Ny baslinje: bara steg EFTER den räknas, och det första steget efter
 	den krediteras aldrig (dess intervall kan börja före baslinjen). ]]
 local function nyBaslinje(s, o, p, logg)
@@ -112,6 +135,17 @@ local function stang(s, orsak): boolean
 			hastId = s.hastId, ovning = TempoLektion.OVNING, prov = s.prov, sekunder = s.sek,
 			meter = s.meter, medelFart = medel, spridning = (s.maxFart - s.minFart) / medel,
 			enhet = "m/s", start = Forsok.ogonblick(s.forsokId).start })
+		--[[ Tempocoachning: jämförelsen med den FÖRRA distinkta fullföljningen
+			i samma lektionsobjekt, bara med ändliga, jämförbara fakta. ]]
+		local ny, forra = s.resultat, s.forraKlar
+		s.jamforelse = nil
+		if forra and forra.forsokId ~= ny.forsokId and forra.rittId == ny.rittId and forra.hastId == ny.hastId
+			and forra.ovning == ny.ovning and andligtIckeNeg(forra.spridning) and andligtIckeNeg(ny.spridning)
+			and andligtPositivt(forra.medelFart) and andligtPositivt(ny.medelFart) then
+			s.jamforelse = table.freeze({ forsokId = ny.forsokId, forraForsokId = forra.forsokId,
+				forraSpridning = forra.spridning, spridning = ny.spridning })
+		end
+		if andligtIckeNeg(ny.spridning) and andligtPositivt(ny.medelFart) then s.forraKlar = ny end
 		s.progress = 100
 		s.revision += 1
 		andra(s, "complete", "complete")
@@ -179,8 +213,8 @@ function TempoLektion.steg(s, now: number, gangart: string?, ryggar: boolean?)
 	end
 
 	local fart = meter / dt
-	if fart < GOLV then omSerie(s, "too_slow"); return end
-	if fart > TAK then omSerie(s, "too_fast"); return end
+	if fart < GOLV then omSerie(s, "too_slow"); coach(s, "too_slow"); return end
+	if fart > TAK then omSerie(s, "too_fast"); coach(s, "too_fast"); return end
 	local lo, hi = math.min(s.minFart, fart), math.max(s.maxFart, fart)
 	local medel = (s.summa + fart) / (s.prov + 1)
 	if s.prov > 0 and (hi - lo) / medel > SPRIDNING then
@@ -190,6 +224,7 @@ function TempoLektion.steg(s, now: number, gangart: string?, ryggar: boolean?)
 		s.prov, s.sek, s.meter, s.summa = 1, dt, meter, fart
 		s.minFart, s.maxFart = fart, fart
 		andra(s, "steady", "steadier")
+		coach(s, "steadier")
 	else
 		s.prov += 1
 		s.sek += dt
@@ -244,6 +279,8 @@ function TempoLektion.begar(s, op: any, seq: any, now: number, gangart: string?,
 			if ok then
 				s.forsokId, s.deadline = id, now + DEADLINE
 				s.resultat = nil
+				-- Nytt försök: räknaren om, jämförelsen bort (den förra fullföljningen står kvar).
+				s.coachNr, s.coachSkal, s.jamforelse = 0, nil, nil
 				nyBaslinje(s, o, p, logg)
 				tomSerie(s)
 				s.progress = 0

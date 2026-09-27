@@ -134,6 +134,12 @@ It does not make leading, skill memory or the catalogue complete.
 
 ## Deferred verification (written, NOT run)
 
+Correction (tempo package): a replaced character or model at the completion
+sample, a future-version save and unknown history for leading are PLANNED,
+not written. L4 covers only release and re-take plus another actor, and L6
+covers write failure and recovery plus a full row. The shared pipeline's
+future and corrupt loads are written in `lektionsminne.spec`, not here.
+
 `roblox/tests/ledningsminne.spec.luau` (KOHERENS) uses the ledlektion
 fixture.
 
@@ -144,11 +150,11 @@ fixture.
 - Retry and Finish right after success;
 - denied, stale and timeout;
 - old goal flags and a spawn inside the goal;
-- release and re-take, a replaced character or model;
+- release and re-take (L4); another actor kept apart (L4);
 - two players kept apart;
 - history kept after a new context without a current success;
 - trusted reload;
-- write failure, unknown history, a full row and a future-version save;
+- write failure, then recovery, and a full row (L6);
 - a forged table rejected.
 
 **Genuinely deferred cases** (scheduler):

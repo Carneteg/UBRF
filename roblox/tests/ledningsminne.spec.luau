@@ -209,7 +209,7 @@ do
 	check("ett hopp eller en spawn i målet ger ingen markör", bild().lage ~= "complete" and proj().ledning == "ej_klarad")
 end
 
-print("\n── L4. Släpp och nytt grepp, ny karaktär, ny modell; skilda spelare (SYNKRONT) ──")
+print("\n── L4. Släpp och nytt grepp; en annan aktör (SYNKRONT) ──")
 do
 	nollstall()
 	req("finish"); LedService.slapp(spelare); flytta(UTE_X); steg()
