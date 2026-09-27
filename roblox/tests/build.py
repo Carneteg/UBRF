@@ -188,10 +188,12 @@ FORBEREDELSE = SPEL + [
     # AKTOREN (#252 DEL C) FORE tjansterna: GameplayService, HorseService
     # och LedService fragar den om aktoren har en klient att skicka till.
     ("Aktor",        "src/shared/HorseCore/Aktor.luau"),
-    ("HorseService", "src/server/HorseService.luau"),
     # SparService FORE StallService: StallService.hastminnen laser saven ur
     # den. Ordningen ar samma som init.server.luau har.
+    # C4: och FORE HorseService, som via LektionsMinne require:ar den.
     ("SparService",  "src/server/SparService.luau"),
+    ("LektionsMinne", "src/server/LektionsMinne.luau"),  # C4: forsta-klarad-minnet
+    ("HorseService", "src/server/HorseService.luau"),
     ("StallService", "src/server/StallService.luau"),
     # Klientsidan: prompt-beslutet (krav 8) provas har, inte i en lokal funktion.
     ("InteractionController", "src/client/InteractionController.luau"),
@@ -466,8 +468,9 @@ KOHERENS = GEOMETRI + [
     # AKTOREN (#252 DEL C) FORE tjansterna: GameplayService, HorseService
     # och LedService fragar den om aktoren har en klient att skicka till.
     ("Aktor",        "src/shared/HorseCore/Aktor.luau"),
+    ("SparService",     "src/server/SparService.luau"),  # C4: fore HorseService (LektionsMinne)
+    ("LektionsMinne",   "src/server/LektionsMinne.luau"),  # C4: forsta-klarad-minnet
     ("HorseService",    "src/server/HorseService.luau"),
-    ("SparService",     "src/server/SparService.luau"),
     ("StallService",    "src/server/StallService.luau"),
     #[[ LedService laddas FORE GameplayService: den senare require:ar
     #   den, och grinden pa "leda" ar hela poangen med blockerare 2. ]]
@@ -834,6 +837,8 @@ def valjBunt(spec_rel: str):
     #[[ M3.1: navvagens livslangd i hornet. Samma bunt, samma skal. ]]
     elif "ledvag" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
+    elif "lektionsminne" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
     elif "lektionsaterkoppling" in spec_rel:
         moduler, stubbar = KLIENT, "tests/stubs.luau"
     elif "utrustning-rattelse" in spec_rel:

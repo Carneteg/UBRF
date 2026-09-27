@@ -97,6 +97,16 @@ local laddningar: { [Player]: {} } = {}
 --[[ Varför den senaste skrivningen nekades, eller nil. Läsbart så att en
 	anropare kan skilja "fullt" från "nätet föll" (granskning R1, fynd 1). ]]
 local senasteNej: { [Player]: string? } = {}
+--[[ C4 (docs/LESSON-MEMORY-CONTRACT.md): krokar som körs i BÖRJAN av varje
+	körning av `UpdateAsync`-transformatorn, med spelaren och den minnestabell
+	skrivningen utgår från. De får bara göra idempotenta, tak-respekterande
+	tillägg (LektionsMinne lägger in väntande markörer). Varje krok i egen
+	pcall; ett fel i en krok stoppar inte skrivningen. ]]
+local foreSkrivningKrokar: { (Player, Sparning.Save) -> () } = {}
+
+function SparService.foreSkrivning(fn: (Player, Sparning.Save) -> ())
+	table.insert(foreSkrivningKrokar, fn)
+end
 
 --[[ Studio utan API-åtkomst, och alla lokala prov, ska INTE krascha på
 	rad ett. `GetDataStore` kastar då, och resultatet är nil — vilket
@@ -306,6 +316,14 @@ function SparService.skriv(player: Player, andra: ((Sparning.Save) -> ())?): boo
 			if notering == "spar.framtida_sparfil" then
 				konflikt = "framtida sparfil i lagret"
 				return nil
+			end
+
+			--[[ C4: väntande tillägg in i minnet INNAN taket prövas och
+				sammanslagningen görs, i VARJE körning (Roblox får köra om
+				transformatorn). Idempotent. ]]
+			for _, krok in ipairs(foreSkrivningKrokar) do
+				local okK, felK = pcall(krok, player, minnet)
+				if not okK then warn("[Spar] en foreSkrivning-krok föll: " .. tostring(felK)) end
 			end
 
 			--[[ REVISIONEN, OCH VAD DEN BETYDER FÖR VILAN.
@@ -679,6 +697,7 @@ end
 	påstår. ]]
 function SparService._glomHookarForProv()
 	efterLaddning = {}
+	foreSkrivningKrokar = {}
 end
 
 return SparService

@@ -1637,6 +1637,30 @@ Sprak.text = {
 		sv = "Snyggt ledd – hela vägen in på ridbanan!",
 		en = "Nicely led – all the way onto the arena track!",
 	},
+	["lektionsminne.markering.sparad"] = {
+		sv = " · klarad",
+		en = " · done",
+	},
+	["lektionsminne.markering.vantar"] = {
+		sv = " · klarad nu",
+		en = " · done now",
+	},
+	["lektionsminne.forslag"] = {
+		sv = "Förslag: %s",
+		en = "Suggested: %s",
+	},
+	["lektionsminne.igen"] = {
+		sv = "Öva igen: %s",
+		en = "Practise again: %s",
+	},
+	["lektionsminne.okand"] = {
+		sv = "Jag kan inte läsa din lektionshistorik just nu – alla övningar går att välja.",
+		en = "I can't read your lesson history right now – every exercise is available.",
+	},
+	["lektionsminne.vantar_info"] = {
+		sv = "Det du klarat nu är inte sparat än.",
+		en = "What you just completed isn't saved yet.",
+	},
 	["ugneta.se_ritten"] = {
 		sv = "Se ritten",
 		en = "Watch the ride",

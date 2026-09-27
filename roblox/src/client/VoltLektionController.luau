@@ -5,6 +5,46 @@ local Sprak = require(game:GetService("ReplicatedStorage").HorseCore.Sprak)
 local Plats = require(game:GetService("ReplicatedStorage").HorseCore.Ridhusplats)
 local Ugneta = require(script.Parent.UgnetaController)
 local Aterkoppling = require(script.Parent.LektionsAterkoppling)
+--[[ C4: spelarens EGET lektionsminne, som serverns projektion (läsning
+	bara). Tre lägen per lektion — "sparad", "vantar", "ej_klarad" — och
+	"okand" när historiken inte gick att lita på. Aldrig ett betyg. ]]
+local MINNE_TYPER = { volt = true, halt = true, overgang = true, serpentin = true, tempo = true,
+	vag_mitt = true, vag_diag = true, halvvolt = true, galopp = true, markbom = true }
+local MINNE_LAGEN = { sparad = true, vantar = true, ej_klarad = true, okand = true }
+--[[ Den fasta pedagogiska ordningen för ETT förslag (kontraktet):
+	halt och jämn skritt först, sedan volten, övergångar, raka linjer,
+	serpentin, halvvolt, markbom och sist galoppfattningen. Ett förslag är
+	en riktning, inte ett påstående om att något bedömts. ]]
+local MINNE_ORDNING = { "halt", "tempo", "volt", "overgang", "vag_mitt", "vag_diag", "serpentin",
+	"halvvolt", "markbom", "galopp" }
+local minne: { historik: string, lektioner: { [string]: string } }? = nil
+local minneLyssnare: any = nil
+
+local function tvattMinne(p: any): any
+	if type(p) ~= "table" or type(p.lektioner) ~= "table" then return nil end
+	local ut = {}
+	for typ in MINNE_TYPER do
+		local l = p.lektioner[typ]
+		ut[typ] = if type(l) == "string" and MINNE_LAGEN[l] then l else "okand"
+	end
+	return { historik = if p.historik == "betrodd" then "betrodd" else "okand", lektioner = ut }
+end
+
+local function klarad(typ: string): boolean
+	local l = minne and minne.lektioner[typ]
+	return l == "sparad" or l == "vantar"
+end
+
+--[[ ETT förslag: första i ordningen som inte är klarad; alla klarade ger
+	"öva igen" på den första. Okänd historik ger inget förslag. ]]
+local function forslag(): (string?, boolean)
+	local m = minne
+	if not m or m.historik ~= "betrodd" then return nil, false end
+	for _, typ in MINNE_ORDNING do
+		if not klarad(typ) then return typ, false end
+	end
+	return MINNE_ORDNING[1], true
+end
 local V = {}
 local ritt: string? = nil
 local valt, fri = false, false
@@ -565,6 +605,46 @@ local function val(key, fn)
 		skicka=function() if attached and gen==generation and id==ritt and token==requestNr then fn() end end }
 end
 
+--[[ C4: lektionens namnnyckel i menyn. ]]
+local function valNyckel(typ: string): string
+	return if typ == "volt" then "choose" else "choose_" .. typ
+end
+
+--[[ C4: ett lektionsval med minnets markering: "· klarad" när den är
+	sparad, "· klarad nu" när den väntar på att sparas. ]]
+local function valLektion(typ: string)
+	local k = val(valNyckel(typ), function() V.valj(typ) end)
+	local l = minne and minne.lektioner[typ]
+	if l == "sparad" then k.text ..= Sprak.t("lektionsminne.markering.sparad")
+	elseif l == "vantar" then k.text ..= Sprak.t("lektionsminne.markering.vantar") end
+	return k
+end
+
+--[[ C4: sidans rad om minnet (okänd historik eller osparat), eller nil. ]]
+local function minnesRad(): string?
+	local m = minne
+	if not m or m.historik ~= "betrodd" then return Sprak.t("lektionsminne.okand") end
+	for _, l in m.lektioner do
+		if l == "vantar" then return Sprak.t("lektionsminne.vantar_info") end
+	end
+	return nil
+end
+
+local function medMinne(t: string): string
+	local r = minnesRad()
+	return if r then (t .. " " .. r) else t
+end
+
+--[[ C4: förslagets knapp — samma valväg som menyn (V.valj), och Start
+	krävs fortfarande. ]]
+local function forslagsKnapp()
+	local typ, igen = forslag()
+	if not typ then return nil end
+	local k = val(valNyckel(typ), function() V.valj(typ) end)
+	k.text = Sprak.t(if igen then "lektionsminne.igen" else "lektionsminne.forslag", text(valNyckel(typ)))
+	return k
+end
+
 function V.panel()
 	if not attached or not ritt then return nil end
 	if not valt then
@@ -572,50 +652,65 @@ function V.panel()
 			högst tre lektioner plus Tillbaka. Gruppsidan ersätter Ugnetas
 			egna kortknappar, så att inget val trängs ut. ]]
 		-- Tillbaka leder alltid till toppnivån med de ursprungliga kortknapparna.
+		--[[ C4: lektionsvalen bär minnets markering, och sidans text säger när
+			historiken är okänd eller något ännu inte är sparat. Samma knappar,
+			samma antal, samma Tillbaka. ]]
 		if meny == "gangart" then
-			return { ersatt=true, text=text("pick"), ovning="", vantar=false, knappar={
-				val("choose_halt",function() V.valj("halt") end),
-				val("choose_tempo",function() V.valj("tempo") end),
+			return { ersatt=true, text=medMinne(text("pick")), ovning="", vantar=false, knappar={
+				valLektion("halt"),
+				valLektion("tempo"),
 				val("group_overgangar",function() meny = "overgangar" end),
 				val("back",function() meny = nil end) } }
 		elseif meny == "overgangar" then
 			-- Undergrupp: Tillbaka leder till Gångarter och fart.
-			return { ersatt=true, text=text("pick"), ovning="", vantar=false, knappar={
-				val("choose_overgang",function() V.valj("overgang") end),
-				val("choose_galopp",function() V.valj("galopp") end),
+			return { ersatt=true, text=medMinne(text("pick")), ovning="", vantar=false, knappar={
+				valLektion("overgang"),
+				valLektion("galopp"),
 				val("back",function() meny = "gangart" end) } }
 		elseif meny == "vagar" then
-			return { ersatt=true, text=text("pick"), ovning="", vantar=false, knappar={
-				val("choose_serpentin",function() V.valj("serpentin") end),
-				val("choose_halvvolt",function() V.valj("halvvolt") end),
+			return { ersatt=true, text=medMinne(text("pick")), ovning="", vantar=false, knappar={
+				valLektion("serpentin"),
+				valLektion("halvvolt"),
 				val("group_linjer",function() meny = "linjer" end),
 				val("back",function() meny = nil end) } }
 		elseif meny == "linjer" then
 			-- Undergrupp: raka linjer och markbommen; Tillbaka leder till Ridvägar.
-			return { ersatt=true, text=text("pick"), ovning="", vantar=false, knappar={
-				val("choose_vag_mitt",function() V.valj("vag_mitt") end),
-				val("choose_vag_diag",function() V.valj("vag_diag") end),
-				val("choose_markbom",function() V.valj("markbom") end),
+			return { ersatt=true, text=medMinne(text("pick")), ovning="", vantar=false, knappar={
+				valLektion("vag_mitt"),
+				valLektion("vag_diag"),
+				valLektion("markbom"),
 				val("back",function() meny = "vagar" end) } }
 		elseif meny == "topp" then
-			return { ersatt=true, text=text("pick"), ovning="", vantar=false, knappar={
-				val("choose",function() V.valj("volt") end),
+			return { ersatt=true, text=medMinne(text("pick")), ovning="", vantar=false, knappar={
+				valLektion("volt"),
 				val("group_gangart",function() meny = "gangart" end),
 				val("group_vagar",function() meny = "vagar" end),
 				val("back",function() meny = nil end) } }
 		end
-		local knappar = { val("choose",function() V.valj("volt") end),
+		local knappar = { valLektion("volt"),
 			val("group_gangart",function() meny = "gangart" end),
 			val("group_vagar",function() meny = "vagar" end) }
+		local forslagsText: string? = nil
 		if fri then
 			table.insert(knappar,val("lessons",function()
 				fri=false; if gaLektion then gaLektion() end
 			end))
+			--[[ C4: vid fri ridning är sidan full (fyra val); förslaget nämns i
+				texten i stället för att tränga ut ett val. ]]
+			local typ, igen = forslag()
+			if typ then
+				forslagsText = Sprak.t(if igen then "lektionsminne.igen" else "lektionsminne.forslag",
+					text(valNyckel(typ)))
+			end
+		else
+			--[[ C4: utan fri ridning finns en fjärde plats: ETT valfritt förslag. ]]
+			local fk = forslagsKnapp()
+			if fk then table.insert(knappar, fk) end
 		end
 		--[[ R1: bredvid Ugnetas 0..3 kortknappar ryms inte alltid tre val;
 			då visar Ugneta den kompakta listan — en post som öppnar
 			toppsidan. Vid fri ridning ersätts kortknapparna ändå. ]]
-		return { ersatt=fri, knappar=knappar, text=nil, vantar=false, ovning="",
+		return { ersatt=fri, knappar=knappar, text=forslagsText, vantar=false, ovning="",
 			kompakt = if fri then nil else { val("choose_lesson",function() meny = "topp" end) } }
 	end
 	local b = bild or {lage="ready",progress=0,tips="approach"}
@@ -657,6 +752,19 @@ function V.start(marke, legacy)
 	if not listener then
 		listener=Net.get("VoltLektionSync").OnClientEvent:Connect(mottag)
 	end
+	--[[ C4: minnet är spelarens eget och gäller över ritter; det hämtas vid
+		varje start (läsning bara) och följer serverns push. EN lyssnare. ]]
+	if not minneLyssnare then
+		minneLyssnare = Net.get("LektionsMinneSync").OnClientEvent:Connect(function(p)
+			local m = tvattMinne(p)
+			if m then minne = m end
+		end)
+	end
+	task.spawn(function()
+		local ok, p = pcall(function() return Net.get("LektionsMinne"):InvokeServer("sync") end)
+		local m = if ok then tvattMinne(p) else nil
+		if m then minne = m end
+	end)
 	if valt then skicka("sync") end
 end
 
@@ -670,6 +778,8 @@ function V.steg(dt)
 end
 
 function V.tarOver(): boolean return attached and (valt or fri) end
+--[[ Provkrok: minnets projektion som klienten håller. ]]
+function V._minneForProv(): any return minne end
 function V.lektion(): boolean return attached and valt end
 
 function V.avbryt()

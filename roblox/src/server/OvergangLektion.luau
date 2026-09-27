@@ -120,6 +120,9 @@ local function stang(s, orsak): boolean
 		s.progress = 100
 		s.revision += 1
 		andra(s, "complete", "complete")
+		--[[ C4: övergången till "complete", med det frysta resultatet på
+			plats — minnet prövar och noterar (docs/LESSON-MEMORY-CONTRACT.md). ]]
+		if type(s.vidKlar) == "function" then s.vidKlar(s) end
 	else
 		andra(s, "timeout", "timeout")
 	end

@@ -27,6 +27,8 @@ local DEFINITIONS = {
 	VoltLektionSync = "RemoteEvent",    -- server -> owner: session-local circle outcome
 	LedLektion = "RemoteFunction",      -- owner intent (on foot): sync/start/retry/finish + seq
 	LedLektionSync = "RemoteEvent",     -- server -> owner: session-local leading-lesson outcome
+	LektionsMinne = "RemoteFunction",   -- owner read only ("sync"): own completion memory projection
+	LektionsMinneSync = "RemoteEvent",  -- server -> owner: own completion memory projection
 	--[[ #233 FAS 4b. `StateSync` bar förut PARET (gångart, tempo), och
 	     gångarten på tråden var serverns enda källa till vilken gångart
 	     hästen var i. Det var klientauktoritet med ett rimlighetsfilter:

@@ -46,6 +46,9 @@ local VagLektion = require(script.Parent.VagLektion)
 local HalvvoltLektion = require(script.Parent.HalvvoltLektion)
 local GaloppLektion = require(script.Parent.GaloppLektion)
 local MarkbomLektion = require(script.Parent.MarkbomLektion)
+--[[ C4: första-klarad-minnet. Lektionens egen övergång till "complete"
+	anropar `vidKlar`, som HorseService sätter här när lektionen skapas. ]]
+local LektionsMinne = require(script.Parent.LektionsMinne)
 
 --[[ Lektionstyp → modul. Utelämnad/okänd typ i ett befintligt läge är
 	voltlektionen (oförändrat standardbeteende). ]]
@@ -63,6 +66,14 @@ local function lektionModul(typ: string?): any
 end
 
 local HorseService = {}
+
+--[[ C4: en ny lektion för sessionen, med minnets krok. Kroken läser sessionen
+	när den anropas (ryttare, ritt, häst just då), aldrig en sparad kopia. ]]
+local function nyLektion(session: any, typ: string, rittId: string, userId: number, hastId: string): any
+	local l = lektionModul(typ).ny(rittId, userId, hastId, typ)
+	l.vidKlar = function(lektion: any) LektionsMinne.slutford(session, lektion) end
+	return l
+end
 
 export type Session = {
 	rig: Types.Rig,
@@ -1792,6 +1803,9 @@ function HorseService.start()
 	Net.get("MountRequest").OnServerInvoke = Skopa.grind("MountRequest",
 		HorseService.mountRequest)
 	Net.get("VoltLektion").OnServerInvoke = Skopa.grind("VoltLektion", HorseService.voltLektionsBegaran)
+	--[[ C4: minnet startar efter SparService (Start.luau: SparService före
+		HorseService) och hakar på dess laddning och skrivning. ]]
+	LektionsMinne.start()
 	--[[ ── ETT NEJ MÅSTE ÅTERFÖRENA, INTE BARA NEKA ──────────────────
 
 	     ChatGPT-re-review av `269bec5`. Klienten river LOKALT innan den
@@ -1984,7 +1998,7 @@ function HorseService.voltLektionsBegaran(player: any, rittId: any, op: any, seq
 		och finns ingen skapas den valda. ]]
 	if op == "sync" then
 		if not nu then
-			nu = lektionModul(typ).ny(rittId, player.UserId, hastId, typ)
+			nu = nyLektion(session, typ, rittId, player.UserId, hastId)
 			session.voltLektion = nu
 		end
 		local L = lektionModul(nu.typ)
@@ -2028,7 +2042,7 @@ function HorseService.voltLektionsBegaran(player: any, rittId: any, op: any, seq
 	if fel == nil then
 		local L = lektionModul(anvand)
 		if not session.voltLektion then
-			session.voltLektion = L.ny(rittId, player.UserId, hastId, anvand)
+			session.voltLektion = nyLektion(session, anvand, rittId, player.UserId, hastId)
 		end
 		ok, fel, bild = L.begar(session.voltLektion, op, seq, os.clock(), gangart, ryggar)
 	end

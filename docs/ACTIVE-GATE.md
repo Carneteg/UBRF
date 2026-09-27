@@ -77,6 +77,10 @@ and test policy. This index is dated 2026-09-26; it is not product acceptance.
   Text controls b6ea134 passed Codex source review only. Ugneta turning toward the
   bound mounted rider ([contract](INSTRUCTOR-GAZE-CONTRACT.md), local yaw-only, bounded)
   is built on it, with the hint-line owner fix; BUILT_NOT_VERIFIED, spec written, not run.
+  Gaze fd3f592 passed Codex source review only. Lesson memory (C4 first slice,
+  [contract](LESSON-MEMORY-CONTRACT.md): first completion per mounted lesson, saved/
+  pending/unknown kept apart, one optional next practice) is built on it;
+  BUILT_NOT_VERIFIED, spec written, not run.
   Deferred before Tobias' playtest: full42, runtime smoke in engine, both lesson
   flows, guides, entrance door, SV/EN and touch.
 - 2026-09-27: the entrance correction 93e16f5 received BANK_ONLY code PASS and a

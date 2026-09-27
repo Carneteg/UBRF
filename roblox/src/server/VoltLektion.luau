@@ -55,6 +55,9 @@ local function stang(s, orsak, a): boolean
 			start = Forsok.ogonblick(s.forsokId).start, avsnitt = a })
 		s.progress = 100
 		andra(s, "complete", "complete")
+		--[[ C4: övergången till "complete", med det frysta resultatet på
+			plats — minnet prövar och noterar (docs/LESSON-MEMORY-CONTRACT.md). ]]
+		if type(s.vidKlar) == "function" then s.vidKlar(s) end
 	else
 		andra(s, "timeout", "timeout")
 	end

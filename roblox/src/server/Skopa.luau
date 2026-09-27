@@ -106,6 +106,8 @@ local GRANSER: { [string]: Grans } = {
 	LedSlapp = { tak = 4, pafyll = 1 },
 	--[[ Ledningslektionen till fots: val och start/avsluta, inga strömmar. ]]
 	LedLektion = { tak = 4, pafyll = 1 },
+	--[[ C4: läsning av det egna lektionsminnet, ingen skrivväg. ]]
+	LektionsMinne = { tak = 4, pafyll = 1 },
 
 	--[[ UTRUSTNINGEN bygger fysiska delar på hästen. Dyrare än ett
 		listtryck, och inget en människa gör i ström. ]]
