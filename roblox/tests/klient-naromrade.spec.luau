@@ -190,7 +190,17 @@ do
 		vänta på nästa bildruta. ]]
 	N.satRider(false)
 
-	local synliga = N._rader()
+	--[[ Alternativ 3 (CHATGPT_UX_DECISION_NEAR_AREA): ledningens sekundära ingång
+		till fots får en rad som prompterna inte behöver, EFTER dem. Provet räknar
+		handlingsraderna och visar att ingången står sist. ]]
+	local allaRader = N._rader()
+	local synliga = {}
+	for _, t in ipairs(allaRader) do
+		if string.sub(t, 1, #Sprak.t("ledlektion.choose")) ~= Sprak.t("ledlektion.choose") then table.insert(synliga, t) end
+	end
+	check("den sekundära ingången står sist, efter handlingarna",
+		#allaRader == #synliga or string.sub(allaRader[#allaRader], 1, #Sprak.t("ledlektion.choose")) == Sprak.t("ledlektion.choose"),
+		table.concat(allaRader, " | "))
 	check("listan RITAS med en rad per handling", #synliga == 2,
 		("%d rader: %s"):format(#synliga, table.concat(synliga, " | ")))
 	check("närmast först också på skärmen",
@@ -285,7 +295,11 @@ do
 			or sadel.Style == nil, tostring(sadel.Style))
 	N.satRider(false)
 
-	check("listan ritar en rad för handlingen", #N._rader() == 1,
+	local handlingsrader = 0
+	for _, t in ipairs(N._rader()) do
+		if string.sub(t, 1, #Sprak.t("ledlektion.choose")) ~= Sprak.t("ledlektion.choose") then handlingsrader += 1 end
+	end
+	check("listan ritar en rad för handlingen", handlingsrader == 1,
 		("%d rader"):format(#N._rader()))
 	check("och Robloxs EGNA bild för samma handling är släckt",
 		sadel.Style == Enum.ProximityPromptStyle.Custom,

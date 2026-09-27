@@ -125,7 +125,8 @@ do
 	NR.satRider(false)
 	local function valText()
 		local ut = {}
-		for _, v in ipairs(NR._val()) do table.insert(ut, tostring(v.text)) end
+		-- Ledningens sekundära ingång till fots står sedan 784e8c1 bredvid korten; här räknas lektionens val.
+		for _, v in ipairs(NR._val()) do if not v.sekundar then table.insert(ut, tostring(v.text)) end end
 		return ut
 	end
 	local fore = valText()
@@ -170,7 +171,10 @@ do
 	local m, d = CoachBanner.text()
 	prova("övningens text följer bytet även efter avbrottet",
 		d == Sprak.iSprak("en", "ugneta.ovning.halt_skritt.p1"), ("%q / %q"):format(m, d))
-	prova("och avbrottets väntan väcks inte av bytet", UC.vantar() == false and #NR._val() == 0)
+	NR.satRider(false) -- panelen ritas om (i spelet varje bildruta)
+	local lektionsVal = 0
+	for _, v in ipairs(NR._val()) do if not v.sekundar then lektionsVal += 1 end end
+	prova("och avbrottets väntan väcks inte av bytet", UC.vantar() == false and lektionsVal == 0)
 	UC._vaxlaSprak()
 end
 

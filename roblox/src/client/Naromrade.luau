@@ -157,6 +157,9 @@ local aterEtikett: TextLabel? = nil
 local hjalpKnapp: TextButton? = nil
 local hjalpText: TextLabel? = nil
 local hjalpUt = false
+--[[ Alternativ 3: står bara sekundära val i valsektionen ritas den EFTER
+	handlingsraderna (prompterna är primära). ]]
+local valEfter = false
 local valRader: { [number]: any } = {}
 local valKnappar: { TextButton } = {}
 local valYta: ScrollingFrame? = nil
@@ -1881,8 +1884,11 @@ rita = function()
 		end
 		local ug = UgnetaController.panel(MAX_VAL)
 		visaAterkoppling(nil)
-		for j, k in ipairs(ug.knappar) do
-			if j <= MAX_VAL then valRader[j] = k end
+		--[[ Ledningens ingång TILL FOTS (sekundär) hör aldrig till ridningens
+			rader, även om ingen ridlektionspanel råkar vara installerad. ]]
+		local ridVal = 0
+		for _, k in ipairs(ug.knappar) do
+			if not k.sekundar and ridVal < MAX_VAL then ridVal += 1; valRader[ridVal] = k end
 		end
 		for j, vb in ipairs(valKnappar) do
 			local k = valRader[j]
@@ -1893,7 +1899,8 @@ rita = function()
 					else Color3.fromRGB(38, 41, 47)
 			end
 		end
-		if valYta then valYta.Visible = #ug.knappar > 0 end
+		valEfter = false
+		if valYta then valYta.LayoutOrder = 3; valYta.Visible = ridVal > 0 end
 		local alla = {}
 		for _, r in ipairs(KontrollHjalp.rader()) do
 			table.insert(alla, r.vad .. "  [" .. r.reglage .. "]")
@@ -1997,7 +2004,16 @@ rita = function()
 	end
 	--[[ Under en fråga står EN sekundär handling fast — Rida nu, enligt
 	     produktordningen — så att frågans alternativ får plats att synas. ]]
-	local promptPlatser = if #valen > 0 then 1 else platser
+	--[[ CHATGPT_UX_DECISION_NEAR_AREA (alternativ 3): ett SEKUNDÄRT val
+		(ledningens ingång till fots) tar högst sin egen rad och krymper aldrig
+		de närliggande prompterna till en; bara ett primärt val gör det. ]]
+	local primara, sekundara = 0, 0
+	for _, k in ipairs(valen) do
+		if k.sekundar then sekundara += 1 else primara += 1 end
+	end
+	local promptPlatser = if primara > 0 then 1 else platser
+	valEfter = primara == 0 and sekundara > 0
+	if valYta then valYta.LayoutOrder = if valEfter then 5 else 3 end
 	--[[ ── UTRUSTNINGSSTEGET BEHÖVER SIN VERKLIGA HANDLING ────────────────
 
 		Mätt i Studio: momentet «Tacking up 1/5» stod på tur, servern sa
@@ -2050,6 +2066,13 @@ rita = function()
 			return rang[a] < rang[b]
 		end)
 		promptPlatser = math.min(2, platser)
+	end
+	--[[ Alternativ 3: det sekundära valet tar bara en rad som prompterna inte
+		behöver. Fyller prompterna listan står det inte med (det kommer tillbaka
+		så snart en rad blir ledig); prompterna krymps aldrig för dess skull. ]]
+	if valEfter and #ordnade >= promptPlatser then
+		valen = {}
+		valEfter = false
 	end
 	antalHandlingar = #ordnade
 	local sidor = math.max(1, math.ceil(#ordnade / promptPlatser))
@@ -2217,14 +2240,18 @@ end
 function Naromrade._rader(): { string }
 	--[[ I skärmens ordning: skötselns alternativ först, sedan handlingarna. ]]
 	local ut = {}
-	if valYta and valYta.Visible then
-		for _, b in ipairs(valKnappar) do
-			if b.Visible then table.insert(ut, b.Text) end
+	local function valen()
+		if valYta and valYta.Visible then
+			for _, b in ipairs(valKnappar) do
+				if b.Visible then table.insert(ut, b.Text) end
+			end
 		end
 	end
+	if not valEfter then valen() end
 	for _, b in ipairs(rader) do
 		if b.Visible then table.insert(ut, b.Text) end
 	end
+	if valEfter then valen() end
 	return ut
 end
 
