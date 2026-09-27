@@ -167,7 +167,20 @@ check("a second player's lesson is independent (no bound horse)", ok2 == false a
 -- ── Genvägar och luckor, stillastående ──
 led(); steg()
 ga(UTE_X + 4)
-LedService.placeraVidMal(spelare, MIN)
+--[[ Bänkens delar bär CFrame och Position som två fält, och stubbens PivotTo
+	flyttar bara CFrame; `stallFram` läser Position som bevis. Här (bara för
+	den här hästen, bara under anropet) följer Position med, som i Roblox —
+	en global stubbändring bröt integration.spec, som flyttar med CFrame. ]]
+do
+	local riktigPivot = MIN.PivotTo
+	MIN.PivotTo = function(self, cf)
+		riktigPivot(self, cf)
+		local r = self.PrimaryPart
+		if r and cf then r.Position = cf.Position end
+	end
+	check("KONTROLL: the shortcut placement itself succeeded", LedService.placeraVidMal(spelare, MIN) == true)
+	MIN.PivotTo = riktigPivot
+end
 steg()
 check("placeraVidMal (a shortcut placement) is never leading", bild().lage ~= "complete"
 	and bild().progress == 0)
