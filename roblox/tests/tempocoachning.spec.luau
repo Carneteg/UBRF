@@ -495,6 +495,21 @@ do
 	vantaUtSparren()
 	ga(nu.u, nu.v)
 	check("JD en färsk händelse efter svaret visas", jCue() ~= nil)
+	--[[ JS (R1-uppföljningen i 2522225): en ny begäran från klienten tar bort
+		den synliga raden DIREKT i `skicka` — före svaret, som hålls kvar här. ]]
+	local fin = jKnapp("tempolektion.finish")
+	check("KONTROLL JS: Avsluta finns medan raden står", fin ~= nil and jCue() ~= nil)
+	__schemaPa(true)
+	remote.InvokeServer = function(self, ...)
+		local svar = table.pack(riktig(self, ...))
+		task.wait() -- svaret dröjer
+		return table.unpack(svar, 1, svar.n)
+	end
+	if fin then fin.skicka() end
+	check("JS en ny begäran tar bort raden direkt, före svaret", jCue() == nil)
+	__schemaTomKo()
+	remote.InvokeServer = riktig
+	__schemaPa(false)
 	avslutaNu("JD slut")
 	UCj.satLektionsVal(nil)
 	VCj.avbryt()
