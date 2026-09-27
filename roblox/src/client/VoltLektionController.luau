@@ -4,6 +4,7 @@ local Net = require(game:GetService("ReplicatedStorage").HorseCore.Networking)
 local Sprak = require(game:GetService("ReplicatedStorage").HorseCore.Sprak)
 local Plats = require(game:GetService("ReplicatedStorage").HorseCore.Ridhusplats)
 local Ugneta = require(script.Parent.UgnetaController)
+local Aterkoppling = require(script.Parent.LektionsAterkoppling)
 local V = {}
 local ritt: string? = nil
 local valt, fri = false, false
@@ -622,6 +623,12 @@ function V.panel()
 		elseif b.lage=="ready" or b.lage=="closed" then "intro"
 		else b.tips
 	local txt = text(key)
+	--[[ Slutet på en övning: Ugnetas sammanfattning av JUST det här försökets
+		frysta resultat och ett nästa steg (docs/LESSON-FEEDBACK-CONTRACT.md). ]]
+	if not pending and not fel then
+		local at = Aterkoppling.text(b, { typ = typ, ritt = ritt })
+		if at then txt = at end
+	end
 	if (b.lage=="riding" or b.lage=="halt1" or b.lage=="walk" or b.lage=="walk1"
 		or b.lage=="trot" or b.lage=="walk2" or b.lage=="route" or b.lage=="steady"
 		or b.lage=="canter" or b.lage=="approach" or b.lage=="crossing" or b.lage=="exit")

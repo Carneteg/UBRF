@@ -305,6 +305,7 @@ PARITET = [
     ("UgnetaGestalt",    "src/client/UgnetaGestalt.luau"),
     ("ReplayController", "src/client/ReplayController.luau"),
     # Kedjan som binder ihop dem. Utan den var HUD:en bara anropbar.
+    ("LektionsAterkoppling", "src/client/LektionsAterkoppling.luau"),  # C1: aterkoppling efter ovningen
     ("VoltLektionController", "src/client/VoltLektionController.luau"),
     ("LektionController", "src/client/LektionController.luau"),
 ]
@@ -386,6 +387,7 @@ KLIENT = SPEL + [
     ("Ridhusplats",   "src/shared/HorseCore/Ridhusplats.luau"),  # #264 INFRA-PLATS1: UgnetaGestalt require:ar den
     ("UgnetaGestalt",       "src/client/UgnetaGestalt.luau"),
     ("ReplayController",    "src/client/ReplayController.luau"),
+    ("LektionsAterkoppling", "src/client/LektionsAterkoppling.luau"),  # C1: aterkoppling efter ovningen
     ("VoltLektionController", "src/client/VoltLektionController.luau"),
     ("LektionController",   "src/client/LektionController.luau"),
     ("LedLektionController", "src/client/LedLektionController.luau"),  # ledningslektionen till fots
@@ -830,6 +832,8 @@ def valjBunt(spec_rel: str):
     #[[ M3.1: navvagens livslangd i hornet. Samma bunt, samma skal. ]]
     elif "ledvag" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
+    elif "lektionsaterkoppling" in spec_rel:
+        moduler, stubbar = KLIENT, "tests/stubs.luau"
     elif "utrustning-rattelse" in spec_rel:
         moduler, stubbar = KOHERENS, "tests/stubs.luau"
     elif "ledlektion" in spec_rel:

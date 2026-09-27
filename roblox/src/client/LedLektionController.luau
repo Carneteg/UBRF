@@ -6,6 +6,7 @@ local Net = require(game:GetService("ReplicatedStorage").HorseCore.Networking)
 local Sprak = require(game:GetService("ReplicatedStorage").HorseCore.Sprak)
 local Plats = require(game:GetService("ReplicatedStorage").HorseCore.Ridhusplats)
 local Ugneta = require(script.Parent.UgnetaController)
+local Aterkoppling = require(script.Parent.LektionsAterkoppling)
 local L = {}
 
 local M, TOMTDJUP = 3, 170 -- samma omräkning som LedService.tomt
@@ -134,6 +135,11 @@ function L.panel(): any
 	local key = if pending then "pending" elseif fel then fel
 		elseif b.lage == "ready" or b.lage == "closed" then "intro" else b.tips
 	local txt = text(key)
+	if not pending and not fel then
+		local lp = game:GetService("Players").LocalPlayer
+		local at = Aterkoppling.text(b, { typ = "leda", userId = lp and lp.UserId })
+		if at then txt = at end
+	end
 	if b.lage == "leading" and not pending and not fel then
 		txt ..= " " .. tostring(b.progress) .. "%"
 	end
