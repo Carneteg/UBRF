@@ -23,10 +23,16 @@ and test policy. This index is dated 2026-09-26; it is not product acceptance.
   Branch codex/circle-lesson-20260926; the
   [lesson contract](CIRCLE-LESSON-CONTRACT.md) received conditional design PASS
   on00ec03a ([result](https://github.com/Carneteg/UBRF/pull/264#issuecomment-5848762860)).
-  Implementation now connects server observation/lifecycle to explicit Ugneta
-  choices and a session-local result. Focused tests run on actual service and
-  client paths; full-chain verification and independent code review remain
-  required before delivery. No publication or product acceptance.
+  Circle candidate e2a800b received independent BANK_ONLY code PASS
+  ([result](https://github.com/Carneteg/UBRF/pull/264#issuecomment-5852847754))
+  and all 42 shared checks passed locally. Codex now performs the authorized
+  bounded unpublished Studio check, not Tobias. Startup and door interaction
+  were observed; the lesson itself is not yet engine-verified.
+  The test found an opaque static interior door face hiding the opened entrance.
+  Current correction is limited to [DOOR-VISUAL-CONTRACT](DOOR-VISUAL-CONTRACT.md):
+  attach moving visual details to the existing leaf, preserve the fixed frame.
+  Exact-candidate review and a new local visual check are required. No publication
+  or product acceptance.
 
 ## Approved sequence and limits
 

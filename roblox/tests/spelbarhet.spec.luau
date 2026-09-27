@@ -300,8 +300,6 @@ end
 -- ══ 3. DÖRRENS ANVÄNDBARHET ═════════════════════════════════════════════
 print("\n3. Dörrens användbarhet")
 
-DorrService.start()
-
 local blad
 if dorr then
 	for _, d in ipairs(modell:GetDescendants()) do
@@ -311,8 +309,63 @@ if dorr then
 end
 check("entrédörren har ett uppmärkt dörrblad", blad ~= nil)
 
+local kontroll = Instance.new("Part")
+kontroll.Name = "Untagged test child"
+kontroll.CFrame = if blad then blad.CFrame else CFrame.new()
+kontroll.Parent = blad
+local kontrollCF = kontroll.CFrame
+DorrService.start()
+
 local prompt = blad and blad:FindFirstChildOfClass("ProximityPrompt")
 check("dörrbladet har en ProximityPrompt", prompt ~= nil)
+
+-- The actual entrance skin must swing, not remain as an opaque second door.
+if blad then
+	local dekor, fasta = {}, {}
+	for _, d in ipairs(modell:GetDescendants()) do
+		if d.Name == "Klubbentrén inifrån" or d.Name == "Klubbentréns solfjäderfönster" then
+			table.insert(dekor, { del = d, cf = d.CFrame })
+			check("entry decoration belongs to the moving leaf",
+				d.Parent == blad and d:GetAttribute("UBRFDorrDekor") == true)
+			check("entry decoration has no collision or independent prompt",
+				d.CanCollide == false and d:FindFirstChildOfClass("ProximityPrompt") == nil)
+		elseif d.Name == "Klubbentréns karm" or (d:GetAttribute("UBRFDorr") and d ~= blad) then
+			table.insert(fasta, { del = d, cf = d.CFrame })
+		end
+	end
+	check("entry retains both moving visual details", #dekor == 2)
+	check("fixed frame and unrelated doors are present", #fasta > 3)
+	local stangd = blad.CFrame
+	local hinge = (stangd * CFrame.new(-blad:GetAttribute("Bredd") * M / 2, 0, 0)).Position
+	local angle = math.rad(85)
+	local function samma(a, b)
+		local av, bv = { a:GetComponents() }, { b:GetComponents() }
+		for i = 1, 12 do if math.abs(av[i] - bv[i]) > 1e-6 then return false end end
+		return true
+	end
+	for cycle = 1, 3 do
+		DorrService.satLage(blad, true)
+		DorrService.satLage(blad, true)
+		for _, v in ipairs(dekor) do
+			local dp = v.cf.Position - hinge
+			local expected = hinge + Vector3.new(dp.X * math.cos(angle) + dp.Z * math.sin(angle),
+				dp.Y, -dp.X * math.sin(angle) + dp.Z * math.cos(angle))
+			check("decoration rotates about the real hinge without drift " .. cycle,
+				(v.del.CFrame.Position - expected).Magnitude < 1e-6
+				and (v.del.CFrame.LookVector - (CFrame.Angles(0, angle, 0) * v.cf).LookVector).Magnitude < 1e-6)
+			check("opened decoration leaves its original position", (v.del.CFrame.Position - v.cf.Position).Magnitude > 0.5)
+			check("decoration remains noncolliding when open", v.del.CanCollide == false)
+		end
+		for _, v in ipairs(fasta) do check("fixed geometry does not follow the leaf", samma(v.del.CFrame, v.cf)) end
+		check("untagged child stays untouched", samma(kontroll.CFrame, kontrollCF))
+		DorrService.satLage(blad, false)
+		check("closed leaf restores its original transform", samma(blad.CFrame, stangd) and blad.CanCollide)
+		for _, v in ipairs(dekor) do
+			check("closed decoration restores its original transform", samma(v.del.CFrame, v.cf) and v.del.CanCollide == false)
+		end
+	end
+	kontroll:Destroy()
+end
 
 if prompt and utanfor and blad then
 	local bp = blad.CFrame.Position
