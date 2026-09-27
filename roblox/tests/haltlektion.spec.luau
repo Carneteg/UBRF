@@ -300,6 +300,18 @@ do
 	check("C1: a locale switch redraws the words from the same attempt",
 		har(tEn, "Next time") and tEn ~= t)
 	Sprak.satVal("sv")
+	-- C2: kort text ritas om på plats ur SAMMA försök, genom den riktiga panelen.
+	LararInstallning.satDetalj("kort")
+	local tK = panelText()
+	check("C2: concise redraws the same attempt in place, without the numbers",
+		har(tK, Sprak.t("aterkoppling.halt.kort")) and har(tK, Sprak.t("aterkoppling.halt.nasta"))
+		and not har(tK, tal1(klar.resultat.skrittMeter)) and image().forsokId == klar.forsokId)
+	sida = UgnetaController.panel(4)
+	check("C2: concise keeps Retry and Finish on the composed page",
+		hitta(sida.knappar, Sprak.t("voltlektion.retry")) ~= nil
+		and hitta(sida.knappar, Sprak.t("haltlektion.finish")) ~= nil)
+	LararInstallning.satDetalj("detaljerad")
+	check("C2: back to detailed shows the same facts again", panelText() == t)
 
 	-- Retry: nytt försök, inget resultat, ingen gammal sammanfattning.
 	request("retry")
@@ -308,6 +320,10 @@ do
 	check("C1: after Retry the new attempt never shows the previous summary",
 		ny.resultat == nil and not har(panelText(), tal1(klar.resultat.skrittMeter))
 		and not har(panelText(), Sprak.t("aterkoppling.halt.nasta")))
+	LararInstallning.satDetalj("kort")
+	check("C2: after Retry, concise shows no old summary either",
+		not har(panelText(), Sprak.t("aterkoppling.halt.kort")))
+	LararInstallning.satDetalj("detaljerad")
 	-- Timeout efter ett lyckat försök.
 	s.voltLektion.deadline = os.clock()
 	step(X.u, X.v)

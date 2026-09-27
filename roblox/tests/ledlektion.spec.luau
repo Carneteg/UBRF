@@ -476,6 +476,12 @@ do
 		har(t, tal1(klar.resultat.meter)) and har(t, Sprak.t("aterkoppling.leda.nasta")), t)
 	for _ = 1, 4 do steg() end
 	check("C1: further samples in the same context keep the same summary", panelText() == t)
+	LararInstallning.satDetalj("kort")
+	local tK = panelText()
+	check("C2: concise in the same context: short line and next step, no numbers",
+		har(tK, Sprak.t("aterkoppling.leda.kort")) and har(tK, Sprak.t("aterkoppling.leda.nasta"))
+		and not har(tK, tal1(klar.resultat.meter)), tK)
+	LararInstallning.satDetalj("detaljerad")
 	-- Annan bunden häst (A → B) medan lektionen står i complete.
 	aktuell = ANNAN
 	steg()
@@ -485,6 +491,9 @@ do
 	t = panelText()
 	check("C1: after A → B the old result is not attributed to B",
 		t == ANNAN_TEXT and not har(t, tal1(klar.resultat.meter)), t)
+	LararInstallning.satDetalj("kort")
+	check("C2: concise keeps the stale-context text after A → B", panelText() == ANNAN_TEXT)
+	LararInstallning.satDetalj("detaljerad")
 	-- Den försenade äldre bilden (samma försök, lägre revision) återställer inget.
 	Networking.get("LedLektionSync").OnClientEvent:Fire(klar)
 	local p = Lc.panel()

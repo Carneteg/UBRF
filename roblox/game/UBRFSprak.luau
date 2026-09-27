@@ -1549,6 +1549,94 @@ Sprak.text = {
 		sv = "Den övningen gjordes med en annan häst eller före ett byte av karaktär, så jag visar inte de siffrorna här. Led igen med den häst du har nu.",
 		en = "That exercise was done with another horse or before a character change, so I will not show its numbers here. Lead again with the horse you have now.",
 	},
+	["installning.knapp"] = {
+		sv = "Text",
+		en = "Text",
+	},
+	["installning.tips"] = {
+		sv = "Välj hur mycket Ugneta skriver",
+		en = "Choose how much Ugneta writes",
+	},
+	["installning.rubrik_kommentarer"] = {
+		sv = "Kommentarer under ritten",
+		en = "Comments while riding",
+	},
+	["installning.kommentarer.normal"] = {
+		sv = "Normalt",
+		en = "Normal",
+	},
+	["installning.kommentarer.farre"] = {
+		sv = "Färre",
+		en = "Fewer",
+	},
+	["installning.kommentarer.inga"] = {
+		sv = "Inga",
+		en = "None",
+	},
+	["installning.rubrik_detalj"] = {
+		sv = "Text efter övningen",
+		en = "Text after the exercise",
+	},
+	["installning.detalj.detaljerad"] = {
+		sv = "Detaljerad",
+		en = "Detailed",
+	},
+	["installning.detalj.kort"] = {
+		sv = "Kort",
+		en = "Concise",
+	},
+	["installning.klar"] = {
+		sv = "Klar",
+		en = "Done",
+	},
+	["aterkoppling.timeout_kort"] = {
+		sv = "Tiden tog slut.",
+		en = "Time ran out.",
+	},
+	["aterkoppling.volt.kort"] = {
+		sv = "Snyggt – volten är klar!",
+		en = "Nice – the circle is done!",
+	},
+	["aterkoppling.halt.kort"] = {
+		sv = "Bra – halt vid X!",
+		en = "Good – halt at X!",
+	},
+	["aterkoppling.overgang.kort"] = {
+		sv = "Fint – trav vid första ringen och skritt vid den andra!",
+		en = "Nice – trot at the first ring and walk at the second!",
+	},
+	["aterkoppling.serpentin.kort"] = {
+		sv = "Snyggt – alla tre bågarna!",
+		en = "Nice – all three loops!",
+	},
+	["aterkoppling.tempo.kort"] = {
+		sv = "Bra – jämn skritt hela sträckan!",
+		en = "Good – a steady walk all the way!",
+	},
+	["aterkoppling.vag_mitt.kort"] = {
+		sv = "Snyggt – mittlinjen är riden!",
+		en = "Nice – the centre line is ridden!",
+	},
+	["aterkoppling.vag_diag.kort"] = {
+		sv = "Snyggt – diagonalen är riden!",
+		en = "Nice – the diagonal is ridden!",
+	},
+	["aterkoppling.halvvolt.kort"] = {
+		sv = "Fint – spår, halvvolt och tillbaka till spåret!",
+		en = "Nice – track, half-circle and back to the track!",
+	},
+	["aterkoppling.galopp.kort"] = {
+		sv = "Bra – galopp vid K! Galoppsidan bedömdes inte.",
+		en = "Good – canter at K! The lead was not judged.",
+	},
+	["aterkoppling.markbom.kort"] = {
+		sv = "Snyggt – över bommen i skritt! Avståndet mellan hovarna och bommen mäts inte.",
+		en = "Nice – over the pole in walk! The distance between the hooves and the pole is not measured.",
+	},
+	["aterkoppling.leda.kort"] = {
+		sv = "Snyggt ledd – hela vägen in på ridbanan!",
+		en = "Nicely led – all the way onto the arena track!",
+	},
 	["ugneta.se_ritten"] = {
 		sv = "Se ritten",
 		en = "Watch the ride",

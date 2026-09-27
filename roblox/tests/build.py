@@ -297,6 +297,7 @@ PARITET = [
     #[[ #244: bannern FORE UgnetaController, som require:ar den. Samma
     #   regel som hela listan: en modul far bara referera det som star
     #   over. ]]
+    ("LararInstallning", "src/client/LararInstallning.luau"),  # C2: textinstallningar
     ("CoachBanner",      "src/client/CoachBanner.luau"),
     #[[ #264: sprakflaggan fragar servern genom Networking. ]]
     ("Networking",       "src/shared/HorseCore/Networking.luau"),
@@ -382,6 +383,7 @@ KLIENT = SPEL + [
     #   require:ar den, i BADA listorna — ligger den bara i en blir
     #   require:t nil i den andra, och det syns forst som ett
     #   "attempt to index nil" langt fran orsaken. ]]
+    ("LararInstallning",    "src/client/LararInstallning.luau"),  # C2: textinstallningar
     ("CoachBanner",         "src/client/CoachBanner.luau"),
     ("UgnetaController",    "src/client/UgnetaController.luau"),
     ("Ridhusplats",   "src/shared/HorseCore/Ridhusplats.luau"),  # #264 INFRA-PLATS1: UgnetaGestalt require:ar den

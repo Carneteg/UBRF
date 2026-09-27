@@ -9,6 +9,8 @@
 	därför kan varken dubbla bilder, omritningar eller språkbyten ge en
 	dubbel eller gammal sammanfattning. ]]
 local Sprak = require(game:GetService("ReplicatedStorage").HorseCore.Sprak)
+--[[ C2: kort eller detaljerad text (docs/INSTRUCTOR-TEXT-CONTROLS-CONTRACT.md). ]]
+local Installning = require(script.Parent.LararInstallning)
 
 local A = {}
 
@@ -121,10 +123,20 @@ function A.text(b: any, kontext: any): string?
 		if hor == "kontext" then return Sprak.t("aterkoppling.leda.annan") end
 		local s = if hor == "ja" then sammanfattning(typ, b.resultat) else nil
 		if not s then return Sprak.t("aterkoppling.okant") end
+		--[[ C2: KORT bygger på SAMMA validerade bevis — `s` finns bara om
+			bindningen och varje fält höll. Siffrorna utelämnas, statusen, nästa
+			steg och galopp-/markbomsbegränsningarna står kvar (egna ord,
+			ingen avkapning). ]]
+		if Installning.detalj() == "kort" then
+			s = Sprak.t("aterkoppling." .. typ .. ".kort")
+		end
 		return s .. " " .. Sprak.t("aterkoppling." .. typ .. ".nasta")
 	elseif b.lage == "timeout" then
 		--[[ Neutralt: ingen gratulation, inget lånat resultat, ingen påhittad
 			orsak — serverns egen framstegssiffra och ett konkret tips. ]]
+		if Installning.detalj() == "kort" then
+			return Sprak.t("aterkoppling.timeout_kort") .. " " .. Sprak.t("aterkoppling." .. typ .. ".igen")
+		end
 		local procent = if fin(b.progress) then math.clamp(math.floor(b.progress), 0, 99) else 0
 		return Sprak.t("aterkoppling.timeout", tostring(procent)) .. " "
 			.. Sprak.t("aterkoppling." .. typ .. ".igen")

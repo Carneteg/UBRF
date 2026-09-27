@@ -132,6 +132,6 @@ shaped by each producer (field names taken from the producers above).
   - Back.
 
 **Planned, not written:**
-- panel-level chains for the other eight mounted types. They share the call
+- panel-level chains for the other nine mounted types (ten mounted types minus the halt example). They share the call
   site and the formatter, and their producers already have per-type specs.
 - rendered layout, text length on touch.
