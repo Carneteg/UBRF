@@ -20,7 +20,7 @@ local gaLektion: (() -> ())? = nil
 -- "overgang" (övergångar vid T1/T2), "serpentin" (träningsserpentin) eller
 -- "tempo" (jämn fart i skritt; ingen guide), "vag_mitt" eller "vag_diag"
 -- (ridvägarna; figuren är typen), "halvvolt" (halvvolt tillbaka till spåret)
--- eller "galopp" (galoppfattning vid K, utan galoppsida).
+-- "galopp" (galoppfattning vid K, utan galoppsida) eller "markbom" (bom på marken).
 local typ = "volt"
 -- Valsidan före en vald lektion: nil = toppnivån, "topp" (ersättningssidan
 -- bakom "Välj övning"), "gangart", "overgangar" (undergrupp i gangart),
@@ -170,6 +170,47 @@ local function halvvoltGuide(m, ref, delmal)
 	end
 end
 
+-- Ground pole: the server's pole frame (centre, width axis A, intended
+-- direction W towards C). Dashed corridor edges on the approach, chevrons on
+-- a = 0 towards the pole, a mark beside each pole end (never on the pole) and
+-- an exit lane. delmal: 0 approach, 1 crossing, 2 exit.
+local function markbomGuide(m, ref, delmal)
+	local p = ref.plats
+	local function lokalt(a, w)
+		return Plats.tillVarld(p, Vector3.new(ref.u + ref.au * a + ref.wu * w, 0.035,
+			ref.v + ref.av * a + ref.wv * w))
+	end
+	local fram = lokalt(0, 1) - lokalt(0, 0)
+	local sidled = lokalt(1, 0) - lokalt(0, 0)
+	local kant = ref.bredd / 2 + ref.sida
+	local w = -ref.djup
+	while w < -0.6 do
+		for _, a in ipairs({ -kant, kant }) do
+			streck(m, p, lokalt(a, w), fram, 0.35 * p.studsPerMeter, delmal == 0)
+		end
+		w += 1.2
+	end
+	w = -ref.djup + 1
+	while w < -1.5 do
+		local spets = lokalt(0, w)
+		for _, sida in ipairs({ 1, -1 }) do
+			local fot = spets - fram * 0.7 + sidled * (0.7 * sida)
+			streck(m, p, (spets + fot) / 2, spets - fot, 0.35 * p.studsPerMeter, delmal == 0)
+		end
+		w += 2.5
+	end
+	for _, a in ipairs({ -(ref.bredd / 2 + 0.3), ref.bredd / 2 + 0.3 }) do
+		streck(m, p, lokalt(a, 0), fram, 0.3 * p.studsPerMeter, delmal == 1)
+	end
+	w = 0.6
+	while w <= 3 do
+		for _, a in ipairs({ -kant, kant }) do
+			streck(m, p, lokalt(a, w), fram, 0.35 * p.studsPerMeter, delmal == 2)
+		end
+		w += 1.2
+	end
+end
+
 local function vagTyp(t: string?): boolean
 	return t == "vag_mitt" or t == "vag_diag"
 end
@@ -179,9 +220,10 @@ local function visaGuide(ref, delmal)
 	if guideRef and guideRef.ramId == ref.ramId and guideTyp == typ and guideDel == delmal then return end
 	rivGuide()
 	local m = Instance.new("Model"); m.Name = "Voltguide"
-	if typ == "serpentin" or vagTyp(typ) or typ == "halvvolt" then
+	if typ == "serpentin" or vagTyp(typ) or typ == "halvvolt" or typ == "markbom" then
 		if typ == "serpentin" then serpentinGuide(m, ref, delmal)
 		elseif typ == "halvvolt" then halvvoltGuide(m, ref, delmal)
+		elseif typ == "markbom" then markbomGuide(m, ref, delmal)
 		else vagGuide(m, ref, delmal) end
 		m.Parent = workspace; guide, guideRef, guideTyp, guideDel = m, ref, typ, delmal
 		return
@@ -233,9 +275,12 @@ local function mottag(b)
 	if valt and (b.lage=="approach" or b.lage=="baseline" or b.lage=="riding"
 		or b.lage=="halt1" or b.lage=="walk"
 		or b.lage=="walk1" or b.lage=="trot" or b.lage=="walk2"
-		or b.lage=="to_start" or b.lage=="route" or b.lage=="canter") then
-		visaGuide(b.referens, if typ == "serpentin" or vagTyp(typ) or typ == "halvvolt"
-			then b.delmal else nil)
+		or b.lage=="to_start" or b.lage=="route" or b.lage=="canter"
+		or b.lage=="approach" or b.lage=="crossing" or b.lage=="exit") then
+		local delmal = if typ == "serpentin" or vagTyp(typ) or typ == "halvvolt" then b.delmal
+			elseif typ == "markbom" then (if b.lage == "exit" then 2 elseif b.lage == "crossing" then 1 else 0)
+			else nil
+		visaGuide(b.referens, delmal)
 	else rivGuide() end
 end
 
@@ -255,7 +300,8 @@ local function skicka(op)
 		if not transport then fel="network"; return end
 		mottag(b)
 		if ok~=true then
-			fel = if reason=="place" then "place" elseif reason=="active" then "active" else "network"
+			fel = if reason=="place" or reason=="pole" then reason elseif reason=="active" then "active"
+				else "network"
 		elseif op=="finish" then
 			valt, fri, meny = false, true, nil; rivGuide()
 		end
@@ -266,11 +312,40 @@ function V.valj(vald: string?)
 	if not ritt then return end
 	local ny = if vald == "halt" or vald == "overgang" or vald == "serpentin" or vald == "tempo"
 		or vald == "vag_mitt" or vald == "vag_diag" or vald == "halvvolt" or vald == "galopp"
-		then vald else "volt"
+		or vald == "markbom" then vald else "volt"
 	if ny ~= typ then typ, bild = ny, nil; rivGuide() end
 	valt, fri, fel, meny = true, false, nil, nil
 	Ugneta.dolj()
 	skicka("sync")
+end
+
+-- Markbommens egna texter; gemensamma nycklar faller igenom.
+local function markbomText(key): string?
+	if key=="choose_markbom" then return Sprak.t("markbomlektion.choose") end
+	if typ ~= "markbom" then return nil end
+	if key=="start" then return Sprak.t("markbomlektion.start") end
+	if key=="finish" then return Sprak.t("markbomlektion.finish") end
+	if key=="intro" then return Sprak.t("markbomlektion.intro") end
+	if key=="to_approach" then return Sprak.t("markbomlektion.to_approach") end
+	if key=="walk_to_pole" then return Sprak.t("markbomlektion.walk_to_pole") end
+	if key=="approach_longer" then return Sprak.t("markbomlektion.approach_longer") end
+	if key=="over_pole" then return Sprak.t("markbomlektion.over_pole") end
+	if key=="walk_on_after" then return Sprak.t("markbomlektion.walk_on_after") end
+	if key=="walk_on" then return Sprak.t("markbomlektion.walk_on") end
+	if key=="walk_only" then return Sprak.t("markbomlektion.walk_only") end
+	if key=="off_line" then return Sprak.t("markbomlektion.off_line") end
+	if key=="reverse" then return Sprak.t("markbomlektion.reverse") end
+	if key=="beside_pole" then return Sprak.t("markbomlektion.beside_pole") end
+	if key=="no_passage" then return Sprak.t("markbomlektion.no_passage") end
+	if key=="wrong_direction" then return Sprak.t("markbomlektion.wrong_direction") end
+	if key=="pole_missing" then return Sprak.t("markbomlektion.pole_missing") end
+	if key=="pole" then return Sprak.t("markbomlektion.pole_missing") end
+	if key=="unknown" then return Sprak.t("markbomlektion.unknown") end
+	if key=="complete" then return Sprak.t("markbomlektion.complete") end
+	if key=="timeout" then return Sprak.t("markbomlektion.timeout") end
+	if key=="closed" then return Sprak.t("markbomlektion.closed") end
+	if key=="place" then return Sprak.t("markbomlektion.place") end
+	return nil
 end
 
 -- Galoppfattningens egna texter; gemensamma nycklar faller igenom.
@@ -446,6 +521,8 @@ local function haltText(key): string?
 end
 
 local function text(key)
+	local mb = markbomText(key)
+	if mb then return mb end
 	local ga = galoppText(key)
 	if ga then return ga end
 	local hv = halvvoltText(key)
@@ -512,10 +589,11 @@ function V.panel()
 				val("group_linjer",function() meny = "linjer" end),
 				val("back",function() meny = nil end) } }
 		elseif meny == "linjer" then
-			-- Undergrupp: Tillbaka leder till Ridvägar.
+			-- Undergrupp: raka linjer och markbommen; Tillbaka leder till Ridvägar.
 			return { ersatt=true, text=text("pick"), ovning="", vantar=false, knappar={
 				val("choose_vag_mitt",function() V.valj("vag_mitt") end),
 				val("choose_vag_diag",function() V.valj("vag_diag") end),
+				val("choose_markbom",function() V.valj("markbom") end),
 				val("back",function() meny = "vagar" end) } }
 		elseif meny == "topp" then
 			return { ersatt=true, text=text("pick"), ovning="", vantar=false, knappar={
@@ -545,7 +623,7 @@ function V.panel()
 	local txt = text(key)
 	if (b.lage=="riding" or b.lage=="halt1" or b.lage=="walk" or b.lage=="walk1"
 		or b.lage=="trot" or b.lage=="walk2" or b.lage=="route" or b.lage=="steady"
-		or b.lage=="canter")
+		or b.lage=="canter" or b.lage=="approach" or b.lage=="crossing" or b.lage=="exit")
 		and not pending and not fel then
 		txt ..= " "..tostring(b.progress).."%"
 	end

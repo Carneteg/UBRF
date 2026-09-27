@@ -55,7 +55,11 @@ and test policy. This index is dated 2026-09-26; it is not product acceptance.
   spec written, not run. Half-circle R2 8c500cf passed Codex source review
   only. Canter departure at K ([contract](CANTER-DEPARTURE-LESSON-CONTRACT.md),
   partial: no lead recognition) is built on it, with a "Transitions" subgroup
-  under Gaits and pace; BUILT_NOT_VERIFIED, spec written, not run.
+  under Gaits and pace; BUILT_NOT_VERIFIED, spec written, not run. Canter
+  267ab77 passed Codex source review only. Ground pole in walk, jumping stage 1
+  ([contract](GROUND-POLE-LESSON-CONTRACT.md), the existing pole rod_50, root-plane
+  passage only) is built on it, with additive `generation`/`flyttad` fields in
+  HinderObservation.register(); BUILT_NOT_VERIFIED, spec written, not run.
   Deferred before Tobias' playtest: full42, runtime smoke in engine, both lesson
   flows, guides, entrance door, SV/EN and touch.
 - 2026-09-27: the entrance correction 93e16f5 received BANK_ONLY code PASS and a

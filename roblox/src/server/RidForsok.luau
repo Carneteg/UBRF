@@ -86,6 +86,8 @@ RidForsok.OVNINGAR = table.freeze({
 	halvvolt = table.freeze({ ["server-halvvolt-1"] = true }),
 	-- Galoppfattning vid K, delvis (docs/CANTER-DEPARTURE-LESSON-CONTRACT.md).
 	galoppfattning = table.freeze({ ["server-galopp-1"] = true }),
+	-- Bom på marken i skritt, hoppningens första steg (docs/GROUND-POLE-LESSON-CONTRACT.md).
+	markbom = table.freeze({ ["server-markbom-1"] = true }),
 })
 RidForsok.MAX_PER_RITT = 8
 RidForsok.MAX_BEGARAN = 16

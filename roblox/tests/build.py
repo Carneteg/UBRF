@@ -184,6 +184,7 @@ FORBEREDELSE = SPEL + [
     ("VagLektion", "src/server/VagLektion.luau"),  # ridvagar: mittlinje, diagonal
     ("HalvvoltLektion", "src/server/HalvvoltLektion.luau"),  # halvvolt tillbaka till sparet
     ("GaloppLektion", "src/server/GaloppLektion.luau"),  # galoppfattning vid K (delvis)
+    ("MarkbomLektion", "src/server/MarkbomLektion.luau"),  # bom pa marken i skritt
     # AKTOREN (#252 DEL C) FORE tjansterna: GameplayService, HorseService
     # och LedService fragar den om aktoren har en klient att skicka till.
     ("Aktor",        "src/shared/HorseCore/Aktor.luau"),
@@ -455,6 +456,7 @@ KOHERENS = GEOMETRI + [
     ("VagLektion", "src/server/VagLektion.luau"),  # ridvagar: mittlinje, diagonal
     ("HalvvoltLektion", "src/server/HalvvoltLektion.luau"),  # halvvolt tillbaka till sparet
     ("GaloppLektion", "src/server/GaloppLektion.luau"),  # galoppfattning vid K (delvis)
+    ("MarkbomLektion", "src/server/MarkbomLektion.luau"),  # bom pa marken i skritt
     # AKTOREN (#252 DEL C) FORE tjansterna: GameplayService, HorseService
     # och LedService fragar den om aktoren har en klient att skicka till.
     ("Aktor",        "src/shared/HorseCore/Aktor.luau"),
@@ -767,6 +769,8 @@ def valjBunt(spec_rel: str):
     elif "forsok" in spec_rel:
         moduler, stubbar = KOHERENS, "tests/stubs.luau"
     #[[ Start/halt-lektionen: samma bank som voltlektionen. ]]
+    elif "markbomlektion" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
     elif "galopplektion" in spec_rel:
         moduler, stubbar = KOHERENS, "tests/stubs.luau"
     elif "halvvoltlektion" in spec_rel:

@@ -29,6 +29,7 @@ SPECAR="$SPECAR tempolektion"
 SPECAR="$SPECAR vaglektion"
 SPECAR="$SPECAR halvvoltlektion"
 SPECAR="$SPECAR galopplektion"
+SPECAR="$SPECAR markbomlektion"
 # #252 DEL B: banken provar SIG SJALV forst, i bada riktningarna. En
 # require av en modul som inte ligger i bunten ska falla bygget — inte
 # bli ett tyst nil (DEL A). Faller provet bygger vi inte en enda spec.

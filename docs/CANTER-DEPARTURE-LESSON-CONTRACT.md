@@ -66,9 +66,11 @@ The lesson has three phases.
      tip `trot_on`.
    - Canter, walk and halt give no preparation credit.
    - Being already in canter at Start never counts.
-2. **Departure:** an event first seen in this step, `fran = "trot"`,
-   `till = "canter"`, `orsak = "hjalp"`, neither side reversing, and its `t`
-   within the timing window. Its position is the step's observed interval:
+2. **Departure:** an event appended to RidLogg after the previous processed step
+   and first seen in this step (append order; its `t` is never compared with
+   `now`), with `fran = "trot"`, `till = "canter"`, `orsak = "hjalp"`, neither
+   side reversing, in a step with exactly one new observed segment. Its
+   position is the step's observed interval:
    - it must be a valid ridplats **segment** with **both** endpoints within 3 m
      of K;
    - it must have preparation ≥ 8 m;

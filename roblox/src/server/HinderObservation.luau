@@ -105,6 +105,12 @@ type Ritt = {
 local hinder: { [string]: Hinder } = {}
 local avvisade: { [string]: string } = {}
 local delar: { [string]: { [any]: boolean } } = {}
+--[[ GENERATION per id (#264 markbom): räknas upp vid VARJE ändring i
+	registreringen — en del som läggs till, tas bort eller prövas om, eller
+	hela id:t bort. En konsument som vill veta att geometrin är SAMMA
+	registrering (inte en ersättare med identiska mått) jämför den. Rent
+	tillägg; inga livscykelregler ändras. ]]
+local generation: { [string]: number } = {}
 local ritter: { [string]: Ritt } = {}
 local avslutade: { string } = {}
 local gallrade = 0
@@ -203,6 +209,7 @@ end
 	  · samma del igen   → ingen dubblett; geometrin läses om.
 	Pågående försök ärvs aldrig av en annan geometri. ]]
 local function prova(id: string)
+	generation[id] = (generation[id] or 0) + 1
 	local n, del = antalDelar(id)
 	if n == 0 then
 		delar[id] = nil
@@ -261,6 +268,7 @@ end
 
 --[[ Hela id:t bort, med alla dess delar. ]]
 function HinderObservation.avregistrera(id: string)
+	generation[id] = (generation[id] or 0) + 1
 	stangAktiva(id, "hinder_borttaget")
 	hinder[id] = nil
 	delar[id] = nil
@@ -478,12 +486,20 @@ function HinderObservation.ogonblick(rittId: string?): any
 	})
 end
 
---[[ Registrets innehåll, fryst: giltiga hinder och avvisade id:n. ]]
+--[[ Registrets innehåll, fryst: giltiga hinder och avvisade id:n.
+	`generation` (se ovan) och `flyttad` — delen har flyttats mer än 0,01
+	studs från sitt registrerade läge, en LEVANDE läsning; registret läser
+	inte om geometrin vid en flytt — är rena tillägg (#264 markbom). ]]
 function HinderObservation.register(): any
 	local ut = {}
 	for id, h in pairs(hinder) do
+		local del = h._del
+		local okFlytt, flyttad = pcall(function()
+			return del == nil or del.Parent == nil or (del.Position - h._lage).Magnitude > 0.01
+		end)
 		ut[id] = { id = id, x = h.cx, y = h.cy, z = h.cz, bredd = h.bredd,
-			breddaxel = { x = h.ux, z = h.uz }, normal = { x = h.nx, z = h.nz }, topp = h.topp }
+			breddaxel = { x = h.ux, z = h.uz }, normal = { x = h.nx, z = h.nz }, topp = h.topp,
+			generation = generation[id] or 0, flyttad = (not okFlytt) or flyttad == true }
 	end
 	return frys({ hinder = ut, avvisade = avvisade })
 end
@@ -496,6 +512,7 @@ function HinderObservation._glomForProv()
 	hinder = {}
 	avvisade = {}
 	delar = {}
+	generation = {}
 	ritter = {}
 	avslutade = {}
 	gallrade = 0
