@@ -337,6 +337,40 @@ V.avbryt(); V.start("another-ride",nil)
 assert(coroutine.resume(late))
 check("late response cannot contaminate new ride", not V.lektion() and V.panel().text==nil)
 task.spawn=originalSpawn; remote.OnServerInvoke=handler
+
+-- A declared client-less actor (Aktor, harKlient=false) is how the engine runtime
+-- smoke drives server paths. The lesson must progress for it without addressing
+-- an owner event to it: in the engine, FireClient on a non-Player throws inside
+-- the shared Heartbeat loop and would skip every later session that frame.
+local actor=player(913); actor.harKlient=false
+Players._spelare={p,other,actor}
+local horse2=HastRigg.bygg("circle_actor","Circle actor",CFrame.new(Ridhusplats.tillVarld(RP,vec(4,0,2))))
+horse2.Parent=workspace; Tags:AddTag(horse2,"Horse")
+local s2=HorseService.sessionFor(horse2)
+local function step2(u,v,dt)
+	local a=Ridhusplats.tillVarld(RP,vec(u,0,v)); a=vec(a.X,s2.rig.root.Position.Y,a.Z)
+	s2.rig.root.CFrame=CFrame.new(a); s2.rig.root.Position=a
+	s2.energi=1; Run.Heartbeat:Fire(dt or 0.25)
+end
+step2(4,2)
+local aRoot=actor.Character:FindFirstChild("HumanoidRootPart")
+local aPos=s2.rig.root.Position+vec(6,0,0); aRoot.CFrame=CFrame.new(aPos); aRoot.Position=aPos
+local okA,_,actorRide=HorseService.tryMount(actor,horse2)
+step2(4,2); step2(4,2)
+local sync=Net.get("VoltLektionSync")
+local sentBefore=#sync._skickat
+local okStart,_,startImage=HorseService.voltLektionsBegaran(actor,actorRide,"start",1)
+for v=3,20 do step2(4,v) end
+for i=0,12 do local a=-math.pi/2+2*math.pi*i/72; step2(10*math.cos(a),30+10*math.sin(a)) end
+local _,_,actorImage=HorseService.voltLektionsBegaran(actor,actorRide,"sync")
+local toActor=0
+for n=sentBefore+1,#sync._skickat do if sync._skickat[n][1]==actor then toActor+=1 end end
+check("client-less actor lesson progresses server-side", okA and okStart and startImage.lage=="approach"
+	and actorImage.lage=="riding")
+check("client-less actor receives no owner event", toActor==0)
+HorseService.voltLektionsBegaran(actor,actorRide,"finish",2)
+HorseService.dismount(actor)
+
 check("lesson never writes persistent data", (__datastore.forsok and __datastore.forsok.skriv or 0)==writes)
 if fails>0 then error(tostring(fails).." FEL") end
 print(string.format("\nVOLTLEKTION: %d prov, alla gröna",total))

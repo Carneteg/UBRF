@@ -1824,8 +1824,13 @@ function HorseService.start()
 			if lesson and session.rider and lesson.rittId == session.rittId then
 				local rev = lesson.revision
 				VoltLektion.steg(lesson, os.clock())
-				if rev ~= lesson.revision then
-					Net.get("VoltLektionSync"):FireClient(session.rider, VoltLektion.bild(lesson))
+				--[[ Samma mottagarregel som RidTillstand och StaminaSync: en
+					deklarerad aktör utan klient får inget ägarbesked. I motorn
+					kastar FireClient på en icke-Player, och kastet skulle här
+					hoppa över alla senare sessioner i samma hjärtslag. ]]
+				local kVolt = Aktor.klient(session.rider)
+				if rev ~= lesson.revision and kVolt then
+					Net.get("VoltLektionSync"):FireClient(kVolt, VoltLektion.bild(lesson))
 				end
 			end
 		end
