@@ -16,20 +16,74 @@ local listener: any = nil
 local guide: Model? = nil
 local guideRef: any = nil
 local gaLektion: (() -> ())? = nil
--- Vald lektion: "volt" (voltlektionen) eller "halt" (start/halt vid X).
+-- Vald lektion: "volt" (voltlektionen), "halt" (start/halt vid X),
+-- "overgang" (övergångar vid T1/T2) eller "serpentin" (träningsserpentin).
 local typ = "volt"
 local guideTyp: string? = nil
+local guideDel: number? = nil
 
 local function rivGuide()
 	if guide then guide:Destroy() end
-	guide, guideRef = nil, nil
+	guide, guideRef, guideDel = nil, nil, nil
 end
 
-local function visaGuide(ref)
+-- One flat non-colliding dash, only if the whole dash stays within the arena.
+local function streck(m, p, pos, riktning, half, stark)
+	local bound = half * 1.1
+	if not (Plats.inom(p,"bana",pos+p.tvars*bound) and Plats.inom(p,"bana",pos-p.tvars*bound)
+		and Plats.inom(p,"bana",pos+p.motC*bound) and Plats.inom(p,"bana",pos-p.motC*bound)) then
+		return
+	end
+	local part = Instance.new("Part")
+	part.Name = "Guide"; part.Anchored = true; part.CanCollide = false
+	part.CanTouch = false; part.CanQuery = false; part.CastShadow = false
+	part.Size = Vector3.new(half*0.65,0.05,half*2)
+	part.CFrame = CFrame.lookAt(pos,pos+riktning)
+	part.Color = Color3.fromRGB(77,174,142)
+	part.Transparency = if stark then 0.25 else 0.8
+	part.Parent = m
+end
+
+-- Serpentine: the three loops of the server's route, the start ring and the
+-- end ring. The next portion (delmal 0 start ring, 1-3 loop, 4 end ring) is
+-- solid, the rest faint.
+local function serpentinGuide(m, ref, delmal)
+	local p = ref.plats
+	local half = 0.5 * p.studsPerMeter
+	local function lokalt(u, v) return Plats.tillVarld(p, Vector3.new(u, 0.035, v)) end
+	for k = 1, 3 do
+		local c = ref.v0 + ref.r + (k - 1) * 2 * ref.r
+		local side = ref.sidor[k]
+		local antal = 20
+		for i = 0, antal - 1 do
+			local th = math.pi * (i + 0.5) / antal
+			local pos = lokalt(ref.u + side*ref.r*math.sin(th), c - ref.r*math.cos(th))
+			local fram = lokalt(ref.u + side*ref.r*math.sin(th + 0.05), c - ref.r*math.cos(th + 0.05))
+			streck(m, p, pos, fram - pos, half, delmal == k)
+		end
+	end
+	for j, v in ipairs({ ref.v0, ref.v0 + 6 * ref.r }) do
+		local antal = 12
+		for i = 0, antal - 1 do
+			local a = 2 * math.pi * i / antal
+			local pos = lokalt(ref.u + ref.ring*math.cos(a), v + ref.ring*math.sin(a))
+			local fram = lokalt(ref.u + ref.ring*math.cos(a + 0.05), v + ref.ring*math.sin(a + 0.05))
+			streck(m, p, pos, fram - pos, 0.3 * p.studsPerMeter,
+				(j == 1 and delmal == 0) or (j == 2 and delmal == 4))
+		end
+	end
+end
+
+local function visaGuide(ref, delmal)
 	if not ref or not ref.plats then rivGuide(); return end
-	if guideRef and guideRef.ramId == ref.ramId and guideTyp == typ then return end
+	if guideRef and guideRef.ramId == ref.ramId and guideTyp == typ and guideDel == delmal then return end
 	rivGuide()
 	local m = Instance.new("Model"); m.Name = "Voltguide"
+	if typ == "serpentin" then
+		serpentinGuide(m, ref, delmal)
+		m.Parent = workspace; guide, guideRef, guideTyp, guideDel = m, ref, typ, delmal
+		return
+	end
 	local p = ref.plats
 	-- Volt: dashes fill the allowed inner band. Halt: a small ring marks the
 	-- stopping zone at X. Transitions: one ring per training target (T1, T2).
@@ -73,8 +127,9 @@ local function mottag(b)
 	sekvens = math.max(sekvens,b.sekvens or 0)
 	if valt and (b.lage=="approach" or b.lage=="baseline" or b.lage=="riding"
 		or b.lage=="halt1" or b.lage=="walk"
-		or b.lage=="walk1" or b.lage=="trot" or b.lage=="walk2") then
-		visaGuide(b.referens)
+		or b.lage=="walk1" or b.lage=="trot" or b.lage=="walk2"
+		or b.lage=="to_start" or b.lage=="route") then
+		visaGuide(b.referens, if typ == "serpentin" then b.delmal else nil)
 	else rivGuide() end
 end
 
@@ -103,11 +158,34 @@ end
 
 function V.valj(vald: string?)
 	if not ritt then return end
-	local ny = if vald == "halt" or vald == "overgang" then vald else "volt"
+	local ny = if vald == "halt" or vald == "overgang" or vald == "serpentin" then vald else "volt"
 	if ny ~= typ then typ, bild = ny, nil; rivGuide() end
 	valt, fri, fel = true, false, nil
 	Ugneta.dolj()
 	skicka("sync")
+end
+
+-- Serpentinlektionens egna texter; gemensamma nycklar faller igenom.
+local function serpentinText(key): string?
+	if key=="choose_serpentin" then return Sprak.t("serpentinlektion.choose") end
+	if typ ~= "serpentin" then return nil end
+	if key=="start" then return Sprak.t("serpentinlektion.start") end
+	if key=="finish" then return Sprak.t("serpentinlektion.finish") end
+	if key=="intro" then return Sprak.t("serpentinlektion.intro") end
+	if key=="to_start" then return Sprak.t("serpentinlektion.to_start") end
+	if key=="loop1" then return Sprak.t("serpentinlektion.loop1") end
+	if key=="loop2" then return Sprak.t("serpentinlektion.loop2") end
+	if key=="loop3" then return Sprak.t("serpentinlektion.loop3") end
+	if key=="to_end" then return Sprak.t("serpentinlektion.to_end") end
+	if key=="off_route" then return Sprak.t("serpentinlektion.off_route") end
+	if key=="reverse" then return Sprak.t("serpentinlektion.reverse") end
+	if key=="walk_or_trot" then return Sprak.t("serpentinlektion.walk_or_trot") end
+	if key=="unknown" then return Sprak.t("serpentinlektion.unknown") end
+	if key=="complete" then return Sprak.t("serpentinlektion.complete") end
+	if key=="timeout" then return Sprak.t("serpentinlektion.timeout") end
+	if key=="closed" then return Sprak.t("serpentinlektion.closed") end
+	if key=="place" then return Sprak.t("serpentinlektion.place") end
+	return nil
 end
 
 -- Övergångslektionens egna texter; gemensamma nycklar faller igenom.
@@ -160,6 +238,8 @@ local function haltText(key): string?
 end
 
 local function text(key)
+	local sp = serpentinText(key)
+	if sp then return sp end
 	local o = overgangText(key)
 	if o then return o end
 	local h = haltText(key)
@@ -195,7 +275,8 @@ function V.panel()
 	if not valt then
 		local knappar = { val("choose",function() V.valj("volt") end),
 			val("choose_halt",function() V.valj("halt") end),
-			val("choose_overgang",function() V.valj("overgang") end) }
+			val("choose_overgang",function() V.valj("overgang") end),
+			val("choose_serpentin",function() V.valj("serpentin") end) }
 		if fri then
 			table.insert(knappar,val("lessons",function()
 				fri=false; if gaLektion then gaLektion() end
@@ -209,7 +290,7 @@ function V.panel()
 		else b.tips
 	local txt = text(key)
 	if (b.lage=="riding" or b.lage=="halt1" or b.lage=="walk" or b.lage=="walk1"
-		or b.lage=="trot" or b.lage=="walk2") and not pending and not fel then
+		or b.lage=="trot" or b.lage=="walk2" or b.lage=="route") and not pending and not fel then
 		txt ..= " "..tostring(b.progress).."%"
 	end
 	local knappar = {}

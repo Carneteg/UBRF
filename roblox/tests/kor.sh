@@ -24,6 +24,7 @@ SPECAR="geometri spel spelkanon forberedelse skotselpass sparning-v2 ridlogg rid
 SPECAR="$SPECAR voltlektion"
 SPECAR="$SPECAR haltlektion"
 SPECAR="$SPECAR overganglektion"
+SPECAR="$SPECAR serpentinlektion"
 # #252 DEL B: banken provar SIG SJALV forst, i bada riktningarna. En
 # require av en modul som inte ligger i bunten ska falla bygget — inte
 # bli ett tyst nil (DEL A). Faller provet bygger vi inte en enda spec.

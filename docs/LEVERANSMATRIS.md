@@ -180,7 +180,7 @@ touch bevaras.
 | Område: väg | #266 C/B3 | linje = svängradie | position och figur | INFRA-2A, INFRA-2B1, B3 | fel plats ger inte rätt linjebetyg | — | `EJ_PÅBÖRJAD` |
 | Område: tempo | #266 C/B3 | `rytm = nil` (`Lektion.luau:148`) | rytm faktiskt mätt | B3 | ingen rytmbedömning förrän den mäts | — | `EJ_PÅBÖRJAD` |
 | Område: övergångar | #266 C | skritt_trav, trav_skritt | plats för övergången | B3 | — | — | `BYGGT` — BUILT_NOT_VERIFIED 2026-09-27: `OvergangLektion` (skritt → trav vid T1 → skritt vid T2, träningsmål på mittlinjen, [kontrakt](TRANSITION-LESSON-CONTRACT.md)); prov skrivna, ej körda |
-| Område: volter och serpentiner | #266 C | storvolt, hörn | form, storlek och plats | B3 | — | — | `EJ_PÅBÖRJAD` |
+| Område: volter och serpentiner | #266 C | storvolt, hörn | form, storlek och plats | B3 | — | — | `DELVIS BYGGT` — BUILT_NOT_VERIFIED 2026-09-27: `SerpentinLektion` (träningsserpentin med tre bågar A → C, ordnade korsningar av mittlinjen, en spelets träningsväg och inget officiellt program, [kontrakt](SERPENTINE-LESSON-CONTRACT.md)); prov skrivna, ej körda. Övriga övningar i området ej påbörjade |
 | Område: galoppfattning | #266 C/§3.1 | galoppsidan följer varvet | igenkänning; egen hjälp om modellen stöder det | B1 | — | — | `EJ_PÅBÖRJAD` |
 | Område: hoppning | #266 C/B4 | generellt hopp | bommar → hinder → linje → bana | B4 | — | — | `EJ_PÅBÖRJAD` |
 | C1 konkreta råd | #266 C1, #236 | temafokus, cooldown 8/14 s, attribution | råd knutna till händelser; bekräftelse av förbättring; länk till replay | INFRA-2A, INFRA-2B1, B3 | råd bara när mätningen stöder det | ett råd leder till ett bättre försök | `EJ_PÅBÖRJAD` |
