@@ -158,7 +158,9 @@ local function stang(s, orsak): boolean
 	if not Forsok.slutfor(s.rittId, s.forsokId, orsak, obsTid(s.rittId), nil) then return false end
 	if orsak == "slutford" then
 		s.resultat = table.freeze({ forsokId = s.forsokId, rittId = s.rittId, userId = s.userId,
-			hastId = s.hastId, figur = "hornet", meter = s.langst - s.armS, armS = s.armS,
+			hastId = s.hastId, figur = "hornet",
+			-- R1: räknat från vägens början (armS kan ligga bakom P0), som framsteget.
+			meter = s.langst - math.max(s.armS, 0), armS = s.armS,
 			slutS = s.langst, langd = s.referens.langd, mitt = s.mittNadd == true, radie = R,
 			start = Forsok.ogonblick(s.forsokId).start })
 		s.progress = 100

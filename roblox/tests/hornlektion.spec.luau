@@ -150,6 +150,9 @@ do
 	check("det frysta resultatet: figur, kontrollpunkt, meter och längd", done.resultat ~= nil
 		and table.isfrozen(done.resultat) and done.resultat.figur == "hornet" and done.resultat.mitt == true
 		and math.abs(done.resultat.langd - ref.langd) < 1e-6 and done.resultat.meter > 0)
+	-- R1: metrarna räknas från vägens början, så de överstiger aldrig vägens längd.
+	check("det frysta resultatets meter överstiger inte vägens längd", done.resultat ~= nil
+		and done.resultat.meter <= done.resultat.langd + 1e-6)
 	check("minnet: markören för hörnet (egen nyckel)", LM.nyckel("hornet") == "lektion:hornet:server-horn-1"
 		and LM._projektion(LM._tillstandForProv(p)).lektioner.hornet == "sparad")
 	local skriv0 = __datastore.forsok.skriv
@@ -219,10 +222,15 @@ do
 	check("H11 en annan lektion nekas medan hörnet är aktivt", okByt == false and felByt == "active")
 	local okF = avslutaNu()
 	check("H10 Avsluta stänger", okF == true and image().lage == "closed")
+	local hornObjekt = s.voltLektion
 	request("start", "vag_mitt"); request("finish", "vag_mitt")
-	local _, _, bNy = HorseService.voltLektionsBegaran(p, id, "sync", nil, "hornet")
-	check("H11 A-B-A: tillbaka till hörnet är ett nytt lektionsobjekt, klart att starta",
-		bNy ~= nil and bNy.typ == "hornet" and (bNy.lage == "ready" or bNy.lage == "closed") and bNy.resultat == nil)
+	--[[ En sync läser bara den pågående lektionen (ändrar aldrig typ); tillbaka
+		till hörnet går genom ett Start med typen, som skapar ett nytt objekt. ]]
+	local okNy, _, bNy = request("start", "hornet")
+	check("H11 A-B-A: tillbaka till hörnet är ett nytt lektionsobjekt, utan gammalt resultat",
+		okNy == true and bNy ~= nil and bNy.typ == "hornet" and bNy.lage == "to_start" and bNy.resultat == nil
+		and s.voltLektion ~= hornObjekt)
+	avslutaNu()
 end
 
 print("\n── H12. Guiden: varje del ligger på serverns väg (PÅHITTAD GEOMETRI mot riktig referens) ──")
@@ -282,6 +290,8 @@ end
 
 print("\n── H14–H15. Menyn och hälsningen i den FAKTISKA värden (SAMMANFOGAT, SYNKRONT) ──")
 do
+	-- Bänken har ingen riktig tid: takten nollställs, annars nekas Start med takt.for_snabbt.
+	Skopa._nollstallForProv()
 	local VC, UC = VoltLektionController, UgnetaController
 	local function hitta(lista, txt)
 		for _, k in ipairs(lista) do if string.find(k.text, txt, 1, true) then return k end end
@@ -304,6 +314,8 @@ do
 		and hitta(sidaB, Sprak.t("halvvoltlektion.choose")) ~= nil and hitta(sidaB, Sprak.t("hornlektion.choose")) ~= nil)
 	hitta(sidaB, Sprak.t("hornlektion.choose")).skicka()
 	-- H14: hälsningen efter ett godtaget Start genom värdens knapp, i den riktiga ritten.
+	-- H13 lämnade ett fullföljt hörn; Avsluta först, så att sidan erbjuder Start.
+	avslutaNu()
 	VC.avbryt(); VC.start(id, nil); UC.satLektionsVal(VC.panel)
 	VC.valj("tempo"); VC.valj("hornet")
 	local start = hitta(UC.panel(4).knappar, Sprak.t("hornlektion.start"))
@@ -321,6 +333,7 @@ end
 
 print("\n── H16. VERKLIGT FÖRDRÖJT: Start på schemat, pushen före det sena svaret ──")
 do
+	Skopa._nollstallForProv()
 	local VC, UC = VoltLektionController, UgnetaController
 	local remote = Networking.get("VoltLektion")
 	local riktig = remote.InvokeServer
