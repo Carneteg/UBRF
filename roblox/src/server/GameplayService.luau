@@ -65,6 +65,8 @@ local Net = Core.Networking
 local HorseService = require(script.Parent.HorseService)
 local StallService = require(script.Parent.StallService)
 local SparService = require(script.Parent.SparService)
+--[[ C (skötsel): spelarens egna första gånger. docs/CARE-MEMORY-CONTRACT.md. ]]
+local LektionsMinne = require(script.Parent.LektionsMinne)
 local Aktor = require(ReplicatedStorage.HorseCore.Aktor)
 --[[ #259 Gate 1A: takten framfor de klientanropade fjarrfunktionerna.
 	En delad skopa, inte en per handlare — se `Skopa.luau`. ]]
@@ -450,6 +452,10 @@ function GameplayService.moment(player: Player, fasId: string, momentId: string,
 	--[[ TREDJE VÄRDET FÖLJER MED (#246 A). Se noten i `Preparation`. ]]
 	local ok, avslag, avslagArg =
 		Preparation.utforMoment(s, fasId, momentId, s.hastId, utforare)
+	--[[ C: skötselminnet prövar ett LYCKAT moment direkt, innan vyn skickas
+		och innan någon ombindning kan ersätta tillståndet. Bara spelarens
+		eget arbete räknas (se LektionsMinne.skotselMoment). ]]
+	if ok then LektionsMinne.skotselMoment(player, s, fasId, momentId, utforare) end
 	skicka(player)
 	--[[ KVITTENSEN NAMNGER DELEN OCH HÄSTEN. Den går ut som svarets andra
 		och tredje värde — samma kanal som nejen redan använder — så att

@@ -1661,6 +1661,42 @@ Sprak.text = {
 		sv = "Det du klarat nu är inte sparat än.",
 		en = "What you just completed isn't saved yet.",
 	},
+	["skotselminne.rubrik"] = {
+		sv = "Det du gjort själv:",
+		en = "What you have done yourself:",
+	},
+	["skotselminne.halsa"] = {
+		sv = "Hälsa lugnt",
+		en = "Greet her calmly",
+	},
+	["skotselminne.visitera"] = {
+		sv = "Visitera",
+		en = "Check her over",
+	},
+	["skotselminne.rykta"] = {
+		sv = "Rykta",
+		en = "Groom",
+	},
+	["skotselminne.hovar"] = {
+		sv = "Kratsa alla fyra hovar",
+		en = "Pick out all four hooves",
+	},
+	["skotselminne.sparad"] = {
+		sv = "gjort",
+		en = "done",
+	},
+	["skotselminne.vantar"] = {
+		sv = "gjort nu – inte sparat än",
+		en = "done now – not saved yet",
+	},
+	["skotselminne.ej_klarad"] = {
+		sv = "inte än",
+		en = "not yet",
+	},
+	["skotselminne.okand"] = {
+		sv = "Jag kan inte läsa din skötselhistorik just nu.",
+		en = "I can't read your care history right now.",
+	},
 	["halsning.volt"] = {
 		sv = "Nu rider vi volten: följ linjen runt mitten ett helt varv.",
 		en = "Now for the circle: follow the line around the middle for one full circle.",

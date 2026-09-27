@@ -1792,7 +1792,13 @@ local function fyllText(data: any, minHast: string?, hastnamn: string?)
 		stegEtikett.Visible = steg ~= ""
 	end
 	visaAterkoppling(ater)
-	visaHjalp(if data then stegLista(data.steg or {}) else "")
+	--[[ C: skötselminnets avsnitt EFTER dagens steg, åtskilt — samma
+		valfria hjälplista, ingen rad och ingen fråga. ]]
+	local hjalp = if data then stegLista(data.steg or {}) else ""
+	if data and type(data.historik) == "string" and data.historik ~= "" then
+		hjalp = if hjalp ~= "" then (hjalp .. "\n\n" .. data.historik) else data.historik
+	end
+	visaHjalp(hjalp)
 end
 
 rita = function()

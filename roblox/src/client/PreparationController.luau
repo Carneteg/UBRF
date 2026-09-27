@@ -69,6 +69,64 @@ local MINIMAL_UI = true
 
 local PreparationController = {}
 
+--[[ ══ SKÖTSELMINNET (C) — docs/CARE-MEMORY-CONTRACT.md ══════════════════
+	Serverns projektion av spelarens EGNA första gånger (halsa, visitera,
+	rykta, hovar), med samma ordning som lektionsminnet: nyare session, eller
+	samma session med minst samma revision. Historiken är spelarens egen och
+	gäller över häst och uppgift. Den visas i värdens hjälpavsnitt, åtskild
+	från dagens bockar — aldrig som en rad, en fråga eller en kvittens. ]]
+local SKOTSEL_ID = { "halsa", "visitera", "rykta", "hovar" }
+local SKOTSEL_LAGEN = { sparad = true, vantar = true, ej_klarad = true, okand = true }
+local skotselMinne: { historik: string, lagen: { [string]: string }, session: number, rev: number }? = nil
+
+local function heltalMinne(x: any): number
+	if type(x) ~= "number" or x ~= x or x < 0 or x == math.huge or x % 1 ~= 0 then return -1 end
+	return x
+end
+
+local function taEmotSkotsel(p: any): boolean
+	if type(p) ~= "table" or type(p.skotsel) ~= "table" then return false end
+	local session, rev = heltalMinne(p.session), heltalMinne(p.rev)
+	if session < 0 or rev < 0 then return false end
+	local nu = skotselMinne
+	if nu and (session < nu.session or (session == nu.session and rev < nu.rev)) then return false end
+	local lagen = {}
+	for _, id in SKOTSEL_ID do
+		local l = p.skotsel[id]
+		lagen[id] = if type(l) == "string" and SKOTSEL_LAGEN[l] then l else "okand"
+	end
+	skotselMinne = { historik = if p.historik == "betrodd" then "betrodd" else "okand", lagen = lagen,
+		session = session, rev = rev }
+	return true
+end
+
+--[[ Avsnittet i hjälplistan, på det språk som gäller när det ritas. ]]
+local function skotselHistorik(): string?
+	local m = skotselMinne
+	if not m then return nil end
+	if m.historik ~= "betrodd" then
+		local vantar = {}
+		for _, id in SKOTSEL_ID do
+			if m.lagen[id] == "vantar" then
+				table.insert(vantar, Sprak.t("skotselminne." .. id) .. " — " .. Sprak.t("skotselminne.vantar"))
+			end
+		end
+		local rader = { Sprak.t("skotselminne.okand") }
+		for _, r in vantar do table.insert(rader, r) end
+		return table.concat(rader, "\n")
+	end
+	local rader = { Sprak.t("skotselminne.rubrik") }
+	for _, id in SKOTSEL_ID do
+		local l = m.lagen[id]
+		local lage = if l == "sparad" then Sprak.t("skotselminne.sparad")
+			elseif l == "vantar" then Sprak.t("skotselminne.vantar")
+			else Sprak.t("skotselminne.ej_klarad")
+		table.insert(rader, Sprak.t("skotselminne." .. id) .. " — " .. lage)
+	end
+	return table.concat(rader, "\n")
+end
+PreparationController._skotselHistorik = skotselHistorik
+
 local player = Players.LocalPlayer
 
 --[[ ══ KONTEXTEN — HUD:EN FÅR INTE LOVA VAD SPELAREN INTE KAN GÖRA ══════
@@ -1632,6 +1690,8 @@ local function avsluta(lage: string, antalVal: number, ledtext: string,
 		synlig = synlig,
 		harVal = interaktionPagar(antalVal),
 		hastnamn = panelHastnamn,
+		--[[ C: skötselminnets avsnitt för hjälplistan (nil när inget finns). ]]
+		historik = skotselHistorik(),
 	}
 	if vard then
 		if gui then gui.Enabled = false end
@@ -2415,10 +2475,24 @@ function PreparationController.start()
 		lyssnade än hade missat att eftervården väntade. ]]
 	Net.get("PreparationSync").OnClientEvent:Connect(ritaOmNyare)
 	Net.get("PassSync").OnClientEvent:Connect(PreparationController.tillampaPass)
+	--[[ C: skötselminnet. EN lyssnare (start körs en gång), sedan en läsning.
+		En ändrad historik ritar om värden; inget annat påverkas. ]]
+	local function minneIn(p: any)
+		if taEmotSkotsel(p) then
+			if panelData then panelData.historik = skotselHistorik() end
+			if vard then vard() end
+		end
+	end
+	Net.get("LektionsMinneSync").OnClientEvent:Connect(minneIn)
+	task.spawn(function()
+		local ok, p = pcall(function() return Net.get("LektionsMinne"):InvokeServer("sync") end)
+		if ok then minneIn(p) end
+	end)
 	--[[ #264 GAIT_READABILITY_AND_UGNETA: språkflaggan. Samma vy, ritad om
 	     på det nya språket — ingenting skickas, ingenting går vidare. ]]
 	Sprak.vidByte(function()
 		if senasteVy then rita(senasteVy) end
+		if panelData then panelData.historik = skotselHistorik() end
 	end)
 
 	task.spawn(function()

@@ -72,6 +72,10 @@ local GaloppLektion = require(script.Parent.GaloppLektion)
 local MarkbomLektion = require(script.Parent.MarkbomLektion)
 
 local LektionsMinne = {}
+--[[ C (skötsel): docs/CARE-MEMORY-CONTRACT.md. Samma rörledning, egen
+	namnrymd: internt id `skotsel:<id>`, lagringsnyckel
+	`skotsel:<id>:v1:<antal kvalificerande moment ur kanon>`. ]]
+local Preparation = require(ReplicatedStorage.HorseCore.Preparation)
 
 --[[ De tio lektionerna, med producentens egen övning och version (det
 	RidForsok-försöket startas med) och resultatets identitet. ]]
@@ -103,7 +107,29 @@ LektionsMinne.TYPER = table.freeze({ "volt", "halt", "overgang", "serpentin", "t
 local RETRY_S = 20
 local MAX_RETRY = 3
 
+--[[ SKÖTSELNS FYRA MÅLSTOLPAR (v1). De kvalificerande momenten HÄRLEDS ur
+	kanon via `Preparation.moment` — aldrig en avskrift. ]]
+LektionsMinne.SKOTSEL = table.freeze({ "halsa", "visitera", "rykta", "hovar" })
+local function skotselMoment(sid: string): { string }
+	local ut = {}
+	local fas = if sid == "hovar" then "iordning" else sid
+	for _, m in ipairs(Preparation.moment(fas)) do
+		if not m.fel and (sid ~= "hovar" or string.sub(m.id, 1, 4) == "hov:") then
+			table.insert(ut, m.id)
+		end
+	end
+	return ut
+end
+LektionsMinne._skotselMoment = skotselMoment
+
 function LektionsMinne.nyckel(typ: string): string?
+	if string.sub(typ, 1, 8) == "skotsel:" then
+		local sid = string.sub(typ, 9)
+		if table.find(LektionsMinne.SKOTSEL, sid) == nil then return nil end
+		local n = #skotselMoment(sid)
+		if n == 0 then return nil end
+		return "skotsel:" .. sid .. ":v1:" .. n
+	end
 	local d = DEF[typ]
 	if not d then return nil end
 	return "lektion:" .. typ .. ":" .. tostring(d.version)
@@ -164,8 +190,20 @@ local function projektion(t: Tillstand?): any
 		end
 		lektioner[typ] = lage
 	end
+	--[[ Skötseln: samma fyra lägen, egen karta. ]]
+	local skotsel = {}
+	for _, sid in LektionsMinne.SKOTSEL do
+		local id = "skotsel:" .. sid
+		local lage = "okand"
+		if t then
+			if t.bekraftad[id] then lage = "sparad"
+			elseif t.vantar[id] then lage = "vantar"
+			elseif t.betrodd then lage = "ej_klarad" end
+		end
+		skotsel[sid] = lage
+	end
 	return table.freeze({ historik = if t and t.betrodd then "betrodd" else "okand",
-		lektioner = table.freeze(lektioner),
+		lektioner = table.freeze(lektioner), skotsel = table.freeze(skotsel),
 		session = if t then t.session else 0, rev = if t then t.rev else 0 })
 end
 LektionsMinne._projektion = projektion
@@ -285,6 +323,49 @@ function LektionsMinne.slutford(session: any, s: any)
 	schemalagg(player, t.token, 0)
 end
 
+--[[ ── SKÖTSEL: ETT LYCKAT MOMENT, UTFÖRT AV SPELAREN ────────────────
+	Anropas av `GameplayService.moment` direkt efter att
+	`Preparation.utforMoment` lyckats, före vyn skickas. Bara spelarens eget
+	arbete (`utforare ~= "auto"`, momentet bokfört som bokstavligt `true`),
+	bara när det SISTA kvalificerande momentet just bokfördes, och bara om
+	ALLA kvalificerande moment är `true` (ett enda "auto" gör målstolpen
+	ogiltig den dagen). Visitationen kräver dessutom att fasen just blev klar
+	utan välfärdsstopp — ett fynd gör den aldrig klar samma dag. ]]
+function LektionsMinne.skotselMoment(player: any, state: any, fasId: string, momentId: string,
+	utforare: string?)
+	if utforare == "auto" then return end
+	if player == nil or Aktor.klient(player) == nil then return end
+	local t = tillstand[player]
+	if not t or t.lamnar or SparService.save(player) == nil then return end
+	if type(state) ~= "table" or type(state.gjorda) ~= "table" then return end
+	local g = state.gjorda[fasId]
+	if type(g) ~= "table" or g[momentId] ~= true then return end
+	local sid: string? = nil
+	if fasId == "halsa" or fasId == "visitera" or fasId == "rykta" then sid = fasId
+	elseif fasId == "iordning" and string.sub(momentId, 1, 4) == "hov:" then sid = "hovar" end
+	if not sid then return end
+	local ids = skotselMoment(sid)
+	if sid == "halsa" then
+		-- Ett val: det riktiga alternativet spelaren just valde med egen hand.
+		if table.find(ids, momentId) == nil then return end
+	else
+		for _, mid in ids do
+			if g[mid] ~= true then return end
+		end
+		if table.find(ids, momentId) == nil then return end
+	end
+	if sid == "visitera" and (state.klara == nil or state.klara.visitera ~= true or state.stoppad ~= nil) then
+		return
+	end
+	local id = "skotsel:" .. sid
+	if t.bekraftad[id] or t.vantar[id] then return end
+	t.vantar[id] = true
+	markera(SparService.save(player), id)
+	t.retry = 0
+	skicka(player)
+	schemalagg(player, t.token, 0)
+end
+
 --[[ ── LADDNING, AVFÄRD, KLIENTENS LÄSNING ─────────────────────────── ]]
 local function efterLaddning(player: Player, save: any)
 	sessionNr += 1
@@ -294,6 +375,9 @@ local function efterLaddning(player: Player, save: any)
 	if t.betrodd then
 		for _, typ in LektionsMinne.TYPER do
 			if harMarkor(save, typ) then t.bekraftad[typ] = true end
+		end
+		for _, sid in LektionsMinne.SKOTSEL do
+			if harMarkor(save, "skotsel:" .. sid) then t.bekraftad["skotsel:" .. sid] = true end
 		end
 	end
 	tillstand[player] = t
