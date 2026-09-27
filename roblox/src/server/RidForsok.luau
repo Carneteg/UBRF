@@ -78,6 +78,8 @@ RidForsok.OVNINGAR = table.freeze({
 	overgangar = table.freeze({ ["server-overgang-1"] = true }),
 	-- Serpentinlektionen (docs/SERPENTINE-LESSON-CONTRACT.md).
 	serpentin = table.freeze({ ["server-serpentin-1"] = true }),
+	-- Jämn fart i skritt (docs/TEMPO-LESSON-CONTRACT.md).
+	jamn_skritt = table.freeze({ ["server-tempo-1"] = true }),
 })
 RidForsok.MAX_PER_RITT = 8
 RidForsok.MAX_BEGARAN = 16

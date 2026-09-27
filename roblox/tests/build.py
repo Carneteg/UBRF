@@ -180,6 +180,7 @@ FORBEREDELSE = SPEL + [
     ("HaltLektion", "src/server/HaltLektion.luau"),  # start/halt-lektionen
     ("OvergangLektion", "src/server/OvergangLektion.luau"),  # overgangslektionen
     ("SerpentinLektion", "src/server/SerpentinLektion.luau"),  # serpentinlektionen
+    ("TempoLektion", "src/server/TempoLektion.luau"),  # jamn fart i skritt
     # AKTOREN (#252 DEL C) FORE tjansterna: GameplayService, HorseService
     # och LedService fragar den om aktoren har en klient att skicka till.
     ("Aktor",        "src/shared/HorseCore/Aktor.luau"),
@@ -447,6 +448,7 @@ KOHERENS = GEOMETRI + [
     ("HaltLektion", "src/server/HaltLektion.luau"),  # start/halt-lektionen
     ("OvergangLektion", "src/server/OvergangLektion.luau"),  # overgangslektionen
     ("SerpentinLektion", "src/server/SerpentinLektion.luau"),  # serpentinlektionen
+    ("TempoLektion", "src/server/TempoLektion.luau"),  # jamn fart i skritt
     # AKTOREN (#252 DEL C) FORE tjansterna: GameplayService, HorseService
     # och LedService fragar den om aktoren har en klient att skicka till.
     ("Aktor",        "src/shared/HorseCore/Aktor.luau"),
@@ -759,6 +761,8 @@ def valjBunt(spec_rel: str):
     elif "forsok" in spec_rel:
         moduler, stubbar = KOHERENS, "tests/stubs.luau"
     #[[ Start/halt-lektionen: samma bank som voltlektionen. ]]
+    elif "tempolektion" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
     elif "serpentinlektion" in spec_rel:
         moduler, stubbar = KOHERENS, "tests/stubs.luau"
     elif "overganglektion" in spec_rel:

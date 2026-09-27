@@ -41,6 +41,7 @@ local VoltLektion = require(script.Parent.VoltLektion)
 local HaltLektion = require(script.Parent.HaltLektion)
 local OvergangLektion = require(script.Parent.OvergangLektion)
 local SerpentinLektion = require(script.Parent.SerpentinLektion)
+local TempoLektion = require(script.Parent.TempoLektion)
 
 --[[ Lektionstyp → modul. Utelämnad/okänd typ i ett befintligt läge är
 	voltlektionen (oförändrat standardbeteende). ]]
@@ -48,6 +49,7 @@ local function lektionModul(typ: string?): any
 	if typ == "halt" then return HaltLektion end
 	if typ == "overgang" then return OvergangLektion end
 	if typ == "serpentin" then return SerpentinLektion end
+	if typ == "tempo" then return TempoLektion end
 	return VoltLektion
 end
 
@@ -1960,7 +1962,8 @@ function HorseService.voltLektionsBegaran(player: any, rittId: any, op: any, seq
 	--[[ Lektionstyp: utelämnad = volt (oförändrat beteende), "halt" =
 		start/halt. En lektion per ritt. ]]
 	if typ == nil then typ = "volt" end
-	if typ ~= "volt" and typ ~= "halt" and typ ~= "overgang" and typ ~= "serpentin" then
+	if typ ~= "volt" and typ ~= "halt" and typ ~= "overgang" and typ ~= "serpentin"
+		and typ ~= "tempo" then
 		return false, "unknown", nil
 	end
 	local hastId = tostring(session.rig.model:GetAttribute("HorseId") or session.rig.model.Name)

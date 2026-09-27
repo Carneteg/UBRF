@@ -17,7 +17,8 @@ local guide: Model? = nil
 local guideRef: any = nil
 local gaLektion: (() -> ())? = nil
 -- Vald lektion: "volt" (voltlektionen), "halt" (start/halt vid X),
--- "overgang" (övergångar vid T1/T2) eller "serpentin" (träningsserpentin).
+-- "overgang" (övergångar vid T1/T2), "serpentin" (träningsserpentin) eller
+-- "tempo" (jämn fart i skritt; ingen guide).
 local typ = "volt"
 local guideTyp: string? = nil
 local guideDel: number? = nil
@@ -158,11 +159,34 @@ end
 
 function V.valj(vald: string?)
 	if not ritt then return end
-	local ny = if vald == "halt" or vald == "overgang" or vald == "serpentin" then vald else "volt"
+	local ny = if vald == "halt" or vald == "overgang" or vald == "serpentin" or vald == "tempo"
+		then vald else "volt"
 	if ny ~= typ then typ, bild = ny, nil; rivGuide() end
 	valt, fri, fel = true, false, nil
 	Ugneta.dolj()
 	skicka("sync")
+end
+
+-- Tempolektionens (jämn fart i skritt) egna texter; gemensamma nycklar faller igenom.
+local function tempoText(key): string?
+	if key=="choose_tempo" then return Sprak.t("tempolektion.choose") end
+	if typ ~= "tempo" then return nil end
+	if key=="start" then return Sprak.t("tempolektion.start") end
+	if key=="finish" then return Sprak.t("tempolektion.finish") end
+	if key=="intro" then return Sprak.t("tempolektion.intro") end
+	if key=="walk_on" then return Sprak.t("tempolektion.walk_on") end
+	if key=="keep_going" then return Sprak.t("tempolektion.keep_going") end
+	if key=="too_slow" then return Sprak.t("tempolektion.too_slow") end
+	if key=="too_fast" then return Sprak.t("tempolektion.too_fast") end
+	if key=="steadier" then return Sprak.t("tempolektion.steadier") end
+	if key=="walk_only" then return Sprak.t("tempolektion.walk_only") end
+	if key=="stay_inside" then return Sprak.t("tempolektion.stay_inside") end
+	if key=="unknown" then return Sprak.t("tempolektion.unknown") end
+	if key=="complete" then return Sprak.t("tempolektion.complete") end
+	if key=="timeout" then return Sprak.t("tempolektion.timeout") end
+	if key=="closed" then return Sprak.t("tempolektion.closed") end
+	if key=="place" then return Sprak.t("tempolektion.place") end
+	return nil
 end
 
 -- Serpentinlektionens egna texter; gemensamma nycklar faller igenom.
@@ -238,6 +262,8 @@ local function haltText(key): string?
 end
 
 local function text(key)
+	local te = tempoText(key)
+	if te then return te end
 	local sp = serpentinText(key)
 	if sp then return sp end
 	local o = overgangText(key)
@@ -276,7 +302,8 @@ function V.panel()
 		local knappar = { val("choose",function() V.valj("volt") end),
 			val("choose_halt",function() V.valj("halt") end),
 			val("choose_overgang",function() V.valj("overgang") end),
-			val("choose_serpentin",function() V.valj("serpentin") end) }
+			val("choose_serpentin",function() V.valj("serpentin") end),
+			val("choose_tempo",function() V.valj("tempo") end) }
 		if fri then
 			table.insert(knappar,val("lessons",function()
 				fri=false; if gaLektion then gaLektion() end
@@ -290,7 +317,8 @@ function V.panel()
 		else b.tips
 	local txt = text(key)
 	if (b.lage=="riding" or b.lage=="halt1" or b.lage=="walk" or b.lage=="walk1"
-		or b.lage=="trot" or b.lage=="walk2" or b.lage=="route") and not pending and not fel then
+		or b.lage=="trot" or b.lage=="walk2" or b.lage=="route" or b.lage=="steady")
+		and not pending and not fel then
 		txt ..= " "..tostring(b.progress).."%"
 	end
 	local knappar = {}
