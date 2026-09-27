@@ -12,7 +12,12 @@
 	SKRIVEN FÖR SENARE KÖRNING (bygg nu, testa sist). Inte körd.
 	ETIKETTER:
 	- SYNKRONT: bänkens `task.defer` kör skrivförsöket direkt;
-	- VERKLIGT FÖRDRÖJT: på schemat `__schemaPa`, bara avsnitt 9;
+	- VERKLIGT FÖRDRÖJT: på schemat `__schemaPa`, avsnitt 9 (en skötselmarkörs
+	  egen skrivning) och 11 (en passkrivning, samma persistenssteg som
+	  avslutaPass, anropat direkt);
+	- SYNTETISK VY: avsnitt 12:s fråga och återlämning (fält som servern
+	  skickar, genom PreparationSync-lyssnaren); sessionen och historiken där
+	  är riktiga (LocalPlayer);
 	- REGELNIVÅ: välfärdsstoppet (avsnitt 6) körs med ett riktigt
 	  Preparation-tillstånd och riktiga regler, och kroken anropas direkt;
 	  inte genom tjänsten, eftersom fyndets pass inte kan väljas för
@@ -308,6 +313,104 @@ do
 	if Players.PlayerAdded.slutfor then Players.PlayerAdded:slutfor() end
 	check("betrodd omläsning: båda sparade", proj(G).skotsel.halsa == "sparad" and proj(G).skotsel.visitera == "sparad")
 	lamna(G)
+end
+
+print("\n── 10. Versionspolicyn: samma definition samma nyckel, reviderad definition ny nyckel ──")
+do
+	local fore = LM.nyckel("skotsel:rykta")
+	check("samma definition ger samma nyckel", LM.nyckel("skotsel:rykta") == fore)
+	LM._satSkotselVersionForProv("rykta", "v2")
+	local reviderad = LM.nyckel("skotsel:rykta")
+	check("en reviderad definition (höjd version) ger en ny nyckel", reviderad ~= fore)
+	LM._satSkotselVersionForProv("rykta", "v1")
+	check("tillbaka: samma nyckel som förut (ingen omsättning av en oförändrad definition)",
+		LM.nyckel("skotsel:rykta") == fore)
+end
+
+print("\n── 11. VERKLIGT FÖRDRÖJT: en passkrivning i luften och en skötselmarkör under den ──")
+--[[ Skrivningen är samma persistenssteg som `GameplayService.avslutaPass`
+	gör (`Sparning.registreraPass` + `SparService.skriv(player)`), anropat
+	DIREKT — inte hela avslutaPass-flödet. ]]
+do
+	local H = nySession("Passkrivning")
+	gor(H, "halsa", korrektHalsning())
+	gorFas(H, "visitera")
+	__schemaPa(true)
+	__datastore.efterSkriv = function() __datastore.efterSkriv = nil; task.wait() end
+	task.spawn(function()
+		Sparning.registreraPass(SparService.save(H), "prov-pass-1", 1)
+		SparService.skriv(H)
+	end)
+	__schemaSteg()
+	check("KONTROLL: passkrivningen i luften, raden landad", rad(H) ~= nil and rad(H).passId["prov-pass-1"] ~= nil)
+	gorFas(H, "rykta") -- skötseln fullföljs under den
+	check("ryktningen under passkrivningen: väntande (egen skrivning nekad som upptagen)",
+		proj(H).skotsel.rykta == "vantar" and radMarkor(H, "rykta") == nil)
+	__schemaTomKo()
+	__schemaPa(false)
+	check("efter passkrivningen: markören finns i den ersatta cachen", SparService.save(H).framsteg[LM.nyckel(
+		"skotsel:rykta")] ~= nil)
+	LM._forsokSparaForProv(H)
+	check("och bekräftas av minnets eget försök", proj(H).skotsel.rykta == "sparad" and radMarkor(H, "rykta") ~= nil)
+	check("passkvittot står kvar", rad(H).passId["prov-pass-1"] ~= nil)
+	lamna(H)
+end
+
+print("\n── 12. Den RIKTIGA LocalPlayer-skötselvyn: historiken bredvid en fråga och en återlämning, fyra rader, SV/EN ──")
+--[[ Sessionen körs med `Players.LocalPlayer`, så att serverns
+	PreparationSync och minnespushar faktiskt når klienten (bänkens
+	FireClient levererar till LocalPlayer). Frågan och återlämningen läggs i
+	en SYNTETISK vy genom samma PreparationSync-lyssnare (fält som servern
+	skickar) — samma grepp som utrustning-rattelse-specen. ]]
+do
+	local lp = Players.LocalPlayer
+	nästaUid += 1
+	lp.UserId = nästaUid
+	lp.Name = "Lokal"
+	lp.Character = nySpelare("Lokal", nästaUid, vec(6, 0, 0)).Character
+	lp.CharacterAdded = lp.CharacterAdded or __signal_ny()
+	lp.CharacterRemoving = lp.CharacterRemoving or __signal_ny()
+	SparService._glomForProv(lp)
+	Players._spelare = { lp }
+	Players.PlayerAdded:Fire(lp)
+	if Players.PlayerAdded.slutfor then Players.PlayerAdded:slutfor() end
+	local hid = StallService.hastIdFor(lp)
+	if hid then
+		local h = (UBRFSpel.hastar or {})[hid]
+		local m = HastRigg.bygg(hid, (h and h.namn) or hid, CFrame.new(vec(0, 0, 0)))
+		m.Parent = workspace
+		Taggar:AddTag(m, "Horse")
+	end
+	local PC, NR = PreparationController, Naromrade
+	check("KONTROLL: den lokala skötselvyn finns", PC.panel() ~= nil)
+	gor(lp, "halsa", korrektHalsning()) -- riktig hälsning: markören pushas till klienten
+	check("KONTROLL: klienten fick historiken", PC._skotselHistorik() ~= nil)
+	local sync = Networking.get("PreparationSync")
+	local rev = 10 ^ 6
+	sync.OnClientEvent:Fire({ hastId = hid, hastnamn = "Häst", status = "preparing", steg = {}, nasta = nil,
+		redo = false, burenUtrustning = nil, rev = rev,
+		burnaDelar = { { typ = "sadel", hastId = "annan_hast", hastnamn = "Annan", registrerad = true, forvarv = 1 } },
+		moment = { { id = "q1", namn = "Svar 1", fel = true }, { id = "q2", namn = "Svar 2" } } })
+	local pd = PC.panel()
+	check("frågan har företräde och sidan ryms i fyra rader", pd ~= nil and #pd.val <= 4
+		and pd.val[1] ~= nil and pd.val[1].rattelse ~= true)
+	NR.satRider(false)
+	local fore = #NR._val()
+	local knapp = NR._panel().hjalpKnapp
+	check("KONTROLL: hjälpknappen finns", knapp ~= nil)
+	if knapp then knapp.Activated:Fire() end
+	NR.satRider(false)
+	local hjalp = NR._panel().hjalp
+	check("hjälplistan bär historiken efter dagens steg (hälsningen gjord)", string.find(hjalp,
+		Sprak.t("skotselminne.halsa"), 1, true) ~= nil and string.find(hjalp, Sprak.t("skotselminne.rubrik"), 1, true) ~= nil,
+		hjalp)
+	check("historiken lägger inte till någon rad", #NR._val() == fore)
+	Sprak.satVal("en")
+	NR.satRider(false)
+	check("på engelska", string.find(NR._panel().hjalp, "What you have done yourself", 1, true) ~= nil)
+	Sprak.satVal("sv")
+	if knapp then knapp.Activated:Fire() end
+	lamna(lp)
 end
 
 RunService._server = false

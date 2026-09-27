@@ -192,6 +192,8 @@ FORBEREDELSE = SPEL + [
     # den. Ordningen ar samma som init.server.luau har.
     # C4: och FORE HorseService, som via LektionsMinne require:ar den.
     ("SparService",  "src/server/SparService.luau"),
+    ("LedService",     "src/server/LedService.luau"),  # C4 ledning: fore LektionsMinne, som kraver LedLektion
+    ("LedLektion",     "src/server/LedLektion.luau"),  # ledningslektionen till fots
     ("LektionsMinne", "src/server/LektionsMinne.luau"),  # C4: forsta-klarad-minnet
     ("HorseService", "src/server/HorseService.luau"),
     ("StallService", "src/server/StallService.luau"),
@@ -226,13 +228,11 @@ FORBEREDELSE = SPEL + [
     #   i banken alls. Dubbletterna ar borttagna; det finns nu EN definition
     #   av varje bunt. ]]
     ("TackForradService", "src/server/TackForradService.luau"),
-    ("LedService",     "src/server/LedService.luau"),
     #[[ #252 DEL B: GameplayService require:ar DorrService (dorrkroken i
     #   `start`). Raden saknades har, sa `DorrService` var nil i varje spec
     #   pa forberedelse-/integrationsbunten — tyst, tills banken slutade
     #   acceptera en require som inte har nagon modul bakom sig. ]]
     ("DorrService",    "src/server/DorrService.luau"),
-    ("LedLektion",     "src/server/LedLektion.luau"),  # ledningslektionen till fots
     ("GameplayService", "src/server/GameplayService.luau"),
     #[[ #263 Gate 2A: First Ride. EFTER tjansterna den anropar —
     #   GameplayService, HorseService, LedService och TackService. ]]
@@ -469,6 +469,8 @@ KOHERENS = GEOMETRI + [
     # och LedService fragar den om aktoren har en klient att skicka till.
     ("Aktor",        "src/shared/HorseCore/Aktor.luau"),
     ("SparService",     "src/server/SparService.luau"),  # C4: fore HorseService (LektionsMinne)
+    ("LedService",     "src/server/LedService.luau"),  # C4 ledning: fore LektionsMinne, som kraver LedLektion
+    ("LedLektion",      "src/server/LedLektion.luau"),  # ledningslektionen till fots
     ("LektionsMinne",   "src/server/LektionsMinne.luau"),  # C4: forsta-klarad-minnet
     ("HorseService",    "src/server/HorseService.luau"),
     ("StallService",    "src/server/StallService.luau"),
@@ -478,7 +480,6 @@ KOHERENS = GEOMETRI + [
     #   GameplayService, som prover utrustningen fysiskt. ]]
     ("TackRigg",       "src/server/TackRigg.luau"),
     ("TackService",    "src/server/TackService.luau"),
-    ("LedService",     "src/server/LedService.luau"),
     #[[ #235 FAS 1: boxfrontens upphangning. FORE GameplayService, som
     #   numera require:ar den for att slacka en tagen sadel. ]]
     ("TackForradService", "src/server/TackForradService.luau"),
@@ -487,7 +488,6 @@ KOHERENS = GEOMETRI + [
     #   stod dessutom tva ganger (en gang via _KLIENTDELEN); den andra ar
     #   borta, buntar med dubbletter byggs inte langre. ]]
     ("DorrService",     "src/server/DorrService.luau"),
-    ("LedLektion",      "src/server/LedLektion.luau"),  # ledningslektionen till fots
     ("GameplayService", "src/server/GameplayService.luau"),
     #[[ #263 Gate 2A: First Ride. EFTER tjansterna den anropar —
     #   GameplayService, HorseService, LedService och TackService. ]]
@@ -837,6 +837,8 @@ def valjBunt(spec_rel: str):
     #[[ M3.1: navvagens livslangd i hornet. Samma bunt, samma skal. ]]
     elif "ledvag" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
+    elif "ledningsminne" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
     elif "skotselminne" in spec_rel:
         moduler, stubbar = KOHERENS, "tests/stubs.luau"
     elif "instruktorstart" in spec_rel:

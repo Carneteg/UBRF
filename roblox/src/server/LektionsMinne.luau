@@ -76,6 +76,10 @@ local LektionsMinne = {}
 	namnrymd: internt id `skotsel:<id>`, lagringsnyckel
 	`skotsel:<id>:v1:<antal kvalificerande moment ur kanon>`. ]]
 local Preparation = require(ReplicatedStorage.HorseCore.Preparation)
+--[[ C4 ledning (docs/LEADING-MEMORY-CONTRACT.md): internt id "ledning",
+	nyckel `ledning:<LedLektion.VERSION>`. Ingen cykel: LedLektion kräver
+	varken GameplayService eller den här modulen. ]]
+local LedLektion = require(script.Parent.LedLektion)
 
 --[[ De tio lektionerna, med producentens egen övning och version (det
 	RidForsok-försöket startas med) och resultatets identitet. ]]
@@ -110,6 +114,11 @@ local MAX_RETRY = 3
 --[[ SKÖTSELNS FYRA MÅLSTOLPAR (v1). De kvalificerande momenten HÄRLEDS ur
 	kanon via `Preparation.moment` — aldrig en avskrift. ]]
 LektionsMinne.SKOTSEL = table.freeze({ "halsa", "visitera", "rykta", "hovar" })
+--[[ VERSIONSPOLICYN (R-uppföljning): en ändring av de kvalificerande
+	momentens INNEBÖRD (ordning, ersatta moment, nya regler) KRÄVER att
+	versionen här höjs. Ändras bara ANTALET moment byts nyckeln ändå (antalet
+	ingår). En oförändrad definition behåller sin nyckel. ]]
+local SKOTSEL_VERSION: { [string]: string } = { halsa = "v1", visitera = "v1", rykta = "v1", hovar = "v1" }
 local function skotselMoment(sid: string): { string }
 	local ut = {}
 	local fas = if sid == "hovar" then "iordning" else sid
@@ -128,7 +137,10 @@ function LektionsMinne.nyckel(typ: string): string?
 		if table.find(LektionsMinne.SKOTSEL, sid) == nil then return nil end
 		local n = #skotselMoment(sid)
 		if n == 0 then return nil end
-		return "skotsel:" .. sid .. ":v1:" .. n
+		return "skotsel:" .. sid .. ":" .. (SKOTSEL_VERSION[sid] or "v1") .. ":" .. n
+	end
+	if typ == "ledning" then
+		return "ledning:" .. tostring(LedLektion.VERSION)
 	end
 	local d = DEF[typ]
 	if not d then return nil end
@@ -202,8 +214,14 @@ local function projektion(t: Tillstand?): any
 		end
 		skotsel[sid] = lage
 	end
+	local ledning = "okand"
+	if t then
+		if t.bekraftad.ledning then ledning = "sparad"
+		elseif t.vantar.ledning then ledning = "vantar"
+		elseif t.betrodd then ledning = "ej_klarad" end
+	end
 	return table.freeze({ historik = if t and t.betrodd then "betrodd" else "okand",
-		lektioner = table.freeze(lektioner), skotsel = table.freeze(skotsel),
+		lektioner = table.freeze(lektioner), skotsel = table.freeze(skotsel), ledning = ledning,
 		session = if t then t.session else 0, rev = if t then t.rev else 0 })
 end
 LektionsMinne._projektion = projektion
@@ -366,6 +384,41 @@ function LektionsMinne.skotselMoment(player: any, state: any, fasId: string, mom
 	schemalagg(player, t.token, 0)
 end
 
+--[[ ── LEDNINGEN TILL FOTS: DEN GENUINA ÖVERGÅNGEN TILL "complete" ────
+	Anropas av `LedLektion.stang` via `deps.klar`, i samma anrop. Prövar
+	modulens FAKTISKA tillstånd (aldrig en tabell utifrån), det frysta
+	resultatets version och identitet mot det aktuella försöket och den
+	aktuella kontextepoken, och producentens egna villkor (GRANSER) — inga
+	nya trösklar. ]]
+local function andligt(x: any): boolean
+	return type(x) == "number" and x == x and x ~= math.huge and x ~= -math.huge
+end
+function LektionsMinne.ledningKlar(player: any, s: any)
+	if player == nil or Aktor.klient(player) == nil then return end
+	local t = tillstand[player]
+	if not t or t.lamnar or SparService.save(player) == nil then return end
+	if not LedLektion.arAktuellt(player, s) or s.lage ~= "complete" then return end
+	local r = s.resultat
+	if type(r) ~= "table" or not table.isfrozen(r) or r.version ~= LedLektion.VERSION then return end
+	if r.userId ~= s.userId or s.userId ~= (player :: any).UserId or r.forsokNr ~= s.forsokNr
+		or r.kontextNr ~= s.kontextNr or r.hastId ~= s.hastId then return end
+	local G = LedLektion.GRANSER
+	if not (andligt(r.meter) and r.meter >= G.RESA_M) then return end
+	if not (andligt(r.frammeProv) and r.frammeProv % 1 == 0 and r.frammeProv >= G.FRAMME_PROV) then return end
+	if not (andligt(r.sekunder) and r.sekunder >= 0) or type(r.malNyckel) ~= "string" then return end
+	if t.bekraftad.ledning or t.vantar.ledning then return end
+	t.vantar.ledning = true
+	markera(SparService.save(player), "ledning")
+	t.retry = 0
+	skicka(player)
+	schemalagg(player, t.token, 0)
+end
+
+--[[ Provkrok: en reviderad skötseldefinition (höjd version) för ett id. ]]
+function LektionsMinne._satSkotselVersionForProv(sid: string, v: string)
+	SKOTSEL_VERSION[sid] = v
+end
+
 --[[ ── LADDNING, AVFÄRD, KLIENTENS LÄSNING ─────────────────────────── ]]
 local function efterLaddning(player: Player, save: any)
 	sessionNr += 1
@@ -379,6 +432,7 @@ local function efterLaddning(player: Player, save: any)
 		for _, sid in LektionsMinne.SKOTSEL do
 			if harMarkor(save, "skotsel:" .. sid) then t.bekraftad["skotsel:" .. sid] = true end
 		end
+		if harMarkor(save, "ledning") then t.bekraftad.ledning = true end
 	end
 	tillstand[player] = t
 	skicka(player)

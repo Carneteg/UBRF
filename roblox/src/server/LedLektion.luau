@@ -35,7 +35,11 @@ local MAX_REQUESTS = 16
 LedLektion.GRANSER = table.freeze({ STEG_S = STEG_S, RESA_M = RESA_M, HOPP_M = HOPP_M,
 	LUCKA_S = LUCKA_S, FRAMME_PROV = FRAMME_PROV, DEADLINE = DEADLINE })
 
-type Beroenden = { rattHast: (Player) -> Model?, rider: (Player) -> boolean }
+--[[ `klar` (valfri, C4 ledning): anropas i SAMMA anrop som övergången till
+	"complete", med spelaren och tillståndet — innan Retry, Avsluta eller en
+	ny bindning hinner röra något. docs/LEADING-MEMORY-CONTRACT.md. ]]
+type Beroenden = { rattHast: (Player) -> Model?, rider: (Player) -> boolean,
+	klar: ((Player, any) -> ())? }
 local beroenden: Beroenden? = nil
 local tillstand: { [Player]: any } = {}
 local klocka = 0 -- serverns lektionstid (s), summan av stegen
@@ -121,6 +125,11 @@ local function stang(player: Player, s, orsak: string)
 		s.progress = 100
 		s.revision += 1
 		andra(s, "complete", "complete")
+		local b = beroenden
+		if b and b.klar then
+			local okK, felK = pcall(b.klar, player, s)
+			if not okK then warn("[LedLektion] klar-kroken föll: " .. tostring(felK)) end
+		end
 	else
 		andra(s, "timeout", "timeout")
 	end
@@ -308,6 +317,12 @@ function LedLektion.begar(player: any, op: any, seq: any, forvantat: any,
 	table.insert(s.ordning, seq)
 	while #s.ordning > MAX_REQUESTS do s.svar[table.remove(s.ordning, 1)] = nil end
 	return ok, fel, bild
+end
+
+--[[ Är `s` modulens FAKTISKA tillstånd för spelaren? (En tabell utifrån är
+	det aldrig.) ]]
+function LedLektion.arAktuellt(player: any, s: any): boolean
+	return player ~= nil and s ~= nil and tillstand[player] == s
 end
 
 function LedLektion.lamnar(player: Player)

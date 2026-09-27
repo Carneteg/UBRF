@@ -1756,6 +1756,9 @@ function GameplayService.start()
 	LedLektion.start({
 		rattHast = function(player) return bunden[player] end,
 		rider = function(player) return HorseService.horseOf(player) ~= nil end,
+		--[[ C4 ledning: första genuina fullföljandet, prövat och noterat av
+			minnet. LedService:s egen målkrok för förberedelsen är orörd. ]]
+		klar = LektionsMinne.ledningKlar,
 	})
 
 	--[[ Uppsittningen och avsittningen driver passets läge. De hakas på

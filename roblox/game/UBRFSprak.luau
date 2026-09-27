@@ -1697,6 +1697,26 @@ Sprak.text = {
 		sv = "Jag kan inte läsa din skötselhistorik just nu.",
 		en = "I can't read your care history right now.",
 	},
+	["ledminne.markering.sparad"] = {
+		sv = " · klarad",
+		en = " · done",
+	},
+	["ledminne.markering.vantar"] = {
+		sv = " · klarad nu",
+		en = " · done now",
+	},
+	["ledminne.sparad"] = {
+		sv = "Du har lett henne hela vägen förut.",
+		en = "You have led her all the way before.",
+	},
+	["ledminne.vantar"] = {
+		sv = "Du har lett henne hela vägen förut (inte sparat än).",
+		en = "You have led her all the way before (not saved yet).",
+	},
+	["ledminne.okand"] = {
+		sv = "Jag kan inte läsa din ledningshistorik just nu.",
+		en = "I can't read your leading history right now.",
+	},
 	["halsning.volt"] = {
 		sv = "Nu rider vi volten: följ linjen runt mitten ett helt varv.",
 		en = "Now for the circle: follow the line around the middle for one full circle.",

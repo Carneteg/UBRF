@@ -25,6 +25,34 @@ local guideNyckel: string? = nil
 
 local AKTIVA = { lead_first = true, leading = true }
 
+--[[ C4 ledning (docs/LEADING-MEMORY-CONTRACT.md): spelarens egen historik ur
+	serverns ordnade minnesprojektion — skild från försökets bild. Samma
+	ordningsregel: nyare session, eller samma session med minst samma rev. ]]
+local ledMinne: { lage: string, session: number, rev: number }? = nil
+local LED_LAGEN = { sparad = true, vantar = true, ej_klarad = true, okand = true }
+local function heltalL(x: any): number
+	if type(x) ~= "number" or x ~= x or x < 0 or x == math.huge or x % 1 ~= 0 then return -1 end
+	return x
+end
+local function taEmotLedning(p: any)
+	if type(p) ~= "table" then return end
+	local session, rev = heltalL(p.session), heltalL(p.rev)
+	if session < 0 or rev < 0 then return end
+	local nu = ledMinne
+	if nu and (session < nu.session or (session == nu.session and rev < nu.rev)) then return end
+	local l = p.ledning
+	ledMinne = { lage = if type(l) == "string" and LED_LAGEN[l] then l
+		elseif p.historik ~= "betrodd" then "okand" else "okand", session = session, rev = rev }
+end
+local function historikRad(): string?
+	local m = ledMinne
+	if not m then return nil end
+	if m.lage == "sparad" then return Sprak.t("ledminne.sparad") end
+	if m.lage == "vantar" then return Sprak.t("ledminne.vantar") end
+	if m.lage == "okand" then return Sprak.t("ledminne.okand") end
+	return nil
+end
+
 local function rivGuide()
 	if guide then guide:Destroy() end
 	guide, guideNyckel = nil, nil
@@ -129,12 +157,25 @@ function L.panel(): any
 	if not startad then return nil end
 	if not valt then
 		return { ersatt = false, text = nil, ovning = "", vantar = false,
-			knappar = { val("choose", function() valt = true; sidGen += 1; skicka("sync") end, true) } }
+			knappar = { (function()
+				local k = val("choose", function() valt = true; sidGen += 1; skicka("sync") end, true)
+				local m = ledMinne
+				if m and m.lage == "sparad" then k.text ..= Sprak.t("ledminne.markering.sparad")
+				elseif m and m.lage == "vantar" then k.text ..= Sprak.t("ledminne.markering.vantar") end
+				return k
+			end)() } }
 	end
 	local b = bild or { lage = "ready", progress = 0, tips = "intro" }
 	local key = if pending then "pending" elseif fel then fel
 		elseif b.lage == "ready" or b.lage == "closed" then "intro" else b.tips
 	local txt = text(key)
+	--[[ C4: historiken bara i klar-/stängt läge — aldrig under ett aktivt
+		försök eller på complete-sidan, där det aktuella försökets frysta
+		återkoppling gäller. ]]
+	if not pending and not fel and (b.lage == "ready" or b.lage == "closed") then
+		local rad = historikRad()
+		if rad then txt ..= " " .. rad end
+	end
 	if not pending and not fel then
 		local lp = game:GetService("Players").LocalPlayer
 		local at = Aterkoppling.text(b, { typ = "leda", userId = lp and lp.UserId })
@@ -176,6 +217,12 @@ function L.start()
 	if startad then return end
 	startad = true
 	Net.get("LedLektionSync").OnClientEvent:Connect(mottag)
+	--[[ C4: EN lyssnare på minnet (start körs en gång) och en läsning. ]]
+	Net.get("LektionsMinneSync").OnClientEvent:Connect(taEmotLedning)
+	task.spawn(function()
+		local ok, p = pcall(function() return Net.get("LektionsMinne"):InvokeServer("sync") end)
+		if ok then taEmotLedning(p) end
+	end)
 	game:GetService("RunService").Heartbeat:Connect(L.steg)
 	Ugneta.satFotVal(L.panel)
 end
@@ -187,5 +234,6 @@ function L._bildForProv(): any return bild end
 	följer serverns efter att ett prov anropat handlaren direkt. ]]
 function L._synkaForProv() skicka("sync") end
 function L._guideForProv(): Model? return guide end
+function L._ledMinneForProv(): any return ledMinne end
 
 return L

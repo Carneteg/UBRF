@@ -75,9 +75,14 @@ It does NOT cover, and does not change:
 
 ## Storage (the existing v2 `framsteg`, no schema change)
 
-- **Key:** `skotsel:<id>:v1:<n>`, where `n` is the number of qualifying
-  moments in the current canon. A changed canon therefore changes the key,
-  and an old marker never counts for a new definition.
+- **Key:** `skotsel:<id>:<version>:<n>`, where the version comes from an
+  explicit table (`SKOTSEL_VERSION`, all `v1`) and `n` is the number of
+  qualifying moments in the current canon.
+  - Correction (leading package): the earlier claim that ANY changed canon
+    changes the key was wrong. A change in the number of moments changes
+    the key automatically. A change in the qualifying MEANING (reordering,
+    replaced moments or new rules) REQUIRES the version to be bumped by
+    hand. An unchanged definition keeps its key.
 - **Separate namespace.** The key never collides with `lektion:*`, and the
   lesson keys, producers and attempt validation are untouched. No RidForsok
   ride is invented for care.
@@ -127,36 +132,54 @@ It does NOT cover, and does not change:
   - It shows only facts: no improvement and no praise.
 - **Language.** SV/EN comes from language keys, drawn at render time.
 
-## Deferred verification (written, NOT run)
+## Deferred verification (written, NOT run), corrected against the actual spec
 
-`roblox/tests/skotselminne.spec.luau` (KOHERENS) builds on the fixture of
-the preparation and memory specs:
-- real `GameplayService.moment` (the `PreparationMoment` path) with the
-  canon's moments;
-- real SparService on the stubbed DataStore;
-- the real `PreparationController` and Naromrade help text.
+`roblox/tests/skotselminne.spec.luau` (KOHERENS) uses integration-spec
+sessions.
 
-**SYNCHRONOUS cases:**
-- each milestone's final manual action;
-- the greeting choice (right and wrong alternative);
+**SYNCHRONOUS cases, written:**
+- the definitions;
+- the greeting (a wrong and a right alternative);
+- the visitation only at its last point;
+- grooming;
 - hooves before equipment;
-- duplicate, denied, wrong order and wrong horse;
+- a duplicate;
+- wrong order;
 - a fully automatic `ridaNu` and a mixed day;
-- a welfare stop;
-- a new assignment (new state);
-- repeating a milestone, then a trusted reload;
-- a failed write, then recovery;
-- future, corrupt and unavailable history;
+- a trusted reload (history does not complete today's work);
+- a write failure, then recovery;
 - a full `framsteg`;
-- reversed replies and a newer context in the client;
-- SV/EN in the help section;
-- the four-row composition with a care question.
+- a read failure giving unknown history;
+- the version policy: the same definition keeps its key, a revised one
+  gets a new key.
 
-**GENUINELY DEFERRED cases** (scheduler):
-- a care completion while a lesson-memory write is in flight;
-- a leave during that write (the bounded drain).
+**RULES LEVEL, written:** the welfare stop, run on a real `Preparation`
+state with the hook called directly.
 
-**Planned, not written:**
+**CLIENT, written:**
+- the server's own projection delivered through the client event: ordering,
+  unknown history and SV/EN;
+- the REAL LocalPlayer care view (section 12): the history in the help
+  section next to a question and an equipment return. The question and the
+  return come from a SYNTHETIC view through the PreparationSync listener.
+  The four-row cap and SV/EN are also checked.
+
+**GENUINELY DEFERRED, written:**
+- section 9: the care marker's OWN write in flight, a visitation during it,
+  a leave during it (the drain), then a trusted reload;
+- section 11: a PASS-STYLE write in flight (`registreraPass` plus
+  `SparService.skriv`, the persistence step of `avslutaPass` invoked
+  directly, NOT the whole `avslutaPass` flow), with grooming completed
+  during it. The marker stays pending and is confirmed by the memory's own
+  attempt afterwards.
+
+**PLANNED, not written:**
+- wrong horse through a second player (the moment path refuses it before
+  the hook; `integration.spec` covers that refusal);
+- a future or corrupt save for care specifically (the lesson-memory spec
+  covers the shared pipeline);
+- a newer context in the host;
+- a real mounted-memory completion during a care write;
 - physical rendering;
-- a real DataStore;
-- a respawn on a device.
+- a real DataStore.
+

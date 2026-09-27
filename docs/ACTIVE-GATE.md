@@ -89,6 +89,9 @@ and test policy. This index is dated 2026-09-26; it is not product acceptance.
   player's own first completion of greeting, visitation, grooming and hooves,
   [contract](CARE-MEMORY-CONTRACT.md)) is built on it; BUILT_NOT_VERIFIED, spec
   written, not run.
+  Care memory 6f9cc5e passed Codex source review only. Leading memory (first
+  genuine completion of the on-foot leading lesson, [contract](LEADING-MEMORY-CONTRACT.md))
+  and the care follow-ups are built on it; BUILT_NOT_VERIFIED, spec written, not run.
   Deferred before Tobias' playtest: full42, runtime smoke in engine, both lesson
   flows, guides, entrance door, SV/EN and touch.
 - 2026-09-27: the entrance correction 93e16f5 received BANK_ONLY code PASS and a

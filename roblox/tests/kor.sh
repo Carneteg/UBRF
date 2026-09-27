@@ -38,6 +38,7 @@ SPECAR="$SPECAR klient-ugnetablick"
 SPECAR="$SPECAR lektionsminne"
 SPECAR="$SPECAR instruktorstart"
 SPECAR="$SPECAR skotselminne"
+SPECAR="$SPECAR ledningsminne"
 # #252 DEL B: banken provar SIG SJALV forst, i bada riktningarna. En
 # require av en modul som inte ligger i bunten ska falla bygget — inte
 # bli ett tyst nil (DEL A). Faller provet bygger vi inte en enda spec.
