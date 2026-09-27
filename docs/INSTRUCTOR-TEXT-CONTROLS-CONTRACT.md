@@ -35,7 +35,7 @@ no-teacher-voice decision in `docs/G02-C-UGNETA.md` stands. C2 stays partial.
 | Preference | Value | Effect | Never affected |
 |---|---|---|---|
 | Live comments | **Normal** (default) | Every cue that reaches `live` is shown, as before. | — |
-| | **Fewer** | Of the cues that reach `live`, the 1st, 3rd, 5th … are shown and the 2nd, 4th … are dropped. That is ⌈n/2⌉ of n. The counter restarts when the preference changes. | evidence, theme choice, cooldown, "never twice", lesson timing, attempts, results, progression |
+| | **Fewer** | Of the cues that reach `live`, the 1st, 3rd, 5th … are shown and the 2nd, 4th … are dropped. That is ⌈n/2⌉ of n. The counter restarts only when the COMMENT preference changes; a detail change does not touch it (R1). | evidence, theme choice, cooldown, "never twice", lesson timing, attempts, results, progression |
 | | **None** | No optional live comment is shown. A chip already visible is hidden immediately, together with its mirrored teacher and panel text. | safety, tasks and choices, pending/error/recovery, care, equipment, results, Retry/Finish/Back/free actions, the ride row |
 | End-of-exercise text | **Detailed** (default) | Today's summary: the supported facts plus one next step. | — |
 | | **Concise** | The same validated frozen evidence, identity and context checks. A short status line without numbers, plus the same next step. Canter keeps "the lead was not judged". The ground pole keeps "hoof distance is not measured". Timeout says "Time ran out" plus the retry hint, without the percentage. "No details" and the leading stale-context text are identical in both modes. | validation, attempt binding, the leading context epoch, Retry/Finish/Back |
@@ -59,6 +59,10 @@ no-teacher-voice decision in `docs/G02-C-UGNETA.md` stands. C2 stays partial.
    flag is unchanged.
    - Pointing at or selecting the button shows a one-line hint, the same
      pattern as the flag.
+   - R1: the hint line belongs to the control that showed it (`tipsKalla`).
+     Redraws, settings changes and language changes rewrite that control's
+     text. Leaving a control hides the line only while that control still
+     owns it.
 2. Pressing it opens an inline settings area inside the same surface, under
    the message. It is not another HUD and not a panel row; the panel's four
    rows and its capacity are untouched. The area has two groups of native
@@ -109,6 +113,21 @@ Additions to existing specs:
 - `ledlektion.spec`: the real `LedLektionController.panel` in concise mode,
   and the stale-context text in both modes.
 
+R1 additions, written, NOT run:
+- `klient-lararinstallning.spec`:
+  - the real Text/flag MouseEnter/Leave and SelectionGained/Lost events,
+    with repeated redraws, a settings change and SV/EN;
+  - the real `LektionController` path (start, acknowledge, steg with weak
+    and good riding alternating), counted in the teacher surface and the
+    host at Normal / Fewer / None;
+  - the "Fewer" counter is not reset by a detail change.
+- `klient-uikontext.spec`: a real care question (through
+  `PreparationController.tillampa`) with 0..3 legacy controls. The panel
+  rows are identical with the settings open and closed, there are at most
+  four, and the question options are kept.
+
 Planned, not written:
+- a GUI rebuild after a real ScreenGui loss (a repeated `start` is not proof
+  of rebuild) and a real respawn;
 - panel-level chains for the other nine mounted types;
 - rendered layout, physical touch and runtime.

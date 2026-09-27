@@ -432,6 +432,11 @@ end
 --[[ ETT STEG. Anropas varje bildruta med ritt-telemetrin. ]]
 function LektionController.steg(dt: number, tm: { [string]: any }?,
 	pose: { [string]: any }?)
+	--[[ C2: UGNETA VÄNDER SIG MOT RYTTAREN — FÖRE varje tidig retur, så
+	     att det gäller alla tio ridlektioner (VoltLektionController tar
+	     över), det gamla passet och fri ridning lika. `pose` är den just nu
+	     bundna rittens rot, räknad av init.client i samma bildruta. ]]
+	UgnetaGestalt.steg(dt, pose)
 	VoltLektionController.steg(dt)
 	if VoltLektionController.tarOver() then return end
 	local p = pass

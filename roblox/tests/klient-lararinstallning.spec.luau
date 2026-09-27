@@ -282,6 +282,112 @@ do
 	I.satKommentarer("normal")
 end
 
+print("\n── 9. R1: tipsraden hör till sin kontroll (riktiga händelser, omritning, språk) ──")
+do
+	local T = UC._tips()
+	local flagga, text = T.flagga, T.installning
+	text.MouseEnter:Fire()
+	for _ = 1, 5 do UC._larare() end -- fem vanliga omritningar
+	prova("pekaren på Text: raden säger vad Text gör, även efter omritningar",
+		UC._tips().synlig and UC._tips().text == Sprak.t("installning.tips") and UC._tips().kalla == "installning",
+		UC._tips().text)
+	UC._vaxlaSprak()
+	UC._larare()
+	prova("språkbyte: samma kontrolls text, på engelska",
+		UC._tips().text == Sprak.iSprak("en", "installning.tips"), UC._tips().text)
+	UC._vaxlaSprak()
+	UC._larare()
+	flagga.MouseEnter:Fire()
+	UC._larare()
+	prova("pekaren på flaggan: raden säger språkbytet", UC._tips().text == Sprak.t("sprak.byt")
+		and UC._tips().kalla == "sprak")
+	text.MouseLeave:Fire() -- Text lämnas men äger inte raden
+	prova("att lämna en kontroll som inte äger raden döljer den inte",
+		UC._tips().synlig and UC._tips().kalla == "sprak")
+	flagga.MouseLeave:Fire()
+	prova("ägaren lämnar: raden döljs", not UC._tips().synlig and UC._tips().kalla == nil)
+	text.SelectionGained:Fire()
+	I.satDetalj("kort") -- en inställningsändring ritar om
+	UC._larare()
+	prova("fokus på Text överlever en inställningsändring och omritning",
+		UC._tips().synlig and UC._tips().text == Sprak.t("installning.tips"))
+	I.satDetalj("detaljerad")
+	flagga.SelectionLost:Fire()
+	prova("flaggan tappar fokus utan att äga raden: raden står kvar", UC._tips().synlig)
+	text.SelectionLost:Fire()
+	prova("Text tappar fokus: raden döljs", not UC._tips().synlig)
+end
+
+print("\n── 10. R1: produktionsvägen LektionController → filtret → ytan och värden ──")
+do
+	--[[ Samma väg som klient-ugnetalive: `LektionController.start`, kortet
+		kvitteras, `steg` får telemetri. Svag och bra ridning växlar, så att
+		temat får säga något nytt (aldrig samma ord två gånger i rad).
+		BÄNKANTAGANDE (KONTROLL nedan): chipet hinner slockna före nästa
+		kommentar, så varje visad kommentar är en egen övergång i ytan. ]]
+	local LC = LektionController
+	local CD = RidKanon.UGNETA.LIVE_CD
+	prova("KONTROLL: chipets visningstid är kortare än spärren",
+		CD.visa < CD.fel and CD.visa < CD.bra, ("%s / %s / %s"):format(CD.visa, CD.fel, CD.bra))
+	local SVAG = { uppsutten = true, svarstid = 4, etableringstid = 6, paradKvalitet = 0.1,
+		fokus = 0.1, spanning = 0.1, fart = 0.2, onskadFart = 2, svangradie = math.huge }
+	local BRA = { uppsutten = true, svarstid = 0.2, etableringstid = 0.3, paradKvalitet = 0.95,
+		fokus = 0.95, spanning = 0.05, fart = 2, onskadFart = 2, svangradie = math.huge }
+	local LIVE = {}
+	for _, r in pairs(UC.LIVE_NYCKEL) do
+		LIVE[Sprak.iSprak("sv", r.fel)] = true
+		LIVE[Sprak.iSprak("sv", r.bra)] = true
+	end
+	local function kor(lage)
+		I.satKommentarer(lage)
+		UC.dolj()
+		LC.start(nil, nil)
+		LC.steg(1 / 60, SVAG, nil)
+		UC.fortsatt()
+		local antal, iVard, forra = 0, 0, ""
+		for i = 1, 90 * 60 do
+			if UC.vantar() then UC.fortsatt() end
+			local tm = if (i // (10 * 60)) % 2 == 0 then SVAG else BRA
+			LC.steg(1 / 60, tm, nil)
+			local t = UC._larare().text
+			if LIVE[t] and t ~= forra then
+				antal += 1
+				if panelAter() == t then iVard += 1 end
+			end
+			forra = t
+		end
+		LC.avbryt()
+		return antal, iVard
+	end
+	local nN, vN = kor("normal")
+	local nF, vF = kor("farre")
+	local nI, vI = kor("inga")
+	prova("KONTROLL: normalt kom minst två kommentarer genom lektionens väg", nN >= 2, nN)
+	prova("normalt: varje kommentar står i ytan OCH i värdens återkoppling", vN == nN, ("%d/%d"):format(vN, nN))
+	prova("färre: ⌈n/2⌉ av samma lektionsförlopp", nF == math.ceil(nN / 2), ("%d av %d"):format(nF, nN))
+	prova("färre: de som visas står också i värden", vF == nF)
+	prova("inga: ingen kommentar i ytan eller värden", nI == 0 and vI == 0)
+	I.satKommentarer("normal")
+	UC.dolj()
+end
+
+print("\n── 11. R1: textdetaljen nollställer inte räknaren för Färre ──")
+do
+	I.satKommentarer("normal")
+	I.satKommentarer("farre") -- ett riktigt byte: räknaren börjar om
+	UC.dolj()
+	UC.live("R1", true)
+	I.satDetalj("kort") -- bara detaljen ändras
+	UC.live("R2", true)
+	prova("efter ett byte av detalj släpps den andra kommentaren som vanligt",
+		ytaText() == "R1", ytaText())
+	UC.live("R3", true)
+	prova("och den tredje visas", ytaText() == "R3")
+	I.satDetalj("detaljerad")
+	I.satKommentarer("normal")
+	UC.dolj()
+end
+
 if fel > 0 then
 	print(("\n%d mätning(ar) föll."):format(fel))
 	error("klient-lararinstallning.spec: " .. fel .. " fel")

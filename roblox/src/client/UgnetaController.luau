@@ -199,6 +199,15 @@ local installKlar: TextButton? = nil
 --[[ "Färre": var ANDRA kommentar som når `live` släpps. Räknaren börjar om
      när valet ändras. Ingen kö — en släppt kommentar är borta. ]]
 local farreRaknare = 0
+--[[ R1: räknaren börjar om bara när KOMMENTARSVALET ändras — de två valen
+     är oberoende, så ett byte av textdetalj rör den inte. ]]
+local senasteKommentarer = Installning.kommentarer()
+--[[ R1: TIPSRADEN ÄR BUNDEN TILL SIN KONTROLL. Flaggan och textknappen
+     delar raden; `tipsKalla` säger vems den är ("sprak" | "installning"),
+     och ritningen skriver den kontrollens text på det språk som gäller.
+     En kontroll som lämnas döljer bara raden om den fortfarande är dess. ]]
+local tipsKalla: string? = nil
+local TIPS_NYCKEL = { sprak = "sprak.byt", installning = "installning.tips" }
 local ritKoppling: RBXScriptConnection? = nil
 --[[ Senaste beskedets BYGGARE: den ger rubrik, punkter och knapptext på
      det språk som gäller när den körs. Nil när inget besked finns. ]]
@@ -633,10 +642,20 @@ local function byggLarare(g: ScreenGui)
 	tips.LayoutOrder = 2
 	tips.Parent = l
 	lararTips = tips
-	k.MouseEnter:Connect(function() tips.Text = Sprak.t("sprak.byt"); tips.Visible = true end)
-	k.MouseLeave:Connect(function() tips.Visible = false end)
-	k.SelectionGained:Connect(function() tips.Text = Sprak.t("sprak.byt"); tips.Visible = true end)
-	k.SelectionLost:Connect(function() tips.Visible = false end)
+	local function visaTips(kalla: string)
+		tipsKalla = kalla
+		tips.Text = Sprak.t(TIPS_NYCKEL[kalla])
+		tips.Visible = true
+	end
+	local function doljTips(kalla: string)
+		if tipsKalla ~= kalla then return end
+		tipsKalla = nil
+		tips.Visible = false
+	end
+	k.MouseEnter:Connect(function() visaTips("sprak") end)
+	k.MouseLeave:Connect(function() doljTips("sprak") end)
+	k.SelectionGained:Connect(function() visaTips("sprak") end)
+	k.SelectionLost:Connect(function() doljTips("sprak") end)
 
 	--[[ C2: TEXTKNAPPEN, till vänster om flaggan. Samma träffyta (44 px hög),
 	     fokuserbar, och samma tipsrad som flaggan. ]]
@@ -659,10 +678,10 @@ local function byggLarare(g: ScreenGui)
 	ikh.Parent = ik
 	ik.Parent = huvud
 	ik.Activated:Connect(function() vaxlaInstallning() end)
-	ik.MouseEnter:Connect(function() tips.Text = Sprak.t("installning.tips"); tips.Visible = true end)
-	ik.MouseLeave:Connect(function() tips.Visible = false end)
-	ik.SelectionGained:Connect(function() tips.Text = Sprak.t("installning.tips"); tips.Visible = true end)
-	ik.SelectionLost:Connect(function() tips.Visible = false end)
+	ik.MouseEnter:Connect(function() visaTips("installning") end)
+	ik.MouseLeave:Connect(function() doljTips("installning") end)
+	ik.SelectionGained:Connect(function() visaTips("installning") end)
+	ik.SelectionLost:Connect(function() doljTips("installning") end)
 	installKnapp = ik
 
 	local m = Instance.new("TextLabel")
@@ -1299,7 +1318,12 @@ local function ritaLarare()
 	if flaggNamn then flaggNamn.Text = Sprak.t("sprak.nuvarande") end
 	ritaInstallning()
 	local tips = lararTips
-	if tips and tips.Visible then tips.Text = Sprak.t("sprak.byt") end
+	--[[ R1: raden skrivs om för den kontroll den hör till, aldrig som
+	     flaggans text av bara farten. ]]
+	if tips and tips.Visible then
+		local n = tipsKalla and TIPS_NYCKEL[tipsKalla]
+		if n then tips.Text = Sprak.t(n) end
+	end
 	--[[ Spelarlistan i högra hörnet: lägg ytan till vänster om den. ]]
 	local hoger = 16
 	pcall(function()
@@ -1352,7 +1376,11 @@ end
 	därmed dess spegling i ytan och panelen). Allt ritas om på plats; inget
 	besked visas igen, inget val väcks och ingenting spelas upp i efterhand. ]]
 installningBytt = function()
-	farreRaknare = 0
+	local nu = Installning.kommentarer()
+	if nu ~= senasteKommentarer then
+		senasteKommentarer = nu
+		farreRaknare = 0
+	end
 	if Installning.kommentarer() == "inga" then
 		local c = chip
 		if c then c.Visible = false end
@@ -1424,6 +1452,13 @@ end
 
 function UgnetaController._vaxlaInstallning()
 	vaxlaInstallning()
+end
+
+--[[ Provets fönster in: tipsraden och vems den är. ]]
+function UgnetaController._tips(): { [string]: any }
+	local t = lararTips
+	return { synlig = t ~= nil and t.Visible, text = if t then t.Text else "", kalla = tipsKalla,
+		flagga = flaggKnapp, installning = installKnapp }
 end
 
 function UgnetaController._vaxlaSprak()
