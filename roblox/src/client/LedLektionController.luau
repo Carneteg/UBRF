@@ -15,6 +15,10 @@ local pending, pendingTid = false, 0
 local fel: string? = nil
 local valt = false
 local startad = false
+--[[ R1: sidans generation. Varje ritad kontroll bär den och det VISADE
+	försöket; en ny sida, Tillbaka, en ny begäran eller ett nytt försök gör
+	äldre kontroller döda, så en kvarglömd återkallning aldrig skickar. ]]
+local sidGen = 0
 local guide: Model? = nil
 local guideNyckel: string? = nil
 
@@ -64,23 +68,29 @@ local function visaGuide(ref: any)
 end
 
 local function mottag(b: any)
-	if type(b) ~= "table" or b.typ ~= "leda" or type(b.revision) ~= "number" then return end
-	if bild and b.forsokNr == bild.forsokNr and b.revision < bild.revision then return end
+	if type(b) ~= "table" or b.typ ~= "leda" or type(b.revision) ~= "number"
+		or type(b.forsokNr) ~= "number" then return end
+	--[[ R1: en bild från ett ÄLDRE försök ersätter aldrig ett nyare, och
+		inom samma försök aldrig en nyare revision. ]]
+	if bild and (b.forsokNr < bild.forsokNr
+		or (b.forsokNr == bild.forsokNr and b.revision < bild.revision)) then return end
+	if not bild or b.forsokNr ~= bild.forsokNr or b.lage ~= bild.lage then sidGen += 1 end
 	bild = b
 	sekvens = math.max(sekvens, b.sekvens or 0)
 	if valt and AKTIVA[b.lage] then visaGuide(b.referens) else rivGuide() end
 end
 
-local function skicka(op: string)
+local function skicka(op: string, forvantat: number?)
 	if pending and op ~= "finish" then return end
 	requestNr += 1
+	sidGen += 1
 	local token = requestNr
 	if op ~= "sync" then sekvens += 1 end
 	local seq = sekvens
 	pending, pendingTid, fel = true, 0, nil
 	task.spawn(function()
 		local transport, ok, reason, b = pcall(function()
-			return Net.get("LedLektion"):InvokeServer(op, seq)
+			return Net.get("LedLektion"):InvokeServer(op, seq, forvantat)
 		end)
 		if token ~= requestNr then return end
 		pending = false
@@ -88,7 +98,8 @@ local function skicka(op: string)
 		mottag(b)
 		if ok ~= true then
 			fel = if reason == "inside" or reason == "target" or reason == "horse" or reason == "mounted"
-				or reason == "character" or reason == "active" then reason else "network"
+				or reason == "character" or reason == "active" or reason == "stale_attempt" then reason
+				else "network"
 		elseif op == "finish" then
 			valt = false; rivGuide()
 		end
@@ -99,10 +110,13 @@ local function text(key: string): string
 	return Sprak.t("ledlektion." .. key)
 end
 
-local function val(key: string, fn: () -> (), sekundar: boolean?)
-	local token = requestNr
+--[[ En ritad kontroll: bunden till sidans generation och det visade
+	försöket (R1). Den gäller bara om ingenting har hänt sedan den ritades. ]]
+local function val(key: string, fn: (number) -> (), sekundar: boolean?)
+	local gen = sidGen
+	local forsok = if bild and type(bild.forsokNr) == "number" then bild.forsokNr else 0
 	return { text = text(key), aktiv = true, sekundar = sekundar == true,
-		skicka = function() if token == requestNr or not pending then fn() end end }
+		skicka = function() if gen == sidGen and not pending then fn(forsok) end end }
 end
 
 --[[ Ugneta's on-foot choices: ONE secondary entry, or the lesson page. ]]
@@ -110,7 +124,7 @@ function L.panel(): any
 	if not startad then return nil end
 	if not valt then
 		return { ersatt = false, text = nil, ovning = "", vantar = false,
-			knappar = { val("choose", function() valt = true; skicka("sync") end, true) } }
+			knappar = { val("choose", function() valt = true; sidGen += 1; skicka("sync") end, true) } }
 	end
 	local b = bild or { lage = "ready", progress = 0, tips = "intro" }
 	local key = if pending then "pending" elseif fel then fel
@@ -124,15 +138,19 @@ function L.panel(): any
 		if fel == "network" then
 			table.insert(knappar, val("sync", function() skicka("sync") end))
 		elseif b.lage == "ready" or b.lage == "closed" then
-			table.insert(knappar, val("start", function() skicka("start") end))
+			table.insert(knappar, val("start", function(f) skicka("start", f) end))
 		elseif b.lage == "complete" or b.lage == "timeout" then
-			table.insert(knappar, val("retry", function() skicka("retry") end))
+			table.insert(knappar, val("retry", function(f) skicka("retry", f) end))
 		end
 	end
 	if AKTIVA[b.lage] then
-		table.insert(knappar, val("finish", function() skicka("finish") end))
+		table.insert(knappar, val("finish", function(f) skicka("finish", f) end))
 	else
-		table.insert(knappar, val("back", function() valt = false; rivGuide() end))
+		--[[ Tillbaka: nya sidor och ett sent svar på en gammal begäran tas
+			inte emot (requestNr), och gamla kontroller dör (sidGen). ]]
+		table.insert(knappar, val("back", function()
+			valt = false; rivGuide(); sidGen += 1; requestNr += 1; pending = false
+		end))
 	end
 	return { ersatt = true, knappar = knappar, text = txt, ovning = txt, vantar = false }
 end
@@ -154,6 +172,7 @@ end
 
 --[[ Provkrokar. ]]
 function L._valtForProv(): boolean return valt end
+function L._bildForProv(): any return bild end
 function L._guideForProv(): Model? return guide end
 
 return L

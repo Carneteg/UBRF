@@ -33,7 +33,8 @@ local function nyKaraktar(pos)
 	return k, rot, hum
 end
 local START = Vector3.new(0, 3, 0)
-local karaktar, spelarRot = nyKaraktar(START)
+local karaktar, spelarRot, spelarHum = nyKaraktar(START)
+spelarHum.Health = 100 -- realistiskt: produktionen kräver ett levande Health
 local spelare = Players.LocalPlayer
 spelare.Name = "Ledaren"; spelare.UserId = 8811
 spelare.Character = karaktar
@@ -89,9 +90,14 @@ local function ga(tx, stegM) -- leds fram till tx i steg om stegM meter
 	for i = 1, n do flytta(x0 + (tx - x0) * i / n); steg() end
 end
 local seq = 0
+--[[ Det försök klienten VISAR (R1): serverns nuvarande försöksnummer. ]]
+local function forv(p)
+	local st = LedLektion._tillstandForProv(p or spelare)
+	return if st then st.forsokNr else 0
+end
 local function req(op, p)
 	seq += 1
-	return LedLektion.begar(p or spelare, op, seq)
+	return LedLektion.begar(p or spelare, op, seq, forv(p))
 end
 local function bild() local _, _, b = LedLektion.begar(spelare, "sync"); return b end
 local function led() return LedService.borja(spelare, MIN) end
@@ -148,7 +154,7 @@ steg()
 check("the other horse cannot be led; the lesson waits for the right one", okFel ~= true
 	and bild().lage == "lead_first")
 local andra = { UserId = 8812, Name = "Annan", Character = nil }
-local ok2, fel2 = LedLektion.begar(andra, "start", 1)
+local ok2, fel2 = LedLektion.begar(andra, "start", 1, 0)
 check("a second player's lesson is independent (no bound horse)", ok2 == false and fel2 == "horse"
 	and bild().lage == "lead_first")
 
@@ -196,14 +202,15 @@ st.deadline = 0
 steg()
 check("deadline gives incomplete, never success", bild().lage == "timeout")
 local base = seq
-local a1 = { LedLektion.begar(spelare, "retry", base + 1) }
-local a2 = { LedLektion.begar(spelare, "retry", base + 1) }
+local f0 = forv()
+local a1 = { LedLektion.begar(spelare, "retry", base + 1, f0) }
+local a2 = { LedLektion.begar(spelare, "retry", base + 1, f0) }
 check("a replayed request returns the same answer", a1[1] == a2[1] and a1[2] == a2[2])
-local okAnnan = LedLektion.begar(spelare, "finish", base + 1)
+local okAnnan = LedLektion.begar(spelare, "finish", base + 1, f0)
 check("the same sequence with another operation is refused", okAnnan == false)
 LedLektion.begar(spelare, "sync", nil)
-LedLektion.begar(spelare, "finish", base + 3)
-local okGammal, felGammal = LedLektion.begar(spelare, "start", base + 2) -- aldrig använd, men äldre
+LedLektion.begar(spelare, "finish", base + 3, forv())
+local okGammal, felGammal = LedLektion.begar(spelare, "start", base + 2, forv()) -- aldrig använd, men äldre
 check("an older, unused sequence is stale", okGammal == false and felGammal == "stale")
 seq = base + 3
 local sync = Networking.get("LedLektionSync")
@@ -223,6 +230,85 @@ flytta(UTE_X)
 local okRR = req("retry"); led(); steg()
 check("retry needs new travel: progress starts at 0", okRR == true and bild().progress == 0
 	and bild().lage == "leading")
+
+-- ── R1: samma ledningssession, karaktär och häst ──
+req("finish"); LedService.slapp(spelare)
+flytta(UTE_X)
+req("start"); led(); steg()
+ga(UTE_X + 5)
+local pauseResa = LedLektion._tillstandForProv(spelare).resa
+for _ = 1, 8 do steg() end
+check("R1: a pause in the SAME leading session keeps its travel", bild().lage == "leading"
+	and LedLektion._tillstandForProv(spelare).resa == pauseResa and bild().progress > 0)
+LedService.slapp(spelare); led() -- släpp och nytt grepp om SAMMA häst mellan två prov
+steg()
+check("R1: release and re-take of the same horse between samples clears the evidence",
+	bild().lage == "lead_first" and bild().tips == "released" and bild().progress == 0)
+steg()
+check("R1: a fresh outside baseline follows", bild().lage == "leading" and bild().progress == 0)
+ga(UTE_X + 8)
+local nyK, nyRot, nyHum = nyKaraktar(spelarRot.Position)
+nyHum.Health = 100
+spelare.Character = nyK -- ny karaktär (respawn) mellan två prov, genast levande
+steg()
+check("R1: a replaced character between samples clears the evidence", bild().tips == "character"
+	and bild().progress == 0)
+spelare.Character = karaktar
+local forald = MIN.Parent
+MIN.Parent = nil -- den bundna hästen borta / ersatt
+steg()
+check("R1: a missing or replaced bound horse resets", bild().tips == "horse" and bild().progress == 0)
+MIN.Parent = forald
+steg()
+
+-- ── R1: gamla kontroller och gamla bilder på klienten (riktiga återkallningar) ──
+local Lk = LedLektionController
+Lk.start()
+UgnetaController.satLektionsVal(nil)
+UgnetaController.dolj()
+req("finish"); LedService.slapp(spelare)
+flytta(UTE_X)
+local function hittaK(lista, txt)
+	for _, k in ipairs(lista) do if k.text == txt then return k end end
+	return nil
+end
+local e0 = hittaK(UgnetaController.panel(4).knappar, Sprak.t("ledlektion.choose"))
+if e0 then e0.skicka() end
+local startK = hittaK(UgnetaController.panel(4).knappar, Sprak.t("ledlektion.start"))
+if startK then startK.skicka() end
+local forsokA = forv()
+local finishA = hittaK(UgnetaController.panel(4).knappar, Sprak.t("ledlektion.finish"))
+check("KONTROLL: the page started an attempt and shows Finish", startK ~= nil and finishA ~= nil
+	and bild().lage ~= "closed")
+if finishA then finishA.skicka() end
+local startB = hittaK(UgnetaController.panel(4).knappar, Sprak.t("ledlektion.start"))
+if startB then startB.skicka() end
+local forsokB = forv()
+check("KONTROLL: a newer attempt is running", forsokB == forsokA + 1 and bild().lage ~= "closed")
+if finishA then finishA.skicka() end -- den KVARGLÖMDA Finish från försök A
+check("R1: a retained old Finish callback never closes the newer attempt",
+	forv() == forsokB and bild().lage ~= "closed")
+-- Klienten har gått vidare i sekvensen (den följer serverns högsta): nästa lediga.
+seq = LedLektion._tillstandForProv(spelare).hogsta + 1
+local okSt, felSt = LedLektion.begar(spelare, "finish", seq, forsokA)
+check("R1: the server rejects an old attempt's Finish without touching the newer one",
+	okSt == false and felSt == "stale_attempt" and bild().lage ~= "closed")
+seq = LedLektion._tillstandForProv(spelare).hogsta + 1
+local okSt2, felSt2 = LedLektion.begar(spelare, "retry", seq, forsokA)
+check("R1: a stale Retry for an older attempt is rejected", okSt2 == false and felSt2 == "stale_attempt")
+local aktuellBild = Lk._bildForProv()
+Networking.get("LedLektionSync").OnClientEvent:Fire({ typ = "leda", forsokNr = forsokA, revision = 999,
+	lage = "complete", tips = "complete", progress = 100, sekvens = 0 })
+check("R1: a reordered snapshot from an older attempt never replaces the current one",
+	Lk._bildForProv() == aktuellBild)
+local finNu = hittaK(UgnetaController.panel(4).knappar, Sprak.t("ledlektion.finish"))
+if finNu then finNu.skicka() end
+check("R1: the current attempt's own Finish still works", bild().lage == "closed")
+local tillbaka = hittaK(UgnetaController.panel(4).knappar, Sprak.t("ledlektion.back"))
+if tillbaka then tillbaka.skicka() end
+check("R1: Back returns to the on-foot entry", not Lk._valtForProv())
+seq = LedLektion._tillstandForProv(spelare).hogsta
+UgnetaController.dolj()
 
 -- ── Klientens ingång till fots (källnivå) ──
 local L = LedLektionController

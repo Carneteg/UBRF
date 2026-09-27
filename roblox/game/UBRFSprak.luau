@@ -1373,6 +1373,10 @@ Sprak.text = {
 		sv = "Avsluta ledningen först.",
 		en = "Finish leading first.",
 	},
+	["ledlektion.stale_attempt"] = {
+		sv = "Det där gällde en äldre ledning. Här är den aktuella.",
+		en = "That was for an earlier lead. Here is the current one.",
+	},
 	["ledlektion.pending"] = {
 		sv = "Ett ögonblick…",
 		en = "One moment…",

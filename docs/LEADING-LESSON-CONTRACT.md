@@ -94,6 +94,29 @@ Retry and Finish work as in the other lessons:
   - a jump or gap (`unknown`).
 - **Leaving the game:** the state is dropped.
 
+## R1 (source review #5856236775)
+
+- **Session continuity.** At the baseline the lesson records the identity of the
+  leading RECORD (`LedService.lage(player)`), the character, its root part and
+  the horse root part. Each `borja` creates a new record, so a release and
+  re-take of the same horse between two samples, a new or respawned character,
+  or a replaced root clears all travel and arrival (`released`, `character`,
+  `horse`). The next sample needs a fresh outside baseline. A pause in the SAME
+  session is unchanged.
+- **Expected attempt.** Start, Retry and Finish carry the attempt number the
+  client DISPLAYS. The server applies them only if it equals its current
+  attempt. Otherwise the answer is `stale_attempt`, and the newer attempt is
+  never touched. The expected attempt is part of duplicate replay: the same
+  sequence with a different operation or expectation is refused.
+- **Client controls.** Rendered controls are bound to a page generation and the
+  displayed attempt:
+  - a new page, Back, any request or a new attempt kills older controls;
+  - Back also drops a pending reply;
+  - a snapshot from a LOWER attempt, or an older revision of the same attempt,
+    is ignored.
+- **Health.** Production requires a numeric `Health > 0`; the fixture sets a
+  realistic `Health = 100`.
+
 ## Lifecycle and requests
 
 - **Attempt:** a numbered attempt per player (`forsokNr`), session-local.
@@ -159,12 +182,29 @@ bound horse and another horse). The horse is moved between explicit
 - no persistent writes.
 
 **Panel:**
-- the on-foot entry is visible beside 0..3 cards;
-- the entry is hidden while a care question is open;
-- Back works;
+- the on-foot entry is visible beside 0..3 cards and is secondary;
+- choosing opens the lesson page;
 - the mounted menus are unchanged.
 
+**R1, written:**
+- a pause in the same session keeps its travel;
+- releasing and re-taking the same horse between samples clears the evidence,
+  and a fresh baseline follows;
+- a replaced character between samples clears the evidence;
+- a missing or replaced bound horse resets;
+- a retained old Finish callback, through the real page callbacks, never closes
+  the newer attempt;
+- the server rejects an old attempt's Finish and Retry (`stale_attempt`);
+- a reordered older-attempt snapshot never replaces the current one;
+- the current attempt's own Finish still works.
+
 **Planned, not written:**
+- the care question hiding the entry (Naromrade `data.harVal`), which needs
+  preparation data in the panel fixture and is checked in source only;
+- no persistent writes: the module requires no save API (a source claim, not a
+  test);
+- a delayed reply after Back or a reopen: the bench runs `task.spawn` at once,
+  so a reply cannot be delayed there. `requestNr` covers it in source;
 - death and leaving (the same reset path as a missing character);
 - a real LedPrompt → LedBorja chain (covered by ledning-integration);
 - rendered layout, touch and SV/EN;

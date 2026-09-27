@@ -61,7 +61,7 @@ local function levande(player: Player): boolean
 	local hum = k and k:FindFirstChildOfClass("Humanoid")
 	if hum == nil or k:FindFirstChild("HumanoidRootPart") == nil then return false end
 	local liv = (hum :: any).Health
-	return type(liv) ~= "number" or liv > 0
+	return type(liv) == "number" and liv > 0
 end
 
 local function planM(a: Vector3, b: Vector3): number
@@ -101,6 +101,7 @@ end
 --[[ Tillbaka till "led henne": all resa och ankomst bort, samma tidsgräns. ]]
 local function tillLed(s, tips)
 	s.baslinje, s.sistaPos, s.sistaT = false, nil, nil
+	s.ledPost, s.karaktar, s.karRot, s.hastRotId = nil, nil, nil, nil
 	s.resa, s.ledTid, s.framme = 0, 0, 0
 	andra(s, "lead_first", tips)
 	satProgress(s, 0)
@@ -149,6 +150,19 @@ local function prov(player: Player, s)
 		return
 	end
 	if led.modell ~= s.modell then tillLed(s, "wrong_horse"); return end
+	--[[ R1: SAMMA LEDNINGSSESSION, SAMMA KARAKTÄR, SAMMA HÄSTROT. Varje
+		`borja` skapar en NY post i LedService och `slapp` tar bort den; ett
+		släpp och ett nytt grepp om samma häst mellan två prov syns bara som
+		en annan post. Likaså en ny karaktär (respawn) eller en ny rotdel.
+		Allt sådant kastar resa och ankomst och kräver en färsk baslinje
+		utanför målet. En paus i samma session är oförändrad. ]]
+	local karaktar = (player :: any).Character
+	local karRot = karaktar and karaktar:FindFirstChild("HumanoidRootPart")
+	if s.baslinje and (led ~= s.ledPost or karaktar ~= s.karaktar or karRot ~= s.karRot
+		or rot ~= s.hastRotId) then
+		tillLed(s, if led ~= s.ledPost then "released" elseif rot ~= s.hastRotId then "horse" else "character")
+		return
+	end
 
 	local pos = (rot :: BasePart).Position
 	local z = LedService.malzon() :: any
@@ -157,6 +171,7 @@ local function prov(player: Player, s)
 			redan i målet måste hon ut först. ]]
 		if LedService.iRekt(pos, z) then andra(s, "lead_first", "outside_first"); return end
 		s.baslinje, s.sistaPos, s.sistaT = true, pos, klocka
+		s.ledPost, s.karaktar, s.karRot, s.hastRotId = led, karaktar, karRot, rot
 		s.resa, s.ledTid, s.framme = 0, 0, 0
 		andra(s, "leading", "lead_on")
 		return
@@ -187,7 +202,12 @@ function LedLektion._steg(dt: number)
 	end
 end
 
-function LedLektion.begar(player: any, op: any, seq: any): (boolean, string?, any)
+--[[ `forvantat` (R1): det försöksnummer klienten VISAR när den skickar en
+	ändrande begäran. Start, Retry och Finish gäller bara om det är
+	serverns nuvarande försök — en kvarglömd kontroll från ett äldre försök
+	(eller en annan häst, som alltid ger ett nytt försök) nekas som
+	`stale_attempt` utan att röra det nyare. Ingår i dubblettkontrollen. ]]
+function LedLektion.begar(player: any, op: any, seq: any, forvantat: any): (boolean, string?, any)
 	if typeof(player) ~= "Instance" and type(player) ~= "table" then return false, "request", nil end
 	local s = tillstand[player]
 	if not s then s = nytt(player); tillstand[player] = s end
@@ -196,16 +216,21 @@ function LedLektion.begar(player: any, op: any, seq: any): (boolean, string?, an
 	if type(seq) ~= "number" or seq ~= seq or seq < 1 or seq > 2147483647 or seq % 1 ~= 0 then
 		return false, "request", nil
 	end
+	if type(forvantat) ~= "number" or forvantat ~= forvantat or forvantat < 0 or forvantat % 1 ~= 0 then
+		return false, "request", nil
+	end
 	local prev = s.svar[seq]
 	if prev then
-		if prev.op ~= op then return false, "request", nil end
+		if prev.op ~= op or prev.forvantat ~= forvantat then return false, "request", nil end
 		return prev.ok, prev.fel, prev.bild
 	end
 	if seq <= s.hogsta then return false, "stale", nil end
 	s.hogsta = seq
 	local ok, fel = false, nil
 	local b = beroenden
-	if op == "finish" then
+	if forvantat ~= s.forsokNr then
+		fel = "stale_attempt"
+	elseif op == "finish" then
 		--[[ Avsluta rör aldrig hästen eller kopplet. ]]
 		ok = true
 		andra(s, "closed", "closed")
@@ -241,7 +266,7 @@ function LedLektion.begar(player: any, op: any, seq: any): (boolean, string?, an
 		end
 	end
 	local bild = LedLektion.bild(s)
-	s.svar[seq] = { op = op, ok = ok, fel = fel, bild = bild }
+	s.svar[seq] = { op = op, forvantat = forvantat, ok = ok, fel = fel, bild = bild }
 	table.insert(s.ordning, seq)
 	while #s.ordning > MAX_REQUESTS do s.svar[table.remove(s.ordning, 1)] = nil end
 	return ok, fel, bild
