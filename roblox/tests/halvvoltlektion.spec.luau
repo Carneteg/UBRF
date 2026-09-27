@@ -233,20 +233,64 @@ ga(nu.u, nu.v + 0.5)
 check("R1: nor does the next moving sample", image().lage ~= "complete")
 
 -- Krediterad bit, tolererad förflyttning i halt (0,4 m), sedan skritt: ingen
--- vinst i efterhand, och slutläget visar att 0,4 m aldrig krediterades.
+-- vinst i efterhand; resultatet skiljer fysiskt slutläge och krediterade meter.
 tillStart()
 rutt(-3, 5)
-local p5 = image().progress
+local k5 = s.voltLektion.kreditM
 aid("broms")
 ga(vag(5.2)); ga(vag(5.4))
 check("R1: movement within 0.5 m of the halt anchor is tolerated", image().lage == "route")
 aid("driv")
 ga(nu.u, nu.v)
-check("R1: resuming walk on a stationary sample credits nothing", image().progress == p5)
+check("R1: resuming walk on a stationary sample credits nothing", s.voltLektion.kreditM == k5)
 rutt(5.4, G.LANGD)
 local efterHalt = image()
-check("R1: the figure completes with the halted 0.4 m never credited", efterHalt.lage == "complete"
-	and efterHalt.resultat.slutS < G.LANGD - 0.3)
+check("R2: one tolerated pause still completes; its 0.4 m stays uncredited debt",
+	efterHalt.lage == "complete" and efterHalt.resultat.slutS >= G.LANGD - G.SLUT_M
+	and math.abs(efterHalt.resultat.skuld - 0.4) < 0.05
+	and math.abs(efterHalt.resultat.meter
+		- (efterHalt.resultat.slutS - efterHalt.resultat.armS - efterHalt.resultat.skuld)) < 1e-6)
+rakt(uT - 1, G.E_V - 1)
+check("R2: moving on past E inside the end ring cannot change the result", image().resultat == efterHalt.resultat)
+
+-- R2: två åtskilda tillåtna pauser — skulden passerar 0,5 m, försöket går
+-- tillbaka till startringen (återhämtningsbart), aldrig ett olåsbart läge.
+request("retry")
+tillStart()
+rutt(-3, 5)
+aid("broms")
+ga(vag(5.2)); ga(vag(5.4))
+check("R2: the first 0.4 m pause is tolerated", image().lage == "route")
+aid("driv")
+rutt(5.4, 10)
+aid("broms")
+ga(vag(10.2))
+check("R2: a second pause pushing the debt past 0.5 m returns to the start ring",
+	image().lage == "to_start" and image().tips == "halt_moved")
+aid("driv")
+tillStart()
+rutt(-3, G.LANGD)
+check("R2: after two pauses the route is recoverable and completes", image().lage == "complete")
+
+-- R2: ett litet fram-och-tillbaka efter en paus tar aldrig igen skulden.
+request("retry")
+tillStart()
+rutt(-3, 5)
+local kA = s.voltLektion.kreditM
+aid("broms")
+ga(vag(5.2)); ga(vag(5.4))
+aid("driv")
+ga(nu.u, nu.v)
+rutt(5.4, 5.0)
+rutt(5.0, 5.4)
+check("R2: walking back and forward over the paused 0.4 m credits nothing",
+	image().lage == "route" and s.voltLektion.kreditM == kA)
+rutt(5.4, 6)
+check("R2: new ground beyond the furthest point is credited",
+	math.abs(s.voltLektion.kreditM - (kA + 0.6)) < 1e-6)
+rutt(6, G.LANGD)
+check("R2: that attempt completes with its debt reported", image().lage == "complete"
+	and math.abs(image().resultat.skuld - 0.4) < 0.05)
 
 -- Ofarlig, begränsad darrning i halt: pausen står kvar och figuren fullföljs.
 request("retry")

@@ -92,9 +92,10 @@ gait.
   start ring, projects to part 1 with `−2 ≤ S ≤ 2`, is in the layout, is in walk,
   trot or halt, and is not reversing.
   - The arming step gives NO credit.
-  - `armS` (the observed S) and `langst` (the furthest S, the reference for
-    backwards detection) both start at the arming point, as in riding-paths R1.
-  - Progress is `(max(langst, 0) − max(armS, 0)) / (L − max(armS, 0))`.
+  - `armS` (the observed S) and `framst` (the physical furthest S, the reference
+    for backwards detection) both start at the arming point, and `kreditM`
+    starts at 0 (R2, see below).
+  - Progress is `(max(framst, 0) − max(armS, 0)) / (L − max(armS, 0))`.
   - A stationary first step, the approach and a rear-half arming therefore
     neither credit nor reverse.
 - **Riding:** each step needs:
@@ -103,7 +104,7 @@ gait.
   - all samples in the corridor and the layout;
   - an unambiguous and continuous projection.
 
-  Only forward movement in walk or trot raises `langst`. Halt is an allowed
+  Only forward movement in walk or trot adds credit (`kreditM`). Halt is an allowed
   pause: no credit and no reset. Reversing, canter or a gait event into them
   resets with `walk_or_trot`.
 - **Ordered joins:** the joins are recorded in order. A join counts only when a
@@ -116,22 +117,39 @@ gait.
   - standing still, jitter;
   - distance ridden elsewhere.
 
-## R1: halt cannot be banked (source review #5855779841)
+## R1/R2: halt cannot be banked (source reviews #5855779841, #5855815820)
 
-- **Halt anchor:** when a step has accepted halt (no credit), the lesson anchors
-  the position where the halt began. Jitter within **0.5 m** of the anchor is
-  tolerated for any length of time: no credit, no reset. More uncredited
-  displacement returns the attempt to the start ring with `halt_moved`. The
-  anchor is released by the next credited step.
-- **Incremental credit:** `langst` grows only by the movement since the previous
-  sample (or from `langst`, if that is further on), never by an absolute jump to
-  the current S. Anything moved without credit, including the tolerated 0.5 m,
-  therefore cannot be reclaimed later by a gait change or a stationary sample.
-  The completion threshold `L − 0.5` stays; a tolerated halt drift can make the
-  rider need to ride slightly further within the end ring.
+- **Halt anchor (R1):** during an accepted halt (no credit) the position where the
+  halt began is anchored. Movement within **0.5 m** of the anchor is tolerated for
+  any length of time; more returns the attempt to the start ring with
+  `halt_moved`. The anchor is released by the next credited step.
+- **Two separate quantities (R2).** R1's single `langst` mixed position and
+  credit; it is replaced by:
+  - `framst`: the PHYSICAL furthest route position reached (absolute S, any
+    accepted gait). Backwards detection, the join cap and completion
+    (`framst ≥ L − 0.5` in the end ring with both joins) use it.
+  - `kreditM`: the credited metres. It grows only when `framst` is pushed
+    forward by a credited (walk/trot) sample, by exactly that push.
+  - `skuld = framst − armS − kreditM`: forward ground covered without credit.
+    It can never be credited later, because walking back and forward below
+    `framst` pushes nothing. **Rule:** if `skuld` exceeds 0.5 m, the attempt
+    returns to the start ring with `halt_moved`, which is clearly recoverable
+    with fresh evidence and the same deadline.
+- **Consequences:**
+  - One tolerated pause never locks the attempt: completion needs only the
+    physical `framst`.
+  - Repeated pauses that add up to more than 0.5 m re-arm.
+  - Nothing moved during halt is ever reclaimed.
 - **Joins:** a join counts only from a credited sample.
-- **Unchanged:** rear/front arming, reverse, chord/corridor/order, identity, break
-  recovery and deadline.
+- **Result:** the result names both quantities: `slutS` (physical end position),
+  `meter` (= `kreditM`) and `skuld`. Progress display follows the physical reach.
+- **Correction:** R1's report claimed the tolerated drift was "never credited"
+  while its incremental formula could reclaim it by a small out-and-back, and
+  that a rider could "ride slightly further" to finish (false, because the
+  projection clamps at L). Both claims are withdrawn; R2 is the implemented
+  model.
+- **Unchanged:** rear/front arming, reverse, chord/corridor/order, identity,
+  break recovery and deadline.
 
 ## Recovery and breaks
 
@@ -156,7 +174,8 @@ resets.
 - **Closing:** success closes once with `slutford`; the deadline closes with
   `tidsgrans` and wins at equality; Finish closes with `avbrutet`; ride
   teardown closes through FORSOK1.
-- **Frozen result:** `figur = "halvvolt"`, `armS`, `slutS`, `meter = slutS − armS`,
+- **Frozen result:** `figur = "halvvolt"`, `armS`, `slutS` (physical end position),
+  `meter` (credited metres), `skuld` (`slutS − armS − meter`),
   the joins and the start.
 
 ## Menu (capacity-aware, four rows)
@@ -203,7 +222,14 @@ existing compact entry, and with free riding.
 - a full halted traversal, then a stationary walk sample and the next moving
   sample, never completes;
 - a credited part, 0.4 m of tolerated halt drift, then a stationary walk
-  sample, gives no windfall, and completion shows `slutS < L − 0.3`;
+  sample: `kreditM` is unchanged; completion reports `slutS ≥ L − 0.5`,
+  `skuld ≈ 0.4` and `meter = slutS − armS − skuld`; moving on past E inside the
+  end ring cannot change the result;
+- R2: two separate tolerated pauses (0.4 + 0.2 m) exceed 0.5 m of debt and return
+  to the start ring (`halt_moved`), and the route then recovers and completes;
+- R2: walking back and forward over the paused 0.4 m credits nothing, new ground
+  beyond `framst` is credited, and that attempt completes with its debt
+  reported;
 - bounded ±0.1 m jitter keeps the route and progress, and the figure then
   completes.
 

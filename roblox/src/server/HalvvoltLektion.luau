@@ -161,8 +161,8 @@ local function stang(s, orsak): boolean
 	if not Forsok.slutfor(s.rittId, s.forsokId, orsak, obsTid(s.rittId), nil) then return false end
 	if orsak == "slutford" then
 		s.resultat = table.freeze({ forsokId = s.forsokId, rittId = s.rittId, userId = s.userId,
-			hastId = s.hastId, figur = "halvvolt", armS = s.armS, slutS = s.langst,
-			meter = s.langst - s.armS, langd = LANGD,
+			hastId = s.hastId, figur = "halvvolt", armS = s.armS, slutS = s.framst,
+			meter = s.kreditM, skuld = (s.framst - s.armS) - s.kreditM, langd = LANGD,
 			skarvar = table.freeze(table.clone(s.skarvar)),
 			start = Forsok.ogonblick(s.forsokId).start })
 		s.progress = 100
@@ -175,7 +175,7 @@ local function stang(s, orsak): boolean
 end
 
 local function tillStart(s, tips)
-	s.armS, s.langst, s.sistaS, s.sistaPunkt, s.haltAnkare = nil, nil, nil, nil, nil
+	s.armS, s.framst, s.kreditM, s.sistaS, s.sistaPunkt, s.haltAnkare = nil, nil, 0, nil, nil, nil
 	s.skarvar = {}
 	andra(s, "to_start", tips)
 	satDelmal(s, 0)
@@ -202,8 +202,8 @@ local function delFor(S: number): number
 end
 
 local function vagTips(s): string
-	if s.langst >= LANGD - 4 then return "to_end" end
-	local d = delFor(s.langst)
+	if s.framst >= LANGD - 4 then return "to_end" end
+	local d = delFor(s.framst)
 	return if d == 1 then "track" elseif d == 2 then "half_circle" else "return"
 end
 
@@ -246,22 +246,30 @@ local function paVagen(s, seg, kredit: boolean): boolean
 		if s.sistaS ~= nil and math.abs(S - s.sistaS) > 1.6 * d + 0.3 then
 			tillStart(s, "unknown"); return false
 		end
-		if S < s.langst - BAKAT_M then tillStart(s, "reverse"); return false end
+		if S < s.framst - BAKAT_M then tillStart(s, "reverse"); return false end
 		--[[ Skarvarna i ordning: ett KREDITERAT prov nära nästa skarv (R1:
 			okrediterad rörelse räknar aldrig en skarv). ]]
 		local nasta = skarvPunkter[#s.skarvar + 1]
 		if kredit and nasta and math.sqrt((u - nasta.u) ^ 2 + (v - nasta.v) ^ 2) <= SKARV_R then
 			table.insert(s.skarvar, table.freeze({ u = u, v = v }))
 		end
-		--[[ R1: STEGVIS KREDIT. `langst` växer bara med rörelsen sedan
-			föregående prov (eller från `langst`, om den ligger längre fram) —
-			aldrig med ett absolut hopp till S. Det som flyttats utan kredit
-			kan därför inte tas igen av ett senare prov. ]]
-		local fore_S = s.sistaS or S
-		local fran = math.max(fore_S, s.langst)
-		if kredit and S > fran then
-			local tak = if #s.skarvar < 2 then skarvPunkter[#s.skarvar + 1].S + SKARV_SLACK else LANGD
-			s.langst = math.max(s.langst, math.min(s.langst + (S - fran), tak))
+		--[[ R2: TVÅ STORHETER, SKILDA. `framst` är det FYSISKA längsta
+			vägläget (vilken gångart som helst) — bakåtspärr, skarvtak och
+			klart mäts mot det. `kreditM` är de krediterade metrarna: bara när
+			`framst` flyttas fram i ett krediterat prov (skritt/trav). Det som
+			flyttats fram utan kredit är `skuld` = framst − armS − kreditM; det
+			kan aldrig krediteras senare (ett fram-och-tillbaka under `framst`
+			ger ingenting), och överstiger det HALT_R går försöket tillbaka till
+			startringen. Klart kräver bara den fysiska `framst`, så en tillåten
+			paus låser aldrig försöket. ]]
+		local tak = if #s.skarvar < 2 then skarvPunkter[#s.skarvar + 1].S + SKARV_SLACK else LANGD
+		local ny = math.min(S, tak)
+		if ny > s.framst then
+			if kredit then s.kreditM += ny - s.framst end
+			s.framst = ny
+			if (s.framst - s.armS) - s.kreditM > HALT_R then
+				tillStart(s, "halt_moved"); return false
+			end
 		end
 		s.sistaS, fore = S, { u = u, v = v }
 	end
@@ -314,9 +322,9 @@ function HalvvoltLektion.steg(s, now: number, gangart: string?, ryggar: boolean?
 		local iRing = math.sqrt((q.u - ref.uT) ^ 2 + (q.v - P0_V) ^ 2) <= RING
 		if iRing and S ~= nil and not tvetydig and S >= -RING and S <= RING
 			and p.iDressyr == true then
-			--[[ Armeringssteget ger INGEN kredit; armS och langst börjar i
+			--[[ Armeringssteget ger INGEN kredit; armS och framst börjar i
 				det observerade läget (bakre eller främre halvan). ]]
-			s.armS, s.langst, s.sistaS, s.haltAnkare = S, S, S, nil
+			s.armS, s.framst, s.kreditM, s.sistaS, s.haltAnkare = S, S, 0, S, nil
 			s.sistaPunkt = { u = q.u, v = q.v }
 			s.skarvar = {}
 			andra(s, "route", "track")
@@ -332,12 +340,13 @@ function HalvvoltLektion.steg(s, now: number, gangart: string?, ryggar: boolean?
 	if not paVagen(s, seg, gangart == "walk" or gangart == "trot") then return end
 	local tips = vagTips(s)
 	andra(s, "route", tips)
-	satDelmal(s, if tips == "to_end" then 4 else delFor(s.langst))
+	satDelmal(s, if tips == "to_end" then 4 else delFor(s.framst))
 	local fran = math.max(s.armS, 0)
-	satProgress(s, 99 * math.max(s.langst - fran, 0) / (LANGD - fran))
+	--[[ Visningen följer den fysiska räckvidden; krediten står i resultatet. ]]
+	satProgress(s, 99 * math.max(s.framst - fran, 0) / (LANGD - fran))
 	local q = seg.till
 	local iSlut = math.sqrt((q.u - ref.uT) ^ 2 + (q.v - E_V) ^ 2) <= RING
-	if s.langst >= LANGD - SLUT_M and #s.skarvar >= 2 and iSlut then stang(s, "slutford") end
+	if s.framst >= LANGD - SLUT_M and #s.skarvar >= 2 and iSlut then stang(s, "slutford") end
 end
 
 function HalvvoltLektion.begar(s, op: any, seq: any, now: number, gangart: string?,
@@ -384,7 +393,7 @@ function HalvvoltLektion.begar(s, op: any, seq: any, now: number, gangart: strin
 				s.resultat = nil
 				nyBaslinje(s, o, p, logg)
 				s.progress, s.delmal = 0, 0
-				s.armS, s.langst, s.sistaS, s.sistaPunkt, s.skarvar = nil, nil, nil, nil, {}
+				s.armS, s.framst, s.kreditM, s.sistaS, s.sistaPunkt, s.skarvar = nil, nil, 0, nil, nil, {}
 				s.revision += 1
 				andra(s, "to_start", "to_start")
 			end
