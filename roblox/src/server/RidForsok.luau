@@ -72,6 +72,8 @@ local RidForsok = {}
 
 RidForsok.OVNINGAR = table.freeze({
 	storvolt = table.freeze({ [VoltObservation.VERSION] = true }),
+	-- Start/halt-lektionen (docs/HALT-LESSON-CONTRACT.md).
+	starthalt = table.freeze({ ["server-halt-1"] = true }),
 })
 RidForsok.MAX_PER_RITT = 8
 RidForsok.MAX_BEGARAN = 16

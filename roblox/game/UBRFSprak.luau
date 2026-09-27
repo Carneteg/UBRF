@@ -685,6 +685,70 @@ Sprak.text = {
 		sv = "Ett ridförsök pågår redan. Avsluta det innan du börjar ett nytt.",
 		en = "A riding attempt is already active. Finish it before starting another.",
 	},
+	["haltlektion.choose"] = {
+		sv = "Träna start och halt",
+		en = "Practice start and halt",
+	},
+	["haltlektion.start"] = {
+		sv = "Starta övningen",
+		en = "Start exercise",
+	},
+	["haltlektion.finish"] = {
+		sv = "Avsluta start och halt",
+		en = "Finish start and halt",
+	},
+	["haltlektion.intro"] = {
+		sv = "Stå still i halt, skritta fram och gör ett halt vid X – mitt på dressyrbanan.",
+		en = "Stand still in halt, walk on and halt at X – the centre of the dressage arena.",
+	},
+	["haltlektion.halt_first"] = {
+		sv = "Börja med att stå helt still i halt.",
+		en = "Start by standing completely still in halt.",
+	},
+	["haltlektion.walk_on"] = {
+		sv = "Fint! Be om skritt med en tydlig skänkel.",
+		en = "Nice! Ask for walk with a clear leg aid.",
+	},
+	["haltlektion.walk_only"] = {
+		sv = "Stanna i skritt – lugnt och jämnt.",
+		en = "Stay in walk – calm and even.",
+	},
+	["haltlektion.to_x"] = {
+		sv = "Skritta mot X, den gröna ringen mitt på banan.",
+		en = "Walk towards X, the green ring in the middle of the arena.",
+	},
+	["haltlektion.hold"] = {
+		sv = "Halt vid X – håll henne stilla en stund.",
+		en = "Halt at X – keep her still for a moment.",
+	},
+	["haltlektion.halt_outside"] = {
+		sv = "Ett fint halt! Skritta vidare och prova att stanna inne i ringen vid X.",
+		en = "A nice halt! Walk on and try stopping inside the ring at X.",
+	},
+	["haltlektion.halt_at_x"] = {
+		sv = "Be om halt när du är inne i ringen vid X.",
+		en = "Ask for halt when you are inside the ring at X.",
+	},
+	["haltlektion.unknown"] = {
+		sv = "Jag tappade en bit av ritten. Vi börjar om från ett halt.",
+		en = "I missed part of the ride. Let us start again from a halt.",
+	},
+	["haltlektion.complete"] = {
+		sv = "Halt vid X klart! Du skrittade fram och stannade på rätt plats.",
+		en = "Halt at X completed! You walked on and stopped in the right place.",
+	},
+	["haltlektion.timeout"] = {
+		sv = "Vi hann inte fram till ett halt vid X. Ta en paus eller prova igen.",
+		en = "We did not reach a halt at X yet. Take a break or try again.",
+	},
+	["haltlektion.closed"] = {
+		sv = "Start och halt är avslutad.",
+		en = "Start and halt has ended.",
+	},
+	["haltlektion.place"] = {
+		sv = "Rid in på dressyrbanan innan du startar.",
+		en = "Enter the dressage arena before you start.",
+	},
 	["ugneta.se_ritten"] = {
 		sv = "Se ritten",
 		en = "Watch the ride",

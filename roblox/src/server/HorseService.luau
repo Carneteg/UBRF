@@ -38,6 +38,7 @@ local RidPlatsObservation = require(script.Parent.RidPlatsObservation)
 local VoltObservation = require(script.Parent.VoltObservation)
 local RidForsok = require(script.Parent.RidForsok)
 local VoltLektion = require(script.Parent.VoltLektion)
+local HaltLektion = require(script.Parent.HaltLektion)
 
 local HorseService = {}
 
@@ -1823,14 +1824,18 @@ function HorseService.start()
 			local lesson = session.voltLektion
 			if lesson and session.rider and lesson.rittId == session.rittId then
 				local rev = lesson.revision
-				VoltLektion.steg(lesson, os.clock())
+				--[[ En lektion per ritt: `typ` "halt" är start/halt-lektionen,
+					allt annat den oförändrade voltlektionen. ]]
+				local Lektion = if lesson.typ == "halt" then HaltLektion else VoltLektion
+				Lektion.steg(lesson, os.clock(), Ridtrappa.gangart(session.stegIndex),
+					Ridtrappa.ryggar(session.stegIndex))
 				--[[ Samma mottagarregel som RidTillstand och StaminaSync: en
 					deklarerad aktör utan klient får inget ägarbesked. I motorn
 					kastar FireClient på en icke-Player, och kastet skulle här
 					hoppa över alla senare sessioner i samma hjärtslag. ]]
 				local kVolt = Aktor.klient(session.rider)
 				if rev ~= lesson.revision and kVolt then
-					Net.get("VoltLektionSync"):FireClient(kVolt, VoltLektion.bild(lesson))
+					Net.get("VoltLektionSync"):FireClient(kVolt, Lektion.bild(lesson))
 				end
 			end
 		end
@@ -1930,18 +1935,38 @@ function HorseService.forsokVolt(forsokId: string?): (any, string?)
 	return RidForsok.voltUnderlag(forsokId, VoltObservation.ogonblick(f.rittId))
 end
 
-function HorseService.voltLektionsBegaran(player: any, rittId: any, op: any, seq: any): (boolean, string?, any)
+function HorseService.voltLektionsBegaran(player: any, rittId: any, op: any, seq: any,
+	typ: any): (boolean, string?, any)
 	if type(rittId) ~= "string" or #rittId > 128 then return false, "stale", nil end
 	local session = forsokRitt(player, rittId)
 	if not session then return false, "stale", nil end
 	if op ~= "sync" and op ~= "start" and op ~= "retry" and op ~= "finish" then
 		return false, "unknown", nil
 	end
+	--[[ Lektionstyp: utelämnad = volt (oförändrat beteende), "halt" =
+		start/halt. Byte av typ nekas medan ett försök pågår; annars får
+		ritten ett nytt lektionsläge för den valda typen. ]]
+	if typ == nil then typ = "volt" end
+	if typ ~= "volt" and typ ~= "halt" then return false, "unknown", nil end
+	local nu = session.voltLektion
+	if nu and (nu.typ or "volt") ~= typ then
+		if op == "finish" or op == "sync" then
+			--[[ Avsluta och läsa gäller alltid den lektion som faktiskt
+				pågår, så att ett aktivt försök aldrig blir oavslutbart. ]]
+			typ = nu.typ or "volt"
+		elseif RidForsok.aktivt(rittId) then
+			return false, "active", nil
+		else
+			session.voltLektion = nil
+		end
+	end
+	local Lektion = if typ == "halt" then HaltLektion else VoltLektion
 	if not session.voltLektion then
-		session.voltLektion = VoltLektion.ny(rittId, player.UserId,
+		session.voltLektion = Lektion.ny(rittId, player.UserId,
 			tostring(session.rig.model:GetAttribute("HorseId") or session.rig.model.Name))
 	end
-	return VoltLektion.begar(session.voltLektion, op, seq, os.clock())
+	return Lektion.begar(session.voltLektion, op, seq, os.clock(),
+		Ridtrappa.gangart(session.stegIndex), Ridtrappa.ryggar(session.stegIndex))
 end
 
 return HorseService

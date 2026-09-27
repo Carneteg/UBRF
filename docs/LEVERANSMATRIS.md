@@ -176,7 +176,7 @@ touch bevaras.
 | Område: skötsel | #266 C, #161 | `Preparation`, momentvägen | framsteg per område (INFRA-1) | INFRA-1 | framsteg skrivs vid avslutad skötsel | lär sig och minns | `EJ_PÅBÖRJAD` |
 | Område: utrustning | #266 C, BESLUT-162 | tackkedjan, felnekande | uppgift, framsteg, vägledning vid fel | INFRA-1, Utrustning | fel nekas med vägledning utan dolt straff | — | `EJ_PÅBÖRJAD` |
 | Område: ledning | #266 C | `LedService`, målzon | uppgiftsslut, framsteg | INFRA-1 | — | R4/R5-ledningsfallen | `EJ_PÅBÖRJAD` |
-| Område: start/halt | #266 C, `RidKanon` halt_skritt | övning, 22 s-försök | uppgiftsbaserat slut (C3) | INFRA-2A, INFRA-2B1, B3 | halt på avsedd plats avslutar | — | `EJ_PÅBÖRJAD` |
+| Område: start/halt | #266 C, `RidKanon` halt_skritt | övning, 22 s-försök | uppgiftsbaserat slut (C3) | INFRA-2A, INFRA-2B1, B3 | halt på avsedd plats avslutar | — | `BYGGT` — BUILT_NOT_VERIFIED 2026-09-27: `HaltLektion` (halt → skritt på hjälp → halt vid X, [kontrakt](HALT-LESSON-CONTRACT.md)); prov skrivna, ej körda (Tobias beslut: testa sist) |
 | Område: väg | #266 C/B3 | linje = svängradie | position och figur | INFRA-2A, INFRA-2B1, B3 | fel plats ger inte rätt linjebetyg | — | `EJ_PÅBÖRJAD` |
 | Område: tempo | #266 C/B3 | `rytm = nil` (`Lektion.luau:148`) | rytm faktiskt mätt | B3 | ingen rytmbedömning förrän den mäts | — | `EJ_PÅBÖRJAD` |
 | Område: övergångar | #266 C | skritt_trav, trav_skritt | plats för övergången | B3 | — | — | `EJ_PÅBÖRJAD` |

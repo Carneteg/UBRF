@@ -77,6 +77,17 @@ A code/doc cleanup request does not authorize deleting retained artifacts.
 
 ## Tests and product gates
 
+**Latest testing policy, 2026-09-27 10:40 UTC**
+([decision](https://github.com/Carneteg/UBRF/pull/264#issuecomment-5855114357)):
+Tobias playtests the whole at the end. Until then build without running tests:
+no automated suites, mutations, full chain, engine probes or manual gameplay.
+Write regression specs for later; never delete or weaken tests or CI gates.
+Deliveries are BUILT_NOT_VERIFIED / TESTS_DEFERRED with a deferred-check list,
+never a technical, engine or product PASS. Codex reviews source only. Claude
+is the implementation writer for the build-now packages (circle finish,
+[Start/Halt](https://github.com/Carneteg/UBRF/pull/264#issuecomment-5855148032)).
+The rules below apply when the deferred verification is run.
+
 Small engine checks at risky component boundaries are allowed only with a
 written hypothesis, exact candidate, scope and pass/fail criteria before the
 run. Use an isolated copy with no real data mutation. Stop if isolation cannot

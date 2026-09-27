@@ -33,6 +33,11 @@ and test policy. This index is dated 2026-09-26; it is not product acceptance.
   attach moving visual details to the existing leaf, preserve the fixed frame.
   Exact-candidate review and a new local visual check are required. No publication
   or product acceptance.
+- 2026-09-27 10:40 UTC: build now, test last (WORKING-AGREEMENT). Circle finish
+  cbd6499 is BUILT_NOT_VERIFIED. Start/Halt ([contract](HALT-LESSON-CONTRACT.md),
+  halt at X) is built on it, BUILT_NOT_VERIFIED; its spec is written, not run.
+  Deferred before Tobias' playtest: full42, runtime smoke in engine, both lesson
+  flows, guides, entrance door, SV/EN and touch.
 - 2026-09-27: the entrance correction 93e16f5 received BANK_ONLY code PASS and a
   bounded Studio entrance check. The circle-lesson finish package on that base is
   Claude-written and Codex-reviewed (WORKING-AGREEMENT, package exception). The

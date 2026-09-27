@@ -177,6 +177,7 @@ FORBEREDELSE = SPEL + [
     ("VoltObservation", "src/server/VoltObservation.luau"),  # #264 INFRA-VOLT1
     ("RidForsok", "src/server/RidForsok.luau"),  # #264 INFRA-FORSOK1
     ("VoltLektion", "src/server/VoltLektion.luau"),
+    ("HaltLektion", "src/server/HaltLektion.luau"),  # start/halt-lektionen
     # AKTOREN (#252 DEL C) FORE tjansterna: GameplayService, HorseService
     # och LedService fragar den om aktoren har en klient att skicka till.
     ("Aktor",        "src/shared/HorseCore/Aktor.luau"),
@@ -441,6 +442,7 @@ KOHERENS = GEOMETRI + [
     ("VoltObservation", "src/server/VoltObservation.luau"),  # #264 INFRA-VOLT1
     ("RidForsok", "src/server/RidForsok.luau"),  # #264 INFRA-FORSOK1
     ("VoltLektion", "src/server/VoltLektion.luau"),
+    ("HaltLektion", "src/server/HaltLektion.luau"),  # start/halt-lektionen
     # AKTOREN (#252 DEL C) FORE tjansterna: GameplayService, HorseService
     # och LedService fragar den om aktoren har en klient att skicka till.
     ("Aktor",        "src/shared/HorseCore/Aktor.luau"),
@@ -751,6 +753,9 @@ def valjBunt(spec_rel: str):
     #[[ #264 INFRA-OBS-PLATS1: det riktiga ridhuset och tjansterna. ]]
     #[[ #264 INFRA-FORSOK1: samma bank — voltdata ur den riktiga ramen. ]]
     elif "forsok" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
+    #[[ Start/halt-lektionen: samma bank som voltlektionen. ]]
+    elif "haltlektion" in spec_rel:
         moduler, stubbar = KOHERENS, "tests/stubs.luau"
     #[[ #264 INFRA-VOLT1: samma bank som ridplats — den riktiga ramen. ]]
     elif "volt" in spec_rel:
