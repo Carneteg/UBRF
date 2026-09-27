@@ -55,7 +55,10 @@ local function tryck(grupp, varde)
 	return v ~= nil
 end
 local function ytaText() return UC._larare().text end
-local function panelAter() NR.satRider(false); return NR._panel().ater end
+--[[ Kontraktet (INSTRUCTOR-TEXT-CONTROLS §Behaviour): chippets text speglas i
+	lärarytan och i `UgnetaController.panel`s text — inte i Naromrades
+	skötselåterkoppling, som bara bär skötselns kvittens. ]]
+local function panelAter() return UC.panel(4).text or "" end
 
 print("\n── 1. Standard och hur man hittar dit ──")
 do
@@ -155,6 +158,10 @@ end
 print("\n── 5. Inga rör aldrig det obligatoriska ──")
 do
 	tryck("kommentarer", "inga")
+	--[[ Raderna räknas utan ledningens val till fots ("Leda till ridhuset"),
+		som står i samma panel sedan 784e8c1; den öppna frågan om dess plats
+		(klient-naromrade) avgörs separat. ]]
+	UC.satFotVal(nil)
 	UC.visa(function()
 		return Sprak.t("ugneta.ej_bedomd.rubrik"), { Sprak.t("ugneta.ej_bedomd.punkt") },
 			true, Sprak.t("ugneta.prova_igen")
@@ -164,10 +171,12 @@ do
 		UC.vantar() == true and #NR._val() == 1
 		and har(ytaText(), Sprak.t("ugneta.ej_bedomd.punkt")))
 	UC.sakerhetTarOver()
+	NR.satRider(false) -- panelen ritas om (i spelet varje bildruta)
 	prova("säkerheten tar över som förut (väntan släckt, inga val kvar)",
 		UC.vantar() == false and #NR._val() == 0)
 	UC.ridrad("ugneta.rad.borja_skritt", { "W" })
 	prova("ridraden står kvar under Inga", ytaText() == Sprak.t("ugneta.rad.borja_skritt", "W"))
+	UC.satFotVal(LedLektionController.panel)
 	tryck("kommentarer", "normal")
 	UC.dolj()
 end
@@ -187,7 +196,8 @@ do
 			if txt ~= "" then
 				table.insert(signaler, tostring(signal) .. (if bra then "+" else "-"))
 				local fore = ytaText()
-				UC.live(txt .. "#" .. #signaler, bra)
+				-- Läget i texten: ett chip kvar från förra läget har annars samma text.
+				UC.live(txt .. "#" .. lage .. #signaler, bra)
 				if ytaText() ~= fore then visade += 1 end
 			end
 			t += 1 / 30
