@@ -99,6 +99,20 @@ marker, skipped or out-of-order crossings, only visiting the end ring,
 standing still, and pre-Start motion. Each of these either leaves the
 corridor, breaks continuity, fails the crossing check or adds no frontier.
 
+## R1: the exact centre line (source review #5855468769)
+
+- **Angle:** on the correct side of a loop, the semicircle angle is `atan2(|du|, −dv)`
+  clamped to [0, π]. Using `side · du` gave −0 for loop 2 at the literal crossing
+  (u0, 38), and atan2(−0, negative) may return −π; the valid crossing would then have
+  projected to 0 and been rejected as ambiguous. Corridor, ambiguity, continuity and
+  crossing checks are unchanged.
+- **Endpoints:** the first and last sample of a segment are the observed endpoints
+  exactly, not `from + (to − from) · 1` rounded.
+- **Honest limit:** the lesson reads positions through the world ↔ frame conversion, so
+  a literal zero `du` in the running game depends on that rounding. The direct
+  projection cases pin the literal boundary; the consumer traversal lands on the
+  crossings as exactly as the frame allows.
+
 ## Recovery and breaks
 
 - **Leaving the corridor, reversing, a non-allowed gait, an unknown or
@@ -152,6 +166,11 @@ changes. The other lessons' behaviour, keys and replies are unchanged.
 - deadline;
 - a delayed old serpentine start after a type switch opens no attempt;
 - the same sequence with another type is refused;
+- R1: literal crossings (u0, 22) and (u0, 38), the start and end points, ±1e-9 around
+  (u0, 38), the widest loop points and the centre line between crossings project as
+  intended (through a test hook on the real projection);
+- R1: a traversal whose loops end exactly on the centre-line crossings keeps the route
+  and completes;
 - all four lessons start and finish;
 - owner events only to the owner; no persistent writes.
 

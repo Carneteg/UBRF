@@ -164,6 +164,50 @@ tillStartring()
 rutt(0, G.LANGD)
 check("fresh evidence after the break completes", image().lage == "complete")
 
+-- ── R1: exakt på mittlinjen (atan2 med −0 får inte ge −π) ──
+local proj = SerpentinLektion._projiceraForProv
+local function nara(S, mal) return S ~= nil and math.abs(S - mal) < 1e-6 end
+local S22, t22 = proj(U, U, G.V0 + 2 * G.R)
+local S38, t38 = proj(U, U, G.V0 + 4 * G.R)
+check("R1: literal centre-line crossing (u0, 22) projects to the end of loop 1",
+	nara(S22, BAGE) and t22 == false)
+check("R1: literal centre-line crossing (u0, 38) projects to the end of loop 2, not 0",
+	nara(S38, 2 * BAGE) and t38 == false)
+local S6, t6 = proj(U, U, G.V0)
+local S54, t54 = proj(U, U, G.V0 + 6 * G.R)
+check("R1: literal start and end points project to 0 and the full length",
+	nara(S6, 0) and t6 == false and nara(S54, G.LANGD) and t54 == false)
+local Sa, ta = proj(U, U + 1e-9, G.V0 + 4 * G.R)
+local Sb, tb = proj(U, U - 1e-9, G.V0 + 4 * G.R)
+check("R1: points just either side of (u0, 38) stay unambiguous near 2·BAGE",
+	Sa ~= nil and Sb ~= nil and ta == false and tb == false
+	and math.abs(Sa - 2 * BAGE) < 0.01 and math.abs(Sb - 2 * BAGE) < 0.01)
+local Sm2 = proj(U, U - G.R, G.V0 + 3 * G.R)
+local Sm3 = proj(U, U + G.R, G.V0 + 5 * G.R)
+check("R1: the widest points of loops 2 and 3 project to their middles",
+	nara(Sm2, 1.5 * BAGE) and nara(Sm3, 2.5 * BAGE))
+local Sut = proj(U, U, G.V0 + 3 * G.R)
+check("R1: the centre line between crossings stays outside the corridor", Sut == nil)
+
+request("retry")
+tillStartring()
+--[[ Varje båge slutar EXAKT på mittlinjen (u = U, inte sin(π)·R), så
+	produktionsvägen passerar de bokstavliga korsningspunkterna. ]]
+for k = 1, 3 do
+	local S0, S1 = (k - 1) * BAGE, k * BAGE
+	local n = math.ceil(BAGE / 0.9)
+	for i = 1, n do
+		if i == n then ga(U, G.V0 + 2 * G.R * k) else ga(vag(S0 + (S1 - S0) * i / n)) end
+	end
+	if k < 3 then
+		check("R1: exact crossing " .. k .. " keeps the route (no unknown reset)",
+			image().lage == "route" and image().tips ~= "unknown")
+	end
+end
+local exakt = image()
+check("R1: a traversal through the literal crossings completes", exakt.lage == "complete"
+	and #exakt.resultat.korsningar == 2)
+
 request("retry")
 tillStartring()
 rutt(0, 10)

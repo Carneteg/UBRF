@@ -117,7 +117,13 @@ local function projicera(u0: number, u: number, v: number): (number?, boolean)
 		local S, d
 		if side * du >= 0 then
 			local r = math.sqrt(du * du + dv * dv)
-			S = (k - 1) * BAGE + math.atan2(side * du, -dv) * R
+			--[[ R1: vinkeln ska ligga i [0, π] också exakt på mittlinjen.
+				`side * du` blir −0 för en vänsterbåge när du = +0, och
+				atan2(−0, negativt) kan ge −π i stället för π — en giltig
+				korsning hade då blivit tvetydig. Rätt sida är redan vald här,
+				så tvärsavståndet är en storlek: math.abs ger alltid +0/+tal. ]]
+			local th = math.clamp(math.atan2(math.abs(du), -dv), 0, math.pi)
+			S = (k - 1) * BAGE + th * R
 			d = math.abs(r - R)
 		else
 			--[[ Fel sida om bågen: närmaste ände. ]]
@@ -132,6 +138,11 @@ local function projicera(u0: number, u: number, v: number): (number?, boolean)
 	end
 	if basta == nil then return nil, false end
 	return basta, maxS - minS > TVETYDIG_M
+end
+
+--[[ Provkrok: projektionen, för gränsfallen på mittlinjen (R1). ]]
+function SerpentinLektion._projiceraForProv(u0: number, u: number, v: number): (number?, boolean)
+	return projicera(u0, u, v)
 end
 
 local function stang(s, orsak): boolean
@@ -203,7 +214,9 @@ local function paVagen(s, seg, kredit: boolean): boolean
 		tillStart(s, "unknown"); return false
 	end
 	for i = 0, n do
-		local u, v = fu + (tu - fu) * i / n, fv + (tv - fv) * i / n
+		--[[ R1: ändpunkterna provas exakt som observerade, inte avrundade. ]]
+		local u = if i == n then tu else fu + (tu - fu) * i / n
+		local v = if i == n then tv else fv + (tv - fv) * i / n
 		local S, tvetydig = projicera(u0, u, v)
 		if S == nil then tillStart(s, "off_route"); return false end
 		if tvetydig then tillStart(s, "unknown"); return false end
