@@ -187,6 +187,38 @@ do
 		and image().tips == "off_route")
 end
 
+print("\n── H5b–H5c. Kontrollpunkten och segmentets mittpunkt (SAMMANFOGAT, SYNKRONT) ──")
+do
+	--[[ H5b: bågen 1,1 m UTANFÖR sin radie — hela vägen inom korridoren (1,2),
+		men aldrig inom MITT (1,0) från kontrollpunkten. Längd och slutring
+		räcker; utan kontrollpunkten får den aldrig bli fullföljd. ]]
+	local ute = 1.1
+	tillHornStart(); langs(-3, ref.inM)
+	for i = 1, 20 do
+		local th = (math.pi / 2) * i / 20
+		ga(ref.cu + (ref.r + ute) * math.cos(th), ref.cv + (ref.r + ute) * math.sin(th))
+	end
+	local n = math.ceil(ref.utM / 0.9)
+	for i = 1, n do ga(ref.cu - ref.utM * i / n, ref.p3v + ute) end
+	check("KONTROLL H5b: vägen stannade i korridoren ända till slutringen", image().lage == "route"
+		and image().delmal == 3)
+	check("H5b längd och slutring utan kontrollpunkten fullföljer aldrig", image().lage ~= "complete")
+	--[[ H5c: två punkter 1,1 m INNANFÖR bågen (i korridoren) med ett 3,8 m
+		segment emellan, vars mittpunkt ligger 1,6 m från bågen — korridoren är
+		inte konvex här, så mittpunkten måste prövas. ]]
+	local inne = ref.r - 1.1
+	tillHornStart(); langs(-3, ref.inM)
+	for i = 1, 4 do
+		local th = 0.28 * i / 4
+		ga(ref.cu + inne * math.cos(th), ref.cv + inne * math.sin(th))
+	end
+	check("KONTROLL H5c: på den inre linjen, fortfarande på väg", image().lage == "route")
+	-- 0,9 s: ett observerat segment (på 0,25 s vore 3,8 m ett brott i observationen).
+	ga(ref.cu + inne * math.cos(1.3), ref.cv + inne * math.sin(1.3), 0.9)
+	check("H5c ett segment vars mittpunkt lämnar korridoren nollställer", image().lage == "to_start"
+		and image().tips == "off_route")
+end
+
 print("\n── H6–H9. Stillastående, fel gångart, före start, lucka och teleport (SAMMANFOGAT, SYNKRONT) ──")
 do
 	tillHornStart(); langs(-3, 2)
