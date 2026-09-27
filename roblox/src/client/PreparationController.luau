@@ -371,9 +371,14 @@ local panelVal: { any } = {}
 	sig själv när utrustningen lämnats tillbaka, hästen bytts eller
 	karaktären försvunnit. `rattelseGen` binder ett svar till den rättelse
 	det skickades för — ett sent svar skriver aldrig över nyare återkoppling. ]]
-local rattelseNyckel: string? = nil
 local rattelseGen = 0
 local rattelseAktiv = false
+--[[ R1: EN väntande återlämning i taget, med eget nummer. Ett svar gäller
+	bara sin egen begäran; ett äldre svar kastas. Kommer den lyckade vyn
+	FÖRE svaret är delen redan borta — då visas inget nej, och kvittensen
+	kommer med svaret. Efter 10 s utan svar får en ny begäran skickas. ]]
+local lamnaVantar: { nr: number, nyckel: string, typ: string, hastnamn: string, tid: number }? = nil
+local lamnaNr = 0
 local panelSteg: { any } = {}
 local panelData: any = nil
 local panelHastnamn: string? = nil
@@ -1536,14 +1541,30 @@ local function interaktionPagar(antalVal: number): boolean
 	return antalVal > 0 and (not utomRackhall or rattelseAktiv)
 end
 
-local function rattelseFor(vy: any): any
-	local b = vy and vy.burenUtrustning
-	if type(b) ~= "table" or type(b.hastId) ~= "string" or type(vy.hastId) ~= "string" then return nil end
-	if b.hastId == vy.hastId or vy.status == "riding" then return nil end
-	local typ = if type(b.delar) == "table" then b.delar[1] else nil
-	if typ ~= "sadel" and typ ~= "trans" then return nil end
-	return { hastId = b.hastId, typ = typ,
-		hastnamn = if type(b.hastnamn) == "string" and b.hastnamn ~= "" then b.hastnamn else b.hastId }
+--[[ R1: rättelserna läses ur `burnaDelar` — det som FYSISKT bärs, per typ,
+	med registrets förvärv — och inte ur sammanfattningen `burenUtrustning`,
+	som utelämnar det den tilldelade hästen redan bär och slår ihop blandade
+	ägare. En rättelse per buren del som tillhör en ANNAN häst och som
+	spelaren själv hämtat (registrerad). ]]
+local function rattelserFor(vy: any): { any }
+	local ut = {}
+	if type(vy) ~= "table" or type(vy.hastId) ~= "string" or vy.status == "riding" then return ut end
+	for _, d in ipairs(if type(vy.burnaDelar) == "table" then vy.burnaDelar else {}) do
+		if type(d) == "table" and (d.typ == "sadel" or d.typ == "trans") and type(d.hastId) == "string"
+			and d.hastId ~= vy.hastId and d.registrerad == true and type(d.forvarv) == "number" then
+			table.insert(ut, { typ = d.typ, hastId = d.hastId, forvarv = d.forvarv, tilldelad = vy.hastId,
+				nyckel = d.typ .. "|" .. d.hastId .. "|" .. tostring(d.forvarv) .. "|" .. vy.hastId,
+				hastnamn = if type(d.hastnamn) == "string" and d.hastnamn ~= "" then d.hastnamn else d.hastId })
+		end
+	end
+	return ut
+end
+
+local function harDel(vy: any, nyckel: string): boolean
+	for _, r in ipairs(rattelserFor(vy)) do
+		if r.nyckel == nyckel then return true end
+	end
+	return false
 end
 
 --[[ SLUTET PÅ VARJE VY, på ett ställe.
@@ -1742,6 +1763,9 @@ function rita(vy: any)
 	bygg()
 	senasteVy = vy
 	rattelseAktiv = false
+	--[[ R1: VARJE ritning — också de tidiga grenarna (välfärdsstopp, fynd,
+		eftervård, räknat pass) — gör äldre återlämningsval döda. ]]
+	rattelseGen += 1
 
 	--[[ Turen, valläget och "visa allt" hör till den vy som ritas NU.
 		Nollställs här så att en gren som inte sätter dem aldrig ärver
@@ -1908,33 +1932,40 @@ function rita(vy: any)
 		i tur: raden säger vems den är och vad hon gör, och valet att lämna
 		tillbaka den står FÖRST bland panelens val. Nej-texten från ett
 		avslag går före medan den står uppe; sedan kommer rättelsen tillbaka. ]]
-	local r = rattelseFor(vy)
-	local rn = if r then (r.typ .. "|" .. r.hastId) else nil
-	if rn ~= rattelseNyckel then rattelseNyckel = rn; rattelseGen += 1 end
 	local extraVal = 0
-	if r then
+	--[[ En öppen SKÖTSELFRÅGA går före: dess text och val står kvar orörda,
+		och rättelsen väntar tills frågan är besvarad. ]]
+	local rattelser = if fragaNu then {} else rattelserFor(vy)
+	for i, r in ipairs(rattelser) do
 		rattelseAktiv = true
-		ledtext = Sprak.t("tack.rattelse_" .. r.typ, r.hastnamn, hastnamn or "")
+		if i == 1 then ledtext = Sprak.t("tack.rattelse_" .. r.typ, r.hastnamn, hastnamn or "") end
 		local gen = rattelseGen
-		table.insert(panelVal, 1, { id = "lamna:" .. r.typ, text = Sprak.t("tack.lamna_" .. r.typ, r.hastnamn),
-			klar = false, fel = false, paTur = true, aktiv = true, rattelse = true,
+		table.insert(panelVal, i, { id = "lamna:" .. r.typ, text = Sprak.t("tack.lamna_" .. r.typ, r.hastnamn),
+			klar = false, fel = false, paTur = i == 1, aktiv = true, rattelse = true,
 			skicka = function()
 				if gen ~= rattelseGen then return end
+				local v = lamnaVantar
+				if v and os.clock() - v.tid < 10 then return end
+				lamnaNr += 1
+				local nr = lamnaNr
+				lamnaVantar = { nr = nr, nyckel = r.nyckel, typ = r.typ, hastnamn = r.hastnamn, tid = os.clock() }
 				task.spawn(function()
 					local transport, ok, skal = pcall(function()
-						return Net.get("LamnaTillbaka"):InvokeServer(r.typ, r.hastId)
+						return Net.get("LamnaTillbaka"):InvokeServer(r.typ, r.hastId, r.forvarv, r.tilldelad)
 					end)
-					if gen ~= rattelseGen then return end
-					if not transport then
-						PreparationController.visaAvslagFor("tack.lamna_natverk")
-					elseif ok == true then
+					local vant = lamnaVantar
+					if not (vant and vant.nr == nr) then return end -- ett äldre svar
+					lamnaVantar = nil
+					if transport and ok == true then
 						visaBekraftelse(Sprak.t("tack.lamnade_" .. r.typ, r.hastnamn))
-					else
-						PreparationController.visaAvslagFor(skal)
+					elseif harDel(senasteVy, r.nyckel) then
+						--[[ Nejet visas bara om delen fortfarande bärs med SAMMA
+							förvärv och tilldelning; annars har något nyare hänt. ]]
+						PreparationController.visaAvslagFor(if transport then skal else "tack.lamna_natverk")
 					end
 				end)
 			end })
-		extraVal = 1
+		extraVal += 1
 	end
 
 	--[[ RUBRIKEN PEKAR TILLBAKA när hästen är utom räckhåll. Den skrivs
@@ -2283,7 +2314,10 @@ end
 	skäl som `hastId` ovan läses härifrån och inte ur en egen fråga. ]]
 --[[ Provkrok: rättelsen i den senast ritade vyn. ]]
 function PreparationController._rattelseForProv(): any
-	return if rattelseAktiv then rattelseFor(senasteVy) else nil
+	return if rattelseAktiv then rattelserFor(senasteVy)[1] else nil
+end
+function PreparationController._rattelserForProv(): { any }
+	return if rattelseAktiv then rattelserFor(senasteVy) else {}
 end
 
 function PreparationController.burenUtrustning(): any

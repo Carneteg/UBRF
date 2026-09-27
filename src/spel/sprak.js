@@ -646,6 +646,7 @@ const SPRAK = {
   "tack.front_visar_inte": { sv: "Boxfronten gick inte att använda just nu. Försök igen.", en: "The box front could not be used right now. Try again." },
   "tack.kunde_inte_slappas": { sv: "Den gick inte att hänga tillbaka just nu. Du bär den fortfarande.", en: "It could not be hung back right now. You are still carrying it." },
   "tack.lamna_natverk": { sv: "Jag nådde inte stallet. Försök igen.", en: "I could not reach the stable. Try again." },
+  "tack.inaktuell": { sv: "Det där gällde ett tidigare läge. Titta på raden igen.", en: "That was for an earlier moment. Check the line again." },
   "tack.utrustning_for": { sv: "%ss sadel och träns", en: "%s's saddle and bridle" },
   "tack.hamta_forst": { sv: "Sadel och träns hänger på boxfronten — hämta dem först",
     en: "Saddle and bridle hang on the stall front — fetch them first" },

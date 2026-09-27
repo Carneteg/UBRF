@@ -173,12 +173,21 @@ local function burenFor(player: Player)
 	return Preparation.buren(valdUtrustning[player], paHasten, hastnamnFor)
 end
 
+--[[ R1 (docs/EQUIPMENT-GUIDANCE-CONTRACT.md): det som FYSISKT bärs, per typ,
+	med ägarregistrets förvärv. `burenUtrustning` är en sammanfattning som
+	avsiktligt utelämnar det som redan sitter på den tilldelade hästen och
+	slår ihop blandade ägare — rättelsen läser därför detta i stället.
+	Framåtdeklarerad: den behöver `burenAv`, som står längre ned. ]]
+local burnaFor: ((Player) -> { any })? = nil
+
 local function vyFor(player: Player)
 	--[[ Hästens egennamn följer med så att klienten kan sätta in det där
 		kanonen skriver `%N`. Det översätts aldrig. ]]
 	local dagens = StallService.hastFor(player)
-	return Preparation.vy(state[player], status(player), nastaRev(player),
+	local v = Preparation.vy(state[player], status(player), nastaRev(player),
 		if dagens then dagens.namn else nil, burenFor(player))
+	if burnaFor then v.burnaDelar = burnaFor(player) end
+	return v
 end
 
 --[[ Spontan sanning till ägaren. Den kan gå förlorad om klienten ännu inte
@@ -785,9 +794,28 @@ end
 	burna delen svetsas server-side i `TackRigg.byggBuren`, och det enda
 	klienten far ar resultatet. ]]
 local burenAv: { [string]: Player } = {}
+--[[ R1: ett FÖRVÄRV per registrerad hämtning. En återlämning bär numret
+	den visades med; en ny hämtning av samma sak är ett nytt förvärv, så
+	en sen gammal återlämning kan aldrig röra den. ]]
+local burenForvarv: { [string]: number } = {}
+local forvarvNr = 0
 
 local function agarnyckel(typ: string, hastId: string): string
 	return hastId .. "/" .. typ
+end
+
+burnaFor = function(player: Player): { any }
+	local ut = {}
+	for _, typ in ipairs({ "sadel", "trans" }) do
+		local id = TackService.barBuren(player, typ)
+		if id ~= nil then
+			local nyckel = agarnyckel(typ, id)
+			local reg = burenAv[nyckel] == player
+			table.insert(ut, { typ = typ, hastId = id, hastnamn = hastnamnFor(id) or id,
+				registrerad = reg, forvarv = if reg then burenForvarv[nyckel] else nil })
+		end
+	end
+	return ut
 end
 
 --[[ Slapper allt den har spelaren bar — annars later registret en sadel
@@ -802,6 +830,7 @@ function GameplayService.slappBuret(player: Player)
 	for nyckel, agare in pairs(burenAv) do
 		if agare == player then
 			burenAv[nyckel] = nil
+			burenForvarv[nyckel] = nil
 			local hastId, typ = nyckel:match("^(.+)/([^/]+)$")
 			if hastId and typ then
 				pcall(function() TackForradService.satSynlig(hastId, typ, true) end)
@@ -937,6 +966,8 @@ function GameplayService.valjEn(player: Player, hastId: string?, typ: string?): 
 		krok pa fronten — alltsa forst nu ar `WORLD -> HELD` sant. ]]
 	skrivVal(player, t, id)
 	burenAv[nyckel] = player
+	forvarvNr += 1
+	burenForvarv[nyckel] = forvarvNr
 	skicka(player)
 	return true
 end
@@ -956,7 +987,8 @@ end
 	framsteg, ingen belöning, felräknaren orörd. `forvantatHastId` är den
 	hästs utrustning klienten VISADE; bär spelaren något annat nu nekas
 	begäran som inaktuell. ]]
-function GameplayService.lamnaTillbaka(player: Player, typ: any, forvantatHastId: any): (boolean, string?)
+function GameplayService.lamnaTillbaka(player: Player, typ: any, forvantatHastId: any,
+	forvantatForvarv: any, forvantadTilldelad: any): (boolean, string?)
 	if typ ~= "sadel" and typ ~= "trans" then return false, "tack.okand_utrustning" end
 	local t = typ :: string
 	local id = TackService.barBuren(player, t)
@@ -968,6 +1000,11 @@ function GameplayService.lamnaTillbaka(player: Player, typ: any, forvantatHastId
 		ägarpost; de tas aldrig tillbaka den här vägen. ]]
 	local nyckel = agarnyckel(t, id)
 	if burenAv[nyckel] ~= player then return false, "tack.kan_inte_lamnas" end
+	--[[ R1: SAMMA FÖRVÄRV OCH SAMMA TILLDELNING som visades. En sen
+		återlämning efter att samma sak hängts tillbaka och hämtats igen, eller
+		efter att den tilldelade hästen bytts, rör aldrig det nyare. ]]
+	if forvantatForvarv ~= burenForvarv[nyckel] then return false, "tack.inaktuell" end
+	if forvantadTilldelad ~= StallService.hastIdFor(player) then return false, "tack.inaktuell" end
 
 	local karaktar = player.Character
 	local rot = karaktar and karaktar:FindFirstChild("HumanoidRootPart")
@@ -994,10 +1031,16 @@ function GameplayService.lamnaTillbaka(player: Player, typ: any, forvantatHastId
 	end
 
 	burenAv[nyckel] = nil
+	burenForvarv[nyckel] = nil
 	local vald = valdUtrustning[player]
 	if vald and vald[t] == id then vald[t] = nil end
 	skicka(player)
 	return true
+end
+
+--[[ Provkrok: den riktiga producentens per-del-data (samma som vyn bär). ]]
+function GameplayService._burnaForProv(player: Player): { any }
+	return if burnaFor then burnaFor(player) else {}
 end
 
 function GameplayService.valdFor(player: Player): { [string]: string }?
@@ -1055,6 +1098,7 @@ end
 	hangande bredvid den som redan ligger pa ryggen. ]]
 function GameplayService.slappAgande(typ: string, hastId: string)
 	burenAv[agarnyckel(typ, hastId)] = nil
+	burenForvarv[agarnyckel(typ, hastId)] = nil
 end
 
 function GameplayService.sadla(player: Player, modell: Model?): (boolean, string?)
@@ -1643,9 +1687,10 @@ function GameplayService.start()
 	end)
 
 	--[[ Att lämna tillbaka det man bär (docs/EQUIPMENT-GUIDANCE-CONTRACT.md). ]]
-	Net.get("LamnaTillbaka").OnServerInvoke = Skopa.grind("LamnaTillbaka", function(player, typ, hastId)
-		return GameplayService.lamnaTillbaka(player, typ, hastId)
-	end)
+	Net.get("LamnaTillbaka").OnServerInvoke = Skopa.grind("LamnaTillbaka",
+		function(player, typ, hastId, forvarv, tilldelad)
+			return GameplayService.lamnaTillbaka(player, typ, hastId, forvarv, tilldelad)
+		end)
 
 	--[[ ── LEDNINGEN (#162 blockerare 2) ──────────────────────────────
 

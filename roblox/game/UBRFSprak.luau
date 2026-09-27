@@ -1693,6 +1693,10 @@ Sprak.text = {
 		sv = "Jag nådde inte stallet. Försök igen.",
 		en = "I could not reach the stable. Try again.",
 	},
+	["tack.inaktuell"] = {
+		sv = "Det där gällde ett tidigare läge. Titta på raden igen.",
+		en = "That was for an earlier moment. Check the line again.",
+	},
 	["tack.utrustning_for"] = {
 		sv = "%ss sadel och träns",
 		en = "%s's saddle and bridle",

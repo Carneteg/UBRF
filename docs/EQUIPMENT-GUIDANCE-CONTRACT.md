@@ -92,6 +92,35 @@ item is returned, the assigned horse changes or the character is lost.
 - **Other surfaces:** the care question priority, the on-foot leading entry
   and the mounted menus are unchanged. There is no second toast or panel.
 
+## R1 (source review #5856404802)
+
+- **Per held item, from the physical state.** The summary
+  `burenUtrustning` (`Preparation.buren`) deliberately omits a type the
+  ASSIGNED horse already wears and collapses mixed owners, so a real wrong item
+  could be invisible. The view now also carries `burnaDelar`: one entry per
+  physically carried type (`TackService.barBuren`), with the owner horse,
+  whether THIS player registered the pickup (`burenAv`) and the pickup's
+  acquisition number. The summary is unchanged for its existing consumers.
+  The correction lists every wrong, registered held item.
+- **Bound intent.** Each registered pickup gets an acquisition number
+  (`burenForvarv`), cleared on return, `slappAgande` and `slappBuret`. A
+  return carries the displayed item, acquisition and assigned horse, and the
+  server refuses a mismatch as `tack.inaktuell`. A delayed old return after the
+  same item was hung back and fetched again, or after the assigned horse
+  changed, never touches the newer state.
+- **Client.** Every render, including the early branches (welfare stop,
+  finding, aftercare, counted pass), kills older return choices. There is one
+  numbered pending return at a time (a new one after 10 s without a reply).
+  A reply only applies to its own request, so an older reply is dropped. A
+  refusal is shown only if the same item (acquisition and assignment) is still
+  held, so a success view arriving before the reply never produces a false
+  refusal, and the confirmation comes with the reply.
+- **Question priority.** While a care question is open (`fragaNu`) the
+  question keeps its text and choices, and the correction waits. The Naromrade
+  consumer takes the care choices (`data.val`) when Ugneta's non-secondary
+  buttons are absent. Corrections are at most two entries, within the four
+  rows.
+
 ## Deferred verification (written, NOT run)
 
 `roblox/tests/utrustning-rattelse.spec.luau` (KOHERENS, set up like
@@ -124,7 +153,29 @@ tack-fas2) contains these written cases.
 - the correction is derived while a wrong item is carried;
 - it disappears after the return.
 
+**R1, written:**
+- the producer reports a held item with its acquisition;
+- a return with a stale assignment is `tack.inaktuell`;
+- after hang-back and re-fetch of the SAME item, the old return is
+  `tack.inaktuell` and the new pickup stays;
+- producer to client, with the REAL producer's `burnaDelar` in the view:
+  - B is already saddled and bridled while A's saddle and C's bridle are held
+    (the summary would have omitted them, and the owners are mixed), and both
+    corrections are listed within four rows;
+  - an early-return view (welfare stop) kills the old choice, so no request is
+    sent (a counted handler);
+  - after an assignment change the old choice stays dead;
+  - an open care question keeps priority;
+  - after the returns the corrections are gone.
+
 **Planned, not written:**
+- two delayed replies arriving backwards, and a success view before its reply:
+  the bench runs `task.spawn` and RemoteFunction invocations at once, so reply
+  order cannot be controlled there (the logic is `lamnaVantar.nr` and
+  `harDel`);
+- the full LocalPlayer chain (server push through PreparationSync to the
+  client): the view is built with the real producer's data but sent through
+  the listener;
 - order, already-on, target and leading or riding refusals in the guidance
   panel (existing reasons and texts; only the texts are reused);
 - the Naromrade composition with a care question and the correction choice;
