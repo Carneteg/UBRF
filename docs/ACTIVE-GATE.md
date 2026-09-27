@@ -33,6 +33,14 @@ and test policy. This index is dated 2026-09-26; it is not product acceptance.
   attach moving visual details to the existing leaf, preserve the fixed frame.
   Exact-candidate review and a new local visual check are required. No publication
   or product acceptance.
+- 2026-09-27: the entrance correction 93e16f5 received BANK_ONLY code PASS and a
+  bounded Studio entrance check. The circle-lesson finish package on that base is
+  Claude-written and Codex-reviewed (WORKING-AGREEMENT, package exception). The
+  lesson is still not observed in-engine: in an unpublished copy DataStore is
+  denied by design, so First Ride stays off and reaching the lesson needs the
+  whole care chain. The package adds the lesson to the existing engine runtime
+  smoke (`qa/runtime/smoke.luau`, section `voltlektion`, synthetic route) instead
+  of another manual walk; it has not run in the engine yet.
 
 ## Approved sequence and limits
 

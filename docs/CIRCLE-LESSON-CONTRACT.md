@@ -6,6 +6,8 @@ not a code or gameplay PASS. No further design-only round is required.
 Base: 24eae8df2eb5477f01d22c728d8b3b68037d3ade.
 Authority: Tobias' [playable-slice decision](https://github.com/Carneteg/UBRF/pull/264#issuecomment-5848553215).
 Codex implements; Claude reviews independently; Tobias accepts the experience.
+2026-09-27: the finish package on base 93e16f5 is written by Claude and reviewed
+by Codex (see WORKING-AGREEMENT, package exception); earlier history unchanged.
 Existing infrastructure stays frozen except the narrow integration below.
 
 ## Player outcome

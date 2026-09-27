@@ -32,6 +32,12 @@ The full catalogue remains; this is a priority amendment, not abandonment.
   stopped. Reviewer counterexamples belong in an isolated copy, not the
   candidate or shared repository.
 - Tobias owns scope, costs, permissions and human/product acceptance.
+- **Package exception, 2026-09-27 07:40 UTC**
+  ([order](https://github.com/Carneteg/UBRF/pull/264#issuecomment-5853887111)):
+  Tobias asked that the next build step go to Claude. For the bounded
+  circle-lesson finish package on codex/circle-lesson-20260926 only, Claude
+  (3695fbae) is the sole writer and Codex has production STOP and reviews
+  independently. The roles above apply again after that package's review.
 - No parallel writer, new/resumed/forked implementer, extra agent or model cost
   is authorized by the handover. Preserve other writers' existing work.
   Historical Replit assignments do not authorize overwriting its files.
