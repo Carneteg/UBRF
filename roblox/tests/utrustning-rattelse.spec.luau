@@ -90,6 +90,9 @@ check("the refusal consumes nothing: she still carries A's saddle", TackService.
 check("the wrong horse is untouched", TackService.sadlad(hastar[B]) == false
 	and TackService.harTack(hastar[B], "underlagg") == false)
 check("the diagnostic counter counts it", TackService.felAntal(p) == fore + 1)
+--[[ Uttryckligen UTOM räckhåll: boxfronterna står ~6 studs isär, så platsen
+	vid häst B låg bara 10,6 studs från A:s front — inom STEG_RACKVIDD (12). ]]
+stall(rot, front(A) + Vector3.new(0, 0, Config.STEG_RACKVIDD + 6))
 local okFar, skalFar = lamna(p, "sadel", A)
 check("returning far from A's front is refused with guidance", okFar == false
 	and skalFar == "tack.ga_till_fronten" and TackService.barBuren(p, "sadel") == A)
@@ -224,6 +227,16 @@ check("after the returns the corrections are gone", #PreparationController._ratt
 	Förutsätter att bänkens task.spawn kör i en korutin (KONTROLL nedan). ]]
 local remoteL = Networking.get("LamnaTillbaka")
 local ko = {}
+--[[ Bänkens task.spawn kör funktionen DIREKT i anroparens tråd (utan schemat),
+	och då kan transporten inte ge efter ("thread yielded unexpectedly"). Som i
+	Roblox får varje spawn här sin egen korutin; återställs efter avsnittet. ]]
+local riktigSpawn = task.spawn
+task.spawn = function(fn, ...)
+	local c = coroutine.create(fn)
+	local ok, fel = coroutine.resume(c, ...)
+	if not ok then error(fel) end
+	return c
+end
 local riktigInvoke = remoteL.InvokeServer
 remoteL.InvokeServer = function(_self, ...)
 	table.insert(ko, coroutine.running())
@@ -294,6 +307,7 @@ check("R2: the older reply arriving later is dropped",
 	PreparationController._avslag() ~= PreparationController.skalText("tack.ga_till_fronten")
 	and PreparationController._bekraftelse() == lamnadeText("Pelle"))
 remoteL.InvokeServer = riktigInvoke
+task.spawn = riktigSpawn
 
 if fails > 0 then error(tostring(fails) .. " FEL") end
 print(string.format("\nUTRUSTNING-RATTELSE: %d prov, alla gröna", total))
