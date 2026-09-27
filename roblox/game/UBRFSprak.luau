@@ -1661,6 +1661,26 @@ Sprak.text = {
 		sv = "Det du klarat nu är inte sparat än.",
 		en = "What you just completed isn't saved yet.",
 	},
+	["lektionsminne.markering.forslag"] = {
+		sv = " · förslag",
+		en = " · suggested",
+	},
+	["lektionsminne.forslag_var"] = {
+		sv = "Förslag: %s (under %s).",
+		en = "Suggested: %s (under %s).",
+	},
+	["lektionsminne.forslag_rad"] = {
+		sv = "Förslag: %s.",
+		en = "Suggested: %s.",
+	},
+	["lektionsminne.igen_var"] = {
+		sv = "Öva igen: %s (under %s).",
+		en = "Practise again: %s (under %s).",
+	},
+	["lektionsminne.igen_rad"] = {
+		sv = "Öva igen: %s.",
+		en = "Practise again: %s.",
+	},
 	["ugneta.se_ritten"] = {
 		sv = "Se ritten",
 		en = "Watch the ride",

@@ -1,6 +1,10 @@
 # Lesson memory: first completion and one next practice (C4, first slice)
 
-Status: BUILT_NOT_VERIFIED, 2026-09-27. Contract written before code.
+Status: BUILT_NOT_VERIFIED, 2026-09-27.
+
+Correction (R1): in the first build this contract was written AFTER the first
+production edits had started, not before them. The R1 section below was
+written before the R1 code changes.
 Order: [LESSON_MEMORY_BUILD_ONLY_20260927](https://github.com/Carneteg/UBRF/pull/264#issuecomment-5856911110),
 base fd3f592. Build now, test last. Claude writes; Codex reviews source;
 Tobias playtests the whole at the end.
@@ -206,3 +210,103 @@ Unknown history is never "you have done no lessons".
 - stale client callbacks across rides;
 - the real Roblox DataStore;
 - physical UI.
+
+## R1 correction ([LESSON_MEMORY_SOURCE_R1](https://github.com/Carneteg/UBRF/pull/264#issuecomment-5857036865))
+
+### 1. Leave during an in-flight write: the milestone set is drained, not dropped
+
+The defect: `LektionsMinne` dropped its pending set and token on
+`PlayerRemoving`. SparService's leave write then found the key busy (write A
+still yielding), returned false, and forgot the cache. A marker B recorded
+after A's transform returned was therefore lost.
+
+**New order, all inside SparService's existing leave handler:**
+1. The before-leave hooks (`SparService.foreAvfard`) run. `LektionsMinne`
+   marks the state as leaving:
+   - no more UI is sent;
+   - no new retries are scheduled;
+   - scheduled or late attempts return at once.
+   - The pending set and the token are KEPT.
+2. `stangningFor(player)` runs (it already exists). It waits, at most
+   `STANGNING_VANTETAK` frames, for an in-flight write to finish, then makes
+   ONE final `skriv`:
+   - it never runs two writes on the same key at once;
+   - its `foreSkrivning` hook re-applies the kept pending set to the table
+     the write is based on, in every transform run, re-runs included;
+   - the table it is based on is the current cache, which already holds B.
+3. The after-leave hooks (`SparService.efterAvfard(player, ok)`) run.
+   `LektionsMinne` drops the state and token only now.
+   - If `ok` is false, the milestones are LOST: the bounded policy (the
+     wait cap plus `medRetry`'s 3 attempts) is exhausted, and the game says
+     so in a warning.
+   - Nothing is shown to the player and nothing claims durability.
+4. SparService forgets the player (`glom`), as before.
+
+A rejoin is a new `Player` object with its own state, so old work never
+touches it.
+
+### 2. Client ordering: newer facts are never replaced by older replies
+
+- **Server stamps.** Every projection carries:
+  - `session`: a server-wide increasing number, assigned when the player's
+    memory state is created at load;
+  - `rev`: incremented on every change (load, new pending marker,
+    confirmation, a finished write attempt).
+- **Client rule.** Push and sync replies are handled the same way. A
+  projection is accepted only if:
+  - its `session` is greater than the one held; or
+  - it has the same `session` and a `rev` at least as large.
+
+  An old sync reply that arrives after a newer push is ignored, and so is a
+  reply from before a reattach.
+- **Scope.** History is player-owned and is not cleared when a ride or
+  attempt changes. The frozen result guards are unchanged.
+- **The suggestion button.** It is bound to its recommendation: when
+  pressed, it acts only if the current suggestion is still the same type.
+
+### 3. The suggestion in the ACTUAL composed chooser (0..3 cards, 4-row cap)
+
+- **The compact case.** With Ugneta's card buttons present, the host uses
+  the lesson's single compact entry ("Choose exercise"), which opens the
+  replacement page `topp`. Its buttons are unchanged: Circle, Gaits and
+  pace, Riding paths, Back.
+  - Its text (a replacement page's text IS rendered) now shows:
+    - the suggestion and where to find it, for example "Suggested:
+      Half-circle (under Riding paths).";
+    - the pending or unknown line.
+  - The group button that leads to the suggested lesson gets
+    " · suggested", and so does the lesson button on that group page (or
+    the Circle button when the suggestion is the circle).
+- **No cards.** The root keeps its optional fourth button, "Suggested: X".
+  - The root is not a replacement page, so its text is NOT rendered and the
+    root makes no text claim. The pending/unknown line appears on the
+    replacement pages (topp and the groups).
+- **Free riding.** A replacement page: the suggestion and the memory line go
+  in its text.
+- **Unchanged.** Every existing lesson, group, Back, free and "Other
+  exercises" button, and care and equipment priority. No fifth row, and no
+  start.
+
+### 4. Coverage and documentation
+
+- **The request path.** A real halt reaches its completion condition between
+  Heartbeat lesson steps (the observation advances, the lesson does not yet
+  step). A KONTROLL confirms the lesson is not yet complete. The completion
+  then happens INSIDE `begar`:
+  - first with a sync;
+  - then with a retry, which resets the result in the same call. The marker
+    exists and the new attempt carries no result.
+- **The deferred leave.** On the scheduler (`__schemaPa`):
+  - write A yields after its row has landed;
+  - completion B arrives;
+  - `PlayerRemoving` is fired while A is outstanding;
+  - A finishes and the bounded final write runs;
+  - a trusted reload shows B saved.
+  - Variants: a re-run transform, and a failed final write (B is not
+    saved, and nothing claims it is).
+- **Ordering.** A request before a push, reversed replies, and a reattach.
+- **The actual host.** `UgnetaController.panel(4)` / Naromrade with 0 and 1–3
+  cards, the compact entry, the topp page text, the markers, Back, free
+  riding, SV/EN, all completed and unknown history.
+- **The Back case.** The panel is rebuilt after the language switch, and the
+  real destination is asserted.

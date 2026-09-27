@@ -117,8 +117,16 @@ type Tillstand = {
 	tackt: { [string]: boolean }?,
 	retry: number,
 	skriverNu: boolean,
+	--[[ R1: ordningen till klienten. `session` är serverns ökande nummer
+		för det här tillståndet, `rev` räknas upp vid varje ändring. ]]
+	session: number,
+	rev: number,
+	--[[ R1: spelaren lämnar. Ingen UI, inga nya försök; det väntande står
+		kvar tills SparService:s sista skrivning har körts. ]]
+	lamnar: boolean,
 }
 local tillstand: { [Player]: Tillstand } = {}
+local sessionNr = 0
 
 --[[ Markören i en save: bara "klarad minst en gång". ]]
 local function harMarkor(save: any, typ: string): boolean
@@ -157,12 +165,15 @@ local function projektion(t: Tillstand?): any
 		lektioner[typ] = lage
 	end
 	return table.freeze({ historik = if t and t.betrodd then "betrodd" else "okand",
-		lektioner = table.freeze(lektioner) })
+		lektioner = table.freeze(lektioner),
+		session = if t then t.session else 0, rev = if t then t.rev else 0 })
 end
 LektionsMinne._projektion = projektion
 
 local function skicka(player: Player)
 	local t = tillstand[player]
+	if t and t.lamnar then return end -- R1: aldrig UI efter avfärden
+	if t then t.rev += 1 end
 	local k = Aktor.klient(player)
 	if not k then return end
 	pcall(function() Net.get("LektionsMinneSync"):FireClient(k, projektion(t)) end)
@@ -180,7 +191,11 @@ end
 
 forsokSpara = function(player: Player, token: {})
 	local t = tillstand[player]
-	if not t or t.token ~= token then return end -- lämnat, eller ny session
+	if not t or t.token ~= token then return end -- glömd, eller ny session
+	--[[ R1: under avfärden skriver bara SparService:s sista skrivning; ett
+		schemalagt eller sent försök gör ingenting (ingen samtidig skrivning
+		på samma nyckel). ]]
+	if t.lamnar then return end
 	if next(t.vantar) == nil or t.skriverNu then return end
 	--[[ Markörerna in i den AKTUELLA cachade saven (den kan ha ersatts sedan
 		de noterades). Transformatorn gör samma sak igen i varje körning. ]]
@@ -192,6 +207,16 @@ forsokSpara = function(player: Player, token: {})
 	local nu = tillstand[player]
 	if not nu or nu.token ~= token then return end -- ett sent svar till en ny session rör ingenting
 	nu.skriverNu = false
+	if nu.lamnar then
+		--[[ R1: skrivningen var i luften när spelaren lämnade. Det den bar är
+			bekräftat; resten tar SparService:s sista skrivning (kroken lägger in
+			det). Ingen UI, inga nya försök. ]]
+		if ok and nu.tackt then
+			for typ in nu.tackt do nu.bekraftad[typ] = true; nu.vantar[typ] = nil end
+		end
+		nu.tackt = nil
+		return
+	end
 	if ok and nu.tackt then
 		local nagot = false
 		for typ in nu.tackt do
@@ -262,8 +287,10 @@ end
 
 --[[ ── LADDNING, AVFÄRD, KLIENTENS LÄSNING ─────────────────────────── ]]
 local function efterLaddning(player: Player, save: any)
+	sessionNr += 1
 	local t: Tillstand = { token = {}, betrodd = SparService.betroddLasning(player), bekraftad = {},
-		vantar = {}, tackt = nil, retry = 0, skriverNu = false }
+		vantar = {}, tackt = nil, retry = 0, skriverNu = false, session = sessionNr, rev = 0,
+		lamnar = false }
 	if t.betrodd then
 		for _, typ in LektionsMinne.TYPER do
 			if harMarkor(save, typ) then t.bekraftad[typ] = true end
@@ -283,11 +310,32 @@ function LektionsMinne.start()
 	startad = true
 	SparService.foreSkrivning(foreSkrivning)
 	SparService.efterLaddning(efterLaddning)
-	Players.PlayerRemoving:Connect(function(player)
-		--[[ Tokenen dör med sessionen: sena svar och schemalagda försök rör
-			inte en ny session. Markörerna ligger kvar i SparService-minnet,
-			som skriver vid avfärd som förut. ]]
+	--[[ R1: AVFÄRDEN DRÄNERAR, den kastar inte. Före SparService:s sista
+		skrivning: markera att spelaren lämnar (ingen UI, inga nya försök) men
+		BEHÅLL det väntande och tokenen, så att `foreSkrivning` lägger in dem i
+		varje körning av den sista skrivningen. Efter den: släpp tillståndet.
+		Föll den sista skrivningen är markörerna förlorade — det sägs i en
+		varning, aldrig till spelaren som sparat. ]]
+	SparService.foreAvfard(function(player: Player)
+		local t = tillstand[player]
+		if t then t.lamnar = true end
+	end)
+	SparService.efterAvfard(function(player: Player, ok: boolean)
+		local t = tillstand[player]
+		if t and not ok and next(t.vantar) ~= nil then
+			local lista = {}
+			for typ in t.vantar do table.insert(lista, typ) end
+			warn(("[LektionsMinne] %s lämnade och den sista skrivningen föll: %s sparades INTE.")
+				:format(Aktor.namn(player), table.concat(lista, ", ")))
+		end
 		tillstand[player] = nil
+	end)
+	Players.PlayerRemoving:Connect(function(player)
+		--[[ Säkerhetsnät om SparService inte är startad: utan dess avfärd
+			finns ingen sista skrivning att vänta på. ]]
+		if not SparService.redo(player) and SparService.save(player) == nil then
+			tillstand[player] = nil
+		end
 	end)
 end
 
@@ -298,6 +346,10 @@ end
 function LektionsMinne._forsokSparaForProv(player: Player)
 	local t = tillstand[player]
 	if t then forsokSpara(player, t.token) end
+end
+--[[ Provkrok: ett försök med en GIVEN token (t.ex. en gammal session). ]]
+function LektionsMinne._forsokSparaMedTokenForProv(player: Player, token: {})
+	forsokSpara(player, token)
 end
 function LektionsMinne._efterLaddningForProv(player: Player)
 	local s = SparService.save(player)

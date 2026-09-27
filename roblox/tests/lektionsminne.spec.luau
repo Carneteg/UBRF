@@ -144,6 +144,64 @@ do
 	request("finish")
 end
 
+print("\n── 3b. R1: klar INNE i begar — sync, och retry som nollställer i samma anrop ──")
+--[[ BÄNKANTAGANDEN (KONTROLL nedan):
+	- HorseService stegar lektionerna när dess ackumulator når 0,25 s;
+	  varje 0,25 s-steg nollar den;
+	- med dt 0,0625 (exakt i binärt) stegas lektionen var fjärde bildruta;
+	- halten mäts i observationens tid, inte i lektionens `now`.
+	Precis före den bildruta som skulle stega lektionen anropas begäran i
+	stället: blir halten klar just där, sker övergången INNE i `begar`. En
+	KONTROLL säger om Heartbeaten hann före (då mäter fallet inget). ]]
+local function nollstall(typ)
+	tillstand().bekraftad[typ] = nil
+	tillstand().vantar[typ] = nil
+	SparService.save(p).framsteg[LM.nyckel(typ)] = nil
+	if rad() then rad().framsteg[LM.nyckel(typ)] = nil end
+end
+local function tillKlarIBegar(op)
+	still(0, 18, G.HALT_FORE + 0.5)
+	aid("driv")
+	for v = 19, X.v - 1 do step(X.u, v) end
+	aid("broms")
+	local fore = s.voltLektion and s.voltLektion.forsokId
+	local acc, iBegar, iHjarta = 0, false, false
+	for _ = 1, math.ceil((G.HALT_EFTER + 2) / 0.0625) do
+		if acc + 0.0625 >= 0.25 then
+			request(op)
+			local l = s.voltLektion
+			if op == "sync" and l and l.lage == "complete" then iBegar = true; break end
+			if op == "retry" and l and l.forsokId ~= fore then iBegar = true; break end
+		end
+		step(X.u, X.v - 0.5, 0.0625)
+		acc += 0.0625
+		if acc >= 0.25 then acc = 0 end
+		local l = s.voltLektion
+		if l and l.lage == "complete" then iHjarta = true; break end
+	end
+	return iBegar, iHjarta, fore
+end
+do
+	nollstall("halt")
+	request("start")
+	local iBegar, iHjarta = tillKlarIBegar("sync")
+	check("KONTROLL: övergången skedde i sync, inte i Heartbeaten", iBegar and not iHjarta)
+	check("sync: markören föddes av övergången inne i begar",
+		tillstand().vantar.halt == true or tillstand().bekraftad.halt == true)
+	nollstall("halt")
+	request("retry")
+	local iBegarR, iHjartaR, foreR = tillKlarIBegar("retry")
+	check("KONTROLL: övergången skedde i retry, inte i Heartbeaten", iBegarR and not iHjartaR)
+	local ny = s.voltLektion
+	check("retry: det nya försöket bär inget resultat (nollställt i samma anrop)",
+		ny ~= nil and ny.forsokId ~= foreR and ny.resultat == nil)
+	check("retry: det gamla försöket är slutfört i RidForsok", (RidForsok.ogonblick(foreR) or {}).orsak == "slutford")
+	check("retry: markören föddes ändå, innan nollställningen",
+		tillstand().vantar.halt == true or tillstand().bekraftad.halt == true)
+	LM._forsokSparaForProv(p)
+	request("finish")
+end
+
 --[[ Ett riktigt RidForsok-försök med en given övning och definition, stängt
 	med `orsak`, och en lektionsbild formad som producentens. ]]
 local function forsok(ovning, definition, orsak)
@@ -318,7 +376,14 @@ do
 	check("fullt: markören får inte plats och står som väntande", proj().lektioner.halvvolt == "vantar"
 		and save.framsteg[LM.nyckel("halvvolt")] == nil)
 	check("inga andra framsteg togs bort", save.framsteg["annat1"] ~= nil)
-	for i = 1, Sparning.MAX_FRAMSTEG do save.framsteg["annat" .. i] = nil end
+	--[[ Städa: fyllnaden bort ur minnet OCH ur lagret (skrivningarna ovan
+		lade dit den), och den väntande halvvolten släpps — annars skulle
+		avsnitt 9:s sista skrivning nekas som full av fel skäl. ]]
+	for i = 1, Sparning.MAX_FRAMSTEG do
+		save.framsteg["annat" .. i] = nil
+		if rad() then rad().framsteg["annat" .. i] = nil end
+	end
+	tillstand().vantar.halvvolt = nil
 end
 
 print("\n── 8. Otillförlitlig historik: okänd, aldrig 'inga lektioner' ──")
@@ -349,83 +414,226 @@ do
 	end
 end
 
-print("\n── 9. Avfärd och återkomst ──")
-do
-	local tp = tillstand()
-	Players.PlayerRemoving:Fire(p)
-	check("avfärd: modulens tillstånd är borta", LM._tillstandForProv(p) == nil)
-	LM._forsokSparaForProv(p) -- ett sent schemalagt försök
-	check("ett sent försök efter avfärden rör ingenting", LM._tillstandForProv(p) == nil)
+print("\n── 9. R1: avfärd MEDAN en skrivning är i luften — dränering, omkörning, fel ──")
+--[[ På schemat (`__schemaPa`): `task.spawn` köar en korutin, `task.wait` i
+	huvudtråden stegar kön och lämnar över i en schemalagd tråd.
+	`efterSkriv` väntar (`task.wait`) EFTER att raden landat, så skrivning A
+	står utestående med cachen redan ersatt. Klar B kommer då; sedan fyras
+	PlayerRemoving medan A väntar.
+	BÄNKANTAGANDE: SparService:s avfärdshanterare körs i huvudtråden, och dess
+	`stangningFor` stegar schemat med `task.wait` tills A blivit klar. ]]
+local function aterkom()
 	SparService._glomForProv(p)
 	Players._spelare = { p }
 	Players.PlayerAdded:Fire(p)
 	if Players.PlayerAdded.slutfor then Players.PlayerAdded:slutfor() end
-	local t2 = LM._tillstandForProv(p)
-	check("återkomst: ny session, ny token", t2 ~= nil and t2.token ~= tp.token)
-	check("den betrodda omläsningen visar sparade lektioner som sparade",
-		t2.betrodd and t2.bekraftad.halt == true and LM._projektion(t2).lektioner.halt == "sparad")
+	step(0, 18)
+	root.CFrame = CFrame.new(a0); root.Position = a0
+	local ok2, _, id2 = HorseService.tryMount(p, horse)
+	if ok2 then id = id2 end
+	step(0, 18); step(0, 18)
+	return ok2 == true
+end
+local gammalToken = nil
+local function avfardsfall(namn, typA, typB, variant)
+	nollstall(typA); nollstall(typB)
+	__datastore.felSkriv = true
+	LM.slutford(s, lektion(typA, forsok(IDENT[typA][1], IDENT[typA][2])))
+	__datastore.felSkriv = false
+	check(namn .. " KONTROLL: A väntar", tillstand().vantar[typA] == true)
+	gammalToken = tillstand().token
+	__schemaPa(true)
+	__datastore.efterSkriv = function()
+		__datastore.efterSkriv = nil
+		task.wait() -- A står utestående efter att raden landat
+	end
+	task.spawn(LM._forsokSparaForProv, p)
+	__schemaSteg()
+	check(namn .. " KONTROLL: A utestående, raden landad", tillstand().skriverNu == true and radMarkor(typA) ~= nil)
+	LM.slutford(s, lektion(typB, forsok(IDENT[typB][1], IDENT[typB][2])))
+	check(namn .. " KONTROLL: B väntar, finns i den ersatta cachen men inte i lagret",
+		tillstand().vantar[typB] == true and SparService.save(p).framsteg[LM.nyckel(typB)] ~= nil
+		and radMarkor(typB) == nil)
+	if variant == "omkor" then __datastore.omkorTransform = true end
+	if variant == "fel" then __datastore.felSkriv = true end
+	local skickatFore = #(Networking.get("LektionsMinneSync")._skickat or {})
+	Players.PlayerRemoving:Fire(p)
+	__datastore.omkorTransform = false
+	__datastore.felSkriv = false
+	__schemaTomKo()
+	__schemaPa(false)
+	check(namn .. ": ingen UI efter avfärden",
+		#(Networking.get("LektionsMinneSync")._skickat or {}) == skickatFore)
+	check(namn .. ": tillståndet släpptes först efter den sista skrivningen", LM._tillstandForProv(p) == nil)
+	local fB = radMarkor(typB)
+	if variant == "fel" then
+		check(namn .. ": den sista skrivningen föll — B finns INTE i lagret", fB == nil)
+	else
+		check(namn .. ": B följde med den sista skrivningen, en boolesk markör", fB ~= nil and fB.forsok == 1
+			and fB.klarade == 1)
+	end
+	check(namn .. ": A finns i lagret", radMarkor(typA) ~= nil)
+	check(namn .. " KONTROLL: återkomst och ny ritt", aterkom())
+	local pr = proj()
+	check(namn .. ": betrodd omläsning — A sparad", pr.historik == "betrodd" and pr.lektioner[typA] == "sparad")
+	check(namn .. ": betrodd omläsning — B " .. (if variant == "fel" then "ej klarad" else "sparad"),
+		pr.lektioner[typB] == (if variant == "fel" then "ej_klarad" else "sparad"))
+end
+do
+	-- Ritten efter avsnitt 8 är öppen (p lämnade aldrig där).
+	avfardsfall("dränering", "tempo", "overgang", nil)
+	avfardsfall("omkörd transform", "serpentin", "vag_mitt", "omkor")
+	avfardsfall("fel i sista skrivningen", "vag_diag", "markbom", "fel")
+	local skriv0 = __datastore.forsok.skriv
+	LM._forsokSparaMedTokenForProv(p, gammalToken)
+	check("en gammal sessions token gör ingenting i den nya sessionen", __datastore.forsok.skriv == skriv0)
 end
 
-print("\n── 10. Klientens väljare: markering, ETT förslag, okänt, SV/EN, Tillbaka ──")
+print("\n── 10. R1: klientens ordning — gamla svar ersätter aldrig nyare fakta ──")
+local VC = VoltLektionController
+local syncEv = Networking.get("LektionsMinneSync")
+local function hitta(lista, del)
+	for _, k in ipairs(lista) do if string.find(k.text, del, 1, true) then return k end end
+	return nil
+end
 do
-	local VC = VoltLektionController
-	local function hitta(lista, del)
-		for _, k in ipairs(lista) do if string.find(k.text, del, 1, true) then return k end end
-		return nil
+	Sprak.satVal("sv")
+	VC.avbryt(); VC.start(id, nil)
+	local m0 = VC._minneForProv()
+	check("KONTROLL: klienten har serverns projektion", m0 ~= nil and m0.session >= 1)
+	local S, R = m0.session, m0.rev
+	local function med(lage, session, rev)
+		local l = {}
+		for _, typ in LM.TYPER do l[typ] = lage end
+		return { historik = "betrodd", lektioner = l, session = session, rev = rev }
+	end
+	-- En läsning före en push: pushen (nyare) kommer först, läsningens svar (äldre) sist.
+	syncEv.OnClientEvent:Fire(med("sparad", S, R + 5))
+	syncEv.OnClientEvent:Fire(med("ej_klarad", S, R + 3))
+	check("ett äldre svar efter en nyare push ignoreras", VC._minneForProv().lektioner.halt == "sparad"
+		and VC._minneForProv().rev == R + 5)
+	syncEv.OnClientEvent:Fire(med("vantar", S, R + 5))
+	check("samma revision tas emot (samma fakta, idempotent)", VC._minneForProv().lektioner.halt == "vantar")
+	syncEv.OnClientEvent:Fire(med("ej_klarad", S - 1, R + 99))
+	check("en ÄLDRE serversession ignoreras hur hög revisionen än är",
+		VC._minneForProv().lektioner.halt == "vantar")
+	syncEv.OnClientEvent:Fire({ historik = "betrodd", lektioner = {}, session = "x", rev = 1 })
+	check("en projektion utan giltig ordning tas inte emot", VC._minneForProv().lektioner.halt == "vantar")
+	-- Återkoppling: klientens nya läsning svarar med serverns ÄLDRE revision (R)
+	-- än den den håller (R + 5) — svaret från före ersätter inte det nyare.
+	VC.avbryt(); VC.start(id, nil)
+	check("efter återkoppling: ett äldre läsningssvar ersätter inte nyare fakta",
+		VC._minneForProv().lektioner.halt == "vantar" and VC._minneForProv().rev == R + 5)
+	-- En NY serversession (ny laddning på servern) tas emot och ersätter.
+	LM._efterLaddningForProv(p)
+	local server = LM._projektion(tillstand())
+	check("en nyare serversession från servern tas emot och gäller",
+		server.session > S and VC._minneForProv().session == server.session
+		and VC._minneForProv().lektioner.halt == server.lektioner.halt)
+	VC.avbryt()
+end
+
+print("\n── 11. R1: den FAKTISKA väljaren i Ugneta/Naromrade — 0 och 1..3 kort, kompakt, Tillbaka, fri, SV/EN ──")
+do
+	local UC = UgnetaController
+	local function sida(n)
+		UC.dolj()
+		if n and n > 0 then UC.visa("Kort", {}, n >= 1, nil, n >= 2, n >= 3) end
+		return UC.panel(4)
+	end
+	local function push(lektioner, historik)
+		local nu = VC._minneForProv()
+		syncEv.OnClientEvent:Fire({ historik = historik or "betrodd", lektioner = lektioner,
+			session = nu.session, rev = nu.rev + 1 })
 	end
 	Sprak.satVal("sv")
 	VC.avbryt(); VC.start(id, nil)
-	local m = VC._minneForProv()
-	check("KONTROLL: klienten fick sin projektion", m ~= nil and m.historik == "betrodd")
-	local topp = VC.panel().knappar
-	check("toppnivån: högst fyra val", #topp <= 4, #topp)
-	local tempoSparad = m.lektioner.tempo == "sparad" and m.lektioner.halt == "sparad"
-	local function forslagen(lista)
-		local n, k = 0, nil
-		for _, x in ipairs(lista) do
-			if string.find(x.text, "Förslag", 1, true) or string.find(x.text, "Öva igen", 1, true) then n += 1; k = x end
+	UC.satLektionsVal(VC.panel)
+	-- Känt läge: allt klart utom halvvolt och galopp → förslaget är halvvolt.
+	local l = {}
+	for _, typ in LM.TYPER do l[typ] = "sparad" end
+	l.halvvolt, l.galopp = "ej_klarad", "ej_klarad"
+	push(l)
+	local noll = sida(0)
+	check("0 kort: toppnivån har förslagsknappen och högst fyra rader",
+		#noll.knappar <= 4 and hitta(noll.knappar, "Förslag: " .. Sprak.t("halvvoltlektion.choose")) ~= nil)
+	for n = 1, 3 do
+		local sd = sida(n)
+		local kompakt = sd.knappar[#sd.knappar] -- den kompakta posten kommer efter korten
+		check(("%d kort: högst fyra rader, korten först, en kompakt post"):format(n), #sd.knappar <= 4
+			and #sd.knappar == n + 1, #sd.knappar)
+		if n == 1 then
+			kompakt.skicka()
+			local topp = UC.panel(4)
+			check("kompakt → toppsidan: ersättningssida vars TEXT säger förslaget och var det finns",
+				topp.ersatt == true and string.find(topp.text or "", Sprak.t("lektionsminne.forslag_var",
+					Sprak.t("halvvoltlektion.choose"), Sprak.t("lektionsval.vagar")), 1, true) ~= nil, topp.text)
+			check("toppsidan: gruppen mot förslaget är markerad, samma fyra knappar",
+				#topp.knappar == 4 and hitta(topp.knappar, Sprak.t("lektionsval.vagar")
+					.. Sprak.t("lektionsminne.markering.forslag")) ~= nil)
+			hitta(topp.knappar, Sprak.t("lektionsval.vagar")).skicka()
+			local vag = UC.panel(4)
+			check("gruppsidan: lektionen är markerad som förslag", hitta(vag.knappar,
+				Sprak.t("halvvoltlektion.choose") .. Sprak.t("lektionsminne.markering.forslag")) ~= nil)
+			Sprak.satVal("en")
+			vag = UC.panel(4) -- byggs OM efter språkbytet
+			check("på engelska: markeringen på engelska", hitta(vag.knappar, " · suggested") ~= nil)
+			Sprak.satVal("sv")
+			vag = UC.panel(4) -- och om igen, på svenska, innan Tillbaka söks
+			local tb = hitta(vag.knappar, Sprak.t("lektionsval.tillbaka"))
+			check("KONTROLL: Tillbaka finns på den ombyggda sidan", tb ~= nil)
+			if tb then tb.skicka() end
+			local ut = VC.panel()
+			check("Tillbaka landar på toppnivån (inte en ersättningssida, gruppknapparna där)",
+				ut.ersatt ~= true and hitta(ut.knappar, Sprak.t("lektionsval.gangart")) ~= nil)
 		end
-		return n, k
 	end
-	local antalF, fk = forslagen(topp)
-	--[[ Efter avsnitt 7 fick halvvolten aldrig plats; efter omläsningen är
-		den alltså den första oklarade i ordningen. ]]
-	check("ETT förslag på toppnivån, och det är första oklarade i ordningen (halvvolt)",
-		antalF == 1 and fk ~= nil and string.find(fk.text, Sprak.t("halvvoltlektion.choose"), 1, true) ~= nil,
-		fk and fk.text)
-	-- Gruppsidan: markering.
-	local grupp = hitta(topp, Sprak.t("lektionsval.gangart"))
-	if grupp then grupp.skicka() end
-	local sida = VC.panel()
-	check("gruppsidan: halt är markerad som klarad", hitta(sida.knappar, Sprak.t("lektionsminne.markering.sparad")) ~= nil
-		and tempoSparad)
-	Sprak.satVal("en")
-	sida = VC.panel()
-	check("på engelska: samma markering, engelska ord", hitta(sida.knappar, " · done") ~= nil)
-	Sprak.satVal("sv")
-	local tillbaka = hitta(sida.knappar, Sprak.t("lektionsval.tillbaka"))
-	if tillbaka then tillbaka.skicka() end
-	check("Tillbaka leder till toppnivån som förut", VC.panel().ersatt ~= true or #VC.panel().knappar <= 4)
-	-- Förslaget väljer lektionen men startar ingenting.
-	_, fk = forslagen(VC.panel().knappar)
+	-- Alla klarade: öva igen.
+	for _, typ in LM.TYPER do l[typ] = "sparad" end
+	push(l)
+	local alla = sida(0)
+	check("alla klarade: 'Öva igen' på den första, inget diplom",
+		hitta(alla.knappar, "Öva igen: " .. Sprak.t("haltlektion.choose")) ~= nil)
+	-- Okänd historik: inget förslag; toppsidan säger det neutralt.
+	push({}, "okand")
+	local ok0 = sida(0)
+	check("okänd historik: inget förslag på toppnivån", hitta(ok0.knappar, "Förslag") == nil
+		and hitta(ok0.knappar, "Öva igen") == nil)
+	local ok1 = sida(1)
+	ok1.knappar[#ok1.knappar].skicka()
+	check("okänd historik: toppsidan säger den neutrala raden", string.find(UC.panel(4).text or "",
+		Sprak.t("lektionsminne.okand"), 1, true) ~= nil)
+	-- Fri ridning: välj en lektion och avsluta den på riktigt → fri.
+	for _, typ in LM.TYPER do l[typ] = "sparad" end
+	l.galopp = "ej_klarad"
+	push(l)
+	VC.avbryt(); VC.start(id, nil)
+	UC.dolj()
+	VC.valj("halt")
+	local fin = hitta(VC.panel().knappar, Sprak.t("haltlektion.finish"))
+	if fin then fin.skicka() end
+	local friSida = UC.panel(4)
+	check("KONTROLL: fri ridning (ersättningssida med 'Andra övningar')", friSida.ersatt == true
+		and hitta(friSida.knappar, Sprak.t("voltlektion.lessons")) ~= nil)
+	check("fri ridning: fyra rader, och förslaget med plats står i texten",
+		#friSida.knappar <= 4 and string.find(friSida.text or "", Sprak.t("lektionsminne.forslag_var",
+			Sprak.t("galopplektion.choose"), Sprak.t("lektionsval.gangart")), 1, true) ~= nil, friSida.text)
+	-- Förslagsknappen är bunden till sitt förslag.
+	VC.avbryt(); VC.start(id .. "-bunden", nil)
+	UC.dolj()
+	l.galopp = "ej_klarad"
+	push(l)
+	local fk = hitta(VC.panel().knappar, "Förslag")
+	l.galopp = "sparad"; l.markbom = "ej_klarad"
+	push(l)
 	if fk then fk.skicka() end
-	--[[ Efter avsnitt 9 kan ritten vara riven av avfärden; frågan är bara
-		att valet inte öppnade något försök. ]]
-	check("förslaget startar inget försök (Start krävs)", fk ~= nil and RidForsok.aktivt(id) == nil)
-	-- Okänd historik: inget förslag, neutral rad.
-	-- En NY ritt (annat märke): valet nollställs och toppnivån visas.
-	VC.avbryt(); VC.start(id .. "-okand", nil)
-	-- Efter startens egen läsning: en push med okänd historik.
-	Networking.get("LektionsMinneSync").OnClientEvent:Fire({ historik = "okand", lektioner = {} })
-	check("KONTROLL: klienten håller nu okänd historik", VC._minneForProv().historik == "okand")
-	topp = VC.panel().knappar
-	check("okänd historik: inget förslag", (forslagen(topp)) == 0)
-	-- Främmande typer och värden tvättas bort.
-	Networking.get("LektionsMinneSync").OnClientEvent:Fire({ historik = "betrodd",
-		lektioner = { halt = "sparad", hopp = "sparad", tempo = "mastare" } })
+	check("en förslagsknapp från före en minnesändring väljer ingenting", VC.lektion() == false)
+	-- Främmande typer och lägen tvättas bort.
+	push({ halt = "sparad", hopp = "sparad", tempo = "mastare" })
 	local mm = VC._minneForProv()
 	check("projektionen tvättas: bara de tio, bara kända lägen", mm.lektioner.hopp == nil
 		and mm.lektioner.tempo == "okand" and mm.lektioner.halt == "sparad")
+	UC.satLektionsVal(nil)
 	VC.avbryt()
 end
 

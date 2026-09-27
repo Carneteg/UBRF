@@ -108,6 +108,22 @@ function SparService.foreSkrivning(fn: (Player, Sparning.Save) -> ())
 	table.insert(foreSkrivningKrokar, fn)
 end
 
+--[[ C4 R1: AVFÄRDEN I TRE STEG, för ett begränsat åtagande (LektionsMinne).
+	`foreAvfard(player)` körs FÖRST i avfärdshanteraren; sedan väntar
+	`stangningFor` ut en pågående skrivning (begränsat) och gör EN sista;
+	sist körs `efterAvfard(player, ok)` med den sista skrivningens svar, innan
+	spelaren glöms. Varje krok i egen pcall. ]]
+local foreAvfardKrokar: { (Player) -> () } = {}
+local efterAvfardKrokar: { (Player, boolean) -> () } = {}
+
+function SparService.foreAvfard(fn: (Player) -> ())
+	table.insert(foreAvfardKrokar, fn)
+end
+
+function SparService.efterAvfard(fn: (Player, boolean) -> ())
+	table.insert(efterAvfardKrokar, fn)
+end
+
 --[[ Studio utan API-åtkomst, och alla lokala prov, ska INTE krascha på
 	rad ett. `GetDataStore` kastar då, och resultatet är nil — vilket
 	`kanSpara` redan hanterar som "spela, men spara inte". ]]
@@ -652,7 +668,18 @@ function SparService.start()
 	Players.PlayerRemoving:Connect(function(player)
 		laddningar[player] = nil
 		redo[player] = nil
-		SparService.skriv(player)
+		for _, krok in ipairs(foreAvfardKrokar) do
+			local okK, felK = pcall(krok, player)
+			if not okK then warn("[Spar] en foreAvfard-krok föll: " .. tostring(felK)) end
+		end
+		--[[ C4 R1: en pågående skrivning vänta ut (begränsat) i stället för
+			att få ett "upptaget"-nej och glömma cachen. Utan en pågående
+			skrivning är detta exakt det `skriv` som stod här förut. ]]
+		local ok = SparService.stangningFor(player)
+		for _, krok in ipairs(efterAvfardKrokar) do
+			local okK, felK = pcall(krok, player, ok)
+			if not okK then warn("[Spar] en efterAvfard-krok föll: " .. tostring(felK)) end
+		end
 		glom(player)
 	end)
 	--[[ DEN ENDA `PlayerAdded`-lyssnaren i servern. Se barriären ovan. ]]
@@ -698,6 +725,8 @@ end
 function SparService._glomHookarForProv()
 	efterLaddning = {}
 	foreSkrivningKrokar = {}
+	foreAvfardKrokar = {}
+	efterAvfardKrokar = {}
 end
 
 return SparService

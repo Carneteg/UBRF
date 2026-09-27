@@ -17,8 +17,13 @@ local MINNE_LAGEN = { sparad = true, vantar = true, ej_klarad = true, okand = tr
 	en riktning, inte ett påstående om att något bedömts. ]]
 local MINNE_ORDNING = { "halt", "tempo", "volt", "overgang", "vag_mitt", "vag_diag", "serpentin",
 	"halvvolt", "markbom", "galopp" }
-local minne: { historik: string, lektioner: { [string]: string } }? = nil
+local minne: { historik: string, lektioner: { [string]: string }, session: number, rev: number }? = nil
 local minneLyssnare: any = nil
+
+local function heltal(x: any): number
+	if type(x) ~= "number" or x ~= x or x < 0 or x == math.huge or x % 1 ~= 0 then return -1 end
+	return x
+end
 
 local function tvattMinne(p: any): any
 	if type(p) ~= "table" or type(p.lektioner) ~= "table" then return nil end
@@ -27,8 +32,28 @@ local function tvattMinne(p: any): any
 		local l = p.lektioner[typ]
 		ut[typ] = if type(l) == "string" and MINNE_LAGEN[l] then l else "okand"
 	end
-	return { historik = if p.historik == "betrodd" then "betrodd" else "okand", lektioner = ut }
+	return { historik = if p.historik == "betrodd" then "betrodd" else "okand", lektioner = ut,
+		session = heltal(p.session), rev = heltal(p.rev) }
 end
+
+--[[ R1: ORDNINGEN. Push och läsningssvar tas emot likadant: bara en
+	projektion från en NYARE serversession, eller samma session med minst
+	samma revision, ersätter den som hålls. Ett gammalt svar som kommer efter
+	en nyare push, eller ett svar från före en återkoppling, ignoreras. ]]
+local function taEmotMinne(p: any)
+	local m = tvattMinne(p)
+	if not m or m.session < 0 or m.rev < 0 then return end
+	local nu = minne
+	if nu and (m.session < nu.session or (m.session == nu.session and m.rev < nu.rev)) then return end
+	minne = m
+end
+
+--[[ Var förslaget finns i menyn: gruppen på toppnivån (nil = volten, som
+	står direkt) och en eventuell undergrupp. ]]
+local MINNE_GRUPP = { halt = "gangart", tempo = "gangart", overgang = "gangart", galopp = "gangart",
+	serpentin = "vagar", halvvolt = "vagar", vag_mitt = "vagar", vag_diag = "vagar", markbom = "vagar" }
+local MINNE_UNDERGRUPP = { overgang = "overgangar", galopp = "overgangar", vag_mitt = "linjer",
+	vag_diag = "linjer", markbom = "linjer" }
 
 local function klarad(typ: string): boolean
 	local l = minne and minne.lektioner[typ]
@@ -617,7 +642,33 @@ local function valLektion(typ: string)
 	local l = minne and minne.lektioner[typ]
 	if l == "sparad" then k.text ..= Sprak.t("lektionsminne.markering.sparad")
 	elseif l == "vantar" then k.text ..= Sprak.t("lektionsminne.markering.vantar") end
+	--[[ R1: förslaget syns också där det faktiskt väljs. ]]
+	if forslag() == typ then k.text ..= Sprak.t("lektionsminne.markering.forslag") end
 	return k
+end
+
+--[[ R1: en gruppknapp som leder mot förslaget bär en markering. ]]
+local function valGrupp(nyckel: string, grupp: string, fn: () -> ())
+	local k = val(nyckel, fn)
+	local typ = forslag()
+	if typ and (MINNE_GRUPP[typ] == grupp or MINNE_UNDERGRUPP[typ] == grupp) then
+		k.text ..= Sprak.t("lektionsminne.markering.forslag")
+	end
+	return k
+end
+
+--[[ R1: förslaget som en mening med var det finns, för ersättningssidorna
+	(vars text faktiskt ritas). ]]
+local function forslagsRad(): string?
+	local typ, igen = forslag()
+	if not typ then return nil end
+	local namn = text(valNyckel(typ))
+	local grupp = MINNE_GRUPP[typ]
+	if grupp then
+		return Sprak.t(if igen then "lektionsminne.igen_var" else "lektionsminne.forslag_var", namn,
+			text(if grupp == "gangart" then "group_gangart" else "group_vagar"))
+	end
+	return Sprak.t(if igen then "lektionsminne.igen_rad" else "lektionsminne.forslag_rad", namn)
 end
 
 --[[ C4: sidans rad om minnet (okänd historik eller osparat), eller nil. ]]
@@ -640,7 +691,9 @@ end
 local function forslagsKnapp()
 	local typ, igen = forslag()
 	if not typ then return nil end
-	local k = val(valNyckel(typ), function() V.valj(typ) end)
+	--[[ R1: bunden till SITT förslag — har minnet ändrats sedan knappen
+		ritades gör den ingenting (panelen ritas om med det nya). ]]
+	local k = val(valNyckel(typ), function() if forslag() == typ then V.valj(typ) end end)
 	k.text = Sprak.t(if igen then "lektionsminne.igen" else "lektionsminne.forslag", text(valNyckel(typ)))
 	return k
 end
@@ -659,7 +712,7 @@ function V.panel()
 			return { ersatt=true, text=medMinne(text("pick")), ovning="", vantar=false, knappar={
 				valLektion("halt"),
 				valLektion("tempo"),
-				val("group_overgangar",function() meny = "overgangar" end),
+				valGrupp("group_overgangar", "overgangar", function() meny = "overgangar" end),
 				val("back",function() meny = nil end) } }
 		elseif meny == "overgangar" then
 			-- Undergrupp: Tillbaka leder till Gångarter och fart.
@@ -671,7 +724,7 @@ function V.panel()
 			return { ersatt=true, text=medMinne(text("pick")), ovning="", vantar=false, knappar={
 				valLektion("serpentin"),
 				valLektion("halvvolt"),
-				val("group_linjer",function() meny = "linjer" end),
+				valGrupp("group_linjer", "linjer", function() meny = "linjer" end),
 				val("back",function() meny = nil end) } }
 		elseif meny == "linjer" then
 			-- Undergrupp: raka linjer och markbommen; Tillbaka leder till Ridvägar.
@@ -681,15 +734,20 @@ function V.panel()
 				valLektion("markbom"),
 				val("back",function() meny = "vagar" end) } }
 		elseif meny == "topp" then
-			return { ersatt=true, text=medMinne(text("pick")), ovning="", vantar=false, knappar={
+			--[[ R1: den KOMPAKTA vägen (med Ugnetas kortknappar) landar här.
+				Knapparna är desamma; texten — som ritas på en ersättningssida —
+				säger förslaget och var det finns, och minnets rad. ]]
+			local rad = forslagsRad()
+			local t = medMinne(text("pick"))
+			return { ersatt=true, text=if rad then (t .. " " .. rad) else t, ovning="", vantar=false, knappar={
 				valLektion("volt"),
-				val("group_gangart",function() meny = "gangart" end),
-				val("group_vagar",function() meny = "vagar" end),
+				valGrupp("group_gangart", "gangart", function() meny = "gangart" end),
+				valGrupp("group_vagar", "vagar", function() meny = "vagar" end),
 				val("back",function() meny = nil end) } }
 		end
 		local knappar = { valLektion("volt"),
-			val("group_gangart",function() meny = "gangart" end),
-			val("group_vagar",function() meny = "vagar" end) }
+			valGrupp("group_gangart", "gangart", function() meny = "gangart" end),
+			valGrupp("group_vagar", "vagar", function() meny = "vagar" end) }
 		local forslagsText: string? = nil
 		if fri then
 			table.insert(knappar,val("lessons",function()
@@ -697,10 +755,11 @@ function V.panel()
 			end))
 			--[[ C4: vid fri ridning är sidan full (fyra val); förslaget nämns i
 				texten i stället för att tränga ut ett val. ]]
-			local typ, igen = forslag()
-			if typ then
-				forslagsText = Sprak.t(if igen then "lektionsminne.igen" else "lektionsminne.forslag",
-					text(valNyckel(typ)))
+			--[[ R1: ersättningssida — texten ritas: förslaget med plats, och
+				minnets rad (okänt/osparat). ]]
+			local rad, minnesText = forslagsRad(), minnesRad()
+			if rad or minnesText then
+				forslagsText = table.concat({ rad or "", minnesText or "" }, if rad and minnesText then " " else "")
 			end
 		else
 			--[[ C4: utan fri ridning finns en fjärde plats: ETT valfritt förslag. ]]
@@ -755,15 +814,11 @@ function V.start(marke, legacy)
 	--[[ C4: minnet är spelarens eget och gäller över ritter; det hämtas vid
 		varje start (läsning bara) och följer serverns push. EN lyssnare. ]]
 	if not minneLyssnare then
-		minneLyssnare = Net.get("LektionsMinneSync").OnClientEvent:Connect(function(p)
-			local m = tvattMinne(p)
-			if m then minne = m end
-		end)
+		minneLyssnare = Net.get("LektionsMinneSync").OnClientEvent:Connect(taEmotMinne)
 	end
 	task.spawn(function()
 		local ok, p = pcall(function() return Net.get("LektionsMinne"):InvokeServer("sync") end)
-		local m = if ok then tvattMinne(p) else nil
-		if m then minne = m end
+		if ok then taEmotMinne(p) end
 	end)
 	if valt then skicka("sync") end
 end
