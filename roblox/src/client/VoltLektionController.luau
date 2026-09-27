@@ -5,6 +5,7 @@ local Sprak = require(game:GetService("ReplicatedStorage").HorseCore.Sprak)
 local Plats = require(game:GetService("ReplicatedStorage").HorseCore.Ridhusplats)
 local Ugneta = require(script.Parent.UgnetaController)
 local Aterkoppling = require(script.Parent.LektionsAterkoppling)
+local Installning = require(script.Parent.LararInstallning)
 --[[ C4: spelarens EGET lektionsminne, som serverns projektion (läsning
 	bara). Tre lägen per lektion — "sparad", "vantar", "ej_klarad" — och
 	"okand" när historiken inte gick att lita på. Aldrig ett betyg. ]]
@@ -31,6 +32,15 @@ local minneLyssnare: any = nil
 local HALSNING_S = 6
 local halsning: { forsokId: any, typ: string, ritt: string, kvar: number }? = nil
 local halsadForsok: any = nil
+--[[ R1: VALETS GENERATION. Räknas upp vid VARJE `V.valj` (även samma typ,
+	även när ingen sync kan skickas för att en begäran väntar), och vid
+	`V.start`/`V.avbryt`. En begäran fångar den; en hälsning kräver att den
+	är oförändrad när svaret kommer. ]]
+local valGen = 0
+--[[ R1: EN prenumeration för modulens livstid (som minnets lyssnare): "inga"
+	tar bort en synlig hälsning direkt. Den är redan förbrukad (försöket är
+	markerat), så den kommer inte tillbaka vid Inga -> Normalt/Färre. ]]
+local installLyssnare: (() -> ())? = nil
 local AKTIVA_LAGEN = { approach = true, baseline = true, riding = true, halt1 = true, walk = true,
 	walk1 = true, trot = true, walk2 = true, to_start = true, route = true, steady = true,
 	canter = true, crossing = true, exit = true }
@@ -370,7 +380,7 @@ local function skicka(op)
 	if not ritt or (pending and op~="finish") then return end
 	requestNr += 1
 	local token, gen, id = requestNr, generation, ritt
-	local typVid = typ
+	local typVid, valVid = typ, valGen
 	if op~="sync" then sekvens += 1 end
 	local seq = sekvens
 	pending, pendingTid, fel = true, 0, nil
@@ -389,7 +399,7 @@ local function skicka(op)
 			svaret bär, när samma försök fortfarande är aktuellt och aktivt i den
 			bild som hålls (en nyare push kan ha kommit först), och när försöket
 			inte redan hälsats. Samma typ som begäran skickades med. ]]
-		if ok == true and (op == "start" or op == "retry") and typ == typVid
+		if ok == true and (op == "start" or op == "retry") and typ == typVid and valGen == valVid
 			and type(b) == "table" and b.forsokId ~= nil and b.rittId == id and (b.typ or "volt") == typVid
 			and bild ~= nil and bild.forsokId == b.forsokId and AKTIVA_LAGEN[bild.lage]
 			and halsadForsok ~= b.forsokId then
@@ -414,6 +424,7 @@ function V.valj(vald: string?)
 		or vald == "markbom" then vald else "volt"
 	if ny ~= typ then typ, bild = ny, nil; rivGuide() end
 	halsning = nil
+	valGen += 1
 	valt, fri, fel, meny = true, false, nil, nil
 	Ugneta.dolj()
 	skicka("sync")
@@ -820,6 +831,9 @@ function V.panel()
 		försöket, i samma typ och ritt, i ett aktivt läge och utan vänta/fel.
 		Stämmer något inte längre tas den bort för gott. Uppgiften och
 		framstegen står kvar efter den. ]]
+	--[[ R1: Inga tar bort hälsningen även här (en läsning av valet, inte
+		`valfriKommentar` — Färre-räknaren rörs inte av en omritning). ]]
+	if halsning and Installning.kommentarer() == "inga" then halsning = nil end
 	local h = halsning
 	if h then
 		if h.ritt == ritt and h.typ == typ and b.forsokId == h.forsokId and AKTIVA_LAGEN[b.lage]
@@ -855,7 +869,13 @@ function V.start(marke, legacy)
 	--[[ C2: återkoppling eller ny ritt: en hälsning visas aldrig igen. I en
 		NY ritt glöms även det senast hälsade försöket (ritten avgränsar det). ]]
 	halsning = nil
+	valGen += 1
 	if not samma then halsadForsok = nil end
+	if not installLyssnare then
+		installLyssnare = Installning.vidByte(function()
+			if Installning.kommentarer() == "inga" then halsning = nil end
+		end)
+	end
 	if not samma then valt,fri,bild,sekvens,meny=false,false,nil,0,nil end
 	ritt,gaLektion,pending,fel=marke,legacy,false,nil
 	attached = true
@@ -899,6 +919,7 @@ function V.avbryt()
 	-- Keep selection only for reattachment to this SAME accepted ride.
 	generation+=1; requestNr+=1; pending=false; attached=false; rivGuide()
 	halsning = nil
+	valGen += 1
 	Ugneta.satLektionsVal(nil)
 end
 

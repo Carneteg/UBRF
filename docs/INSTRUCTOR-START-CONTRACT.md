@@ -144,3 +144,75 @@ arrives within the press):
 
 The lesson-memory event-order fixtures are NOT evidence of an executed
 deferred `InvokeServer` chain.
+
+## R1 correction ([INSTRUCTOR_START_SOURCE_R1](https://github.com/Carneteg/UBRF/pull/264#issuecomment-5857262207))
+
+This section was written BEFORE the R1 production edits.
+
+### 1. Turning comments Off removes a visible greeting immediately
+
+- **The subscription.** `VoltLektionController` holds ONE module-lifetime
+  subscription to `LararInstallning.vidByte`, connected once like the
+  memory listener. It is never re-connected on reattach or rebuild.
+- **On change to "inga".** The current greeting is removed. It is already
+  consumed, because its attempt is marked greeted, so switching Off → Normal
+  or Off → Fewer never brings it back, however fast the switch.
+- **When the panel is drawn.** If comments are "inga", the greeting is
+  removed as well. This is a read of the setting, NOT a call to
+  `valfriKommentar`, so the Fewer counter never moves on a redraw.
+- **Kept on screen.** The task text and progress remain.
+- **Unchanged.** A detail change never touches the greeting or the Fewer
+  counter. A language change redraws the same greeting.
+
+### 2. The selection generation binds a request to the selection it was made in
+
+- **The defect.** `V.valj` calls `skicka("sync")`, and while a request is
+  pending that call returns BEFORE `requestNr` moves. A delayed accepted
+  Start could therefore still greet after the player re-selected the same
+  lesson, or went A → B → A.
+- **The fix.** There is a new counter, `valGen`.
+  - It is incremented on EVERY `V.valj`, same type or not, whether or not a
+    sync is sent. `V.start` and `V.avbryt` also increment it.
+  - `skicka` captures it, and a greeting requires that it is unchanged.
+- **Unaffected.** The reply is still used for the view as before: `mottag`
+  and the revision and type checks decide. The honest current view (for
+  example Finish on an active attempt) is therefore usable once the request
+  settles.
+- **Unchanged.** No pending state is cleared, and the server's
+  replay, ownership and attempt guards are untouched. The Finish, dismount,
+  reattach and timeout invalidations remain as before.
+
+### 3. Coverage labels (this list replaces the one above)
+
+- **Long `dt` policy.** Each `V.steg` call counts at most 1 s towards the 6 s
+  lifetime; a larger `dt` counts as 1 s. The cases step in 1/60 s frames and
+  assert the boundary.
+- **Every new attempt** goes through the real chooser. A successful Finish
+  makes the lesson free, so the lesson is chosen again with `valj` before
+  Start. Every press asserts that its control existed.
+- **SYNCHRONOUS cases:**
+  - accepted Start and Retry;
+  - denied request and transport failure;
+  - a start seen only via sync;
+  - Off, Fewer and Normal;
+  - removal on choice, reattach and dismount;
+  - an attempt already completed before the reply (a push before the
+    return, within the same synchronous call);
+  - all ten keys;
+  - Off while visible, including a rapid Off → Normal.
+- **GENUINELY DEFERRED cases** (scheduler):
+  - the event before the reply;
+  - a late reply after:
+    - another choice;
+    - reselecting the same type;
+    - A → B → A;
+    - Finish;
+    - the 10 s timeout;
+    - a reattach.
+- **FABRICATED** producer-shaped replies: the nine types other than halt in
+  the all-types section. They are not real server starts.
+- **NOT covered:**
+  - safety, care and equipment priority in the host;
+  - physical rendering;
+  - a real network `InvokeServer`.
+
