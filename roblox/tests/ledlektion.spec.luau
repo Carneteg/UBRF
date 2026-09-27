@@ -269,6 +269,10 @@ steg()
 
 end
 -- ── R1: gamla kontroller och gamla bilder på klienten (riktiga återkallningar) ──
+--[[ Bänken har ingen riktig tid: klientavsnitten nedan skickar många
+	begäranden i rad, och takten nekade dem med takt.for_snabbt ("Jag nådde inte
+	stallet"). Skopas klocka hoppas fram vid varje läsning (som instruktorstart.spec). ]]
+Skopa._satKlockaForProv((function() local k = 0; return function() k += 100; return k end end)())
 do -- Egen räckvidd: huvudchunken har högst 200 lokala register, och bunten (alla moduler plus specen) slog i taket.
 local Lk = LedLektionController
 Lk.start()
@@ -277,7 +281,8 @@ UgnetaController.dolj()
 req("finish"); LedService.slapp(spelare)
 flytta(UTE_X)
 local function hittaK(lista, txt)
-	for _, k in ipairs(lista) do if k.text == txt then return k end end
+	-- Prefix: ingången kan bära minnets markering (" · klarad", 97a936a).
+	for _, k in ipairs(lista) do if string.sub(k.text, 1, #txt) == txt then return k end end
 	return nil
 end
 local e0 = hittaK(UgnetaController.panel(4).knappar, Sprak.t("ledlektion.choose"))
@@ -413,7 +418,8 @@ L.start()
 UgnetaController.satLektionsVal(nil)
 local KAP = 4
 local function hitta(lista, txt)
-	for _, k in ipairs(lista) do if k.text == txt then return k end end
+	-- Prefix: ingången kan bära minnets markering (" · klarad", 97a936a).
+	for _, k in ipairs(lista) do if string.sub(k.text, 1, #txt) == txt then return k end end
 	return nil
 end
 local ingangOk = true
@@ -433,8 +439,9 @@ check("choosing opens the lesson page with a lesson control and Back or Finish",
 	sida.ersatt == true and #sida.knappar <= KAP
 	and (hitta(sida.knappar, Sprak.t("ledlektion.back")) ~= nil
 		or hitta(sida.knappar, Sprak.t("ledlektion.finish")) ~= nil))
-UgnetaController.satLektionsVal(VoltLektionController.panel)
+-- `avbryt` släpper lektionsvalet, så det installeras EFTER starten (som LektionController).
 VoltLektionController.avbryt(); VoltLektionController.start("led-meny-prov", nil)
+UgnetaController.satLektionsVal(VoltLektionController.panel)
 local ridsida = UgnetaController.panel(KAP).knappar
 check("mounted lesson menus take precedence and are unchanged",
 	hitta(ridsida, Sprak.t("voltlektion.choose")) ~= nil and hitta(ridsida, Sprak.t("ledlektion.choose")) == nil)
@@ -545,5 +552,6 @@ do
 	UgnetaController.dolj()
 end
 
+Skopa._satKlockaForProv(nil)
 if fails > 0 then error(tostring(fails) .. " FEL") end
 print(string.format("\nLEDLEKTION: %d prov, alla gröna", total))

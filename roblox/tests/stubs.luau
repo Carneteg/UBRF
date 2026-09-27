@@ -1678,6 +1678,11 @@ local function __nyInstans(klass)
 			local rot = rawget(self, "PrimaryPart") or self:FindFirstChild("HumanoidRootPart")
 			if type(rot) == "table" and rawget(rot, "CFrame") ~= nil then
 				rot.CFrame = cf
+				--[[ I Roblox följer Position alltid CFrame. Stubbens delar bär
+				     dem som två fält, och `LedService.stallFram` läser
+				     `PrimaryPart.Position` som bevis — utan den här raden nekade
+				     `placeraVidMal` alltid i bänken. ]]
+				if cf and cf.Position then rot.Position = cf.Position end
 			end
 		end
 		function inst:GetPivot()
