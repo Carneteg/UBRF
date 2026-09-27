@@ -32,14 +32,23 @@ local function visaGuide(ref)
 	local m = Instance.new("Model"); m.Name = "Voltguide"
 	local p = ref.plats
 	-- Volt: dashes fill the allowed inner band. Halt: a small ring marks the
-	-- stopping zone at X. Each whole dash stays within the arena.
-	local radie = if typ == "halt" then ref.radie else ref.radie - 1
-	local antal = if typ == "halt" then 16 else 72
+	-- stopping zone at X. Transitions: one ring per training target (T1, T2).
+	-- Each whole dash stays within the arena.
+	local ringar
+	if typ == "overgang" then
+		ringar = { { u = ref.u, v = ref.v1, r = ref.halv }, { u = ref.u, v = ref.v2, r = ref.halv } }
+	elseif typ == "halt" then
+		ringar = { { u = ref.u, v = ref.v, r = ref.radie } }
+	else
+		ringar = { { u = ref.u, v = ref.v, r = ref.radie - 1 } }
+	end
+	local antal = if typ == "volt" then 72 else 16
+	for _, ring in ipairs(ringar) do
 	for i = 0, antal - 1 do
 		local a = 2 * math.pi * i / antal
-		local pos = Plats.tillVarld(p, Vector3.new(ref.u + radie*math.cos(a),
-			0.035, ref.v + radie*math.sin(a)))
-		local half = (if typ == "halt" then 0.3 else 0.8) * p.studsPerMeter
+		local pos = Plats.tillVarld(p, Vector3.new(ring.u + ring.r*math.cos(a),
+			0.035, ring.v + ring.r*math.sin(a)))
+		local half = (if typ == "volt" then 0.8 else 0.3) * p.studsPerMeter
 		local bound = half * 1.1
 		if Plats.inom(p,"bana",pos+ p.tvars*bound) and Plats.inom(p,"bana",pos-p.tvars*bound)
 			and Plats.inom(p,"bana",pos+p.motC*bound) and Plats.inom(p,"bana",pos-p.motC*bound) then
@@ -52,6 +61,7 @@ local function visaGuide(ref)
 			part.Parent = m
 		end
 	end
+	end
 	m.Parent = workspace; guide, guideRef, guideTyp = m, ref, typ
 end
 
@@ -62,7 +72,8 @@ local function mottag(b)
 	bild = b
 	sekvens = math.max(sekvens,b.sekvens or 0)
 	if valt and (b.lage=="approach" or b.lage=="baseline" or b.lage=="riding"
-		or b.lage=="halt1" or b.lage=="walk") then
+		or b.lage=="halt1" or b.lage=="walk"
+		or b.lage=="walk1" or b.lage=="trot" or b.lage=="walk2") then
 		visaGuide(b.referens)
 	else rivGuide() end
 end
@@ -92,11 +103,38 @@ end
 
 function V.valj(vald: string?)
 	if not ritt then return end
-	local ny = if vald == "halt" then "halt" else "volt"
+	local ny = if vald == "halt" or vald == "overgang" then vald else "volt"
 	if ny ~= typ then typ, bild = ny, nil; rivGuide() end
 	valt, fri, fel = true, false, nil
 	Ugneta.dolj()
 	skicka("sync")
+end
+
+-- Övergångslektionens egna texter; gemensamma nycklar faller igenom.
+local function overgangText(key): string?
+	if key=="choose_overgang" then return Sprak.t("overganglektion.choose") end
+	if typ ~= "overgang" then return nil end
+	if key=="start" then return Sprak.t("overganglektion.start") end
+	if key=="finish" then return Sprak.t("overganglektion.finish") end
+	if key=="intro" then return Sprak.t("overganglektion.intro") end
+	if key=="walk_on" then return Sprak.t("overganglektion.walk_on") end
+	if key=="walk_first" then return Sprak.t("overganglektion.walk_first") end
+	if key=="trot_at_t1" then return Sprak.t("overganglektion.trot_at_t1") end
+	if key=="trot_outside" then return Sprak.t("overganglektion.trot_outside") end
+	if key=="trot_on" then return Sprak.t("overganglektion.trot_on") end
+	if key=="trot_longer" then return Sprak.t("overganglektion.trot_longer") end
+	if key=="walk_at_t2" then return Sprak.t("overganglektion.walk_at_t2") end
+	if key=="walk_outside" then return Sprak.t("overganglektion.walk_outside") end
+	if key=="walk_calm" then return Sprak.t("overganglektion.walk_calm") end
+	if key=="tired" then return Sprak.t("overganglektion.tired") end
+	if key=="walk_only" then return Sprak.t("overganglektion.walk_only") end
+	if key=="trot_only" then return Sprak.t("overganglektion.trot_only") end
+	if key=="unknown" then return Sprak.t("overganglektion.unknown") end
+	if key=="complete" then return Sprak.t("overganglektion.complete") end
+	if key=="timeout" then return Sprak.t("overganglektion.timeout") end
+	if key=="closed" then return Sprak.t("overganglektion.closed") end
+	if key=="place" then return Sprak.t("overganglektion.place") end
+	return nil
 end
 
 -- Start/halt-lektionens egna texter; gemensamma nycklar faller igenom.
@@ -122,6 +160,8 @@ local function haltText(key): string?
 end
 
 local function text(key)
+	local o = overgangText(key)
+	if o then return o end
 	local h = haltText(key)
 	if h then return h end
 	if key=="choose" then return Sprak.t("voltlektion.choose") end
@@ -154,7 +194,8 @@ function V.panel()
 	if not attached or not ritt then return nil end
 	if not valt then
 		local knappar = { val("choose",function() V.valj("volt") end),
-			val("choose_halt",function() V.valj("halt") end) }
+			val("choose_halt",function() V.valj("halt") end),
+			val("choose_overgang",function() V.valj("overgang") end) }
 		if fri then
 			table.insert(knappar,val("lessons",function()
 				fri=false; if gaLektion then gaLektion() end
@@ -167,7 +208,8 @@ function V.panel()
 		elseif b.lage=="ready" or b.lage=="closed" then "intro"
 		else b.tips
 	local txt = text(key)
-	if (b.lage=="riding" or b.lage=="halt1" or b.lage=="walk") and not pending and not fel then
+	if (b.lage=="riding" or b.lage=="halt1" or b.lage=="walk" or b.lage=="walk1"
+		or b.lage=="trot" or b.lage=="walk2") and not pending and not fel then
 		txt ..= " "..tostring(b.progress).."%"
 	end
 	local knappar = {}

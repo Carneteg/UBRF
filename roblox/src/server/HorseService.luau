@@ -39,6 +39,15 @@ local VoltObservation = require(script.Parent.VoltObservation)
 local RidForsok = require(script.Parent.RidForsok)
 local VoltLektion = require(script.Parent.VoltLektion)
 local HaltLektion = require(script.Parent.HaltLektion)
+local OvergangLektion = require(script.Parent.OvergangLektion)
+
+--[[ Lektionstyp → modul. Utelämnad/okänd typ i ett befintligt läge är
+	voltlektionen (oförändrat standardbeteende). ]]
+local function lektionModul(typ: string?): any
+	if typ == "halt" then return HaltLektion end
+	if typ == "overgang" then return OvergangLektion end
+	return VoltLektion
+end
 
 local HorseService = {}
 
@@ -1829,7 +1838,7 @@ function HorseService.start()
 				local rev = lesson.revision
 				--[[ En lektion per ritt: `typ` "halt" är start/halt-lektionen,
 					allt annat den oförändrade voltlektionen. ]]
-				local Lektion = if lesson.typ == "halt" then HaltLektion else VoltLektion
+				local Lektion = lektionModul(lesson.typ)
 				Lektion.steg(lesson, os.clock(), Ridtrappa.gangart(session.stegIndex),
 					Ridtrappa.ryggar(session.stegIndex))
 				--[[ Samma mottagarregel som RidTillstand och StaminaSync: en
@@ -1949,7 +1958,7 @@ function HorseService.voltLektionsBegaran(player: any, rittId: any, op: any, seq
 	--[[ Lektionstyp: utelämnad = volt (oförändrat beteende), "halt" =
 		start/halt. En lektion per ritt. ]]
 	if typ == nil then typ = "volt" end
-	if typ ~= "volt" and typ ~= "halt" then return false, "unknown", nil end
+	if typ ~= "volt" and typ ~= "halt" and typ ~= "overgang" then return false, "unknown", nil end
 	local hastId = tostring(session.rig.model:GetAttribute("HorseId") or session.rig.model.Name)
 	local gangart, ryggar = Ridtrappa.gangart(session.stegIndex), Ridtrappa.ryggar(session.stegIndex)
 	local nu = session.voltLektion
@@ -1958,10 +1967,10 @@ function HorseService.voltLektionsBegaran(player: any, rittId: any, op: any, seq
 		och finns ingen skapas den valda. ]]
 	if op == "sync" then
 		if not nu then
-			nu = (if typ == "halt" then HaltLektion else VoltLektion).ny(rittId, player.UserId, hastId)
+			nu = lektionModul(typ).ny(rittId, player.UserId, hastId)
 			session.voltLektion = nu
 		end
-		local L = if nu.typ == "halt" then HaltLektion else VoltLektion
+		local L = lektionModul(nu.typ)
 		return L.begar(nu, op, seq, os.clock(), gangart, ryggar)
 	end
 
@@ -2000,7 +2009,7 @@ function HorseService.voltLektionsBegaran(player: any, rittId: any, op: any, seq
 		session.voltLektion = nil
 	end
 	if fel == nil then
-		local L = if anvand == "halt" then HaltLektion else VoltLektion
+		local L = lektionModul(anvand)
 		if not session.voltLektion then
 			session.voltLektion = L.ny(rittId, player.UserId, hastId)
 		end
