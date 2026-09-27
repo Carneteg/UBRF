@@ -981,6 +981,10 @@ Sprak.text = {
 		sv = "Välj en övning.",
 		en = "Choose an exercise.",
 	},
+	["lektionsval.oppna"] = {
+		sv = "Välj övning",
+		en = "Choose exercise",
+	},
 	["vaglektion.choose_mitt"] = {
 		sv = "Mittlinjen",
 		en = "Centre line",

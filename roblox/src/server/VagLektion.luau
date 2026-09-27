@@ -120,7 +120,8 @@ local function stang(s, orsak): boolean
 	if not Forsok.slutfor(s.rittId, s.forsokId, orsak, obsTid(s.rittId), nil) then return false end
 	if orsak == "slutford" then
 		s.resultat = table.freeze({ forsokId = s.forsokId, rittId = s.rittId, userId = s.userId,
-			hastId = s.hastId, figur = s.typ, meter = s.front, langd = s.referens.langd,
+			hastId = s.hastId, figur = s.typ, meter = s.langst - s.armS, armS = s.armS,
+			slutS = s.langst, langd = s.referens.langd,
 			start = Forsok.ogonblick(s.forsokId).start })
 		s.progress = 100
 		s.revision += 1
@@ -134,7 +135,7 @@ end
 --[[ Tillbaka till startringen: all linjekredit bort, samma tidsgräns. Inga
 	fler nollställningar förrän spelaren åter är armerad. ]]
 local function tillStart(s, tips)
-	s.front, s.sistaPunkt = 0, nil
+	s.armS, s.langst, s.sistaPunkt = nil, nil, nil
 	andra(s, "to_start", tips)
 	satDelmal(s, 0)
 	satProgress(s, 0)
@@ -155,7 +156,7 @@ local function nyBaslinje(s, o, p, logg)
 end
 
 local function ridTips(s): string
-	if s.front >= s.referens.langd - 4 then return "to_end" end
+	if s.langst ~= nil and s.langst >= s.referens.langd - 4 then return "to_end" end
 	return if s.typ == "vag_diag" then "ride_diag" else "ride_mitt"
 end
 
@@ -205,9 +206,13 @@ function VagLektion.steg(s, now: number, gangart: string?, ryggar: boolean?)
 		local sL = linje(ref, q)
 		local iRing = math.sqrt((q.u - ref.u0) ^ 2 + (q.v - ref.v0) ^ 2) <= ZON
 		if iRing and iKorridor(ref, q) and sL <= ZON and p.iDressyr == true then
-			--[[ Armeringssteget ger INGEN kredit: framsteget börjar på 0
-				härifrån, så inflygningen och korsningsintervallet kastas. ]]
-			s.front = 0
+			--[[ Armeringssteget ger INGEN kredit (R1). `armS` är det
+				OBSERVERADE läget längs linjen vid armeringen (−2..2, även
+				ringens bakre halva), och `langst` — längsta nådda läget, som
+				bakåtspärren mäts mot — börjar där. Framsteg och resultatets
+				meter räknas bara från `armS`, så varken inflygningen eller ett
+				stillastående första steg i ringens främre halva ger kredit. ]]
+			s.armS, s.langst = sL, sL
 			s.sistaPunkt = { u = q.u, v = q.v }
 			andra(s, "route", ridTips(s))
 			satDelmal(s, 1)
@@ -229,15 +234,18 @@ function VagLektion.steg(s, now: number, gangart: string?, ryggar: boolean?)
 		tillStart(s, "off_route"); return
 	end
 	local sL = linje(ref, ti)
-	if sL < s.front - BAKAT_M then tillStart(s, "reverse"); return end
-	if (gangart == "walk" or gangart == "trot") and sL > s.front then
-		s.front = math.min(sL, ref.langd)
+	if sL < s.langst - BAKAT_M then tillStart(s, "reverse"); return end
+	if (gangart == "walk" or gangart == "trot") and sL > s.langst then
+		s.langst = math.min(sL, ref.langd)
 	end
 	s.sistaPunkt = { u = ti.u, v = ti.v }
 	andra(s, "route", ridTips(s))
-	satProgress(s, 99 * s.front / ref.langd)
+	--[[ Framsteg = ridet framåt sedan armeringen, räknat från P0,
+		eller från armeringsläget om det ligger framför P0. ]]
+	local fran = math.max(s.armS, 0)
+	satProgress(s, 99 * math.max(s.langst - fran, 0) / (ref.langd - fran))
 	local iSlut = math.sqrt((ti.u - ref.u1) ^ 2 + (ti.v - ref.v1) ^ 2) <= ZON
-	if s.front >= ref.langd - SLUT_M and iSlut then stang(s, "slutford") end
+	if s.langst >= ref.langd - SLUT_M and iSlut then stang(s, "slutford") end
 end
 
 function VagLektion.begar(s, op: any, seq: any, now: number, gangart: string?,
@@ -284,7 +292,7 @@ function VagLektion.begar(s, op: any, seq: any, now: number, gangart: string?,
 				s.resultat = nil
 				nyBaslinje(s, o, p, logg)
 				s.progress, s.delmal = 0, 0
-				s.front, s.sistaPunkt = 0, nil
+				s.armS, s.langst, s.sistaPunkt = nil, nil, nil
 				s.revision += 1
 				andra(s, "to_start", "to_start")
 			end

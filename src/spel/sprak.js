@@ -383,6 +383,7 @@ const SPRAK = {
   "lektionsval.vagar": { sv: "Ridvägar", en: "Riding paths" },
   "lektionsval.tillbaka": { sv: "Tillbaka", en: "Back" },
   "lektionsval.valj": { sv: "Välj en övning.", en: "Choose an exercise." },
+  "lektionsval.oppna": { sv: "Välj övning", en: "Choose exercise" },
   "vaglektion.choose_mitt": { sv: "Mittlinjen", en: "Centre line" },
   "vaglektion.choose_diag": { sv: "Diagonalen", en: "Diagonal" },
   "vaglektion.start": { sv: "Starta ridvägen", en: "Start the riding path" },

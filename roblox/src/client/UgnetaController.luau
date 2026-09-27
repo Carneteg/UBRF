@@ -1240,7 +1240,12 @@ function UgnetaController.satVard(fn: (() -> ())?)
 	vardLage()
 end
 
-function UgnetaController.panel(): any
+--[[ `kapacitet` (R1, #264): hur många val den som RENDERAR visar
+	(Naromrades MAX_VAL). Ryms inte Ugnetas egna kortknappar plus lektionens
+	val, och lektionen erbjuder en `kompakt` lista, används den i stället —
+	så att lektionsvalet alltid går att nå bredvid 0..3 kortknappar, utan att
+	kortknapparna trängs undan. Utan kapacitet: oförändrat. ]]
+function UgnetaController.panel(kapacitet: number?): any
 	local extra = if lektionsVal then lektionsVal() else nil
 	if extra and extra.ersatt then return extra end
 	local knappar = {}
@@ -1276,7 +1281,9 @@ function UgnetaController.panel(): any
 	local m, d = CoachBanner.text()
 	local ovning = if m ~= "" and d ~= "" then (m .. " — " .. d) else (m .. d)
 	if extra then
-		for _, k in ipairs(extra.knappar or {}) do table.insert(knappar, k) end
+		local lista = extra.knappar or {}
+		if kapacitet and extra.kompakt and #knappar + #lista > kapacitet then lista = extra.kompakt end
+		for _, k in ipairs(lista) do table.insert(knappar, k) end
 	end
 	return { text = text, knappar = knappar, vantar = vantarPa, ovning = ovning }
 end

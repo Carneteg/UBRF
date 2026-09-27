@@ -46,9 +46,24 @@ The top level is now at most four entries:
   diagonal;
 - "lessons" (back to the ordinary lesson) when free riding.
 
-Each group page has at most three choices plus Back. Every earlier lesson
-stays reachable. Long labels wrap: the buttons have `TextWrapped` and the
-choice area scrolls. Rendered layout is not verified.
+Each group page has at most three choices plus Back.
+
+**R1 (source review #5855651822):** when not free riding, Ugneta prepends its
+own 0..3 card actions (continue, watch the ride, move on) before the lesson's
+entries, and the page shows only four rows. Naromrade therefore passes its
+capacity to `UgnetaController.panel(MAX_VAL)`. When the cards plus the three
+top entries do not fit (two or three cards), the lesson's compact list is
+used instead: one entry, "Choose exercise", which opens a replacement page
+(circle, the two groups, Back). With zero or one card the three entries fit as
+before. Back from any page returns to the original top level with the card
+actions intact. When free riding, the cards are replaced as before, and the
+top level has four entries including "lessons".
+
+What this claims is limited to that composition in source: the card actions
+and a lesson entry fit on one page for 0..3 cards, and every lesson is one or
+two pages behind that entry. It is written as cases, NOT run, and rendered
+layout, touch and long SV/EN labels are unverified. Long labels wrap: the
+buttons have `TextWrapped` and the choice area scrolls.
 
 ## Geometry (resolved layout frame, metres; `u0 = dressyrMitt.u`, `v` from A)
 
@@ -88,9 +103,18 @@ the accepted gait.
 
 - **Arming:** in `to_start` the lesson arms when a fresh valid segment ends
   inside the start ring, inside the corridor and the layout, at `s ≤ 2`, in
-  walk, trot or halt, and not reversing. The arming step gives NO credit:
-  progress starts at 0 from there, so the approach and crossing interval are
-  discarded.
+  walk, trot or halt, and not reversing. The arming step gives NO credit.
+- **R1, two coordinates:**
+  - `armS` is the OBSERVED along-line coordinate at arming, anywhere in −2..2,
+    including the rear half of the ring.
+  - `langst` is the furthest absolute coordinate reached. It starts at `armS`
+    and grows only with credited forward movement.
+  - Backwards detection compares with `langst`, so a halt or a short forward
+    step at −1.9 after arming is not "reverse".
+  - Progress is `max(langst, 0) − max(armS, 0)` over `L − max(armS, 0)`, so a
+    stationary first step in the front half credits nothing.
+  - The result holds `armS`, `slutS` (= final `langst`) and `meter` =
+    `slutS − armS`, the credited along-line distance since arming.
 - **Riding:** each step needs all of the following:
   - a valid segment that begins exactly where the previous one ended (the
     lesson steps in the same heartbeat as the sampling);
@@ -152,7 +176,21 @@ recovers by riding into the start ring again.
 `roblox/tests/vaglektion.spec.luau` contains these written cases.
 
 **Full routes and arming:**
-- the full centre line with a frozen result recording the figure;
+- the full centre line with a frozen result recording the figure, `armS`,
+  `slutS` and `meter = slutS − armS`;
+- R1: arming at the literal rear-half point −1.9, a halt there, small forward
+  steps still below −1, then completion with metres from the arming point;
+- R1: genuine backwards travel beyond the allowance still resets;
+- R1: arming in the front half (s = 1.5) from beside the ring, where a
+  stationary first sample gives no progress and completion excludes the
+  approach;
+- R1, source-level panel composition beside 0, 1, 2 and 3 card actions:
+  - a visible lesson entry, and the cards are kept;
+  - every group opens and every leaf of the seven lessons is selectable
+    within four rows;
+  - Back from a group returns to the original card actions;
+  - after Finish, free riding shows all groups and "lessons", and
+    reattachment to the same ride keeps it;
 - the full diagonal;
 - approaching through the start ring from behind gives no credit before
   arming;
@@ -188,7 +226,8 @@ recovers by riding into the start ring again.
 **Planned, not written:**
 - frame change, invalid dt, missing root, a gap and RidLogg overflow, which
   use the same break code path as start/halt (whose spec has them);
-- the client menu (no client bench for this panel), and rendered layout on
-  PC, touch and SV/EN.
+- rendered layout on PC, touch and SV/EN (the panel cases read the composed
+  list, not the rendered buttons), and pending requests while the menu is
+  open.
 
 Engine, rendering and the player flow are unverified.

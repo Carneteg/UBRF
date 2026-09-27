@@ -125,7 +125,9 @@ check("the full centre line completes", done.lage == "complete")
 check("completion is slutford", HorseService.forsok(done.forsokId).orsak == "slutford")
 check("frozen result records the figure and the metres", done.resultat ~= nil
 	and table.isfrozen(done.resultat) and done.resultat.figur == "vag_mitt"
-	and math.abs(done.resultat.meter - langd("vag_mitt")) < 1e-6)
+	and math.abs(done.resultat.slutS - langd("vag_mitt")) < 1e-6
+	and math.abs(done.resultat.armS - -1.9) < 1e-6
+	and math.abs(done.resultat.meter - (done.resultat.slutS - done.resultat.armS)) < 1e-9)
 rakt(U + 3, 50)
 check("later riding cannot change the frozen result", image().resultat == done.resultat)
 
@@ -236,6 +238,145 @@ for _, t in ipairs({ "volt", "halt", "overgang", "serpentin", "tempo", "vag_mitt
 	if not (okS == true and okF == true and bf.lage == "closed") then alla = false end
 end
 check("all seven lesson types start and finish", alla)
+
+-- ── R1: armering i ringens bakre och främre halva ──
+figur = "vag_mitt"
+request("finish")
+request("start")
+tillStart("vag_mitt")
+linje("vag_mitt", -3, -1.9) -- exakt −1,9: bakre halvan
+check("R1: arming at the literal rear-half point s = -1.9", image().lage == "route"
+	and image().progress == 0)
+aid("broms") -- halt
+for _ = 1, 3 do ga(nu.u, nu.v) end
+check("R1: a halt at -1.9 right after arming is a pause, not reverse", image().lage == "route")
+aid("driv") -- skritt
+for _, sL in ipairs({ -1.7, -1.5, -1.2 }) do ga(lp("vag_mitt", sL)) end
+check("R1: small forward steps still below -1 m keep the route", image().lage == "route"
+	and image().tips ~= "reverse")
+linje("vag_mitt", -1.2, langd("vag_mitt"))
+local bak = image()
+check("R1: a rear-half arming completes with metres counted from the arming point",
+	bak.lage == "complete" and math.abs(bak.resultat.armS - -1.9) < 1e-6
+	and math.abs(bak.resultat.meter - (langd("vag_mitt") + 1.9)) < 1e-6)
+
+request("retry")
+tillStart("vag_mitt")
+linje("vag_mitt", -3, 3)
+linje("vag_mitt", 3, 1.8)
+check("R1: genuine backwards travel beyond the allowance still resets", image().lage == "to_start"
+	and image().tips == "reverse")
+
+rakt(U + 1.5, 9); ga(U + 1.5, 7.5) -- utanför ringen (2,12 m från P0)
+check("KONTROLL: not armed beside the ring", image().lage == "to_start")
+ga(U, 7.5) -- in i ringens främre halva, s = 1,5
+check("R1: arming in the front half of the ring", image().lage == "route")
+ga(U, 7.5)
+ga(U, 7.5)
+check("R1: a stationary first route sample in the front half gives no progress",
+	image().lage == "route" and image().progress == 0)
+linje("vag_mitt", 1.5, langd("vag_mitt"))
+local fram = image()
+check("R1: a front-half arming completes without crediting the approach",
+	fram.lage == "complete" and math.abs(fram.resultat.armS - 1.5) < 1e-6
+	and math.abs(fram.resultat.meter - (langd("vag_mitt") - 1.5)) < 1e-6)
+
+-- ── R1: lektionsvalet bredvid Ugnetas 0..3 kortknappar (källnivå) ──
+local V = VoltLektionController
+local KAP = 4 -- Naromrades MAX_VAL, som Naromrade skickar till panel()
+local function texter(lista)
+	local ut = {}
+	for _, k in ipairs(lista) do table.insert(ut, k.text) end
+	return ut
+end
+local function hitta(lista, txt)
+	for _, k in ipairs(lista) do if k.text == txt then return k end end
+	return nil
+end
+local function kort(n)
+	UgnetaController.dolj()
+	if n > 0 then UgnetaController.visa("Kort", {}, n >= 1, nil, n >= 2, n >= 3) end
+end
+local menyOk = true
+for n = 0, 3 do
+	V.avbryt(); V.start("meny-prov-" .. n, nil)
+	UgnetaController.satLektionsVal(nil)
+	kort(n)
+	local egna = texter(UgnetaController.panel(KAP).knappar)
+	check("KONTROLL: " .. n .. " legacy card actions are visible", #egna == n)
+	UgnetaController.satLektionsVal(V.panel)
+	local ug = UgnetaController.panel(KAP)
+	local synliga = texter(ug.knappar)
+	local ryms = #ug.knappar <= KAP
+	local kortKvar = true
+	for i = 1, n do if synliga[i] ~= egna[i] then kortKvar = false end end
+	local ingang = hitta(ug.knappar, Sprak.t("voltlektion.choose"))
+		or hitta(ug.knappar, Sprak.t("lektionsval.oppna"))
+	check("R1: " .. n .. " cards: the lesson entry is visible, the cards are kept and it fits",
+		ryms and kortKvar and ingang ~= nil)
+	-- Öppna varje grupp och välj varje löv; Tillbaka ger kortknapparna igen.
+	local blad = {
+		{ grupp = nil, text = Sprak.t("voltlektion.choose"), slut = Sprak.t("voltlektion.finish") },
+		{ grupp = "lektionsval.gangart", text = Sprak.t("haltlektion.choose"), slut = Sprak.t("haltlektion.finish") },
+		{ grupp = "lektionsval.gangart", text = Sprak.t("overganglektion.choose"), slut = Sprak.t("overganglektion.finish") },
+		{ grupp = "lektionsval.gangart", text = Sprak.t("tempolektion.choose"), slut = Sprak.t("tempolektion.finish") },
+		{ grupp = "lektionsval.vagar", text = Sprak.t("serpentinlektion.choose"), slut = Sprak.t("serpentinlektion.finish") },
+		{ grupp = "lektionsval.vagar", text = Sprak.t("vaglektion.choose_mitt"), slut = Sprak.t("vaglektion.finish") },
+		{ grupp = "lektionsval.vagar", text = Sprak.t("vaglektion.choose_diag"), slut = Sprak.t("vaglektion.finish") },
+	}
+	for _, b in ipairs(blad) do
+		V.avbryt(); V.start("meny-prov-" .. n .. "-" .. b.text, nil)
+		kort(n)
+		local sida = UgnetaController.panel(KAP).knappar
+		local oppna = hitta(sida, Sprak.t("lektionsval.oppna"))
+		if oppna then oppna.skicka(); sida = UgnetaController.panel(KAP).knappar end
+		if b.grupp then
+			local g = hitta(sida, Sprak.t(b.grupp))
+			if not g then menyOk = false else g.skicka(); sida = UgnetaController.panel(KAP).knappar end
+		end
+		if #sida > KAP then menyOk = false end
+		local lov = hitta(sida, b.text)
+		if not lov then menyOk = false else
+			lov.skicka()
+			local vald = UgnetaController.panel(KAP)
+			if not (V.lektion() and hitta(vald.knappar, b.slut)) then menyOk = false end
+		end
+	end
+	-- Tillbaka från en grupp ger de ursprungliga kortknapparna.
+	V.avbryt(); V.start("meny-prov-" .. n .. "-tillbaka", nil)
+	kort(n)
+	local sida = UgnetaController.panel(KAP).knappar
+	local oppna = hitta(sida, Sprak.t("lektionsval.oppna"))
+	if oppna then oppna.skicka(); sida = UgnetaController.panel(KAP).knappar end
+	local g = hitta(sida, Sprak.t("lektionsval.vagar"))
+	if g then g.skicka() end
+	local tb = hitta(UgnetaController.panel(KAP).knappar, Sprak.t("lektionsval.tillbaka"))
+	if tb then tb.skicka() end
+	local efter = texter(UgnetaController.panel(KAP).knappar)
+	local igen = tb ~= nil
+	for i = 1, n do if efter[i] ~= egna[i] then igen = false end end
+	check("R1: " .. n .. " cards: Back from a group returns to the original card actions", igen)
+end
+check("R1: every group opens and every leaf is selectable beside 0..3 cards", menyOk)
+UgnetaController.dolj()
+
+-- Fri ridning efter Finish, och återanslutning till samma ritt. En ny ritt
+-- ger en tom begäranbok, så klientens egen sekvens (från 0) är inte inaktuell.
+check("KONTROLL: dismount for a fresh ride", HorseService.dismount(p) == true)
+id = mount(); nu = { u = 0, v = 4 }
+V.avbryt(); V.start(id, nil)
+UgnetaController.satLektionsVal(V.panel)
+local c = hitta(UgnetaController.panel(KAP).knappar, Sprak.t("voltlektion.choose"))
+if c then c.skicka() end
+local f = hitta(UgnetaController.panel(KAP).knappar, Sprak.t("voltlektion.finish"))
+if f then f.skicka() end
+local friSida = UgnetaController.panel(KAP)
+check("R1: after Finish, free riding shows all groups and the way back to lessons",
+	#friSida.knappar == 4 and hitta(friSida.knappar, Sprak.t("lektionsval.vagar")) ~= nil
+	and hitta(friSida.knappar, Sprak.t("voltlektion.lessons")) ~= nil)
+V.avbryt(); V.start(id, nil)
+check("R1: reattaching to the same ride keeps free-riding navigation",
+	#UgnetaController.panel(KAP).knappar == 4)
 
 local sync = Networking.get("VoltLektionSync")
 local toOther = 0

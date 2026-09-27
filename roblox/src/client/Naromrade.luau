@@ -1873,7 +1873,7 @@ rita = function()
 			stegEtikett.Text = kropp
 			stegEtikett.Visible = kropp ~= ""
 		end
-		local ug = UgnetaController.panel()
+		local ug = UgnetaController.panel(MAX_VAL)
 		visaAterkoppling(nil)
 		for j, k in ipairs(ug.knappar) do
 			if j <= MAX_VAL then valRader[j] = k end
@@ -1973,7 +1973,7 @@ rita = function()
 	local valen: { any } = {}
 	--[[ EN GILTIG EFTERRITT GÅR FÖRE: den läses i panelen och avfärdas där,
 	     och först sedan tar skötselns eftervård över (kontraktet). ]]
-	local ug = UgnetaController.panel()
+	local ug = UgnetaController.panel(MAX_VAL)
 	if #ug.knappar > 0 then
 		for _, k in ipairs(ug.knappar) do
 			if #valen < MAX_VAL then table.insert(valen, k) end

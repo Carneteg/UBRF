@@ -21,9 +21,11 @@ local gaLektion: (() -> ())? = nil
 -- "tempo" (jämn fart i skritt; ingen guide), "vag_mitt" eller "vag_diag"
 -- (ridvägarna; figuren är typen).
 local typ = "volt"
--- Valsidan före en vald lektion: nil = toppnivån, "gangart" eller "vagar".
--- Naromrade visar högst fyra val (MAX_VAL), så toppnivån har högst fyra
--- poster och varje grupp högst tre val plus Tillbaka.
+-- Valsidan före en vald lektion: nil = toppnivån, "topp" (ersättningssidan
+-- bakom "Välj övning"), "gangart" eller "vagar". Naromrade visar högst fyra
+-- val (MAX_VAL) och Ugnetas 0..3 kortknappar kommer först; toppnivån ger
+-- därför också en kompakt lista med EN post (R1), som Ugneta väljer när den
+-- fulla inte ryms. Varje sida har högst tre val plus Tillbaka.
 local meny: string? = nil
 local guideTyp: string? = nil
 local guideDel: number? = nil
@@ -220,6 +222,7 @@ local function vagText(key): string?
 	if key=="group_vagar" then return Sprak.t("lektionsval.vagar") end
 	if key=="back" then return Sprak.t("lektionsval.tillbaka") end
 	if key=="pick" then return Sprak.t("lektionsval.valj") end
+	if key=="choose_lesson" then return Sprak.t("lektionsval.oppna") end
 	if key=="choose_vag_mitt" then return Sprak.t("vaglektion.choose_mitt") end
 	if key=="choose_vag_diag" then return Sprak.t("vaglektion.choose_diag") end
 	if not vagTyp(typ) then return nil end
@@ -380,6 +383,7 @@ function V.panel()
 		--[[ Högst fyra val per sida (Naromrades MAX_VAL): grupperna har
 			högst tre lektioner plus Tillbaka. Gruppsidan ersätter Ugnetas
 			egna kortknappar, så att inget val trängs ut. ]]
+		-- Tillbaka leder alltid till toppnivån med de ursprungliga kortknapparna.
 		if meny == "gangart" then
 			return { ersatt=true, text=text("pick"), ovning="", vantar=false, knappar={
 				val("choose_halt",function() V.valj("halt") end),
@@ -392,6 +396,12 @@ function V.panel()
 				val("choose_vag_mitt",function() V.valj("vag_mitt") end),
 				val("choose_vag_diag",function() V.valj("vag_diag") end),
 				val("back",function() meny = nil end) } }
+		elseif meny == "topp" then
+			return { ersatt=true, text=text("pick"), ovning="", vantar=false, knappar={
+				val("choose",function() V.valj("volt") end),
+				val("group_gangart",function() meny = "gangart" end),
+				val("group_vagar",function() meny = "vagar" end),
+				val("back",function() meny = nil end) } }
 		end
 		local knappar = { val("choose",function() V.valj("volt") end),
 			val("group_gangart",function() meny = "gangart" end),
@@ -401,7 +411,11 @@ function V.panel()
 				fri=false; if gaLektion then gaLektion() end
 			end))
 		end
-		return { ersatt=fri, knappar=knappar, text=nil, vantar=false, ovning="" }
+		--[[ R1: bredvid Ugnetas 0..3 kortknappar ryms inte alltid tre val;
+			då visar Ugneta den kompakta listan — en post som öppnar
+			toppsidan. Vid fri ridning ersätts kortknapparna ändå. ]]
+		return { ersatt=fri, knappar=knappar, text=nil, vantar=false, ovning="",
+			kompakt = if fri then nil else { val("choose_lesson",function() meny = "topp" end) } }
 	end
 	local b = bild or {lage="ready",progress=0,tips="approach"}
 	local key = if pending then "pending" elseif fel then fel
