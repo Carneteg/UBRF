@@ -108,6 +108,7 @@ local function bild() local _, _, b = LedLektion.begar(spelare, "sync"); return 
 local function led() return LedService.borja(spelare, MIN) end
 
 -- ── Hela vägen: start, leda, resa, ankomst ──
+do -- Egen räckvidd: huvudchunken har högst 200 lokala register, och bunten (alla moduler plus specen) slog i taket.
 flytta(UTE_X)
 local ok1, _, b1 = req("start")
 check("start on foot with the horse outside asks to take the horse", ok1 and b1.lage == "lead_first"
@@ -266,7 +267,9 @@ check("R1: a missing or replaced bound horse resets", bild().tips == "horse" and
 MIN.Parent = forald
 steg()
 
+end
 -- ── R1: gamla kontroller och gamla bilder på klienten (riktiga återkallningar) ──
+do -- Egen räckvidd: huvudchunken har högst 200 lokala register, och bunten (alla moduler plus specen) slog i taket.
 local Lk = LedLektionController
 Lk.start()
 UgnetaController.satLektionsVal(nil)
@@ -323,13 +326,14 @@ check("R1: the current attempt's own Finish still works", bild().lage == "closed
 check("R1: after Finish the on-foot entry is shown again", not Lk._valtForProv())
 seq = LedLektion._tillstandForProv(spelare).hogsta
 UgnetaController.dolj()
-
+end
 -- ── R2: kontexten (bunden modell och karaktär) binder ändrande begäranden ──
 --[[ Bänkens StallService tilldelar alltid samma häst, så bindningen A → B görs
 	genom lektionens egen beroendeinjektion — samma väg som när
 	GameplayService svarar med en annan modell. Ersättning med samma HorseId
 	görs med en riktig ny modell. ]]
 local aktuell = MIN
+do -- Egen räckvidd: huvudchunken har högst 200 lokala register, och bunten (alla moduler plus specen) slog i taket.
 LedLektion.start({
 	rattHast = function(p) return if p == spelare then aktuell else nil end,
 	rider = function(p) return HorseService.horseOf(p) ~= nil end,
@@ -401,6 +405,7 @@ check("R2: after a fresh sync the Start acts on horse B", okR4 == true
 MIN2.Parent = nil
 aktuell = MIN
 seq = LedLektion._tillstandForProv(spelare).hogsta
+end
 
 -- ── Klientens ingång till fots (källnivå) ──
 local L = LedLektionController

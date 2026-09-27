@@ -36,7 +36,7 @@ local RunService = game:GetService("RunService")
 local Taggar = game:GetService("CollectionService")
 local vec = Vector3.new
 local LM = LektionsMinne
-local nästaUid = 9600
+local nastaUid = 9600
 
 local function nySpelare(namn, uid, pos)
 	local k = Instance.new("Model"); k.Name = "Karaktar"
@@ -48,8 +48,8 @@ local function nySpelare(namn, uid, pos)
 end
 local startad = false
 local function nySession(namn, forbered)
-	nästaUid += 1
-	local sp = nySpelare(namn, nästaUid, vec(6, 0, 0))
+	nastaUid += 1
+	local sp = nySpelare(namn, nastaUid, vec(6, 0, 0))
 	SparService._glomForProv(sp)
 	if forbered then forbered(sp) end
 	RunService._server = true
@@ -272,12 +272,12 @@ do
 		NR.satRider(false)
 		local knapp = NR._panel().hjalpKnapp
 		check("KONTROLL: hjälpknappen finns", knapp ~= nil)
-		if knapp then knapp.Activated:Fire() end
+		if knapp then knapp.MouseButton1Click:Fire() end
 		NR.satRider(false)
 		check("hjälplistan bär avsnittet efter dagens steg",
 			string.find(NR._panel().hjalp, Sprak.t("skotselminne.okand"), 1, true) ~= nil, NR._panel().hjalp)
 		check("inga nya rader i panelen", #NR._val() == fore, ("%d / %d"):format(fore, #NR._val()))
-		if knapp then knapp.Activated:Fire() end
+		if knapp then knapp.MouseButton1Click:Fire() end
 	else
 		print("  HOPPAT  värddelen: bänkens LocalPlayer har ingen skötselvy (PLANERAT)")
 	end
@@ -364,10 +364,10 @@ print("\n── 12. Den RIKTIGA LocalPlayer-skötselvyn: historiken bredvid en f
 	skickar) — samma grepp som utrustning-rattelse-specen. ]]
 do
 	local lp = Players.LocalPlayer
-	nästaUid += 1
-	lp.UserId = nästaUid
+	nastaUid += 1
+	lp.UserId = nastaUid
 	lp.Name = "Lokal"
-	lp.Character = nySpelare("Lokal", nästaUid, vec(6, 0, 0)).Character
+	lp.Character = nySpelare("Lokal", nastaUid, vec(6, 0, 0)).Character
 	lp.CharacterAdded = lp.CharacterAdded or __signal_ny()
 	lp.CharacterRemoving = lp.CharacterRemoving or __signal_ny()
 	SparService._glomForProv(lp)
@@ -398,7 +398,7 @@ do
 	local fore = #NR._val()
 	local knapp = NR._panel().hjalpKnapp
 	check("KONTROLL: hjälpknappen finns", knapp ~= nil)
-	if knapp then knapp.Activated:Fire() end
+	if knapp then knapp.MouseButton1Click:Fire() end
 	NR.satRider(false)
 	local hjalp = NR._panel().hjalp
 	check("hjälplistan bär historiken efter dagens steg (hälsningen gjord)", string.find(hjalp,
@@ -409,7 +409,7 @@ do
 	NR.satRider(false)
 	check("på engelska", string.find(NR._panel().hjalp, "What you have done yourself", 1, true) ~= nil)
 	Sprak.satVal("sv")
-	if knapp then knapp.Activated:Fire() end
+	if knapp then knapp.MouseButton1Click:Fire() end
 	lamna(lp)
 end
 
