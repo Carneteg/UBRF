@@ -85,7 +85,13 @@ local function helaVagen()
 	linje(G.T2_V, G.T2_V + 2)                  -- skritt ≥ 2 m
 end
 local function tillbakaTillHalt()
-	aid("broms"); aid("broms"); aid("broms")
+	--[[ Bromsa tills hästen står i halt — inte längre. Tre blinda broms från
+		skritt gav halt → ryggning, och tillbakavägen (ryggning → halt → skritt)
+		loggades sedan som övergångar i det nya försöket. ]]
+	for _ = 1, 4 do
+		if Ridtrappa.gangart(s.stegIndex) == "halt" and not Ridtrappa.ryggar(s.stegIndex) then break end
+		aid("broms"); step(U, 4)
+	end
 	step(U, 4, 5); step(U, 4); step(U, 4)
 end
 

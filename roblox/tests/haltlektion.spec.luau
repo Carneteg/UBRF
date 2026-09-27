@@ -98,7 +98,9 @@ check("later riding cannot change the frozen result", image().resultat == done.r
 -- ── Halt utanför X räknas inte, återhämtning utan Retry ──
 local ok2, _, b2 = request("retry")
 check("retry opens a fresh attempt", ok2 and b2.forsokId ~= done.forsokId and b2.lage == "halt1")
-still(X.u, X.v - 8, G.HALT_FORE + 0.5)
+-- Sidoflytten görs i första haltens stillastående, inte som ett 4 m-hopp i ett
+-- 0,25 s-steg: sedan R1 är ett sådant hopp en teleport som nollställer försöket.
+still(X.u - 4, X.v - 8, G.HALT_FORE + 0.5)
 aid("driv")
 for v = X.v - 7, X.v - 2 do step(X.u - 4, v) end
 aid("broms")
@@ -224,6 +226,9 @@ local efterRam = image()
 check("a frame change returns to the first task", efterRam.lage == "halt1" and efterRam.tips == "unknown")
 bana.CFrame = CFrame.new(bana.Position - d); lay.CFrame = CFrame.new(lay.Position - d)
 step(X.u, X.v - 2)
+-- Efter återställd ram behövs ett andra observerat steg innan platsbilden har ett
+-- giltigt läge igen; annars nekar voltlektionen Start med "place".
+step(X.u, X.v - 2)
 
 -- ── R1: rittens begäranbok överlever typbyte ──
 request("finish")
@@ -271,6 +276,11 @@ do
 	VC.valj("halt")
 	request("finish")
 	-- Ett riktigt slutfört halt-försök (samma väg som den lyckliga vägen ovan).
+	-- Hästen står i halt (inte skritt, inte ryggning) vid starten FÖRE Start.
+	for _ = 1, 4 do
+		if Ridtrappa.gangart(s.stegIndex) == "halt" and not Ridtrappa.ryggar(s.stegIndex) then break end
+		aid(if Ridtrappa.ryggar(s.stegIndex) then "driv" else "broms"); step(0, 18)
+	end
 	still(0, 18, 1) -- hästen står vid starten FÖRE Start: ingen förflyttning bryter försöket
 	request("start")
 	still(0, 18, G.HALT_FORE + 0.5)

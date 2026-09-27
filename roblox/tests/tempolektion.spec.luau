@@ -179,7 +179,10 @@ check("KONTROLL: back in walk", Ridtrappa.gangart(s.stegIndex) == "walk"
 
 -- ── Utanför layouten, teleport, återhämtning ──
 gaFart(1.45, 10)
-rakt(U + 11, nu.v)
+--[[ Ut över NÄRMASTE långsidan. Vägen till U + 11 korsade hela banan från
+	cirkelns vänstra sida (u ≈ U − 8) och gav en fullföljd serie innan
+	kanten nåddes. ]]
+rakt(if nu.u < U then U - 11 else U + 11, nu.v)
 check("leaving the layout discards the run", image().lage == "steady" and image().tips == "stay_inside"
 	and image().progress == 0)
 rakt(U + KR * math.cos(fi), KV + KR * math.sin(fi))
