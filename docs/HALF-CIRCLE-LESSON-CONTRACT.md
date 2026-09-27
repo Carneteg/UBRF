@@ -116,6 +116,23 @@ gait.
   - standing still, jitter;
   - distance ridden elsewhere.
 
+## R1: halt cannot be banked (source review #5855779841)
+
+- **Halt anchor:** when a step has accepted halt (no credit), the lesson anchors
+  the position where the halt began. Jitter within **0.5 m** of the anchor is
+  tolerated for any length of time: no credit, no reset. More uncredited
+  displacement returns the attempt to the start ring with `halt_moved`. The
+  anchor is released by the next credited step.
+- **Incremental credit:** `langst` grows only by the movement since the previous
+  sample (or from `langst`, if that is further on), never by an absolute jump to
+  the current S. Anything moved without credit, including the tolerated 0.5 m,
+  therefore cannot be reclaimed later by a gait change or a stationary sample.
+  The completion threshold `L − 0.5` stays; a tolerated halt drift can make the
+  rider need to ride slightly further within the end ring.
+- **Joins:** a join counts only from a credited sample.
+- **Unchanged:** rear/front arming, reverse, chord/corridor/order, identity, break
+  recovery and deadline.
+
 ## Recovery and breaks
 
 The following return the attempt to `to_start`, with all route credit and joins
@@ -178,6 +195,17 @@ existing compact entry, and with free riding.
 - riding the figure backwards from E gives no progress;
 - going back along the arc resets;
 - standing still.
+
+**R1, halt accounting:**
+- a stationary halt, then fresh walk, completes;
+- movement through the join T1 during halt returns to the start with
+  `halt_moved`;
+- a full halted traversal, then a stationary walk sample and the next moving
+  sample, never completes;
+- a credited part, 0.4 m of tolerated halt drift, then a stationary walk
+  sample, gives no windfall, and completion shows `slutS < L − 0.3`;
+- bounded ±0.1 m jitter keeps the route and progress, and the figure then
+  completes.
 
 **Gait and breaks:**
 - halt is a pause;

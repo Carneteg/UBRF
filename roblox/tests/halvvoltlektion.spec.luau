@@ -197,6 +197,71 @@ tillStart()
 rutt(-3, G.LANGD)
 check("fresh recovery after the break completes", image().lage == "complete")
 
+-- ── R1: halt utan kredit kan inte bankas ──
+-- Stillastående halt, sedan färsk skritt: fullföljs.
+request("retry")
+tillStart()
+rutt(-3, 5)
+local pA = image().progress
+aid("broms")
+for _ = 1, 5 do ga(nu.u, nu.v) end
+check("R1: a stationary halt keeps progress and the route", image().lage == "route" and image().progress == pA)
+aid("driv")
+rutt(5, G.LANGD)
+check("R1: fresh walking after a stationary halt completes", image().lage == "complete")
+
+-- Förflyttning under halt genom skarven T1: tillbaka till start, ingen skarv.
+request("retry")
+tillStart()
+rutt(-3, 8)
+aid("broms")
+for i = 1, 15 do ga(vag(8 + 0.2 * i)) end -- 8 → 11 m i halt, förbi T1
+check("R1: moving through a join during halt returns to the start ring", image().lage == "to_start"
+	and image().tips == "halt_moved")
+aid("driv")
+
+-- Hela vägen i halt och sedan ett stillastående skrittprov vid E: aldrig klart.
+tillStart()
+rutt(-3, 0)
+aid("broms")
+rutt(0, G.LANGD)
+aid("driv")
+ga(nu.u, nu.v)
+check("R1: a full halted traversal then a stationary walk sample does not complete",
+	image().lage ~= "complete")
+ga(nu.u, nu.v + 0.5)
+check("R1: nor does the next moving sample", image().lage ~= "complete")
+
+-- Krediterad bit, tolererad förflyttning i halt (0,4 m), sedan skritt: ingen
+-- vinst i efterhand, och slutläget visar att 0,4 m aldrig krediterades.
+tillStart()
+rutt(-3, 5)
+local p5 = image().progress
+aid("broms")
+ga(vag(5.2)); ga(vag(5.4))
+check("R1: movement within 0.5 m of the halt anchor is tolerated", image().lage == "route")
+aid("driv")
+ga(nu.u, nu.v)
+check("R1: resuming walk on a stationary sample credits nothing", image().progress == p5)
+rutt(5.4, G.LANGD)
+local efterHalt = image()
+check("R1: the figure completes with the halted 0.4 m never credited", efterHalt.lage == "complete"
+	and efterHalt.resultat.slutS < G.LANGD - 0.3)
+
+-- Ofarlig, begränsad darrning i halt: pausen står kvar och figuren fullföljs.
+request("retry")
+tillStart()
+rutt(-3, 5)
+local pJ = image().progress
+aid("broms")
+local ju, jv = nu.u, nu.v
+for i = 1, 12 do ga(ju + (if i % 2 == 0 then 0.1 else -0.1), jv) end
+check("R1: bounded jitter in halt keeps the route and the progress", image().lage == "route"
+	and image().tips ~= "halt_moved" and image().progress == pJ)
+aid("driv")
+rutt(5, G.LANGD)
+check("R1: after the jitter the genuine figure completes", image().lage == "complete")
+
 -- ── Tidsgräns, figurbyte, begäranbok, alla lektioner ──
 request("retry")
 s.voltLektion.deadline = os.clock()

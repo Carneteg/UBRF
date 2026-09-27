@@ -1105,6 +1105,10 @@ Sprak.text = {
 		sv = "Vägen rids åt pilarnas håll. Rid till startringen och börja om.",
 		en = "The route goes the way of the arrows. Ride to the start ring and begin again.",
 	},
+	["halvvoltlektion.halt_moved"] = {
+		sv = "Hon flyttade sig under halten. Rid till startringen och börja om.",
+		en = "She moved during the halt. Ride to the start ring and begin again.",
+	},
 	["halvvoltlektion.walk_or_trot"] = {
 		sv = "Rid halvvolten i skritt eller trav. Rid till startringen och börja om.",
 		en = "Ride the half-circle in walk or trot. Ride to the start ring and begin again.",

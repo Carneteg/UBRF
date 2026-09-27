@@ -414,6 +414,7 @@ const SPRAK = {
   "halvvoltlektion.to_end": { sv: "Nästan klart! Rid in i slutringen på spåret.", en: "Almost done! Ride into the end ring on the track." },
   "halvvoltlektion.off_route": { sv: "Ni kom utanför strecken. Rid till startringen och börja om.", en: "You left the dashes. Ride to the start ring and begin again." },
   "halvvoltlektion.reverse": { sv: "Vägen rids åt pilarnas håll. Rid till startringen och börja om.", en: "The route goes the way of the arrows. Ride to the start ring and begin again." },
+  "halvvoltlektion.halt_moved": { sv: "Hon flyttade sig under halten. Rid till startringen och börja om.", en: "She moved during the halt. Ride to the start ring and begin again." },
   "halvvoltlektion.walk_or_trot": { sv: "Rid halvvolten i skritt eller trav. Rid till startringen och börja om.", en: "Ride the half-circle in walk or trot. Ride to the start ring and begin again." },
   "halvvoltlektion.unknown": { sv: "Jag tappade en bit av ritten. Rid till startringen så börjar vi om.", en: "I missed part of the ride. Ride to the start ring and we begin again." },
   "halvvoltlektion.complete": { sv: "Halvvolten klar! Du bytte håll och kom tillbaka till spåret.", en: "Half-circle completed! You changed direction and came back to the track." },

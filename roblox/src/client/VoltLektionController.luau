@@ -281,6 +281,7 @@ local function halvvoltText(key): string?
 	if key=="to_end" then return Sprak.t("halvvoltlektion.to_end") end
 	if key=="off_route" then return Sprak.t("halvvoltlektion.off_route") end
 	if key=="reverse" then return Sprak.t("halvvoltlektion.reverse") end
+	if key=="halt_moved" then return Sprak.t("halvvoltlektion.halt_moved") end
 	if key=="walk_or_trot" then return Sprak.t("halvvoltlektion.walk_or_trot") end
 	if key=="unknown" then return Sprak.t("halvvoltlektion.unknown") end
 	if key=="complete" then return Sprak.t("halvvoltlektion.complete") end

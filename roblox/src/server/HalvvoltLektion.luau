@@ -40,10 +40,12 @@ local BAKAT_M = 1.0
 local SKARV_R = 1.5
 local SKARV_SLACK = 1.0
 local SLUT_M = 0.5
+local HALT_R = 0.5 -- R1: tillåten rörelse från haltens ankare (darrning)
 HalvvoltLektion.GRANSER = table.freeze({ SPAR_DU = SPAR_DU, P0_V = P0_V, T1_V = T1_V, R = R,
 	E_V = E_V, L1 = L1, L2 = L2, L3 = L3, LANGD = LANGD, KORR = KORR, RING = RING,
 	STEG_M = STEG_M, GROV_M = GROV_M, TVETYDIG_M = TVETYDIG_M, BAKAT_M = BAKAT_M,
-	SKARV_R = SKARV_R, SKARV_SLACK = SKARV_SLACK, SLUT_M = SLUT_M, DEADLINE = DEADLINE })
+	SKARV_R = SKARV_R, SKARV_SLACK = SKARV_SLACK, SLUT_M = SLUT_M, HALT_R = HALT_R,
+	DEADLINE = DEADLINE })
 
 local AKTIVA = { to_start = true, route = true }
 
@@ -173,7 +175,7 @@ local function stang(s, orsak): boolean
 end
 
 local function tillStart(s, tips)
-	s.armS, s.langst, s.sistaS, s.sistaPunkt = nil, nil, nil, nil
+	s.armS, s.langst, s.sistaS, s.sistaPunkt, s.haltAnkare = nil, nil, nil, nil, nil
 	s.skarvar = {}
 	andra(s, "to_start", tips)
 	satDelmal(s, 0)
@@ -216,6 +218,19 @@ local function paVagen(s, seg, kredit: boolean): boolean
 	if not fore or math.sqrt((fore.u - fu) ^ 2 + (fore.v - fv) ^ 2) > 0.05 then
 		tillStart(s, "unknown"); return false
 	end
+	--[[ R1: HALT UTAN KREDIT KAN INTE BANKAS. Under halt förankras läget
+		där halten började; darrning inom HALT_R (0,5 m) från ankaret är
+		tillåten hur länge som helst, men mer okrediterad förflyttning går
+		tillbaka till startringen. Ankaret släpps vid nästa krediterade steg. ]]
+	if not kredit then
+		local a = s.haltAnkare or { u = fu, v = fv }
+		s.haltAnkare = a
+		if math.sqrt((tu - a.u) ^ 2 + (tv - a.v) ^ 2) > HALT_R then
+			tillStart(s, "halt_moved"); return false
+		end
+	else
+		s.haltAnkare = nil
+	end
 	local n = math.max(1, math.ceil(langd / STEG_M))
 	local skarvPunkter = {
 		{ u = ref.uT, v = T1_V, S = L1 },
@@ -232,14 +247,21 @@ local function paVagen(s, seg, kredit: boolean): boolean
 			tillStart(s, "unknown"); return false
 		end
 		if S < s.langst - BAKAT_M then tillStart(s, "reverse"); return false end
-		--[[ Skarvarna i ordning: ett prov nära nästa skarv. ]]
+		--[[ Skarvarna i ordning: ett KREDITERAT prov nära nästa skarv (R1:
+			okrediterad rörelse räknar aldrig en skarv). ]]
 		local nasta = skarvPunkter[#s.skarvar + 1]
-		if nasta and math.sqrt((u - nasta.u) ^ 2 + (v - nasta.v) ^ 2) <= SKARV_R then
+		if kredit and nasta and math.sqrt((u - nasta.u) ^ 2 + (v - nasta.v) ^ 2) <= SKARV_R then
 			table.insert(s.skarvar, table.freeze({ u = u, v = v }))
 		end
-		if kredit and S > s.langst then
+		--[[ R1: STEGVIS KREDIT. `langst` växer bara med rörelsen sedan
+			föregående prov (eller från `langst`, om den ligger längre fram) —
+			aldrig med ett absolut hopp till S. Det som flyttats utan kredit
+			kan därför inte tas igen av ett senare prov. ]]
+		local fore_S = s.sistaS or S
+		local fran = math.max(fore_S, s.langst)
+		if kredit and S > fran then
 			local tak = if #s.skarvar < 2 then skarvPunkter[#s.skarvar + 1].S + SKARV_SLACK else LANGD
-			s.langst = math.max(s.langst, math.min(S, tak))
+			s.langst = math.max(s.langst, math.min(s.langst + (S - fran), tak))
 		end
 		s.sistaS, fore = S, { u = u, v = v }
 	end
@@ -294,7 +316,7 @@ function HalvvoltLektion.steg(s, now: number, gangart: string?, ryggar: boolean?
 			and p.iDressyr == true then
 			--[[ Armeringssteget ger INGEN kredit; armS och langst börjar i
 				det observerade läget (bakre eller främre halvan). ]]
-			s.armS, s.langst, s.sistaS = S, S, S
+			s.armS, s.langst, s.sistaS, s.haltAnkare = S, S, S, nil
 			s.sistaPunkt = { u = q.u, v = q.v }
 			s.skarvar = {}
 			andra(s, "route", "track")
