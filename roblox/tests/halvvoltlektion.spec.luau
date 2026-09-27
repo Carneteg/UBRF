@@ -390,6 +390,8 @@ check("the eighth lesson and every old leaf are selectable beside 0..3 cards", m
 check("every composed page fits the four-row renderer", ryms)
 -- Undergruppens Tillbaka leder till Ridvägar, och dess Tillbaka till toppen.
 V.avbryt(); V.start("halvvolt-meny-tillbaka", nil)
+-- Som LektionController gör efter varje start: `avbryt` släpper lektionsvalet.
+UgnetaController.satLektionsVal(V.panel)
 kort(0)
 local g1 = hitta(UgnetaController.panel(KAP).knappar, Sprak.t("lektionsval.vagar"))
 if g1 then g1.skicka() end

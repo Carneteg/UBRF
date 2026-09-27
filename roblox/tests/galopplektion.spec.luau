@@ -264,6 +264,8 @@ end
 check("the ninth lesson and every old leaf are selectable beside 0..3 cards", menyOk)
 check("every composed page fits the four-row renderer", ryms)
 V.avbryt(); V.start("galopp-meny-tillbaka", nil)
+-- Som LektionController gör efter varje start: `avbryt` släpper lektionsvalet.
+UgnetaController.satLektionsVal(V.panel)
 kort(0)
 local g1 = hitta(UgnetaController.panel(KAP).knappar, Sprak.t("lektionsval.gangart"))
 if g1 then g1.skicka() end

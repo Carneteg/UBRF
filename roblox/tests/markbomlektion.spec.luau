@@ -170,10 +170,15 @@ check("reaching the plane and turning back resets and never completes",
 
 -- ── Stillastående, darrning, trav, halt, galopp ──
 runt(0, -9)
-ga(0, -8.6) -- ETT prov: armeringen, utan kredit
+ga(0, -8.6)
+--[[ Armeringen sker redan på vägen in (`runt` slutar i korridoren), så steget
+	till −8,6 är ett krediterat skrittsteg. Det som prövas är att stillastående
+	och darrning INTE lägger till något därefter. ]]
+local fore = image().progress
+check("KONTROLL: armed in approach before standing still", image().lage == "approach")
 for _ = 1, 10 do ga(nu.a, nu.w) end
 for i = 1, 8 do ga(if i % 2 == 0 then 0.05 else -0.05, nu.w) end
-check("standing still and jitter add no approach", image().progress == 0)
+check("standing still and jitter add no approach", image().progress == fore)
 till(0, -7)
 aid("driv") -- trav
 ga(0, -6.2)
@@ -373,6 +378,8 @@ end
 check("the tenth lesson and every old leaf are selectable beside 0..3 cards", menyOk)
 check("every composed page fits the four-row renderer", ryms)
 V.avbryt(); V.start("markbom-meny-tillbaka", nil)
+-- Som LektionController gör efter varje start: `avbryt` släpper lektionsvalet.
+UgnetaController.satLektionsVal(V.panel)
 kort(0)
 for _, g in ipairs({ "lektionsval.vagar", "lektionsval.linjer" }) do
 	local k = hitta(UgnetaController.panel(KAP).knappar, Sprak.t(g))
@@ -381,7 +388,8 @@ end
 local tb = hitta(UgnetaController.panel(KAP).knappar, Sprak.t("lektionsval.tillbaka"))
 if tb then tb.skicka() end
 check("Back from the lines-and-pole subgroup returns to Riding paths",
-	hitta(UgnetaController.panel(KAP).knappar, Sprak.t("halvvoltlektion.choose")) ~= nil)
+	-- Sedan Genom hörnet ligger halvvolten under Böjda vägar; Ridvägar visar gruppen.
+	hitta(UgnetaController.panel(KAP).knappar, Sprak.t("lektionsval.bojda")) ~= nil)
 UgnetaController.dolj()
 
 local sync = Networking.get("VoltLektionSync")

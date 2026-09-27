@@ -298,6 +298,11 @@ local function kort(n)
 	if n > 0 then UgnetaController.visa("Kort", {}, n >= 1, nil, n >= 2, n >= 3) end
 end
 local menyOk = true
+--[[ Ridmenyn prövas MONTERAD. Utan installerad ridlektionspanel visar Ugneta
+	ledningslektionens val till fots ("Leda till ridhuset", sedan 784e8c1) —
+	rätt till fots, men inte en av de gamla kortknapparna provet räknar. Det
+	valet kopplas ur under menyprovet och tillbaka efteråt. ]]
+UgnetaController.satFotVal(nil)
 for n = 0, 3 do
 	V.avbryt(); V.start("meny-prov-" .. n, nil)
 	UgnetaController.satLektionsVal(nil)
@@ -328,6 +333,7 @@ for n = 0, 3 do
 	}
 	for _, b in ipairs(blad) do
 		V.avbryt(); V.start("meny-prov-" .. n .. "-" .. b.text, nil)
+		UgnetaController.satLektionsVal(V.panel) -- som LektionController efter varje start
 		kort(n)
 		local sida = UgnetaController.panel(KAP).knappar
 		local oppna = hitta(sida, Sprak.t("lektionsval.oppna"))
@@ -351,6 +357,8 @@ for n = 0, 3 do
 	end
 	-- Tillbaka från en grupp ger de ursprungliga kortknapparna.
 	V.avbryt(); V.start("meny-prov-" .. n .. "-tillbaka", nil)
+	-- Som LektionController gör efter varje start: `avbryt` släpper lektionsvalet.
+	UgnetaController.satLektionsVal(V.panel)
 	kort(n)
 	local sida = UgnetaController.panel(KAP).knappar
 	local oppna = hitta(sida, Sprak.t("lektionsval.oppna"))
@@ -365,8 +373,12 @@ for n = 0, 3 do
 	check("R1: " .. n .. " cards: Back from a group returns to the original card actions", igen)
 end
 check("R1: every group opens and every leaf is selectable beside 0..3 cards", menyOk)
+UgnetaController.satFotVal(LedLektionController.panel)
 UgnetaController.dolj()
 
+-- Menyprovet ovan skickar många begäranden (också till påhittade ritter);
+-- takten nollställs så att nästa avsnitt inte nekas med takt.for_snabbt.
+Skopa._nollstallForProv()
 -- Fri ridning efter Finish, och återanslutning till samma ritt. En ny ritt
 -- ger en tom begäranbok, så klientens egen sekvens (från 0) är inte inaktuell.
 check("KONTROLL: dismount for a fresh ride", HorseService.dismount(p) == true)
@@ -382,6 +394,7 @@ check("R1: after Finish, free riding shows all groups and the way back to lesson
 	#friSida.knappar == 4 and hitta(friSida.knappar, Sprak.t("lektionsval.vagar")) ~= nil
 	and hitta(friSida.knappar, Sprak.t("voltlektion.lessons")) ~= nil)
 V.avbryt(); V.start(id, nil)
+UgnetaController.satLektionsVal(V.panel) -- som LektionController efter varje start
 check("R1: reattaching to the same ride keeps free-riding navigation",
 	#UgnetaController.panel(KAP).knappar == 4)
 
