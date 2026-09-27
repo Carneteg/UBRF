@@ -482,6 +482,7 @@ const SPRAK = {
   "ledlektion.unknown": { sv: "Jag tappade en bit av vägen. Led henne vidare så börjar vi om.", en: "I missed part of the way. Keep leading her and we start over." },
   "ledlektion.active": { sv: "Avsluta ledningen först.", en: "Finish leading first." },
   "ledlektion.stale_attempt": { sv: "Det där gällde en äldre ledning. Här är den aktuella.", en: "That was for an earlier lead. Here is the current one." },
+  "ledlektion.stale_context": { sv: "Hästen eller du har bytts sedan knappen visades. Här är läget nu.", en: "The horse or you changed since that button was shown. Here is the current state." },
   "ledlektion.pending": { sv: "Ett ögonblick…", en: "One moment…" },
   "ledlektion.network": { sv: "Jag nådde inte stallet. Försök igen.", en: "I could not reach the stable. Try again." },
   "ledlektion.complete": { sv: "Snyggt ledd! Du ledde henne hela vägen in på ridbanan.", en: "Nicely led! You led her all the way onto the arena track." },

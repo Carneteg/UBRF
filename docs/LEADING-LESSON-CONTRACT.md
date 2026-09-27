@@ -117,6 +117,26 @@ Retry and Finish work as in the other lessons:
 - **Health.** Production requires a numeric `Health > 0`; the fixture sets a
   realistic `Health = 100`.
 
+## R2 (source review #5856278551)
+
+- **Context epoch.** The attempt number changes only at Start and Retry, so
+  it cannot bind a horse. The lesson therefore keeps a context epoch
+  (`kontextNr`) per player: the bound MODEL instance and the CHARACTER
+  instance. A replacement with the same HorseId counts as a new context.
+  - It is refreshed at every sync, every request and every step, also without
+    an active attempt.
+  - A change bumps the epoch and pushes the snapshot, which includes
+    `kontextNr` and `hastId`.
+- **Mutating requests** carry both the displayed attempt and context:
+  - a mismatched context is `stale_context`, answered with the current state
+    and actionable guidance;
+  - nothing is touched, and a completed frozen result stays;
+  - both values are part of duplicate replay;
+  - after a fresh sync, Start, Retry and Finish act on the current context.
+- **Start** uses the context's model, the one just validated.
+- **Client.** Controls carry the displayed context too, and a context change
+  bumps the page generation.
+
 ## Lifecycle and requests
 
 - **Attempt:** a numbered attempt per player (`forsokNr`), session-local.
@@ -178,8 +198,7 @@ bound horse and another horse). The horse is moved between explicit
 **Lifecycle and requests:**
 - deadline;
 - stale and replayed requests;
-- owner-only events;
-- no persistent writes.
+- owner-only events.
 
 **Panel:**
 - the on-foot entry is visible beside 0..3 cards and is secondary;
@@ -197,6 +216,23 @@ bound horse and another horse). The horse is moved between explicit
 - the server rejects an old attempt's Finish and Retry (`stale_attempt`);
 - a reordered older-attempt snapshot never replaces the current one;
 - the current attempt's own Finish still works.
+
+**R2, written:**
+- an old Retry after A → B while complete is `stale_context`, the result stays,
+  and a fresh sync then Retry acts on B;
+- an old Start after B → A while closed is `stale_context`, and a fresh sync
+  then Start acts on A;
+- a same-HorseId model replacement during an active attempt is
+  `stale_context` for the old Finish, and the fresh Finish closes;
+- a never-started player (ready) whose binding changes A → B gets
+  `stale_context` for the old Start, and after a fresh sync the Start acts
+  on B;
+- A → B is injected through `LedLektion.start(deps)`, because the bench's
+  StallService always assigns the same horse. The same-HorseId replacement is a
+  real new model.
+- **P3:** the R1 client section now reopens through the real Choose entry
+  after Finish (asserting each control exists) and re-syncs the client through
+  its real sync path after direct handler calls.
 
 **Planned, not written:**
 - the care question hiding the entry (Naromrade `data.harVal`), which needs

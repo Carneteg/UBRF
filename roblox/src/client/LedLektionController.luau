@@ -74,13 +74,15 @@ local function mottag(b: any)
 		inom samma försök aldrig en nyare revision. ]]
 	if bild and (b.forsokNr < bild.forsokNr
 		or (b.forsokNr == bild.forsokNr and b.revision < bild.revision)) then return end
-	if not bild or b.forsokNr ~= bild.forsokNr or b.lage ~= bild.lage then sidGen += 1 end
+	if not bild or b.forsokNr ~= bild.forsokNr or b.lage ~= bild.lage or b.kontextNr ~= bild.kontextNr then
+		sidGen += 1
+	end
 	bild = b
 	sekvens = math.max(sekvens, b.sekvens or 0)
 	if valt and AKTIVA[b.lage] then visaGuide(b.referens) else rivGuide() end
 end
 
-local function skicka(op: string, forvantat: number?)
+local function skicka(op: string, forvantat: number?, kontext: number?)
 	if pending and op ~= "finish" then return end
 	requestNr += 1
 	sidGen += 1
@@ -90,7 +92,7 @@ local function skicka(op: string, forvantat: number?)
 	pending, pendingTid, fel = true, 0, nil
 	task.spawn(function()
 		local transport, ok, reason, b = pcall(function()
-			return Net.get("LedLektion"):InvokeServer(op, seq, forvantat)
+			return Net.get("LedLektion"):InvokeServer(op, seq, forvantat, kontext)
 		end)
 		if token ~= requestNr then return end
 		pending = false
@@ -98,7 +100,8 @@ local function skicka(op: string, forvantat: number?)
 		mottag(b)
 		if ok ~= true then
 			fel = if reason == "inside" or reason == "target" or reason == "horse" or reason == "mounted"
-				or reason == "character" or reason == "active" or reason == "stale_attempt" then reason
+				or reason == "character" or reason == "active" or reason == "stale_attempt"
+				or reason == "stale_context" then reason
 				else "network"
 		elseif op == "finish" then
 			valt = false; rivGuide()
@@ -112,11 +115,12 @@ end
 
 --[[ En ritad kontroll: bunden till sidans generation och det visade
 	försöket (R1). Den gäller bara om ingenting har hänt sedan den ritades. ]]
-local function val(key: string, fn: (number) -> (), sekundar: boolean?)
+local function val(key: string, fn: (number, number) -> (), sekundar: boolean?)
 	local gen = sidGen
 	local forsok = if bild and type(bild.forsokNr) == "number" then bild.forsokNr else 0
+	local kontext = if bild and type(bild.kontextNr) == "number" then bild.kontextNr else 0
 	return { text = text(key), aktiv = true, sekundar = sekundar == true,
-		skicka = function() if gen == sidGen and not pending then fn(forsok) end end }
+		skicka = function() if gen == sidGen and not pending then fn(forsok, kontext) end end }
 end
 
 --[[ Ugneta's on-foot choices: ONE secondary entry, or the lesson page. ]]
@@ -138,13 +142,13 @@ function L.panel(): any
 		if fel == "network" then
 			table.insert(knappar, val("sync", function() skicka("sync") end))
 		elseif b.lage == "ready" or b.lage == "closed" then
-			table.insert(knappar, val("start", function(f) skicka("start", f) end))
+			table.insert(knappar, val("start", function(f, k) skicka("start", f, k) end))
 		elseif b.lage == "complete" or b.lage == "timeout" then
-			table.insert(knappar, val("retry", function(f) skicka("retry", f) end))
+			table.insert(knappar, val("retry", function(f, k) skicka("retry", f, k) end))
 		end
 	end
 	if AKTIVA[b.lage] then
-		table.insert(knappar, val("finish", function(f) skicka("finish", f) end))
+		table.insert(knappar, val("finish", function(f, k) skicka("finish", f, k) end))
 	else
 		--[[ Tillbaka: nya sidor och ett sent svar på en gammal begäran tas
 			inte emot (requestNr), och gamla kontroller dör (sidGen). ]]
@@ -173,6 +177,9 @@ end
 --[[ Provkrokar. ]]
 function L._valtForProv(): boolean return valt end
 function L._bildForProv(): any return bild end
+--[[ Provkrok: den RIKTIGA synkvägen (skicka("sync")), så att klientens sekvens
+	följer serverns efter att ett prov anropat handlaren direkt. ]]
+function L._synkaForProv() skicka("sync") end
 function L._guideForProv(): Model? return guide end
 
 return L

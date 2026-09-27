@@ -70,12 +70,14 @@ end
 
 local function nytt(player: Player): any
 	return { userId = player.UserId, lage = "ready", tips = "intro", revision = 0, progress = 0,
-		forsokNr = 0, hogsta = 0, svar = {}, ordning = {} }
+		forsokNr = 0, hogsta = 0, svar = {}, ordning = {},
+		kontextNr = 0, kModell = nil, kKaraktar = nil, kHastId = nil }
 end
 
 function LedLektion.bild(s): any
 	local z = LedService.malzon()
 	return table.freeze({ typ = "leda", userId = s.userId, forsokNr = s.forsokNr,
+		kontextNr = s.kontextNr, hastId = s.kHastId,
 		revision = s.revision, sekvens = s.hogsta, lage = s.lage, tips = s.tips,
 		progress = s.progress, resultat = s.resultat,
 		referens = if z and s.malNyckel then table.freeze({ nyckel = s.malNyckel,
@@ -117,6 +119,26 @@ local function stang(player: Player, s, orsak: string)
 		andra(s, "complete", "complete")
 	else
 		andra(s, "timeout", "timeout")
+	end
+end
+
+--[[ R2: KONTEXTEN som en ändrande begäran gäller — den bundna MODELLEN
+	(instansen, så att en ersättare med samma HorseId räknas som ny) och
+	KARAKTÄREN. Ändras någon räknas `kontextNr` upp och bilden går ut. Den
+	förnyas vid sync, vid varje begäran och vid varje steg, också utan
+	aktivt försök, så att ett byte medan lektionen står i ready/closed/
+	complete fångas innan en gammal Start/Retry når fram. Begränsad: två
+	referenser och ett tal per spelare. ]]
+local function uppdateraKontext(player: Player, s)
+	local b = beroenden
+	local modell = if b then b.rattHast(player) else nil
+	local kar = (player :: any).Character
+	if modell ~= s.kModell or kar ~= s.kKaraktar then
+		s.kModell, s.kKaraktar = modell, kar
+		s.kHastId = if modell then tostring((modell :: Model):GetAttribute("HorseId") or (modell :: Model).Name)
+			else nil
+		s.kontextNr += 1
+		s.revision += 1
 	end
 end
 
@@ -197,31 +219,40 @@ function LedLektion._steg(dt: number)
 	klocka += dt
 	for player, s in pairs(tillstand) do
 		local rev = s.revision
+		uppdateraKontext(player, s)
 		if AKTIVA[s.lage] then prov(player, s) end
 		if s.revision ~= rev then sand(player, s) end
 	end
 end
 
 --[[ `forvantat` (R1): det försöksnummer klienten VISAR när den skickar en
-	ändrande begäran. Start, Retry och Finish gäller bara om det är
-	serverns nuvarande försök — en kvarglömd kontroll från ett äldre försök
-	(eller en annan häst, som alltid ger ett nytt försök) nekas som
-	`stale_attempt` utan att röra det nyare. Ingår i dubblettkontrollen. ]]
-function LedLektion.begar(player: any, op: any, seq: any, forvantat: any): (boolean, string?, any)
+	ändrande begäran; `kontextForv` (R2): den kontext (bunden modell och
+	karaktär) som visades med den. Start, Retry och Finish gäller bara om
+	båda är serverns nuvarande — annars `stale_attempt` resp.
+	`stale_context`, med aktuell bild, utan att röra något. Ett byte av häst
+	ändrar INTE försöksnumret (det räknas bara vid Start/Retry), därför
+	behövs kontexten. Båda ingår i dubblettkontrollen. ]]
+function LedLektion.begar(player: any, op: any, seq: any, forvantat: any,
+	kontextForv: any): (boolean, string?, any)
 	if typeof(player) ~= "Instance" and type(player) ~= "table" then return false, "request", nil end
 	local s = tillstand[player]
 	if not s then s = nytt(player); tillstand[player] = s end
+	uppdateraKontext(player, s)
 	if op == "sync" then return true, nil, LedLektion.bild(s) end
 	if op ~= "start" and op ~= "retry" and op ~= "finish" then return false, "unknown", nil end
 	if type(seq) ~= "number" or seq ~= seq or seq < 1 or seq > 2147483647 or seq % 1 ~= 0 then
 		return false, "request", nil
 	end
-	if type(forvantat) ~= "number" or forvantat ~= forvantat or forvantat < 0 or forvantat % 1 ~= 0 then
+	if type(forvantat) ~= "number" or forvantat ~= forvantat or forvantat < 0 or forvantat % 1 ~= 0
+		or type(kontextForv) ~= "number" or kontextForv ~= kontextForv or kontextForv < 0
+		or kontextForv % 1 ~= 0 then
 		return false, "request", nil
 	end
 	local prev = s.svar[seq]
 	if prev then
-		if prev.op ~= op or prev.forvantat ~= forvantat then return false, "request", nil end
+		if prev.op ~= op or prev.forvantat ~= forvantat or prev.kontextForv ~= kontextForv then
+			return false, "request", nil
+		end
 		return prev.ok, prev.fel, prev.bild
 	end
 	if seq <= s.hogsta then return false, "stale", nil end
@@ -230,6 +261,8 @@ function LedLektion.begar(player: any, op: any, seq: any, forvantat: any): (bool
 	local b = beroenden
 	if forvantat ~= s.forsokNr then
 		fel = "stale_attempt"
+	elseif kontextForv ~= s.kontextNr then
+		fel = "stale_context"
 	elseif op == "finish" then
 		--[[ Avsluta rör aldrig hästen eller kopplet. ]]
 		ok = true
@@ -243,7 +276,7 @@ function LedLektion.begar(player: any, op: any, seq: any, forvantat: any): (bool
 	elseif not b then
 		fel = "target"
 	else
-		local modell = b.rattHast(player)
+		local modell = s.kModell -- den kontext som just prövades
 		local rot = hastRot(modell)
 		local z = LedService.malzon()
 		if z == nil then fel = "target"
@@ -266,7 +299,8 @@ function LedLektion.begar(player: any, op: any, seq: any, forvantat: any): (bool
 		end
 	end
 	local bild = LedLektion.bild(s)
-	s.svar[seq] = { op = op, forvantat = forvantat, ok = ok, fel = fel, bild = bild }
+	s.svar[seq] = { op = op, forvantat = forvantat, kontextForv = kontextForv, ok = ok, fel = fel,
+		bild = bild }
 	table.insert(s.ordning, seq)
 	while #s.ordning > MAX_REQUESTS do s.svar[table.remove(s.ordning, 1)] = nil end
 	return ok, fel, bild

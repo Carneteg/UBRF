@@ -1377,6 +1377,10 @@ Sprak.text = {
 		sv = "Det där gällde en äldre ledning. Här är den aktuella.",
 		en = "That was for an earlier lead. Here is the current one.",
 	},
+	["ledlektion.stale_context"] = {
+		sv = "Hästen eller du har bytts sedan knappen visades. Här är läget nu.",
+		en = "The horse or you changed since that button was shown. Here is the current state.",
+	},
 	["ledlektion.pending"] = {
 		sv = "Ett ögonblick…",
 		en = "One moment…",
