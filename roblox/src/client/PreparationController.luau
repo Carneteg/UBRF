@@ -365,6 +365,15 @@ local senasteLage: string? = nil
 	varje befintligt layoutprov mäter samma sak. Med en värd är ytorna släckta
 	och innehållet går till värden i stället — flyttat, inte gömt. ]]
 local panelVal: { any } = {}
+--[[ RÄTTELSEN (docs/EQUIPMENT-GUIDANCE-CONTRACT.md): bär spelaren en ANNAN
+	hästs sadel eller träns säger vyn det (`burenUtrustning` mot `hastId`).
+	Den härleds ur varje vy, så den överlever serverns vypushar och går av
+	sig själv när utrustningen lämnats tillbaka, hästen bytts eller
+	karaktären försvunnit. `rattelseGen` binder ett svar till den rättelse
+	det skickades för — ett sent svar skriver aldrig över nyare återkoppling. ]]
+local rattelseNyckel: string? = nil
+local rattelseGen = 0
+local rattelseAktiv = false
 local panelSteg: { any } = {}
 local panelData: any = nil
 local panelHastnamn: string? = nil
@@ -1522,7 +1531,19 @@ end
 	avgör om ett moment ens går att trycka på — HUD:en hittar alltså ingen
 	ny regel på, den slutar bara rita det den redan visste var omöjligt. ]]
 local function interaktionPagar(antalVal: number): boolean
-	return antalVal > 0 and not utomRackhall
+	--[[ En rättelse gäller vid den ANDRA hästens front, alltså ofta utom
+		räckhåll för den egna hästen; räckvidden prövas då av servern. ]]
+	return antalVal > 0 and (not utomRackhall or rattelseAktiv)
+end
+
+local function rattelseFor(vy: any): any
+	local b = vy and vy.burenUtrustning
+	if type(b) ~= "table" or type(b.hastId) ~= "string" or type(vy.hastId) ~= "string" then return nil end
+	if b.hastId == vy.hastId or vy.status == "riding" then return nil end
+	local typ = if type(b.delar) == "table" then b.delar[1] else nil
+	if typ ~= "sadel" and typ ~= "trans" then return nil end
+	return { hastId = b.hastId, typ = typ,
+		hastnamn = if type(b.hastnamn) == "string" and b.hastnamn ~= "" then b.hastnamn else b.hastId }
 end
 
 --[[ SLUTET PÅ VARJE VY, på ett ställe.
@@ -1720,6 +1741,7 @@ end
 function rita(vy: any)
 	bygg()
 	senasteVy = vy
+	rattelseAktiv = false
 
 	--[[ Turen, valläget och "visa allt" hör till den vy som ritas NU.
 		Nollställs här så att en gren som inte sätter dem aldrig ärver
@@ -1882,6 +1904,39 @@ function rita(vy: any)
 		if rubrik then rubrik.Text = fasnamn or Sprak.t("hud.gor_i_ordning") end
 	end
 
+	--[[ RÄTTELSEN. Bär hon en annan hästs utrustning är det det som står
+		i tur: raden säger vems den är och vad hon gör, och valet att lämna
+		tillbaka den står FÖRST bland panelens val. Nej-texten från ett
+		avslag går före medan den står uppe; sedan kommer rättelsen tillbaka. ]]
+	local r = rattelseFor(vy)
+	local rn = if r then (r.typ .. "|" .. r.hastId) else nil
+	if rn ~= rattelseNyckel then rattelseNyckel = rn; rattelseGen += 1 end
+	local extraVal = 0
+	if r then
+		rattelseAktiv = true
+		ledtext = Sprak.t("tack.rattelse_" .. r.typ, r.hastnamn, hastnamn or "")
+		local gen = rattelseGen
+		table.insert(panelVal, 1, { id = "lamna:" .. r.typ, text = Sprak.t("tack.lamna_" .. r.typ, r.hastnamn),
+			klar = false, fel = false, paTur = true, aktiv = true, rattelse = true,
+			skicka = function()
+				if gen ~= rattelseGen then return end
+				task.spawn(function()
+					local transport, ok, skal = pcall(function()
+						return Net.get("LamnaTillbaka"):InvokeServer(r.typ, r.hastId)
+					end)
+					if gen ~= rattelseGen then return end
+					if not transport then
+						PreparationController.visaAvslagFor("tack.lamna_natverk")
+					elseif ok == true then
+						visaBekraftelse(Sprak.t("tack.lamnade_" .. r.typ, r.hastnamn))
+					else
+						PreparationController.visaAvslagFor(skal)
+					end
+				end)
+			end })
+		extraVal = 1
+	end
+
 	--[[ RUBRIKEN PEKAR TILLBAKA när hästen är utom räckhåll. Den skrivs
 		SIST och över allt annat: vilket läge vyn än beskriver är det inte
 		det som gäller för spelaren just nu, och en instruktion man inte
@@ -1899,7 +1954,7 @@ function rita(vy: any)
 	--[[ HUD:en göms medan man rider — men INTE när eftervården väntar, och
 		det är hela skillnaden mot före #161: en spelare som satt av mötte
 		förut en tom skärm, och passet tog aldrig slut. ]]
-	avsluta(lage, #(vy.moment or {}), ledtext, vy.status ~= "riding")
+	avsluta(lage, #(vy.moment or {}) + extraVal, ledtext, vy.status ~= "riding")
 end
 
 --[[ Körs av klientens loop. Ritar bara om när kontexten FAKTISKT byter —
@@ -2226,6 +2281,11 @@ end
 --[[ Vad SERVERN säger att spelaren bär (#182). Klienten räknar inte ut
 	det själv — `DinHast` ritar bara det vyn redan innehåller, av samma
 	skäl som `hastId` ovan läses härifrån och inte ur en egen fråga. ]]
+--[[ Provkrok: rättelsen i den senast ritade vyn. ]]
+function PreparationController._rattelseForProv(): any
+	return if rattelseAktiv then rattelseFor(senasteVy) else nil
+end
+
 function PreparationController.burenUtrustning(): any
 	return senasteVy and senasteVy.burenUtrustning or nil
 end

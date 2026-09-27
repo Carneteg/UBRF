@@ -941,6 +941,65 @@ function GameplayService.valjEn(player: Player, hastId: string?, typ: string?): 
 	return true
 end
 
+--[[ ══ ATT LÄMNA TILLBAKA (docs/EQUIPMENT-GUIDANCE-CONTRACT.md) ═══════
+
+	`valjEn` säger «spelaren får lämna tillbaka sadeln hon bar först», men
+	vägen fanns inte: fronten och dess prompt släcks när utrustningen tas,
+	och de enda som släpper en buren del är `slappBuret` (hela sessionen,
+	eller kroppen borta) och påsättningen. Den som tagit fel hästs sadel
+	satt fast. Det här är den SMALA vägen tillbaka — FAS 1 baklänges:
+
+	    validera -> tänd fronten -> släpp den burna -> committa
+
+	Samma räckvidd som hämtningen, vid utrustningens EGEN front. Ingenting
+	annat: ingen annan del rörs, inget teleporteras, inget sätts på, inget
+	framsteg, ingen belöning, felräknaren orörd. `forvantatHastId` är den
+	hästs utrustning klienten VISADE; bär spelaren något annat nu nekas
+	begäran som inaktuell. ]]
+function GameplayService.lamnaTillbaka(player: Player, typ: any, forvantatHastId: any): (boolean, string?)
+	if typ ~= "sadel" and typ ~= "trans" then return false, "tack.okand_utrustning" end
+	local t = typ :: string
+	local id = TackService.barBuren(player, t)
+	if id == nil then return false, "tack.bar_inget" end
+	if type(forvantatHastId) ~= "string" or forvantatHastId ~= id then
+		return false, "tack.bar_inte_den"
+	end
+	--[[ Bara en REGISTRERAD hämtning. «Rida nu» bygger burna delar utan
+		ägarpost; de tas aldrig tillbaka den här vägen. ]]
+	local nyckel = agarnyckel(t, id)
+	if burenAv[nyckel] ~= player then return false, "tack.kan_inte_lamnas" end
+
+	local karaktar = player.Character
+	local rot = karaktar and karaktar:FindFirstChild("HumanoidRootPart")
+	if not (rot and rot:IsA("BasePart")) then return false, "tack.ingen_karaktar" end
+	local front = TackForradService.forHast(id)
+	local plats = front and front.PrimaryPart
+	if not (plats and plats:IsA("BasePart")) then return false, "tack.ingen_front" end
+	if (rot.Position - plats.Position).Magnitude > STEG_RACKVIDD then
+		return false, "tack.ga_till_fronten"
+	end
+	--[[ Hänger den redan där vore en till en dubblett. ]]
+	if TackForradService.paFronten(id, t) == true then return false, "tack.front_upptagen" end
+
+	--[[ TRANSAKTIONEN. `satSynlig` är allt-eller-inget; ett nej där betyder
+		att ingenting ändrats. Släpps inte den burna delen tas fronten
+		ned igen, så att den aldrig står både i handen och på kroken. ]]
+	if not TackForradService.satSynlig(id, t, true) then
+		return false, "tack.front_visar_inte"
+	end
+	local ok, slapptes = pcall(function() return TackService.slappBuren(player, t) end)
+	if not (ok and slapptes) then
+		pcall(function() TackForradService.satSynlig(id, t, false) end)
+		return false, "tack.kunde_inte_slappas"
+	end
+
+	burenAv[nyckel] = nil
+	local vald = valdUtrustning[player]
+	if vald and vald[t] == id then vald[t] = nil end
+	skicka(player)
+	return true
+end
+
 function GameplayService.valdFor(player: Player): { [string]: string }?
 	return valdUtrustning[player]
 end
@@ -1581,6 +1640,11 @@ function GameplayService.start()
 	--[[ #235 FAS 3: samma monster, en annan typ. ]]
 	Net.get("TransaHast").OnServerInvoke = Skopa.grind("TransaHast", function(player, modell)
 		return GameplayService.transa(player, modell)
+	end)
+
+	--[[ Att lämna tillbaka det man bär (docs/EQUIPMENT-GUIDANCE-CONTRACT.md). ]]
+	Net.get("LamnaTillbaka").OnServerInvoke = Skopa.grind("LamnaTillbaka", function(player, typ, hastId)
+		return GameplayService.lamnaTillbaka(player, typ, hastId)
 	end)
 
 	--[[ ── LEDNINGEN (#162 blockerare 2) ──────────────────────────────

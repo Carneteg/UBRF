@@ -77,6 +77,7 @@ local DEFINITIONS = {
 		 påstående. ]]
 	SadlaHast = "RemoteFunction",          -- klient → server: lägg sadeln jag bär på den här hästen
 	TransaHast = "RemoteFunction",         -- klient -> server: lagg transet jag bar pa den har hasten
+	LamnaTillbaka = "RemoteFunction",      -- klient -> server: hang tillbaka det jag bar pa dess egen front
 	--[[ #264 GAIT_READABILITY_AND_UGNETA: spelarens språkval ur flaggan.
 		 Argumentet är "sv" eller "en" och ingenting annat; servern skriver
 		 bara spelarens eget attribut, så att serverns egna texter till

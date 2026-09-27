@@ -111,6 +111,7 @@ local GRANSER: { [string]: Grans } = {
 		listtryck, och inget en människa gör i ström. ]]
 	SadlaHast = { tak = 4, pafyll = 1 },
 	TransaHast = { tak = 4, pafyll = 1 },
+	LamnaTillbaka = { tak = 4, pafyll = 1 },
 
 	--[[ `RidaNu` låter stallet göra i ordning HELA hästen. Det är den
 		dyraste enskilda handlingen i hela gränssnittet. ]]
