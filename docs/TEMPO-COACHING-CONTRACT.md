@@ -151,3 +151,71 @@ fixture with real HorseService observations.
 **Planned, not written:**
 - physical rendering;
 - whether the cue helps (a human gate).
+
+## R1 correction ([TEMPO_COACHING_SOURCE_R1](https://github.com/Carneteg/UBRF/pull/264#issuecomment-5857608987))
+
+This section was written BEFORE the R1 production edits.
+
+### Applicability is not the same as event history
+
+- **Event history** is `coachNr`: monotonic, counted only at the three
+  classifications.
+- **Current applicability** is the snapshot's CURRENT tip: a cue with reason
+  X is supported only while `tips == X`. Anything else ends it:
+  - the opposite classification;
+  - `unknown`, a gap or a teleport;
+  - `walk_only`, `walk_on` or `stay_inside`;
+  - `keep_going`, a recovery (with no automatic praise);
+  - complete or closed;
+  - a request or context teardown.
+- **Producer.** TempoLektion clears `coachSkal` on every classification that
+  is NOT a coaching event (the resets and `keep_going`). A later
+  incompatible snapshot therefore carries no retained old reason. `coachNr`
+  is untouched.
+- **Client, when a snapshot is consumed** (`mottag`, the path every accepted
+  snapshot goes through):
+  - a visible cue is removed AT ONCE if the newly accepted snapshot no
+    longer supports it (another attempt, not `steady`, or `tips ~= skal`),
+    so an intermediate invalidating snapshot is never forgotten between
+    renders;
+  - a NEW cue requires `COACH_SKAL[b.coachSkal]` AND `b.tips ==
+    b.coachSkal`, so a higher unseen `coachNr` in an incompatible snapshot
+    is consumed without anything being shown.
+- **Rendering** has the same check defensively (`b.tips == cg.skal`).
+- **Removal never does any of these:**
+  - touch the cooldown;
+  - count Fewer;
+  - queue a replacement;
+  - replay a consumed event.
+
+  A genuinely new eligible event after the cooldown is shown as usual, and a
+  still-supported cue may finish its lifetime.
+
+### Coverage labels (this list replaces the one above)
+
+- **JOINED path** (real TempoLektion/HorseService samples → the server's
+  push to LocalPlayer → the real `VoltLektionController` → the composed
+  `UgnetaController.panel(4)`), SYNCHRONOUS:
+  - slow gives a cue;
+  - slow → fast within the cooldown: removed at once, nothing new;
+  - slow → a gap: removed;
+  - the wrong gait: removed;
+  - a higher unseen event number in a newer incompatible snapshot: nothing
+    shown;
+  - removal followed by a recovery before a render: nothing;
+  - a duplicate or older snapshot: rejected;
+  - a fresh event after the cooldown: shown;
+  - a real two-completion pair with a Retry through the client button: the
+    comparison text in the host.
+- **GENUINELY DEFERRED:** a Start request on the scheduler, with the push of
+  the new attempt (and its event) BEFORE the delayed reply. The baseline is
+  set by the push, the old reply is rejected, and a later fresh event is
+  shown.
+- **PRODUCER ONLY:** C1–C5.
+- **FABRICATED client snapshots:** C6–C8 (the corrected C6 expects removal
+  on `too_fast`).
+- **Planned, not written:**
+  - pending/timeout/Finish through the joined path (the lifecycle is covered
+    in C7 with fabricated snapshots);
+  - physical rendering and readability.
+

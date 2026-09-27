@@ -379,12 +379,21 @@ local function mottag(b)
 	--[[ Tempocoachning: baslinje eller ny händelse, bara i en GODTAGEN bild. ]]
 	if typ == "tempo" and b.forsokId ~= nil then
 		local nr = if type(b.coachNr) == "number" and b.coachNr == b.coachNr then b.coachNr else 0
+		--[[ R1: en SYNLIG rad tas bort direkt när den nyss godtagna bilden inte
+			längre stöder den (annat försök, inte steady, eller aktuellt tips
+			≠ radens skäl). Spärren och Färre rörs inte; inget köas. ]]
+		local cg0 = coachning
+		if cg0 and (b.forsokId ~= cg0.forsokId or b.lage ~= "steady" or b.tips ~= cg0.skal) then
+			coachning = nil
+		end
 		if coachForsok ~= b.forsokId then
 			coachForsok, coachSedd, coachning = b.forsokId, nr, nil
 		elseif nr > coachSedd then
 			coachSedd = nr
 			local halsar = halsning ~= nil and halsning.forsokId == b.forsokId
-			if b.lage == "steady" and COACH_SKAL[b.coachSkal] and coachCd <= 0 and not halsar
+			--[[ R1: bara ett skäl som ÄR den aktuella klassningen (tips == skäl);
+				ett högre, osett nummer i en oförenlig bild förbrukas tyst. ]]
+			if b.lage == "steady" and COACH_SKAL[b.coachSkal] and b.tips == b.coachSkal and coachCd <= 0 and not halsar
 				and not pending and not fel then
 				coachCd = COACH_CD.fel
 				if Ugneta.valfriKommentar() then
@@ -871,10 +880,10 @@ function V.panel()
 	local cg = coachning
 	if cg then
 		if cg.ritt == ritt and typ == "tempo" and b.forsokId == cg.forsokId and b.lage == "steady"
-			and not pending and not fel and halsning == nil then
+			and b.tips == cg.skal and not pending and not fel and halsning == nil then
 			txt = Sprak.t("tempocoach." .. cg.skal) .. " " .. txt
 		elseif pending or fel or cg.ritt ~= ritt or typ ~= "tempo" or b.forsokId ~= cg.forsokId
-			or b.lage ~= "steady" then
+			or b.lage ~= "steady" or b.tips ~= cg.skal then
 			coachning = nil
 		end
 	end

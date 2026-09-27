@@ -94,6 +94,11 @@ end
 --[[ Serien bort, med tips. Progress till 0 (bara en revision om den
 	faktiskt ändras, så ingen återstartskedja). ]]
 local function omSerie(s, tips)
+	--[[ R1: skälet gäller bara så länge det är den AKTUELLA klassningen.
+		Varje återställning rensar det; `coach()` sätter det igen direkt efter
+		när återställningen själv är en coachningshändelse. `coachNr` rörs
+		inte. ]]
+	s.coachSkal = nil
 	tomSerie(s)
 	andra(s, "steady", tips)
 	satProgress(s, 0)
@@ -231,6 +236,7 @@ function TempoLektion.steg(s, now: number, gangart: string?, ryggar: boolean?)
 		s.meter += meter
 		s.summa += fart
 		s.minFart, s.maxFart = lo, hi
+		s.coachSkal = nil -- R1: återhämtning är inget coachningsskäl (och inget beröm)
 		andra(s, "steady", "keep_going")
 	end
 	satProgress(s, 99 * math.min(s.prov / MIN_PROV, s.sek / MIN_TID, s.meter / MIN_M, 1))

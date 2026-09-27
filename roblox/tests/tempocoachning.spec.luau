@@ -110,7 +110,12 @@ end
 	  observationer och HorseService;
 	- PÅHITTADE KLIENTBILDER: avsnitt C6–C8 levererar bilder genom
 	  VoltLektionSync till den riktiga VoltLektionController och värden;
-	  fälten har producentens form. ]]
+	  fälten har producentens form;
+	- SAMMANFOGAT (R1): avsnitt J och J9 går från riktiga prov genom serverns
+	  push till LocalPlayer, den riktiga kontrollern och
+	  `UgnetaController.panel(4)`;
+	- VERKLIGT FÖRDRÖJT (R1): avsnitt JD, Start på schemat.
+	PLANERAT: pending/timeout/Finish genom den sammanfogade vägen. ]]
 local function nr() return image().coachNr or 0 end
 
 print("\n── C1. För långsamt: en händelse per färskt prov, inte per läsning ──")
@@ -232,10 +237,10 @@ do
 	I.satDetalj("kort"); I.satDetalj("detaljerad")
 	check("detaljbyte skapar ingen ny", cue() ~= nil)
 	ev.OnClientEvent:Fire(bild_("F1", 5, "too_fast"))
-	check("under spärren: händelsen förbrukas, ingen ny coachning", cue() ~= nil and cue().skal == "too_slow")
-	for _ = 1, 180 do VC.steg(1 / 60) end -- 3 s
-	check("efter visningstiden är den borta", cue() == nil)
-	for _ = 1, 360 do VC.steg(1 / 60) end -- totalt 9 s: spärren slut
+	--[[ R1: den nya, oförenliga klassningen tar bort den synliga raden DIREKT;
+		under spärren visas ingen ny. ]]
+	check("under spärren: den oförenliga händelsen tar bort raden direkt, ingen ny", cue() == nil)
+	for _ = 1, 540 do VC.steg(1 / 60) end -- 9 s: spärren slut
 	ev.OnClientEvent:Fire(bild_("F1", 6, "steadier"))
 	check("efter spärren: en ny händelse visas", cue() ~= nil and cue().skal == "steadier")
 	I.satKommentarer("inga")
@@ -321,6 +326,143 @@ do
 	Sprak.satVal("en")
 	check("på engelska", string.find(A.text(klar(0.02, 0.14), k), "More even than your previous attempt", 1, true) ~= nil)
 	Sprak.satVal("sv")
+end
+
+print("\n── J. R1: DEN SAMMANFOGADE VÄGEN — riktiga prov → serverns push → klienten → den sammansatta värden (SYNKRONT) ──")
+--[[ Fixturens spelare ÄR `Players.LocalPlayer`, så serverns
+	`VoltLektionSync:FireClient` levererar till den riktiga
+	VoltLektionController (bänkens FireClient levererar till LocalPlayer). ]]
+local jEv = Networking.get("VoltLektionSync")
+local function jCue() return VoltLektionController._coachningForProv() end
+local function jText() return UgnetaController.panel(4).text or "" end
+local function borjarMed(t, del) return string.sub(t, 1, #del) == del end
+local function jKnapp(nyckel)
+	local t = Sprak.t(nyckel)
+	for _, k in ipairs(UgnetaController.panel(4).knappar) do if k.text == t then return k end end
+	return nil
+end
+local function vantaUtSparren() for _ = 1, 600 do VoltLektionController.steg(1 / 60) end end
+do
+	local VCj, UCj = VoltLektionController, UgnetaController
+	LararInstallning._aterstallForProv()
+	Sprak.satVal("sv")
+	request("finish")
+	-- Hästen går redan i skritt (C3 slutade med broms från trav till skritt).
+	gaFart(1.45, 3)
+	VCj.avbryt(); VCj.start(id, nil)
+	UCj.satLektionsVal(VCj.panel)
+	UCj.dolj()
+	VCj.valj("tempo")
+	local start = jKnapp("tempolektion.start")
+	check("KONTROLL J: Start finns i den sammansatta värden", start ~= nil)
+	if start then start.skicka() end
+	check("KONTROLL J: servern godtog startet", RidForsok.aktivt(id) ~= nil)
+	for _ = 1, 480 do VCj.steg(1 / 60) end -- hälsningen (6 s) ute ur vägen
+	gaFart(1.45, 3)
+	check("KONTROLL J: ingen coachning av jämn skritt", jCue() == nil)
+	-- J1: för långsamt.
+	for _ = 1, 2 do ga(nu.u, nu.v) end
+	check("J1 långsamt: raden först i värdens text, uppgiften efter", jCue() ~= nil and jCue().skal == "too_slow"
+		and borjarMed(jText(), Sprak.t("tempocoach.too_slow")) and string.find(jText(), Sprak.t("tempolektion.too_slow"), 1, true) ~= nil,
+		jText())
+	-- J2: långsamt -> fort under spärren: bort direkt, ingen ny.
+	gaFart(2.8, 1)
+	check("J2 långsamt -> fort under spärren: raden bort direkt, ingen ny", jCue() == nil
+		and not string.find(jText(), Sprak.t("tempocoach.too_slow"), 1, true)
+		and not string.find(jText(), Sprak.t("tempocoach.too_fast"), 1, true), jText())
+	-- J6: bort, sedan återhämtning till samma skäl FÖRE en ritning: inget.
+	for _ = 1, 2 do ga(nu.u, nu.v) end -- långsamt igen, fortfarande under spärren
+	check("J6 bortagning följd av samma skäl under spärren: ingenting visas", jCue() == nil)
+	-- J8: färsk händelse efter spärren.
+	vantaUtSparren()
+	ga(nu.u, nu.v)
+	check("J8 en färsk händelse efter spärren visas", jCue() ~= nil)
+	-- J3: långsamt -> lucka.
+	ga(nu.u, nu.v, 5)
+	check("J3 långsamt -> lucka (okänt): raden bort", jCue() == nil)
+	-- J4: fel gångart.
+	vantaUtSparren()
+	gaFart(1.45, 3)
+	ga(nu.u, nu.v)
+	check("KONTROLL J4: en rad visas", jCue() ~= nil)
+	aid("driv") -- trav
+	gaFart(3.0, 1)
+	check("J4 fel gångart (walk_only): raden bort", jCue() == nil)
+	aid("broms")
+	gaFart(1.45, 3)
+	-- J5: ett högre osett nummer i en nyare oförenlig bild.
+	vantaUtSparren()
+	local riktigFire = jEv.FireClient
+	jEv.FireClient = function() end -- klienten missar pushen
+	ga(nu.u, nu.v) -- långsamt: servern räknar upp
+	jEv.FireClient = riktigFire
+	ga(nu.u, nu.v, 5) -- lucka: nyare bild, tips unknown, högre coachNr
+	check("KONTROLL J5: bilden bär ett högre nummer men inget aktuellt skäl",
+		image().tips == "unknown" and image().coachSkal == nil)
+	check("J5 ett osett högre nummer i en oförenlig bild ger ingen rad", jCue() == nil)
+	-- J7: dubblett / äldre bild.
+	gaFart(1.45, 3)
+	local gammal = image()
+	vantaUtSparren()
+	ga(nu.u, nu.v)
+	local nyRad = jCue()
+	jEv.OnClientEvent:Fire(gammal)
+	check("J7 en äldre bild förkastas och tar inte bort den aktuella raden", nyRad ~= nil and jCue() == nyRad)
+end
+
+print("\n── J9. R1: två riktiga fullföljanden med Retry genom klientens knapp → jämförelsen i värden (SYNKRONT) ──")
+do
+	local VCj, UCj = VoltLektionController, UgnetaController
+	gaFart(1.45, 3)
+	check("KONTROLL J9: första fullföljandet", tillsKlar(1.45, 80))
+	local retry = jKnapp("voltlektion.retry")
+	check("KONTROLL J9: Prova igen finns", retry ~= nil)
+	if retry then retry.skicka() end
+	gaFart(1.45, 2)
+	check("KONTROLL J9: andra fullföljandet", tillsKlar(1.45, 80))
+	local j = image().jamforelse
+	check("KONTROLL J9: jämförelsen finns i bilden", j ~= nil)
+	if j then
+		local nuP, forrP = math.floor(j.spridning * 100 + 0.5), math.floor(j.forraSpridning * 100 + 0.5)
+		local vantad = Sprak.t(if nuP < forrP then "tempocoach.jamnare" else "tempocoach.forra", tostring(forrP),
+			tostring(nuP))
+		check("J9 jämförelsens text står i den sammansatta värden", string.find(jText(), vantad, 1, true) ~= nil, jText())
+	end
+end
+
+print("\n── JD. R1: VERKLIGT FÖRDRÖJT — Start på schemat, pushen (med händelsen) före det sena svaret ──")
+do
+	local VCj, UCj = VoltLektionController, UgnetaController
+	local remote = Networking.get("VoltLektion")
+	local riktig = remote.InvokeServer
+	request("finish")
+	VCj.valj("halt"); VCj.valj("tempo") -- ny baslinje; valet före schemat
+	gaFart(1.45, 3)
+	__schemaPa(true)
+	remote.InvokeServer = function(self, ...)
+		local svar = table.pack(riktig(self, ...))
+		task.wait() -- svaret dröjer
+		return table.unpack(svar, 1, svar.n)
+	end
+	local start = jKnapp("tempolektion.start")
+	check("KONTROLL JD: Start finns", start ~= nil)
+	if start then start.skicka() end
+	__schemaSteg() -- servern har godtagit, svaret väntar
+	check("KONTROLL JD: försöket är aktivt", RidForsok.aktivt(id) ~= nil)
+	gaFart(1.45, 3)
+	for _ = 1, 2 do ga(nu.u, nu.v) end -- händelser, pushade FÖRE svaret
+	check("JD pushen före svaret sätter baslinjen: ingen rad", jCue() == nil)
+	__schemaTomKo()
+	remote.InvokeServer = riktig
+	__schemaPa(false)
+	check("JD det sena (äldre) svaret skapar ingen rad", jCue() == nil)
+	for _ = 1, 480 do VCj.steg(1 / 60) end
+	vantaUtSparren()
+	ga(nu.u, nu.v)
+	check("JD en färsk händelse efter svaret visas", jCue() ~= nil)
+	request("finish")
+	UCj.satLektionsVal(nil)
+	VCj.avbryt()
 end
 
 UC.satLektionsVal(nil)
