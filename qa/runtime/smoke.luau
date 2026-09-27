@@ -60,6 +60,14 @@ local AVSNITT = {
 	"flerledning", "stadning",
 }
 
+--[[ En FOKUSERAD körning (`--del <avsnitt>`) kör också de avsnitt som
+	förbereder dess tillstånd — de befintliga, i AVSNITT-ordning, inte en
+	kopia av dem. `voltlektion` behöver aktören som `ridanu` får fram och
+	`mountrequest` sätter upp. `alla` påverkas inte. ]]
+local FORUTSATTNINGAR: { [string]: { string } } = {
+	voltlektion = { "ridanu", "mountrequest" },
+}
+
 local function avsnitt(namn: string)
 	aktuelltAvsnitt = namn
 	print(("-- %s --"):format(namn))
@@ -130,8 +138,16 @@ local function ejMatbar(namn: string, skal: string, detalj: any?)
 end
 
 --[[ Ett avsnitt som kastade är ett FEL, inte en tystnad. ]]
+local function valt(namn: string): boolean
+	if DEL == "alla" or DEL == namn then return true end
+	for _, forut in ipairs(FORUTSATTNINGAR[DEL] or {}) do
+		if forut == namn then return true end
+	end
+	return false
+end
+
 local function skyddat(namn: string, f: () -> ())
-	if DEL ~= "alla" and DEL ~= namn then return end
+	if not valt(namn) then return end
 	local ok, felmeddelande = pcall(f)
 	if not ok then
 		aktuelltAvsnitt = namn
