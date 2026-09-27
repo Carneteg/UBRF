@@ -201,6 +201,13 @@ do
 	check("den sekundära ingången står sist, efter handlingarna",
 		#allaRader == #synliga or string.sub(allaRader[#allaRader], 1, #Sprak.t("ledlektion.choose")) == Sprak.t("ledlektion.choose"),
 		table.concat(allaRader, " | "))
+	do -- och i själva layouten: valsektionen (Fragan) ligger under listan när den bara bär ingången
+		local ram = N._panel().ram
+		local fr, li = ram and ram:FindFirstChild("Fragan"), ram and ram:FindFirstChild("Lista")
+		check("i layouten ligger den sekundära ingången under handlingsraderna",
+			#allaRader == #synliga or (fr ~= nil and li ~= nil and fr.LayoutOrder > li.LayoutOrder),
+			("%s / %s"):format(tostring(fr and fr.LayoutOrder), tostring(li and li.LayoutOrder)))
+	end
 	check("listan RITAS med en rad per handling", #synliga == 2,
 		("%d rader: %s"):format(#synliga, table.concat(synliga, " | ")))
 	check("närmast först också på skärmen",
