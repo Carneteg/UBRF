@@ -102,8 +102,10 @@ local function ctx(p)
 end
 local function forv(p) local f = ctx(p); return f end
 local function req(op, p)
-	seq += 1
 	local f, k = ctx(p)
+	-- Identiteten ur serverns begäranbok: klientens egna begäranden flyttar den också.
+	local st = LedLektion._tillstandForProv(p or spelare)
+	seq = math.max(seq, (st and st.hogsta) or 0) + 1
 	return LedLektion.begar(p or spelare, op, seq, f, k)
 end
 local function bild() local _, _, b = LedLektion.begar(spelare, "sync"); return b end
@@ -264,8 +266,12 @@ do
 	for i = 1, Sparning.MAX_FRAMSTEG - n do save.framsteg["fyll" .. i] = { forsok = 1, klarade = 0, senast = 0 } end
 	helLedning()
 	check("fullt: väntande, aldrig sparad", proj().ledning == "vantar")
+	--[[ Städningen läser den AKTUELLA cachen: en skrivning emellan ersätter
+		SparService-cachen med en ny tabell, och `save` ovan är då en gammal kopia. ]]
+	local nuSave = SparService.save(spelare)
 	for i = 1, Sparning.MAX_FRAMSTEG do
 		save.framsteg["fyll" .. i] = nil
+		if nuSave then nuSave.framsteg["fyll" .. i] = nil end
 		if rad() then rad().framsteg["fyll" .. i] = nil end
 	end
 	LM._tillstandForProv(spelare).vantar.ledning = nil
@@ -294,6 +300,8 @@ do
 	Players._spelare = { spelare }
 	Players.PlayerAdded:Fire(spelare)
 	if Players.PlayerAdded.slutfor then Players.PlayerAdded:slutfor() end
+	-- Återinloggningen ger i motorn en ny klient; bänken återanvänder samma.
+	LedLektionController._nyKlientForProv()
 	check("betrodd omläsning: sparad", proj().ledning == "sparad")
 end
 

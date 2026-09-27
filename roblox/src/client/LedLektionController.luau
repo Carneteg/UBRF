@@ -235,5 +235,16 @@ function L._bildForProv(): any return bild end
 function L._synkaForProv() skicka("sync") end
 function L._guideForProv(): Model? return guide end
 function L._ledMinneForProv(): any return ledMinne end
+--[[ Provkrok: en NY klient efter en simulerad återinloggning. I motorn får en
+	återansluten spelare en ny klient; bänken återanvänder samma, och dess bild
+	från före avfärden (högre försöksnummer) skulle annars vinna över serverns
+	nystartade tillstånd. Samma lyssnare, inget annat rörs. ]]
+function L._nyKlientForProv()
+	bild, valt, fel, pending = nil, false, nil, false
+	sekvens = 0
+	requestNr += 1; sidGen += 1
+	ledMinne = nil
+	rivGuide()
+end
 
 return L
