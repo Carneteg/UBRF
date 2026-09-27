@@ -245,7 +245,11 @@ rows beside 0..3 cards.
   - is removed when the pole is missing;
   - is refreshed when a changed valid pole appears in the same frame and the
     same phase;
-- arming is asserted on ONE sample, and forward walk then earns progress.
+- arming is asserted on ONE sample, and forward walk then earns progress;
+- follow-up (#5856139668): an EXISTING guide is replaced by a changed valid
+  registration delivered without any intermediate missing-reference delivery
+  (the removal and re-add happen between two lesson steps), which isolates
+  the cache key.
 
 **Planned, not written:**
 - a duplicate `HinderId` (the registry rejects both; the lesson reads a

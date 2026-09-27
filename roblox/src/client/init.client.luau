@@ -43,6 +43,7 @@ local InteractionController = require(script.InteractionController)
 local PreparationController = require(script.PreparationController)
 local UgnetaController = require(script.UgnetaController)
 local LektionController = require(script.LektionController)
+local LedLektionController = require(script.LedLektionController)
 local KontrollHjalp = require(script.KontrollHjalp)
 --[[ #264 GAIT_READABILITY_AND_UGNETA: Ugnetas ridrad utanför lektionen. ]]
 local UgnetaRad = require(script.UgnetaRad)
@@ -915,6 +916,9 @@ end)
      första ritten börjar. Själva LEKTIONEN startas av `mount` och stegas
      av loopen längst ned — HUD:en är ytan, LektionController är kedjan. ]]
 UgnetaController.start()
+--[[ Ledningslektionen till fots: en sekundär ingång i Ugnetas val när ingen
+     ridlektion är installerad (docs/LEADING-LESSON-CONTRACT.md). ]]
+LedLektionController.start()
 --[[ #161: `?`-knappen byggs vid uppstart och lever hela sessionen. Att
      bygga den vid uppsittning hade gett samma hål vi just stängde — hjälpen
      ska finnas i stallet också. ]]

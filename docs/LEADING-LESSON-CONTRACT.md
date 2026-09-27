@@ -1,0 +1,171 @@
+# Leading the horse to the arena (on foot)
+
+Status: BUILT_NOT_VERIFIED, 2026-09-27. Contract written before code.
+Order: [LEADING_BUILD_ONLY_20260927](https://github.com/Carneteg/UBRF/pull/264#issuecomment-5856139668),
+base 9dff4d5. Build now, test last
+([5855114357](https://github.com/Carneteg/UBRF/pull/264#issuecomment-5855114357)).
+Claude writes; Codex reviews source; Tobias playtests the whole at the end.
+
+This is ONE on-foot lesson in the catalogue area "ledning": lead your own
+horse to the EXISTING arena goal zone. It is not a riding session: it
+uses no RidForsok and no mounted ledger. It does not replace or change
+movement, navigation, the rope, doors or equipment. It does not change the
+preparation step, its acknowledgement or its history.
+
+## Existing semantics used (read in source)
+
+- **The goal:** `LedService.malzon()` is the arena track rectangle in
+  plot coordinates (`GameplayService`: `ridhus.rekt + ridhus.bana`).
+  `LedService.iRekt` is the one rule for "is she there".
+- **Leading state:** `LedService.lage(player)` gives `{ modell, hastId, ... }`
+  while leading, and nil after `slapp`.
+- **Old flags:** `harNattMal` / `harLamnatBox` are HISTORICAL and survive release;
+  the lesson never uses them.
+- **The preparation hook:** `satMalKrok` stays the preparation's consumer
+  (`GameplayService.kvitteraLedning`). The lesson installs NO hook in
+  LedService.
+- **Eligible horse:** GameplayService's bound horse (`bunden[player]`, the same
+  answer as `satRattHastKrok`).
+- **Mounting and dismounting:** `HorseService.lyssnaRyttare` (a list, so it can
+  be appended to).
+- **Shortcuts:** `stallFram` and `placeraVidMal` teleport the horse. They are
+  setup, not leading.
+
+## Narrow new dependency (genuinely missing)
+
+- **Remotes:** `LedLektion` (RemoteFunction: `sync` / `start` / `retry` /
+  `finish` with a sequence) and `LedLektionSync` (RemoteEvent, server → owner).
+  Both are declared in Networking. The remote goes through `Skopa.grind`, which
+  uses the default limit, like `VoltLektion`.
+- **Server module:** `LedLektion` keeps per-player, session-local state with a
+  bounded answer book of 16. It samples every 0.25 s on its own Heartbeat
+  accumulator. `LedLektion.start(deps)` is wired by GameplayService with
+  `rattHast(player)` and `rider(player)`.
+- **No persistence and no reward.**
+
+## Player flow
+
+1. **On foot, with the horse outside the arena:** Ugneta's on-foot panel shows
+   "Lead to the arena". The entry is secondary: it never hides an open care
+   question.
+2. **Choose:** a page with Start and Back.
+3. **Start:**
+   - The player must be on foot and alive, the goal must exist, the bound horse
+     must exist, and it must be OUTSIDE the goal. Otherwise Start is refused
+     with guidance (`inside`, `target`, `horse`, `mounted`).
+   - If the player already leads the right horse, the baseline is taken now
+     (`leading`).
+   - Otherwise the tip is `lead_first`: start leading your horse.
+4. **Lead her there:** the SAME horse, led by this player, must travel
+   ≥ 12 m of fresh observed movement since the baseline.
+5. **Arrive:** she must enter the goal and stay inside ≥ 1.0 s while still led.
+   Then the lesson is complete.
+
+The result stands even if the player releases her in the arena afterwards.
+Retry and Finish work as in the other lessons:
+- Finish never releases or moves the horse.
+- The normal leading controls stay separate.
+
+## Evidence (every 0.25 s, gameplay assumptions)
+
+| Name | Value |
+|---|---|
+| Fresh travel | ≥ 12 m of the horse root's planar movement between consecutive samples WHILE led by this player, after the baseline |
+| Jump / teleport | > 3.0 m between two samples (12 m/s): unknown and a reset (stallFram, placeraVidMal, respawn) |
+| Gap | a sample interval > 1.0 s: unknown and a reset |
+| Arrival | inside `iRekt(malzon)` for ≥ 4 consecutive samples (1.0 s), still led |
+| Deadline | 300 s; timeout ends incomplete |
+
+- **Baseline:** set when leading of the right horse is observed after Start. It
+  records the horse position and the goal key; nothing from before counts.
+- **Stationary:** a horse that does not move adds no travel, whatever
+  `MoveTo` or commands happen. Player position alone never counts; only the
+  horse root does.
+- **Arrival requires the travel:** arriving before 12 m of travel does not
+  complete. Settling restarts if she leaves the goal.
+- **The evidence resets to `lead_first`** (all travel cleared, same deadline):
+  - the lead is released before completion (`released`);
+  - leading a different horse or model (`wrong_horse`);
+  - the bound horse changes;
+  - mounting (`mounted`);
+  - the character missing or dead (`character`);
+  - the horse model gone;
+  - a changed or missing goal (`target`);
+  - a jump or gap (`unknown`).
+- **Leaving the game:** the state is dropped.
+
+## Lifecycle and requests
+
+- **Attempt:** a numbered attempt per player (`forsokNr`), session-local.
+- **Frozen result:** owner, horse id, attempt number, travelled metres, led
+  seconds, arrival sample count, goal key and start.
+- **Retry** (from complete or timeout) needs the horse OUTSIDE the goal (fresh
+  travel). There is no teleport out and no reset of preparation.
+- **Finish** closes the attempt; the horse and the lead are untouched.
+- **Requests:** a monotonic sequence per player; a duplicate replays only the
+  same operation; an older sequence is stale; the book is bounded. Owner-only
+  events go through `Aktor.klient`.
+
+## Client
+
+- **Where the entry lives:** `UgnetaController.satFotVal(fn)` is used only when
+  no mounted lesson panel is installed.
+- **Composition and capacity:** composition is the same as for the mounted panel
+  (renderer capacity, compact list).
+- **Secondary entry:** Naromrade skips it while the care preparation has an open
+  question (`data.harVal`). This is the only Naromrade change.
+- **Guide:** an outline of the goal rectangle at arena-floor height, from the
+  server's goal key. It is refreshed on key change and removed when the target is
+  invalid.
+
+## Deferred verification (written, NOT run)
+
+`roblox/tests/ledlektion.spec.luau` uses the ledning-integration setup
+(SparService, StallService, HorseService, GameplayService, LedService, a
+bound horse and another horse). The horse is moved between explicit
+`LedLektion._steg` calls; there is no physics.
+
+**Positive path:**
+- valid Start, then leading, travel and arrival; the result is frozen;
+- the preparation's own goal acknowledgement still happens.
+
+**Refused starts and freshness:**
+- Start while the horse is already inside is refused;
+- the historical `malNatt` never counts;
+- starting while already leading gives a baseline at Start.
+
+**Wrong horse and identity:**
+- leading the other horse gives `wrong_horse`;
+- a second player's lesson is independent.
+
+**Shortcuts:**
+- `placeraVidMal` or a teleport gives `unknown`;
+- a gap gives `unknown`;
+- a stationary horse never completes.
+
+**Release:**
+- release before the goal gives `released`;
+- release after completion keeps the result.
+
+**Breaks and retry:**
+- a missing or changed goal gives `target`;
+- mounting gives `mounted`;
+- Retry needs fresh travel.
+
+**Lifecycle and requests:**
+- deadline;
+- stale and replayed requests;
+- owner-only events;
+- no persistent writes.
+
+**Panel:**
+- the on-foot entry is visible beside 0..3 cards;
+- the entry is hidden while a care question is open;
+- Back works;
+- the mounted menus are unchanged.
+
+**Planned, not written:**
+- death and leaving (the same reset path as a missing character);
+- a real LedPrompt → LedBorja chain (covered by ledning-integration);
+- rendered layout, touch and SV/EN;
+- the engine's real navigation and doors.

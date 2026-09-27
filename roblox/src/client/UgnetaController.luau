@@ -64,6 +64,18 @@ local UgnetaController = {}
 local lektionsVal: (() -> any)? = nil
 
 -- Explicit panel choices do not participate in help-to-continue or vantarPa.
+--[[ Val TILL FOTS (ledningslektionen): används bara när ingen ridlektions-
+	panel är installerad. Samma sammansättning som ridlektionens val. ]]
+local fotVal: (() -> any)? = nil
+function UgnetaController.satFotVal(fn: (() -> any)?)
+	fotVal = fn
+end
+local function lektionsExtra(): any
+	if lektionsVal then return lektionsVal() end
+	if fotVal then return fotVal() end
+	return nil
+end
+
 function UgnetaController.satLektionsVal(fn: (() -> any)?)
 	lektionsVal = fn
 end
@@ -1056,7 +1068,7 @@ end
 	  4. ridraden utanför lektionen (nyckel + argument, översätts vid ritning).
 	Uppgiftens nej står INTE här: det hör till handlingen, i panelen. ]]
 local function lararMeddelande(): string?
-	local extra = if lektionsVal then lektionsVal() else nil
+	local extra = lektionsExtra()
 	if extra and extra.ersatt then return extra.text end
 	local c = chip
 	--[[ Kommentaren slogs upp ur sin nyckel när den kom, på det språk som
@@ -1246,7 +1258,7 @@ end
 	så att lektionsvalet alltid går att nå bredvid 0..3 kortknappar, utan att
 	kortknapparna trängs undan. Utan kapacitet: oförändrat. ]]
 function UgnetaController.panel(kapacitet: number?): any
-	local extra = if lektionsVal then lektionsVal() else nil
+	local extra = lektionsExtra()
 	if extra and extra.ersatt then return extra end
 	local knappar = {}
 	local v = valrad

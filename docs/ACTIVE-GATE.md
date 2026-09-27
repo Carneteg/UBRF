@@ -60,6 +60,9 @@ and test policy. This index is dated 2026-09-26; it is not product acceptance.
   ([contract](GROUND-POLE-LESSON-CONTRACT.md), the existing pole rod_50, root-plane
   passage only) is built on it, with additive `generation`/`flyttad` fields in
   HinderObservation.register(); BUILT_NOT_VERIFIED, spec written, not run.
+  Ground-pole R1 9dff4d5 passed Codex source review only. Leading to the arena on
+  foot ([contract](LEADING-LESSON-CONTRACT.md), its own session-local attempt and
+  a narrow LedLektion remote) is built on it; BUILT_NOT_VERIFIED, spec written, not run.
   Deferred before Tobias' playtest: full42, runtime smoke in engine, both lesson
   flows, guides, entrance door, SV/EN and touch.
 - 2026-09-27: the entrance correction 93e16f5 received BANK_ONLY code PASS and a

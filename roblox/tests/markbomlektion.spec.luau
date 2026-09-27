@@ -278,10 +278,19 @@ V.valj("markbom")
 local g1 = workspace:FindFirstChild("Voltguide")
 check("R1: a changed valid pole in the same frame and phase refreshes the guide",
 	image().lage == "approach" and nyckel1 ~= nil and g1 ~= nil and g1 ~= g0)
+-- Uppföljning (#5856139668): en BEFINTLIG guide ersätts av en giltig ändrad
+-- registrering utan en mellanliggande leverans utan referens — borttagning och
+-- återläggning sker mellan två lektionssteg, så steget ser bara nyckelbytet.
+check("KONTROLL: a guide exists before the in-step replacement", workspace:FindFirstChild("Voltguide") == g1)
 workspace.DescendantRemoving:Fire(bom); bom.Parent = nil
 bom.CFrame = cfR; bom.Position = posR
 bom.Parent = forald2; workspace.DescendantAdded:Fire(bom)
 ga(nu.a, nu.w)
+local nyckel2 = image().referens and image().referens.nyckel
+V.valj("markbom")
+local g2 = workspace:FindFirstChild("Voltguide")
+check("R1 follow-up: a changed registration with no missing-reference delivery replaces the guide",
+	nyckel2 ~= nil and nyckel2 ~= nyckel1 and g2 ~= nil and g2 ~= g1)
 V.avbryt()
 
 -- ── Tidsgräns, begäranbok, alla lektioner ──

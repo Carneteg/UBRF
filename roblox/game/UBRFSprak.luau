@@ -1289,6 +1289,110 @@ Sprak.text = {
 		sv = "Rid in i ridhuset innan du startar.",
 		en = "Ride into the indoor arena before you start.",
 	},
+	["ledlektion.choose"] = {
+		sv = "Leda till ridhuset",
+		en = "Lead to the arena",
+	},
+	["ledlektion.start"] = {
+		sv = "Starta ledningen",
+		en = "Start leading",
+	},
+	["ledlektion.retry"] = {
+		sv = "Leda igen",
+		en = "Lead again",
+	},
+	["ledlektion.finish"] = {
+		sv = "Avsluta ledningen",
+		en = "Finish leading",
+	},
+	["ledlektion.back"] = {
+		sv = "Tillbaka",
+		en = "Back",
+	},
+	["ledlektion.sync"] = {
+		sv = "Försök igen",
+		en = "Try again",
+	},
+	["ledlektion.intro"] = {
+		sv = "Led din häst till fots hela vägen in på ridbanan. Hästen ska stå utanför när du startar.",
+		en = "Lead your horse on foot all the way onto the arena track. The horse should be outside when you start.",
+	},
+	["ledlektion.lead_first"] = {
+		sv = "Ta din häst och börja leda henne.",
+		en = "Take your horse and start leading her.",
+	},
+	["ledlektion.outside_first"] = {
+		sv = "Hon står redan på ridbanan. Led ut henne först.",
+		en = "She is already on the arena track. Lead her out first.",
+	},
+	["ledlektion.lead_on"] = {
+		sv = "Fint! Led henne lugnt mot ridhuset.",
+		en = "Nice! Lead her calmly towards the arena.",
+	},
+	["ledlektion.into_arena"] = {
+		sv = "Bra! Led in henne på ridbanan.",
+		en = "Good! Lead her onto the arena track.",
+	},
+	["ledlektion.settle"] = {
+		sv = "Framme! Låt henne stå kvar en stund.",
+		en = "You are there! Let her stand for a moment.",
+	},
+	["ledlektion.released"] = {
+		sv = "Du släppte henne. Ta henne igen och led henne hela vägen.",
+		en = "You let go of her. Take her again and lead her all the way.",
+	},
+	["ledlektion.wrong_horse"] = {
+		sv = "Det där är inte din häst. Led din egen häst.",
+		en = "That is not your horse. Lead your own horse.",
+	},
+	["ledlektion.horse"] = {
+		sv = "Jag hittar inte din häst just nu.",
+		en = "I cannot find your horse right now.",
+	},
+	["ledlektion.mounted"] = {
+		sv = "Den här övningen gör du till fots. Sitt av och led henne.",
+		en = "You do this exercise on foot. Dismount and lead her.",
+	},
+	["ledlektion.character"] = {
+		sv = "Vänta tills du är tillbaka, så fortsätter vi.",
+		en = "Wait until you are back, then we continue.",
+	},
+	["ledlektion.target"] = {
+		sv = "Ridbanan går inte att hitta just nu.",
+		en = "The arena track cannot be found right now.",
+	},
+	["ledlektion.inside"] = {
+		sv = "Hon står redan på ridbanan. Led ut henne först.",
+		en = "She is already on the arena track. Lead her out first.",
+	},
+	["ledlektion.unknown"] = {
+		sv = "Jag tappade en bit av vägen. Led henne vidare så börjar vi om.",
+		en = "I missed part of the way. Keep leading her and we start over.",
+	},
+	["ledlektion.active"] = {
+		sv = "Avsluta ledningen först.",
+		en = "Finish leading first.",
+	},
+	["ledlektion.pending"] = {
+		sv = "Ett ögonblick…",
+		en = "One moment…",
+	},
+	["ledlektion.network"] = {
+		sv = "Jag nådde inte stallet. Försök igen.",
+		en = "I could not reach the stable. Try again.",
+	},
+	["ledlektion.complete"] = {
+		sv = "Snyggt ledd! Du ledde henne hela vägen in på ridbanan.",
+		en = "Nicely led! You led her all the way onto the arena track.",
+	},
+	["ledlektion.timeout"] = {
+		sv = "Vi hann inte hela vägen. Ta en paus eller försök igen.",
+		en = "We did not get all the way. Take a break or try again.",
+	},
+	["ledlektion.closed"] = {
+		sv = "Ledningen är avslutad.",
+		en = "Leading has ended.",
+	},
 	["ugneta.se_ritten"] = {
 		sv = "Se ritten",
 		en = "Watch the ride",

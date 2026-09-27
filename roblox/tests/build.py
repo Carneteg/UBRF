@@ -230,6 +230,7 @@ FORBEREDELSE = SPEL + [
     #   pa forberedelse-/integrationsbunten — tyst, tills banken slutade
     #   acceptera en require som inte har nagon modul bakom sig. ]]
     ("DorrService",    "src/server/DorrService.luau"),
+    ("LedLektion",     "src/server/LedLektion.luau"),  # ledningslektionen till fots
     ("GameplayService", "src/server/GameplayService.luau"),
     #[[ #263 Gate 2A: First Ride. EFTER tjansterna den anropar —
     #   GameplayService, HorseService, LedService och TackService. ]]
@@ -387,6 +388,7 @@ KLIENT = SPEL + [
     ("ReplayController",    "src/client/ReplayController.luau"),
     ("VoltLektionController", "src/client/VoltLektionController.luau"),
     ("LektionController",   "src/client/LektionController.luau"),
+    ("LedLektionController", "src/client/LedLektionController.luau"),  # ledningslektionen till fots
     # Kontrollhjalpen: bara init.client.luau require:ar den, sa den behovs
     # bara i KLIENT. Star har och inte i PARITET av det skalet -- inte av
     # forbiseende. Jamfor noten vid Inspelning/ReplayController ovan.
@@ -478,6 +480,7 @@ KOHERENS = GEOMETRI + [
     #   stod dessutom tva ganger (en gang via _KLIENTDELEN); den andra ar
     #   borta, buntar med dubbletter byggs inte langre. ]]
     ("DorrService",     "src/server/DorrService.luau"),
+    ("LedLektion",      "src/server/LedLektion.luau"),  # ledningslektionen till fots
     ("GameplayService", "src/server/GameplayService.luau"),
     #[[ #263 Gate 2A: First Ride. EFTER tjansterna den anropar —
     #   GameplayService, HorseService, LedService och TackService. ]]
@@ -827,6 +830,8 @@ def valjBunt(spec_rel: str):
     #[[ M3.1: navvagens livslangd i hornet. Samma bunt, samma skal. ]]
     elif "ledvag" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
+    elif "ledlektion" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
     elif "ledning-integration" in spec_rel:
         moduler, stubbar = KOHERENS, "tests/stubs.luau"
     elif "ledning" in spec_rel:

@@ -1974,8 +1974,14 @@ rita = function()
 	--[[ EN GILTIG EFTERRITT GÅR FÖRE: den läses i panelen och avfärdas där,
 	     och först sedan tar skötselns eftervård över (kontraktet). ]]
 	local ug = UgnetaController.panel(MAX_VAL)
-	if #ug.knappar > 0 then
-		for _, k in ipairs(ug.knappar) do
+	--[[ Ledningslektionens ingång till fots är SEKUNDÄR: har skötseln en
+		öppen fråga går den före, och ingången visas inte (kontraktet). ]]
+	local ugVal = {}
+	for _, k in ipairs(ug.knappar) do
+		if not (k.sekundar and data and data.harVal) then table.insert(ugVal, k) end
+	end
+	if #ugVal > 0 then
+		for _, k in ipairs(ugVal) do
 			if #valen < MAX_VAL then table.insert(valen, k) end
 		end
 	elseif data and data.harVal then
