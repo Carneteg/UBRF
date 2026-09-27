@@ -965,6 +965,94 @@ Sprak.text = {
 		sv = "Rid in på dressyrbanan innan du startar.",
 		en = "Enter the dressage arena before you start.",
 	},
+	["lektionsval.gangart"] = {
+		sv = "Gångarter och fart",
+		en = "Gaits and pace",
+	},
+	["lektionsval.vagar"] = {
+		sv = "Ridvägar",
+		en = "Riding paths",
+	},
+	["lektionsval.tillbaka"] = {
+		sv = "Tillbaka",
+		en = "Back",
+	},
+	["lektionsval.valj"] = {
+		sv = "Välj en övning.",
+		en = "Choose an exercise.",
+	},
+	["vaglektion.choose_mitt"] = {
+		sv = "Mittlinjen",
+		en = "Centre line",
+	},
+	["vaglektion.choose_diag"] = {
+		sv = "Diagonalen",
+		en = "Diagonal",
+	},
+	["vaglektion.start"] = {
+		sv = "Starta ridvägen",
+		en = "Start the riding path",
+	},
+	["vaglektion.finish"] = {
+		sv = "Avsluta ridvägen",
+		en = "Finish the riding path",
+	},
+	["vaglektion.intro_mitt"] = {
+		sv = "Rid rakt längs mittlinjen från startringen nära A till slutringen nära C. Pilarna visar hållet.",
+		en = "Ride straight along the centre line from the start ring near A to the end ring near C. The arrows show the way.",
+	},
+	["vaglektion.intro_diag"] = {
+		sv = "Byt sida på diagonalen: från startringen nära A till slutringen på andra sidan nära C. Pilarna visar hållet.",
+		en = "Change sides on the diagonal: from the start ring near A to the end ring on the other side near C. The arrows show the way.",
+	},
+	["vaglektion.to_start"] = {
+		sv = "Rid in i startringen och vänd mot pilarna.",
+		en = "Ride into the start ring and face the arrows.",
+	},
+	["vaglektion.ride_mitt"] = {
+		sv = "Bra! Håll dig på mittlinjen mot slutringen.",
+		en = "Good! Stay on the centre line towards the end ring.",
+	},
+	["vaglektion.ride_diag"] = {
+		sv = "Bra! Följ diagonalen över till andra sidan.",
+		en = "Good! Follow the diagonal across to the other side.",
+	},
+	["vaglektion.to_end"] = {
+		sv = "Nästan framme! Rid in i slutringen.",
+		en = "Almost there! Ride into the end ring.",
+	},
+	["vaglektion.off_route"] = {
+		sv = "Ni kom av linjen. Rid tillbaka till startringen och börja om.",
+		en = "You left the line. Ride back to the start ring and begin again.",
+	},
+	["vaglektion.reverse"] = {
+		sv = "Linjen rids mot pilarna. Rid till startringen och börja om.",
+		en = "The line goes the way of the arrows. Ride to the start ring and begin again.",
+	},
+	["vaglektion.walk_or_trot"] = {
+		sv = "Rid linjen i skritt eller trav. Rid till startringen och börja om.",
+		en = "Ride the line in walk or trot. Ride to the start ring and begin again.",
+	},
+	["vaglektion.unknown"] = {
+		sv = "Jag tappade en bit av ritten. Rid till startringen så börjar vi om.",
+		en = "I missed part of the ride. Ride to the start ring and we begin again.",
+	},
+	["vaglektion.complete"] = {
+		sv = "Ridvägen klar! Du red hela linjen från start till mål.",
+		en = "Riding path completed! You rode the whole line from start to finish.",
+	},
+	["vaglektion.timeout"] = {
+		sv = "Vi hann inte hela linjen. Ta en paus eller prova igen.",
+		en = "We did not finish the line. Take a break or try again.",
+	},
+	["vaglektion.closed"] = {
+		sv = "Ridvägen är avslutad.",
+		en = "The riding path has ended.",
+	},
+	["vaglektion.place"] = {
+		sv = "Rid in på dressyrbanan innan du startar.",
+		en = "Enter the dressage arena before you start.",
+	},
 	["ugneta.se_ritten"] = {
 		sv = "Se ritten",
 		en = "Watch the ride",

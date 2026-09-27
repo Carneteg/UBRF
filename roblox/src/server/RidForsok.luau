@@ -80,6 +80,8 @@ RidForsok.OVNINGAR = table.freeze({
 	serpentin = table.freeze({ ["server-serpentin-1"] = true }),
 	-- Jämn fart i skritt (docs/TEMPO-LESSON-CONTRACT.md).
 	jamn_skritt = table.freeze({ ["server-tempo-1"] = true }),
+	-- Ridvägarna mittlinjen och diagonalen (docs/RIDING-PATH-LESSON-CONTRACT.md).
+	ridvag = table.freeze({ ["server-vag-1"] = true }),
 })
 RidForsok.MAX_PER_RITT = 8
 RidForsok.MAX_BEGARAN = 16

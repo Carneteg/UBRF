@@ -45,6 +45,10 @@ and test policy. This index is dated 2026-09-26; it is not product acceptance.
   Serpentine R1 49788ea passed Codex source review only. Steady walk
   ([contract](TEMPO-LESSON-CONTRACT.md), steady observed speed in walk, not hoof
   rhythm) is built on it, BUILT_NOT_VERIFIED; spec written, not run.
+  Tempo 96da81b passed Codex source review only. Riding paths
+  ([contract](RIDING-PATH-LESSON-CONTRACT.md), centre line and diagonal) are built
+  on it, with the lesson menu grouped to at most four choices per page;
+  BUILT_NOT_VERIFIED, spec written, not run.
   Deferred before Tobias' playtest: full42, runtime smoke in engine, both lesson
   flows, guides, entrance door, SV/EN and touch.
 - 2026-09-27: the entrance correction 93e16f5 received BANK_ONLY code PASS and a

@@ -42,6 +42,7 @@ local HaltLektion = require(script.Parent.HaltLektion)
 local OvergangLektion = require(script.Parent.OvergangLektion)
 local SerpentinLektion = require(script.Parent.SerpentinLektion)
 local TempoLektion = require(script.Parent.TempoLektion)
+local VagLektion = require(script.Parent.VagLektion)
 
 --[[ Lektionstyp → modul. Utelämnad/okänd typ i ett befintligt läge är
 	voltlektionen (oförändrat standardbeteende). ]]
@@ -50,6 +51,8 @@ local function lektionModul(typ: string?): any
 	if typ == "overgang" then return OvergangLektion end
 	if typ == "serpentin" then return SerpentinLektion end
 	if typ == "tempo" then return TempoLektion end
+	-- Ridvägarna: figuren är typen, så den ingår i begäranbokens identitet.
+	if typ == "vag_mitt" or typ == "vag_diag" then return VagLektion end
 	return VoltLektion
 end
 
@@ -1963,7 +1966,7 @@ function HorseService.voltLektionsBegaran(player: any, rittId: any, op: any, seq
 		start/halt. En lektion per ritt. ]]
 	if typ == nil then typ = "volt" end
 	if typ ~= "volt" and typ ~= "halt" and typ ~= "overgang" and typ ~= "serpentin"
-		and typ ~= "tempo" then
+		and typ ~= "tempo" and typ ~= "vag_mitt" and typ ~= "vag_diag" then
 		return false, "unknown", nil
 	end
 	local hastId = tostring(session.rig.model:GetAttribute("HorseId") or session.rig.model.Name)
@@ -1974,7 +1977,7 @@ function HorseService.voltLektionsBegaran(player: any, rittId: any, op: any, seq
 		och finns ingen skapas den valda. ]]
 	if op == "sync" then
 		if not nu then
-			nu = lektionModul(typ).ny(rittId, player.UserId, hastId)
+			nu = lektionModul(typ).ny(rittId, player.UserId, hastId, typ)
 			session.voltLektion = nu
 		end
 		local L = lektionModul(nu.typ)
@@ -2018,7 +2021,7 @@ function HorseService.voltLektionsBegaran(player: any, rittId: any, op: any, seq
 	if fel == nil then
 		local L = lektionModul(anvand)
 		if not session.voltLektion then
-			session.voltLektion = L.ny(rittId, player.UserId, hastId)
+			session.voltLektion = L.ny(rittId, player.UserId, hastId, anvand)
 		end
 		ok, fel, bild = L.begar(session.voltLektion, op, seq, os.clock(), gangart, ryggar)
 	end
