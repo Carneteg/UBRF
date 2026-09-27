@@ -129,9 +129,11 @@ request("finish")
 -- ── Hela sekvensen ──
 runt(0, -9)
 request("start")
-till(0, -8.6)
+ga(0, -8.6) -- ETT prov (R1): armeringen
 check("the first walk step in the corridor arms without credit", image().lage == "approach"
 	and image().tips == "walk_to_pole" and image().progress == 0)
+till(0, -8)
+check("subsequent forward walk earns approach progress", image().progress > 0)
 till(0, -4)
 check("4 m of fresh walk leads to the crossing", image().lage == "crossing")
 till(0, 4)
@@ -168,7 +170,7 @@ check("reaching the plane and turning back resets and never completes",
 
 -- ── Stillastående, darrning, trav, halt, galopp ──
 runt(0, -9)
-till(0, -8.6)
+ga(0, -8.6) -- ETT prov: armeringen, utan kredit
 for _ = 1, 10 do ga(nu.a, nu.w) end
 for i = 1, 8 do ga(if i % 2 == 0 then 0.05 else -0.05, nu.w) end
 check("standing still and jitter add no approach", image().progress == 0)
@@ -227,6 +229,60 @@ check("KONTROLL: the re-added pole is a new registration",
 ga(0, -4.2)
 check("an identical replacement does not reuse earlier evidence", image().lage == "approach"
 	and image().progress == 0)
+
+-- ── R1: vridning och ändrade mått på plats, och guiden ──
+runt(0, -9)
+ga(0, -8.6)
+till(0, -6)
+local cfR, posR, storR = bom.CFrame, bom.Position, bom.Size
+bom.CFrame = cfR * CFrame.Angles(0, math.rad(20), 0) -- vriden kring samma centrum
+ga(0, -5.8)
+check("R1: a pole rotated in place is unusable, never the old plane", image().lage == "approach"
+	and image().tips == "pole_missing" and image().referens == nil)
+bom.CFrame = cfR
+ga(0, -5.6)
+check("R1: restored, the evidence is fresh and the guide reference returns", image().progress == 0
+	and image().referens ~= nil)
+runt(0, -9); ga(0, -8.6); till(0, -6)
+bom.Size = storR + vec(0, 0.6, 0) -- högre överkant, samma läge
+ga(0, -5.8)
+check("R1: a resized pole (height) in place is unusable", image().tips == "pole_missing"
+	and image().referens == nil)
+bom.Size = storR
+runt(0, -9); ga(0, -8.6); till(0, -6)
+bom.Size = storR + vec(0.5, 0, 0) -- bredare, samma läge
+ga(0, -5.8)
+check("R1: a resized pole (width) in place is unusable", image().tips == "pole_missing")
+bom.Size = storR
+
+-- Guiden på klienten: borttagen när bommen saknas, förnyad när en giltig
+-- ändrad registrering kommer i SAMMA ram och SAMMA fas, orörd annars.
+local V = VoltLektionController
+V.avbryt(); V.start(id, nil)
+V.valj("markbom")
+local g0 = workspace:FindFirstChild("Voltguide")
+check("KONTROLL: the ground-pole guide is drawn", g0 ~= nil)
+V.valj("markbom")
+check("R1: an unchanged sample does not rebuild the guide", workspace:FindFirstChild("Voltguide") == g0)
+local forald2 = bom.Parent
+workspace.DescendantRemoving:Fire(bom); bom.Parent = nil
+ga(nu.a, nu.w)
+V.valj("markbom")
+check("R1: a missing pole removes the guide", image().referens == nil
+	and workspace:FindFirstChild("Voltguide") == nil)
+bom.CFrame = cfR + vec(0, 0, 3); bom.Position = posR + vec(0, 0, 3)
+bom.Parent = forald2; workspace.DescendantAdded:Fire(bom)
+ga(nu.a, nu.w)
+local nyckel1 = image().referens and image().referens.nyckel
+V.valj("markbom")
+local g1 = workspace:FindFirstChild("Voltguide")
+check("R1: a changed valid pole in the same frame and phase refreshes the guide",
+	image().lage == "approach" and nyckel1 ~= nil and g1 ~= nil and g1 ~= g0)
+workspace.DescendantRemoving:Fire(bom); bom.Parent = nil
+bom.CFrame = cfR; bom.Position = posR
+bom.Parent = forald2; workspace.DescendantAdded:Fire(bom)
+ga(nu.a, nu.w)
+V.avbryt()
 
 -- ── Tidsgräns, begäranbok, alla lektioner ──
 s.voltLektion.deadline = os.clock()

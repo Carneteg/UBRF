@@ -217,7 +217,8 @@ end
 
 local function visaGuide(ref, delmal)
 	if not ref or not ref.plats then rivGuide(); return end
-	if guideRef and guideRef.ramId == ref.ramId and guideTyp == typ and guideDel == delmal then return end
+	if guideRef and guideRef.ramId == ref.ramId and guideRef.nyckel == ref.nyckel and guideTyp == typ
+		and guideDel == delmal then return end
 	rivGuide()
 	local m = Instance.new("Model"); m.Name = "Voltguide"
 	if typ == "serpentin" or vagTyp(typ) or typ == "halvvolt" or typ == "markbom" then

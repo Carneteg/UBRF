@@ -103,8 +103,8 @@ local function bomGeometri(plats): (any, string?)
 	local mot = if nv >= 0 then 1 else -1
 	return table.freeze({ u = c.X, v = c.Z, au = au, av = av, wu = nu_ * mot, wv = nv * mot,
 		bredd = h.bredd / M, riktning = if mot > 0 then "fram" else "bak",
-		generation = h.generation, nyckel = string.format("%d|%.6f|%.6f|%.6f|%.6f|%.6f",
-			h.generation, h.x, h.y, h.z, h.breddaxel.x, h.breddaxel.z) }), nil
+		generation = h.generation, nyckel = string.format("%d|%.6f|%.6f|%.6f|%.6f|%.6f|%.6f|%.6f|%.6f",
+			h.generation, h.x, h.y, h.z, h.breddaxel.x, h.breddaxel.z, h.bredd, h.topp, h.tjocklek) }), nil
 end
 
 local function lokal(g, q): (number, number)
@@ -157,13 +157,22 @@ local function nyBaslinje(s, o, p, logg)
 	s.loggSett = #logg.handelser
 	local plats = Plats.lektionsRam(s.rittId)
 	local geo = bomGeometri(plats)
+	--[[ R1: guiden följer SAMMA registrering som bevisningen. Referensen
+		bär bommens nyckel (generation och hela geometrin), och den tas bort
+		när bommen är oanvändbar. Ändras referensen räknas revisionen upp,
+		så att den når klienten även när läge och tips är oförändrade — men
+		bara då, så att oförändrade prov inte bygger om guiden. ]]
+	local fore = s.referens and s.referens.nyckel or nil
 	if p.ramId ~= nil and geo then
 		s.ramId, s.geo = p.ramId, geo
-		s.referens = table.freeze({ ramId = p.ramId, u = geo.u, v = geo.v, au = geo.au, av = geo.av,
-			wu = geo.wu, wv = geo.wv, bredd = geo.bredd, sida = SIDA_EXTRA, djup = DJUP, plats = plats })
+		s.referens = table.freeze({ ramId = p.ramId, nyckel = geo.nyckel, u = geo.u, v = geo.v,
+			au = geo.au, av = geo.av, wu = geo.wu, wv = geo.wv, bredd = geo.bredd,
+			sida = SIDA_EXTRA, djup = DJUP, plats = plats })
 	else
-		s.ramId, s.geo = nil, nil
+		s.ramId, s.geo, s.referens = nil, nil, nil
 	end
+	local efter = s.referens and s.referens.nyckel or nil
+	if efter ~= fore then s.revision += 1 end
 end
 
 function MarkbomLektion.steg(s, now: number, gangart: string?, ryggar: boolean?)

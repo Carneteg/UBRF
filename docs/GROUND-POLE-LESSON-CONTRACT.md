@@ -47,9 +47,26 @@ client-owned physics remain unverified.
 - **`generation`:** a per-id counter bumped on every registration change (a
   part added, removed or re-proved; a whole id removed). A replacement with
   identical geometry therefore still has a new generation.
-- **`flyttad`:** true when the live part has moved more than 0.01 studs from
-  its registered position. The registry does not re-read geometry on a move,
-  so it would otherwise keep the old geometry.
+- **`flyttad` (R1: the WHOLE geometry, fail-closed):** true when the live
+  part no longer matches the registered geometry. This is computed with the
+  same `geometri()` as registration, and covers:
+  - position (0.01 studs);
+  - the width axis including its sign, since a rotated pole flips the normal
+    (1e-4 per component);
+  - width, thickness and top (0.01 studs).
+
+  A missing part, no parent, invalid or non-finite live geometry, or an error
+  while reading counts as changed. The registry does not re-read geometry on a
+  change, so it would otherwise keep the old geometry. `tjocklek` is also
+  exposed.
+- **Guide identity (R1):**
+  - The lesson's reference carries the pole key: generation, position, axis,
+    width, top and thickness.
+  - The reference is removed (nil) whenever the pole is unusable.
+  - A changed key bumps the revision, so the change reaches the client even
+    when state and tip are unchanged.
+  - The client guide is cached on that key too; other lessons have no key, so
+    their behaviour is unchanged. Unchanged samples do not rebuild the guide.
 
 No rule for duplicates, removal, attempts or passages changes.
 
@@ -217,6 +234,18 @@ rows, and all other pages are unchanged.
 
 **Menu:** every one of the ten leaves and each Back is reachable within four
 rows beside 0..3 cards.
+
+**R1, written:**
+- a pole rotated in place is unusable and its reference is nil; once
+  restored, the evidence is fresh;
+- a pole resized in height or in width in place is unusable;
+- the client guide:
+  - is drawn;
+  - is not rebuilt by an unchanged sample;
+  - is removed when the pole is missing;
+  - is refreshed when a changed valid pole appears in the same frame and the
+    same phase;
+- arming is asserted on ONE sample, and forward walk then earns progress.
 
 **Planned, not written:**
 - a duplicate `HinderId` (the registry rejects both; the lesson reads a

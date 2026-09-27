@@ -487,19 +487,38 @@ function HinderObservation.ogonblick(rittId: string?): any
 end
 
 --[[ Registrets innehåll, fryst: giltiga hinder och avvisade id:n.
-	`generation` (se ovan) och `flyttad` — delen har flyttats mer än 0,01
-	studs från sitt registrerade läge, en LEVANDE läsning; registret läser
-	inte om geometrin vid en flytt — är rena tillägg (#264 markbom). ]]
+	`generation` (se ovan) och `flyttad` är rena tillägg (#264 markbom).
+	`flyttad` är en LEVANDE jämförelse av HELA geometrin (markbom R1):
+	delens nuvarande läge, breddaxel (med tecken — en vriden bom byter
+	normalens riktning), bredd, tjocklek och överkant jämförs med det
+	registrerade, genom samma `geometri()`. Registret läser inte om
+	geometrin vid en ändring, så en konsument som använder den cachade
+	geometrin måste veta när den inte längre stämmer. STÄNGD VID FEL:
+	saknad del, ingen förälder, ogiltig eller icke-ändlig geometri, eller
+	ett fel i läsningen räknas som ändrad. Toleranser: 0,01 studs för läge
+	och mått, 1e-4 för axelns komponenter. ]]
+local TOL_LAGE, TOL_AXEL = 0.01, 1e-4
+local function andrad(h: Hinder): boolean
+	local del = h._del
+	local ok, ut = pcall(function()
+		if del == nil or del.Parent == nil then return true end
+		local g = geometri(del)
+		if not g then return true end
+		return math.abs(g.cx - h.cx) > TOL_LAGE or math.abs(g.cy - h.cy) > TOL_LAGE
+			or math.abs(g.cz - h.cz) > TOL_LAGE
+			or math.abs(g.ux - h.ux) > TOL_AXEL or math.abs(g.uz - h.uz) > TOL_AXEL
+			or math.abs(g.bredd - h.bredd) > TOL_LAGE or math.abs(g.tjocklek - h.tjocklek) > TOL_LAGE
+			or math.abs(g.topp - h.topp) > TOL_LAGE
+	end)
+	return (not ok) or ut ~= false
+end
+
 function HinderObservation.register(): any
 	local ut = {}
 	for id, h in pairs(hinder) do
-		local del = h._del
-		local okFlytt, flyttad = pcall(function()
-			return del == nil or del.Parent == nil or (del.Position - h._lage).Magnitude > 0.01
-		end)
 		ut[id] = { id = id, x = h.cx, y = h.cy, z = h.cz, bredd = h.bredd,
 			breddaxel = { x = h.ux, z = h.uz }, normal = { x = h.nx, z = h.nz }, topp = h.topp,
-			generation = generation[id] or 0, flyttad = (not okFlytt) or flyttad == true }
+			tjocklek = h.tjocklek, generation = generation[id] or 0, flyttad = andrad(h) }
 	end
 	return frys({ hinder = ut, avvisade = avvisade })
 end
