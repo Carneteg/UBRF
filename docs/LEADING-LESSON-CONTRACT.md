@@ -127,6 +127,9 @@ Retry and Finish work as in the other lessons:
     an active attempt.
   - A change bumps the epoch and pushes the snapshot, which includes
     `kontextNr` and `hastId`.
+  - C1 R1 ([LESSON-FEEDBACK-CONTRACT](LESSON-FEEDBACK-CONTRACT.md)): the frozen
+    result also carries the epoch it completed in (`resultat.kontextNr`, additive),
+    so the feedback never attributes it to a later context.
 - **Mutating requests** carry both the displayed attempt and context:
   - a mismatched context is `stale_context`, answered with the current state
     and actionable guidance;

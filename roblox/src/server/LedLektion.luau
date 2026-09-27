@@ -111,7 +111,11 @@ end
 
 local function stang(player: Player, s, orsak: string)
 	if orsak == "slutford" then
+		--[[ C1 R1: kontextepoken det slutfördes i (additivt fält), så att
+			återkopplingen aldrig tillskriver en senare bunden häst/karaktär
+			det här resultatet. ]]
 		s.resultat = table.freeze({ userId = s.userId, hastId = s.hastId, forsokNr = s.forsokNr,
+			kontextNr = s.kontextNr,
 			meter = s.resa, sekunder = s.ledTid, frammeProv = s.framme, malNyckel = s.malNyckel,
 			start = s.start, version = LedLektion.VERSION })
 		s.progress = 100

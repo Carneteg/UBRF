@@ -1545,6 +1545,10 @@ Sprak.text = {
 		sv = "Ta din häst utanför ridbanan och led henne lugnt hela vägen in.",
 		en = "Take your horse outside the arena track and lead her calmly all the way in.",
 	},
+	["aterkoppling.leda.annan"] = {
+		sv = "Den övningen gjordes med en annan häst eller före ett byte av karaktär, så jag visar inte de siffrorna här. Led igen med den häst du har nu.",
+		en = "That exercise was done with another horse or before a character change, so I will not show its numbers here. Lead again with the horse you have now.",
+	},
 	["ugneta.se_ritten"] = {
 		sv = "Se ritten",
 		en = "Watch the ride",

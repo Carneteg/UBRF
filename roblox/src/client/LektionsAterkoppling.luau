@@ -12,72 +12,103 @@ local Sprak = require(game:GetService("ReplicatedStorage").HorseCore.Sprak)
 
 local A = {}
 
-local function tal(x: any, dec: number?): string
-	if type(x) ~= "number" or x ~= x or x == math.huge or x == -math.huge then return "?" end
+--[[ R1: BEVIS ÄR BEVIS. Ett fält som saknas, har fel typ eller inte är ett
+	ändligt tal är INTE ett uppmätt noll — då blir texten ärlig ("inga
+	detaljer"). Validering sker FÖRE all aritmetik och formatering, så att
+	ett trasigt resultat aldrig kastar och `?` aldrig står som ett mått. ]]
+local function fin(x: any): boolean
+	return type(x) == "number" and x == x and x ~= math.huge and x ~= -math.huge
+end
+local function ickeNeg(x: any): boolean
+	return fin(x) and x >= 0
+end
+local function heltal(x: any): boolean
+	return ickeNeg(x) and x % 1 == 0
+end
+local function lista(t: any): boolean
+	return type(t) == "table"
+end
+
+local function tal(x: number, dec: number?): string
 	local s = string.format("%." .. tostring(dec or 1) .. "f", x)
 	if Sprak.eget() == "sv" then s = string.gsub(s, "%.", ",") end
 	return s
 end
 
-local function antal(t: any): number
-	return if type(t) == "table" then #t else 0
-end
-
---[[ Sammanfattningen per typ: bara fält som producenten faktiskt fryser.
-	Returnerar nil om ett nödvändigt fält saknas (då blir texten ärlig). ]]
+--[[ Sammanfattningen per typ: bara fält som producenten faktiskt fryser,
+	och producentens egen övnings-/figuridentitet där den finns. Varje
+	nödvändigt fält prövas först; nil betyder "inga detaljer". Ett
+	observerat noll (en tom lista, 0 m skuld) är giltigt där producenten
+	kan frysa det. ]]
 local function sammanfattning(typ: string, r: any): string?
 	if typ == "volt" then
 		local a = r.avsnitt
-		if type(a) ~= "table" or type(a.varv) ~= "number" or type(a.referens) ~= "table" then return nil end
+		if type(a) ~= "table" or type(a.referens) ~= "table" then return nil end
+		if not (heltal(a.varv) and a.varv >= 1 and fin(a.referens.radie) and a.referens.radie > 0
+			and ickeNeg(a.medelAvvikelse) and ickeNeg(a.tid)) then return nil end
 		return Sprak.t("aterkoppling.volt.klar", tostring(a.varv), tal(a.referens.radie, 0),
 			tal(a.medelAvvikelse), tal(a.tid, 0))
 	elseif typ == "halt" then
-		if type(r.skrittMeter) ~= "number" or type(r.haltSekunder) ~= "number" then return nil end
+		if r.mal ~= "X" or not (ickeNeg(r.skrittMeter) and ickeNeg(r.haltSekunder)) then return nil end
 		return Sprak.t("aterkoppling.halt.klar", tal(r.skrittMeter), tal(r.haltSekunder))
 	elseif typ == "overgang" then
-		if type(r.travMeter) ~= "number" or type(r.skrittMeter) ~= "number" then return nil end
+		if r.mal ~= "T1->T2" or not (ickeNeg(r.travMeter) and ickeNeg(r.skrittMeter)) then return nil end
 		return Sprak.t("aterkoppling.overgang.klar", tal(r.travMeter), tal(r.skrittMeter))
 	elseif typ == "serpentin" then
-		if type(r.meter) ~= "number" then return nil end
-		return Sprak.t("aterkoppling.serpentin.klar", tal(r.meter, 0), tostring(antal(r.korsningar)))
+		if r.rutt ~= "serpentin-3" or not (ickeNeg(r.meter) and lista(r.korsningar)) then return nil end
+		return Sprak.t("aterkoppling.serpentin.klar", tal(r.meter, 0), tostring(#r.korsningar))
 	elseif typ == "tempo" then
-		if type(r.meter) ~= "number" or type(r.medelFart) ~= "number" then return nil end
+		if r.ovning ~= "jamn_skritt" or r.enhet ~= "m/s" then return nil end
+		if not (ickeNeg(r.meter) and ickeNeg(r.sekunder) and fin(r.medelFart) and r.medelFart > 0
+			and ickeNeg(r.spridning)) then return nil end
 		return Sprak.t("aterkoppling.tempo.klar", tal(r.meter), tal(r.sekunder), tal(r.medelFart, 2),
-			tal((r.spridning or 0) * 100, 0))
+			tal(r.spridning * 100, 0))
 	elseif typ == "vag_mitt" or typ == "vag_diag" then
-		if type(r.meter) ~= "number" or type(r.langd) ~= "number" then return nil end
+		if r.figur ~= typ or not (ickeNeg(r.meter) and fin(r.langd) and r.langd > 0) then return nil end
 		return Sprak.t("aterkoppling." .. typ .. ".klar", tal(r.meter), tal(r.langd))
 	elseif typ == "halvvolt" then
-		if type(r.meter) ~= "number" then return nil end
-		local text = Sprak.t("aterkoppling.halvvolt.klar", tal(r.meter), tostring(antal(r.skarvar)))
-		if type(r.skuld) == "number" and r.skuld > 0.05 then
+		if r.figur ~= "halvvolt" or not (ickeNeg(r.meter) and lista(r.skarvar) and fin(r.skuld)) then
+			return nil
+		end
+		local text = Sprak.t("aterkoppling.halvvolt.klar", tal(r.meter), tostring(#r.skarvar))
+		if r.skuld > 0.05 then
 			text ..= " " .. Sprak.t("aterkoppling.halvvolt.skuld", tal(r.skuld))
 		end
 		return text
 	elseif typ == "galopp" then
-		if type(r.travMeter) ~= "number" or type(r.galoppMeter) ~= "number" then return nil end
+		if r.ovning ~= "galoppfattning" or r.galoppsida ~= "ej_bedomd" then return nil end
+		if not (ickeNeg(r.travMeter) and ickeNeg(r.galoppMeter)) then return nil end
 		return Sprak.t("aterkoppling.galopp.klar", tal(r.travMeter), tal(r.galoppMeter))
 	elseif typ == "markbom" then
-		if type(r.inridningM) ~= "number" or type(r.utridningM) ~= "number" then return nil end
+		if r.ovning ~= "markbom" or r.passage ~= "rotplan" then return nil end
+		if not (ickeNeg(r.inridningM) and ickeNeg(r.utridningM)) then return nil end
 		return Sprak.t("aterkoppling.markbom.klar", tal(r.inridningM), tal(r.utridningM))
 	elseif typ == "leda" then
-		if type(r.meter) ~= "number" or type(r.sekunder) ~= "number" then return nil end
+		if not (ickeNeg(r.meter) and ickeNeg(r.sekunder)) then return nil end
 		return Sprak.t("aterkoppling.leda.klar", tal(r.meter), tal(r.sekunder, 0))
 	end
 	return nil
 end
 
---[[ Hör resultatet till det VISADE försöket?
+--[[ Hör resultatet till det VISADE försöket? "ja", "kontext" (ledningen:
+	samma försök men en annan bunden häst/modell eller karaktär sedan det
+	slutfördes) eller "nej".
 	`kontext` = { typ, ritt } för ridlektionerna, { typ = "leda", userId } för
-	ledningen. ]]
-local function tillhor(b: any, kontext: any): boolean
+	ledningen. R1: ledningens resultat bär den kontextepok (`kontextNr`) det
+	slutfördes i; bilden bär den nuvarande. Producenten räknar upp epoken vid
+	varje byte av bunden MODELL (instansen — en ersättare med samma HorseId
+	räknas) och av KARAKTÄR, även i complete. ]]
+local function tillhor(b: any, kontext: any): string
 	local r = b and b.resultat
-	if type(r) ~= "table" then return false end
+	if type(r) ~= "table" then return "nej" end
 	if kontext.typ == "leda" then
-		return type(b.forsokNr) == "number" and r.forsokNr == b.forsokNr and r.userId == kontext.userId
+		if not (heltal(b.forsokNr) and r.forsokNr == b.forsokNr and r.userId ~= nil
+			and r.userId == kontext.userId) then return "nej" end
+		if not (heltal(r.kontextNr) and heltal(b.kontextNr)) then return "nej" end
+		return if r.kontextNr == b.kontextNr then "ja" else "kontext"
 	end
-	return b.forsokId ~= nil and r.forsokId == b.forsokId and r.rittId == b.rittId
-		and b.rittId == kontext.ritt and (b.typ or "volt") == kontext.typ
+	return if b.forsokId ~= nil and r.forsokId == b.forsokId and b.rittId ~= nil and r.rittId == b.rittId
+		and b.rittId == kontext.ritt and (b.typ or "volt") == kontext.typ then "ja" else "nej"
 end
 
 --[[ Texten för ett avslutat försök, eller nil när bilden inte är avslutad
@@ -86,13 +117,15 @@ function A.text(b: any, kontext: any): string?
 	if type(b) ~= "table" or type(kontext) ~= "table" then return nil end
 	local typ = kontext.typ
 	if b.lage == "complete" then
-		local s = if tillhor(b, kontext) then sammanfattning(typ, b.resultat) else nil
+		local hor = tillhor(b, kontext)
+		if hor == "kontext" then return Sprak.t("aterkoppling.leda.annan") end
+		local s = if hor == "ja" then sammanfattning(typ, b.resultat) else nil
 		if not s then return Sprak.t("aterkoppling.okant") end
 		return s .. " " .. Sprak.t("aterkoppling." .. typ .. ".nasta")
 	elseif b.lage == "timeout" then
 		--[[ Neutralt: ingen gratulation, inget lånat resultat, ingen påhittad
 			orsak — serverns egen framstegssiffra och ett konkret tips. ]]
-		local procent = if type(b.progress) == "number" then math.clamp(math.floor(b.progress), 0, 99) else 0
+		local procent = if fin(b.progress) then math.clamp(math.floor(b.progress), 0, 99) else 0
 		return Sprak.t("aterkoppling.timeout", tostring(procent)) .. " "
 			.. Sprak.t("aterkoppling." .. typ .. ".igen")
 	end

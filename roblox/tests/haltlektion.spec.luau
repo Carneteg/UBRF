@@ -248,6 +248,95 @@ local okVF = request("finish", "volt")
 check("ordinary volt -> halt -> volt selection and Finish still work", okH == true and okHF == true
 	and hf.lage == "closed" and okV == true and okVF == true)
 
+-- ── C1 R1: återkopplingen genom den RIKTIGA panelen (VoltLektionController) ──
+--[[ Bilderna är producentens egna (HorseService.voltLektionsBegaran sync) och
+	levereras genom den riktiga lyssnaren på `VoltLektionSync`; texten läses
+	ur `VoltLektionController.panel()` — anropsstället — och ur Ugnetas
+	sammansatta sida med 0..3 kortknappar (MAX_VAL = 4). ]]
+do
+	local VC = VoltLektionController
+	local syncC = Networking.get("VoltLektionSync")
+	local function hitta(lista, txt)
+		for _, k in ipairs(lista) do if k.text == txt then return k end end
+		return nil
+	end
+	local function leverera(b) syncC.OnClientEvent:Fire(b) end
+	local function panelText() local sida = VC.panel(); return sida and sida.text end
+	local function har(t, del) return type(t) == "string" and string.find(t, del, 1, true) ~= nil end
+	local function tal1(x) return (string.gsub(string.format("%.1f", x), "%.", ",")) end
+	Sprak.satVal("sv")
+	UgnetaController.dolj()
+	VC.avbryt(); VC.start(id, nil)
+	UgnetaController.satLektionsVal(VC.panel)
+	VC.valj("halt")
+	request("finish")
+	-- Ett riktigt slutfört halt-försök (samma väg som den lyckliga vägen ovan).
+	still(0, 18, 1) -- hästen står vid starten FÖRE Start: ingen förflyttning bryter försöket
+	request("start")
+	still(0, 18, G.HALT_FORE + 0.5)
+	aid("driv")
+	for v = 19, X.v - 1 do step(X.u, v) end
+	aid("broms")
+	still(X.u, X.v - 0.5, G.HALT_EFTER + 0.75)
+	local klar = image()
+	check("KONTROLL C1: a real completed halt attempt", klar.lage == "complete" and klar.resultat ~= nil)
+	leverera(klar)
+	local t = panelText()
+	check("C1: the panel shows the frozen result's walked metres and the next step",
+		har(t, tal1(klar.resultat.skrittMeter)) and har(t, Sprak.t("aterkoppling.halt.nasta")))
+	local sida = UgnetaController.panel(4)
+	check("C1: the composed page keeps Retry and Finish within capacity", #sida.knappar <= 4
+		and hitta(sida.knappar, Sprak.t("voltlektion.retry")) ~= nil
+		and hitta(sida.knappar, Sprak.t("haltlektion.finish")) ~= nil)
+	UgnetaController.visa("Kort", {}, true, nil, true, true) -- tre äldre kortknappar
+	sida = UgnetaController.panel(4)
+	check("C1: beside three legacy card buttons the page fits, keeps Retry, and the text is unchanged",
+		#sida.knappar <= 4 and hitta(sida.knappar, Sprak.t("voltlektion.retry")) ~= nil and panelText() == t)
+	UgnetaController.dolj()
+	leverera(klar)
+	check("C1: a duplicate snapshot gives the same single summary", panelText() == t)
+	Sprak.satVal("en")
+	local tEn = panelText()
+	check("C1: a locale switch redraws the words from the same attempt",
+		har(tEn, "Next time") and tEn ~= t)
+	Sprak.satVal("sv")
+
+	-- Retry: nytt försök, inget resultat, ingen gammal sammanfattning.
+	request("retry")
+	local ny = image()
+	leverera(ny)
+	check("C1: after Retry the new attempt never shows the previous summary",
+		ny.resultat == nil and not har(panelText(), tal1(klar.resultat.skrittMeter))
+		and not har(panelText(), Sprak.t("aterkoppling.halt.nasta")))
+	-- Timeout efter ett lyckat försök.
+	s.voltLektion.deadline = os.clock()
+	step(X.u, X.v)
+	local slut = image()
+	check("KONTROLL C1: the next attempt timed out", slut.lage == "timeout")
+	leverera(slut)
+	t = panelText()
+	check("C1: timeout after a success is neutral with a retry hint, no borrowed result",
+		har(t, Sprak.t("aterkoppling.halt.igen")) and not har(t, tal1(klar.resultat.skrittMeter))
+		and not har(t, Sprak.t("aterkoppling.halt.nasta")))
+	-- En försenad äldre bild (lägre revision) ersätter inte timeouten.
+	leverera(klar)
+	check("C1: a delayed older complete snapshot does not replace the timeout", panelText() == t)
+	-- Stängt efter ett lyckat försök.
+	request("finish")
+	local stangd = image()
+	leverera(stangd)
+	check("C1: closed shows the ordinary text, never an old result",
+		stangd.lage == "closed" and not har(panelText(), tal1(klar.resultat.skrittMeter)))
+	-- En annan ritt: kontrollern tar inte emot den gamla rittens bild.
+	VC.avbryt(); VC.start("annan-ritt-c1", nil); VC.valj("halt")
+	leverera(klar)
+	local ann = VC.panel()
+	check("C1: another ride never shows this ride's result",
+		ann == nil or not har(ann.text, tal1(klar.resultat.skrittMeter)))
+	VC.avbryt()
+	UgnetaController.satLektionsVal(nil)
+end
+
 local sync = Networking.get("VoltLektionSync")
 local toOther = 0
 for _, rad in ipairs(sync._skickat) do if rad[1] ~= p then toOther += 1 end end

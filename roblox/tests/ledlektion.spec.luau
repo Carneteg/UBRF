@@ -435,5 +435,101 @@ check("mounted lesson menus take precedence and are unchanged",
 	hitta(ridsida, Sprak.t("voltlektion.choose")) ~= nil and hitta(ridsida, Sprak.t("ledlektion.choose")) == nil)
 VoltLektionController.avbryt()
 
+-- ── C1 R1: återkopplingen efter ledningen — producent → sync → panel ──
+--[[ Riktig LedLektion (med den injicerade bindningen `aktuell` ovan), riktig
+	sync-väg (`L._synkaForProv`, dvs. `skicka("sync")` genom fjärranropet) och
+	riktig `LedLektionController.panel()`. En slutförd ledning får aldrig
+	visas som resultat för en SENARE bunden häst, en ersättare med samma
+	HorseId eller en ny karaktär. ]]
+do
+	local Lc = LedLektionController
+	local function har(t, del) return type(t) == "string" and string.find(t, del, 1, true) ~= nil end
+	local function tal1(x) return (string.gsub(string.format("%.1f", x), "%.", ",")) end
+	local function panelText() Lc._synkaForProv(); local p = Lc.panel(); return p and p.text end
+	local ANNAN_TEXT = Sprak.t("aterkoppling.leda.annan")
+	Sprak.satVal("sv")
+	UgnetaController.dolj()
+	if not Lc._valtForProv() then
+		local e2 = hitta(UgnetaController.panel(KAP).knappar, Sprak.t("ledlektion.choose"))
+		if e2 then e2.skicka() end
+	end
+	check("KONTROLL C1: the leading page is open", Lc._valtForProv())
+	aktuell = MIN
+	local function slutfor()
+		LedService.slapp(spelare)
+		flytta(UTE_X); steg()
+		seq = LedLektion._tillstandForProv(spelare).hogsta
+		local lg = bild().lage
+		if lg == "lead_first" or lg == "leading" then req("finish") end
+		if bild().lage == "complete" or bild().lage == "timeout" then req("retry") else req("start") end
+		led(); steg()
+		ga(z.x + 2)
+		for _ = 1, 4 do steg() end
+		return bild()
+	end
+	-- Oförändrad kontext: sammanfattningen visas och står kvar.
+	local klar = slutfor()
+	check("KONTROLL C1: a completed lead with its frozen context epoch", klar.lage == "complete"
+		and klar.resultat ~= nil and klar.resultat.kontextNr == klar.kontextNr)
+	local t = panelText()
+	check("C1: unchanged context shows the led metres and the next step",
+		har(t, tal1(klar.resultat.meter)) and har(t, Sprak.t("aterkoppling.leda.nasta")), t)
+	for _ = 1, 4 do steg() end
+	check("C1: further samples in the same context keep the same summary", panelText() == t)
+	-- Annan bunden häst (A → B) medan lektionen står i complete.
+	aktuell = ANNAN
+	steg()
+	local efterB = bild()
+	check("KONTROLL C1: the producer kept the result but advanced the context", efterB.lage == "complete"
+		and efterB.resultat == klar.resultat and efterB.kontextNr ~= klar.resultat.kontextNr)
+	t = panelText()
+	check("C1: after A → B the old result is not attributed to B",
+		t == ANNAN_TEXT and not har(t, tal1(klar.resultat.meter)), t)
+	-- Den försenade äldre bilden (samma försök, lägre revision) återställer inget.
+	Networking.get("LedLektionSync").OnClientEvent:Fire(klar)
+	local p = Lc.panel()
+	check("C1: a delayed older snapshot does not bring back A's summary", p and p.text == ANNAN_TEXT)
+	-- Tillbaka till A: en NY kontextepok, fortfarande ingen gammal sammanfattning.
+	aktuell = MIN
+	steg()
+	check("C1: returning to A is a new context, still no old summary", panelText() == ANNAN_TEXT)
+	-- Ersättning med SAMMA HorseId efter ett slutfört försök.
+	klar = slutfor()
+	check("KONTROLL C1: completed again on A", klar.lage == "complete"
+		and har(panelText(), tal1(klar.resultat.meter)))
+	local MIN3 = byggHast(MIN_ID, varld(UTE_X - 3, MITT_Y))
+	aktuell = MIN3
+	steg()
+	t = panelText()
+	check("C1: a same-HorseId model replacement is not shown the old result", t == ANNAN_TEXT, t)
+	aktuell = MIN
+	MIN3.Parent = nil
+	steg()
+	-- Ny karaktär efter ett slutfört försök.
+	klar = slutfor()
+	check("KONTROLL C1: completed again before the character change", klar.lage == "complete")
+	local nyK2, _, nyH2 = nyKaraktar(spelarRot.Position)
+	nyH2.Health = 100
+	spelare.Character = nyK2
+	steg()
+	t = panelText()
+	check("C1: a replaced Character is not shown the old result", t == ANNAN_TEXT, t)
+	spelare.Character = karaktar
+	steg()
+	-- Retry från den nya kontexten fungerar som förut och startar utan gammal text.
+	LedService.slapp(spelare); flytta(UTE_X); steg()
+	local okRetry = req("retry")
+	t = panelText()
+	check("C1: Retry in the current context starts a new attempt without any old summary",
+		okRetry == true and not har(t, tal1(klar.resultat.meter)) and t ~= ANNAN_TEXT, t)
+	req("finish")
+	-- Tillbaka stänger sidan som förut (klienten synkar först den riktiga vägen).
+	Lc._synkaForProv()
+	local back = hitta(UgnetaController.panel(KAP).knappar, Sprak.t("ledlektion.back"))
+	if back then back.skicka() end
+	check("C1: Back still leaves the page", not Lc._valtForProv())
+	UgnetaController.dolj()
+end
+
 if fails > 0 then error(tostring(fails) .. " FEL") end
 print(string.format("\nLEDLEKTION: %d prov, alla gröna", total))
