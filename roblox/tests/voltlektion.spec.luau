@@ -151,6 +151,10 @@ check("insufficient aggregates are not perfect metrics", HorseService.volt(id).p
 	and image().lage~="complete")
 step(0,23); step(0,24)
 check("point deviation equality4 remains armed", image().lage=="riding")
+-- A separate short section prevents the aggregate guard from masking this guard.
+beginAt(22)
+step(0,22); step(0,22)
+check("endpoint probe has no aggregate metrics", HorseService.volt(id).pagar.maxAvvikelse==nil)
 step(0,24.001)
 check("outward endpoint invalidates even with insufficient midpoint metrics", image().lage=="approach")
 step(0,20); step(0,20); step(0,20)
