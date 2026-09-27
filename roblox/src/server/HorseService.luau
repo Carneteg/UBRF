@@ -46,6 +46,8 @@ local VagLektion = require(script.Parent.VagLektion)
 local HalvvoltLektion = require(script.Parent.HalvvoltLektion)
 local GaloppLektion = require(script.Parent.GaloppLektion)
 local MarkbomLektion = require(script.Parent.MarkbomLektion)
+-- Genom hörnet (docs/CORNER-LESSON-CONTRACT.md): egen typ `hornet`.
+local HornLektion = require(script.Parent.HornLektion)
 --[[ C4: första-klarad-minnet. Lektionens egen övergång till "complete"
 	anropar `vidKlar`, som HorseService sätter här när lektionen skapas. ]]
 local LektionsMinne = require(script.Parent.LektionsMinne)
@@ -62,6 +64,7 @@ local function lektionModul(typ: string?): any
 	if typ == "halvvolt" then return HalvvoltLektion end
 	if typ == "galopp" then return GaloppLektion end
 	if typ == "markbom" then return MarkbomLektion end
+	if typ == "hornet" then return HornLektion end
 	return VoltLektion
 end
 
@@ -1987,7 +1990,7 @@ function HorseService.voltLektionsBegaran(player: any, rittId: any, op: any, seq
 	if typ == nil then typ = "volt" end
 	if typ ~= "volt" and typ ~= "halt" and typ ~= "overgang" and typ ~= "serpentin"
 		and typ ~= "tempo" and typ ~= "vag_mitt" and typ ~= "vag_diag" and typ ~= "halvvolt"
-		and typ ~= "galopp" and typ ~= "markbom" then
+		and typ ~= "galopp" and typ ~= "markbom" and typ ~= "hornet" then
 		return false, "unknown", nil
 	end
 	local hastId = tostring(session.rig.model:GetAttribute("HorseId") or session.rig.model.Name)

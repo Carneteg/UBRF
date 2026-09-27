@@ -321,7 +321,7 @@ for n = 0, 3 do
 		-- Sedan galoppfattningen ligger övergångarna i undergruppen.
 		{ grupp = "lektionsval.gangart", under = "lektionsval.overgangar", text = Sprak.t("overganglektion.choose"), slut = Sprak.t("overganglektion.finish") },
 		{ grupp = "lektionsval.gangart", text = Sprak.t("tempolektion.choose"), slut = Sprak.t("tempolektion.finish") },
-		{ grupp = "lektionsval.vagar", text = Sprak.t("serpentinlektion.choose"), slut = Sprak.t("serpentinlektion.finish") },
+		{ grupp = "lektionsval.vagar", under = "lektionsval.bojda", text = Sprak.t("serpentinlektion.choose"), slut = Sprak.t("serpentinlektion.finish") },
 		-- Sedan halvvolten ligger mittlinjen och diagonalen i undergruppen.
 		{ grupp = "lektionsval.vagar", under = "lektionsval.linjer", text = Sprak.t("vaglektion.choose_mitt"), slut = Sprak.t("vaglektion.finish") },
 		{ grupp = "lektionsval.vagar", under = "lektionsval.linjer", text = Sprak.t("vaglektion.choose_diag"), slut = Sprak.t("vaglektion.finish") },

@@ -70,6 +70,7 @@ local VagLektion = require(script.Parent.VagLektion)
 local HalvvoltLektion = require(script.Parent.HalvvoltLektion)
 local GaloppLektion = require(script.Parent.GaloppLektion)
 local MarkbomLektion = require(script.Parent.MarkbomLektion)
+local HornLektion = require(script.Parent.HornLektion)
 
 local LektionsMinne = {}
 --[[ C (skötsel): docs/CARE-MEMORY-CONTRACT.md. Samma rörledning, egen
@@ -104,9 +105,12 @@ local DEF: { [string]: { ovning: string, version: string, ok: (any) -> boolean }
 		ok = function(r) return r.ovning == GaloppLektion.OVNING and r.galoppsida == "ej_bedomd" end },
 	markbom = { ovning = MarkbomLektion.OVNING, version = MarkbomLektion.VERSION,
 		ok = function(r) return r.ovning == MarkbomLektion.OVNING and r.passage == "rotplan" end },
+	-- Genom hörnet: egen definition och nyckel; kontrollpunkten mitt i bågen måste vara nådd.
+	hornet = { ovning = HornLektion.OVNING, version = HornLektion.VERSION,
+		ok = function(r) return r.figur == "hornet" and r.mitt == true end },
 }
 LektionsMinne.TYPER = table.freeze({ "volt", "halt", "overgang", "serpentin", "tempo", "vag_mitt",
-	"vag_diag", "halvvolt", "galopp", "markbom" })
+	"vag_diag", "halvvolt", "galopp", "markbom", "hornet" })
 
 local RETRY_S = 20
 local MAX_RETRY = 3

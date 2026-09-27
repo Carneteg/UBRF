@@ -23,13 +23,13 @@
 	`modeller` ar de mappade filer som INTE ar Luau. De raknas for
 	sig, sa att en tappad modell fortfarande syns. Se punkt 9f. ]]
 return {
-	kallhash = "4692ed54adeea2e93dd77682c2007521ed12fdb6f4a3781d69b32dbcb5dfd8ab",
+	kallhash = "ba4d466a4efd92e8ccbb6ea059186daa4352dab21dc70eafb2a77b11cc55d29a",
 	lage = "rojo",
-	kallor = 102,
+	kallor = 103,
 	modeller = 1,
-	sha = "e887036b0a0e68b861a9e4efbc66291617e2bbfe",
-	miljo_sha = "e887036b0a0e68b861a9e4efbc66291617e2bbfe",
-	genererad = "2026-09-27T16:22:37Z",
+	sha = "a9c129d7e664bd573a5968caabe15e7bf9da93bc",
+	miljo_sha = "a9c129d7e664bd573a5968caabe15e7bf9da93bc",
+	genererad = "2026-09-27T16:39:20Z",
 	vag = "tools/bygg-identitet.py ur roblox/default.project.json",
 
 	--[[ Vad Rojo AGER per tjanst. Integritet.luau skiljer kallstyrt

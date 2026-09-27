@@ -96,6 +96,10 @@ and test policy. This index is dated 2026-09-26; it is not product acceptance.
   optional written cue at a time in steady walk and a factual repeat comparison,
   [contract](TEMPO-COACHING-CONTRACT.md)) is built on it; BUILT_NOT_VERIFIED, spec
   written, not run.
+  Tempo coaching R1 a9c129d passed Codex source review only. Through the corner
+  (an oriented training corner as the selectable mounted type `hornet`,
+  [contract](CORNER-LESSON-CONTRACT.md)) is built on it; BUILT_NOT_VERIFIED, spec
+  written, not run.
   Deferred before Tobias' playtest: full42, runtime smoke in engine, both lesson
   flows, guides, entrance door, SV/EN and touch.
 - 2026-09-27: the entrance correction 93e16f5 received BANK_ONLY code PASS and a

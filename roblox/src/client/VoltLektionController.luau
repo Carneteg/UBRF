@@ -10,14 +10,14 @@ local Installning = require(script.Parent.LararInstallning)
 	bara). Tre lägen per lektion — "sparad", "vantar", "ej_klarad" — och
 	"okand" när historiken inte gick att lita på. Aldrig ett betyg. ]]
 local MINNE_TYPER = { volt = true, halt = true, overgang = true, serpentin = true, tempo = true,
-	vag_mitt = true, vag_diag = true, halvvolt = true, galopp = true, markbom = true }
+	vag_mitt = true, vag_diag = true, halvvolt = true, galopp = true, markbom = true, hornet = true }
 local MINNE_LAGEN = { sparad = true, vantar = true, ej_klarad = true, okand = true }
 --[[ Den fasta pedagogiska ordningen för ETT förslag (kontraktet):
 	halt och jämn skritt först, sedan volten, övergångar, raka linjer,
 	serpentin, halvvolt, markbom och sist galoppfattningen. Ett förslag är
 	en riktning, inte ett påstående om att något bedömts. ]]
 local MINNE_ORDNING = { "halt", "tempo", "volt", "overgang", "vag_mitt", "vag_diag", "serpentin",
-	"halvvolt", "markbom", "galopp" }
+	"halvvolt", "hornet", "markbom", "galopp" }
 local minne: { historik: string, lektioner: { [string]: string }, session: number, rev: number }? = nil
 local minneLyssnare: any = nil
 
@@ -89,9 +89,10 @@ end
 --[[ Var förslaget finns i menyn: gruppen på toppnivån (nil = volten, som
 	står direkt) och en eventuell undergrupp. ]]
 local MINNE_GRUPP = { halt = "gangart", tempo = "gangart", overgang = "gangart", galopp = "gangart",
-	serpentin = "vagar", halvvolt = "vagar", vag_mitt = "vagar", vag_diag = "vagar", markbom = "vagar" }
+	serpentin = "vagar", halvvolt = "vagar", vag_mitt = "vagar", vag_diag = "vagar", markbom = "vagar",
+	hornet = "vagar" }
 local MINNE_UNDERGRUPP = { overgang = "overgangar", galopp = "overgangar", vag_mitt = "linjer",
-	vag_diag = "linjer", markbom = "linjer" }
+	vag_diag = "linjer", markbom = "linjer", serpentin = "bojda", halvvolt = "bojda", hornet = "bojda" }
 
 local function klarad(typ: string): boolean
 	local l = minne and minne.lektioner[typ]
@@ -315,6 +316,54 @@ local function markbomGuide(m, ref, delmal)
 	end
 end
 
+--[[ GENOM HÖRNET: inridning, kvartsvolt och utridning ur SAMMA `referens`
+	som servern projicerar mot (uT, cu, cv, r, p0, p3, ring). Pilar visar
+	riktningen; delmålet (1 inridning, 2 bågen, 3 utridning) lyses starkare. ]]
+local function hornGuide(m, ref, delmal)
+	local p = ref.plats
+	local function lokalt(u, v) return Plats.tillVarld(p, Vector3.new(u, 0.035, v)) end
+	local function rak(au, av, bu, bv, stark)
+		local L = math.sqrt((bu - au) ^ 2 + (bv - av) ^ 2)
+		if L <= 0 then return end
+		local du, dv = (bu - au) / L, (bv - av) / L
+		local riktning = lokalt(au + du, av + dv) - lokalt(au, av)
+		local korsVek = lokalt(au + dv, av - du) - lokalt(au, av)
+		local antal = math.max(2, math.floor(L / 1.5))
+		for i = 1, antal - 1 do
+			local t = L * i / antal
+			streck(m, p, lokalt(au + du * t, av + dv * t), riktning, 0.45 * p.studsPerMeter, stark)
+		end
+		local t = 3
+		while t < L - 1 do
+			local spets = lokalt(au + du * t, av + dv * t)
+			for _, sida in ipairs({ 1, -1 }) do
+				local fot = spets - riktning * 0.8 + korsVek * (0.8 * sida)
+				streck(m, p, (spets + fot) / 2, spets - fot, 0.4 * p.studsPerMeter, stark)
+			end
+			t += 4
+		end
+	end
+	rak(ref.p0u, ref.p0v, ref.uT, ref.cv, delmal == 1)
+	local antal = 10
+	for i = 0, antal - 1 do
+		local th = (math.pi / 2) * (i + 0.5) / antal
+		local pos = lokalt(ref.cu + ref.r * math.cos(th), ref.cv + ref.r * math.sin(th))
+		local fram = lokalt(ref.cu + ref.r * math.cos(th + 0.05), ref.cv + ref.r * math.sin(th + 0.05))
+		streck(m, p, pos, fram - pos, 0.45 * p.studsPerMeter, delmal == 2)
+	end
+	rak(ref.cu, ref.cv + ref.r, ref.p3u, ref.p3v, delmal == 3)
+	for j, c in ipairs({ { ref.p0u, ref.p0v }, { ref.p3u, ref.p3v } }) do
+		local n = 12
+		for i = 0, n - 1 do
+			local a = 2 * math.pi * i / n
+			local pos = lokalt(c[1] + ref.ring*math.cos(a), c[2] + ref.ring*math.sin(a))
+			local fram = lokalt(c[1] + ref.ring*math.cos(a + 0.05), c[2] + ref.ring*math.sin(a + 0.05))
+			streck(m, p, pos, fram - pos, 0.3 * p.studsPerMeter,
+				(j == 1 and delmal == 0) or (j == 2 and delmal == 3))
+		end
+	end
+end
+
 local function vagTyp(t: string?): boolean
 	return t == "vag_mitt" or t == "vag_diag"
 end
@@ -325,8 +374,9 @@ local function visaGuide(ref, delmal)
 		and guideDel == delmal then return end
 	rivGuide()
 	local m = Instance.new("Model"); m.Name = "Voltguide"
-	if typ == "serpentin" or vagTyp(typ) or typ == "halvvolt" or typ == "markbom" then
+	if typ == "serpentin" or vagTyp(typ) or typ == "halvvolt" or typ == "markbom" or typ == "hornet" then
 		if typ == "serpentin" then serpentinGuide(m, ref, delmal)
+		elseif typ == "hornet" then hornGuide(m, ref, delmal)
 		elseif typ == "halvvolt" then halvvoltGuide(m, ref, delmal)
 		elseif typ == "markbom" then markbomGuide(m, ref, delmal)
 		else vagGuide(m, ref, delmal) end
@@ -408,7 +458,7 @@ local function mottag(b)
 		or b.lage=="walk1" or b.lage=="trot" or b.lage=="walk2"
 		or b.lage=="to_start" or b.lage=="route" or b.lage=="canter"
 		or b.lage=="approach" or b.lage=="crossing" or b.lage=="exit") then
-		local delmal = if typ == "serpentin" or vagTyp(typ) or typ == "halvvolt" then b.delmal
+		local delmal = if typ == "serpentin" or vagTyp(typ) or typ == "halvvolt" or typ == "hornet" then b.delmal
 			elseif typ == "markbom" then (if b.lage == "exit" then 2 elseif b.lage == "crossing" then 1 else 0)
 			else nil
 		visaGuide(b.referens, delmal)
@@ -424,8 +474,10 @@ local function skicka(op)
 	local seq = sekvens
 	pending, pendingTid, fel = true, 0, nil
 	--[[ C2: en ny begäran tar bort en stående hälsning (den gäller ett
-		försök som inte längre är det enda möjliga). ]]
+		försök som inte längre är det enda möjliga). Tempocoachningen likaså,
+		direkt (spärren och Färre rörs inte). ]]
 	halsning = nil
+	coachning = nil
 	task.spawn(function()
 		local transport, ok, reason, b = pcall(function()
 			return Net.get("VoltLektion"):InvokeServer(id,op,seq,typVid)
@@ -460,7 +512,7 @@ function V.valj(vald: string?)
 	if not ritt then return end
 	local ny = if vald == "halt" or vald == "overgang" or vald == "serpentin" or vald == "tempo"
 		or vald == "vag_mitt" or vald == "vag_diag" or vald == "halvvolt" or vald == "galopp"
-		or vald == "markbom" then vald else "volt"
+		or vald == "markbom" or vald == "hornet" then vald else "volt"
 	if ny ~= typ then typ, bild = ny, nil; rivGuide() end
 	halsning = nil
 	valGen += 1
@@ -522,6 +574,29 @@ local function galoppText(key): string?
 end
 
 -- Halvvoltens egna texter; gemensamma nycklar faller igenom.
+-- Genom hörnets egna texter; gemensamma nycklar faller igenom.
+local function hornText(key): string?
+	if key=="choose_hornet" then return Sprak.t("hornlektion.choose") end
+	if key=="group_bojda" then return Sprak.t("lektionsval.bojda") end
+	if typ ~= "hornet" then return nil end
+	if key=="start" then return Sprak.t("hornlektion.start") end
+	if key=="finish" then return Sprak.t("hornlektion.finish") end
+	if key=="intro" then return Sprak.t("hornlektion.intro") end
+	if key=="to_start" then return Sprak.t("hornlektion.to_start") end
+	if key=="ride_in" then return Sprak.t("hornlektion.ride_in") end
+	if key=="bend" then return Sprak.t("hornlektion.bend") end
+	if key=="ride_out" then return Sprak.t("hornlektion.ride_out") end
+	if key=="off_route" then return Sprak.t("hornlektion.off_route") end
+	if key=="reverse" then return Sprak.t("hornlektion.reverse") end
+	if key=="walk_or_trot" then return Sprak.t("hornlektion.walk_or_trot") end
+	if key=="unknown" then return Sprak.t("hornlektion.unknown") end
+	if key=="complete" then return Sprak.t("hornlektion.complete") end
+	if key=="timeout" then return Sprak.t("hornlektion.timeout") end
+	if key=="closed" then return Sprak.t("hornlektion.closed") end
+	if key=="place" then return Sprak.t("hornlektion.place") end
+	return nil
+end
+
 local function halvvoltText(key): string?
 	if key=="choose_halvvolt" then return Sprak.t("halvvoltlektion.choose") end
 	if typ ~= "halvvolt" then return nil end
@@ -676,6 +751,8 @@ local function text(key)
 	if mb then return mb end
 	local ga = galoppText(key)
 	if ga then return ga end
+	local ho = hornText(key)
+	if ho then return ho end
 	local hv = halvvoltText(key)
 	if hv then return hv end
 	local va = vagText(key)
@@ -805,11 +882,20 @@ function V.panel()
 				valLektion("galopp"),
 				val("back",function() meny = "gangart" end) } }
 		elseif meny == "vagar" then
+			--[[ Genom hörnet: Ridvägar får undergruppen Böjda vägar (serpentin,
+				halvvolt, hörnet) bredvid Raka linjer och markbom — alla val finns
+				kvar, fyra rader, serpentin och halvvolt en nivå längre ner. ]]
+			return { ersatt=true, text=medMinne(text("pick")), ovning="", vantar=false, knappar={
+				valGrupp("group_bojda", "bojda", function() meny = "bojda" end),
+				valGrupp("group_linjer", "linjer", function() meny = "linjer" end),
+				val("back",function() meny = nil end) } }
+		elseif meny == "bojda" then
+			-- Undergrupp: böjda vägar; Tillbaka leder till Ridvägar.
 			return { ersatt=true, text=medMinne(text("pick")), ovning="", vantar=false, knappar={
 				valLektion("serpentin"),
 				valLektion("halvvolt"),
-				valGrupp("group_linjer", "linjer", function() meny = "linjer" end),
-				val("back",function() meny = nil end) } }
+				valLektion("hornet"),
+				val("back",function() meny = "vagar" end) } }
 		elseif meny == "linjer" then
 			-- Undergrupp: raka linjer och markbommen; Tillbaka leder till Ridvägar.
 			return { ersatt=true, text=medMinne(text("pick")), ovning="", vantar=false, knappar={

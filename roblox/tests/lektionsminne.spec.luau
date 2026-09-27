@@ -222,6 +222,7 @@ local IDENT = {
 	halvvolt = { HalvvoltLektion.OVNING, HalvvoltLektion.VERSION, { figur = "halvvolt" } },
 	galopp = { GaloppLektion.OVNING, GaloppLektion.VERSION, { ovning = GaloppLektion.OVNING, galoppsida = "ej_bedomd" } },
 	markbom = { MarkbomLektion.OVNING, MarkbomLektion.VERSION, { ovning = MarkbomLektion.OVNING, passage = "rotplan" } },
+	hornet = { HornLektion.OVNING, HornLektion.VERSION, { figur = "hornet", mitt = true } },
 }
 local function lektion(typ, fid, andra, lage)
 	local r = { forsokId = fid, rittId = id, userId = p.UserId, hastId = HID }
@@ -572,6 +573,11 @@ do
 				#topp.knappar == 4 and hitta(topp.knappar, Sprak.t("lektionsval.vagar")
 					.. Sprak.t("lektionsminne.markering.forslag")) ~= nil)
 			hitta(topp.knappar, Sprak.t("lektionsval.vagar")).skicka()
+			-- Genom hörnet: halvvolten ligger nu under Böjda vägar.
+			local bojda = hitta(UC.panel(4).knappar, Sprak.t("lektionsval.bojda"))
+			check("KONTROLL: Böjda vägar finns och är markerad mot förslaget", bojda ~= nil
+				and string.find(bojda.text, Sprak.t("lektionsminne.markering.forslag"), 1, true) ~= nil)
+			if bojda then bojda.skicka() end
 			local vag = UC.panel(4)
 			check("gruppsidan: lektionen är markerad som förslag", hitta(vag.knappar,
 				Sprak.t("halvvoltlektion.choose") .. Sprak.t("lektionsminne.markering.forslag")) ~= nil)
@@ -583,6 +589,13 @@ do
 			local tb = hitta(vag.knappar, Sprak.t("lektionsval.tillbaka"))
 			check("KONTROLL: Tillbaka finns på den ombyggda sidan", tb ~= nil)
 			if tb then tb.skicka() end
+			--[[ Genom hörnet: Böjda vägar är en nivå under Ridvägar; dess Tillbaka
+				landar på Ridvägar, och Ridvägars Tillbaka på toppnivån. ]]
+			local vagarSida = UC.panel(4)
+			check("Tillbaka från Böjda vägar landar på Ridvägar",
+				hitta(vagarSida.knappar, Sprak.t("lektionsval.bojda")) ~= nil)
+			local tb2 = hitta(vagarSida.knappar, Sprak.t("lektionsval.tillbaka"))
+			if tb2 then tb2.skicka() end
 			local ut = VC.panel()
 			check("Tillbaka landar på toppnivån (inte en ersättningssida, gruppknapparna där)",
 				ut.ersatt ~= true and hitta(ut.knappar, Sprak.t("lektionsval.gangart")) ~= nil)

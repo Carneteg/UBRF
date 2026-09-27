@@ -355,8 +355,8 @@ local blad = {
 	{ vag = { "lektionsval.gangart" }, text = "haltlektion.choose", slut = "haltlektion.finish" },
 	{ vag = { "lektionsval.gangart", "lektionsval.overgangar" }, text = "overganglektion.choose", slut = "overganglektion.finish" },
 	{ vag = { "lektionsval.gangart" }, text = "tempolektion.choose", slut = "tempolektion.finish" },
-	{ vag = { "lektionsval.vagar" }, text = "serpentinlektion.choose", slut = "serpentinlektion.finish" },
-	{ vag = { "lektionsval.vagar" }, text = "halvvoltlektion.choose", slut = "halvvoltlektion.finish" },
+	{ vag = { "lektionsval.vagar", "lektionsval.bojda" }, text = "serpentinlektion.choose", slut = "serpentinlektion.finish" },
+	{ vag = { "lektionsval.vagar", "lektionsval.bojda" }, text = "halvvoltlektion.choose", slut = "halvvoltlektion.finish" },
 	{ vag = { "lektionsval.vagar", "lektionsval.linjer" }, text = "vaglektion.choose_mitt", slut = "vaglektion.finish" },
 	{ vag = { "lektionsval.vagar", "lektionsval.linjer" }, text = "vaglektion.choose_diag", slut = "vaglektion.finish" },
 }
@@ -397,8 +397,9 @@ local g2 = hitta(UgnetaController.panel(KAP).knappar, Sprak.t("lektionsval.linje
 if g2 then g2.skicka() end
 local tb1 = hitta(UgnetaController.panel(KAP).knappar, Sprak.t("lektionsval.tillbaka"))
 if tb1 then tb1.skicka() end
+-- Genom hörnet: Ridvägar visar nu undergrupperna Böjda vägar och Raka linjer.
 check("Back from the subgroup returns to Riding paths",
-	hitta(UgnetaController.panel(KAP).knappar, Sprak.t("halvvoltlektion.choose")) ~= nil)
+	hitta(UgnetaController.panel(KAP).knappar, Sprak.t("lektionsval.bojda")) ~= nil)
 UgnetaController.dolj()
 
 local sync = Networking.get("VoltLektionSync")

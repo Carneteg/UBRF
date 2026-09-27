@@ -185,6 +185,7 @@ FORBEREDELSE = SPEL + [
     ("HalvvoltLektion", "src/server/HalvvoltLektion.luau"),  # halvvolt tillbaka till sparet
     ("GaloppLektion", "src/server/GaloppLektion.luau"),  # galoppfattning vid K (delvis)
     ("MarkbomLektion", "src/server/MarkbomLektion.luau"),  # bom pa marken i skritt
+    ("HornLektion", "src/server/HornLektion.luau"),  # genom hornet (egen typ hornet)
     # AKTOREN (#252 DEL C) FORE tjansterna: GameplayService, HorseService
     # och LedService fragar den om aktoren har en klient att skicka till.
     ("Aktor",        "src/shared/HorseCore/Aktor.luau"),
@@ -465,6 +466,7 @@ KOHERENS = GEOMETRI + [
     ("HalvvoltLektion", "src/server/HalvvoltLektion.luau"),  # halvvolt tillbaka till sparet
     ("GaloppLektion", "src/server/GaloppLektion.luau"),  # galoppfattning vid K (delvis)
     ("MarkbomLektion", "src/server/MarkbomLektion.luau"),  # bom pa marken i skritt
+    ("HornLektion", "src/server/HornLektion.luau"),  # genom hornet (egen typ hornet)
     # AKTOREN (#252 DEL C) FORE tjansterna: GameplayService, HorseService
     # och LedService fragar den om aktoren har en klient att skicka till.
     ("Aktor",        "src/shared/HorseCore/Aktor.luau"),
@@ -837,6 +839,8 @@ def valjBunt(spec_rel: str):
     #[[ M3.1: navvagens livslangd i hornet. Samma bunt, samma skal. ]]
     elif "ledvag" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
+    elif "hornlektion" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
     elif "tempocoachning" in spec_rel:
         moduler, stubbar = KOHERENS, "tests/stubs.luau"
     elif "ledningsminne" in spec_rel:

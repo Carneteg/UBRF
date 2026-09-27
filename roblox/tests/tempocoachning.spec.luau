@@ -115,7 +115,9 @@ end
 	  push till LocalPlayer, den riktiga kontrollern och
 	  `UgnetaController.panel(4)`;
 	- VERKLIGT FÖRDRÖJT (R1): avsnitt JD, Start på schemat.
-	PLANERAT: pending/timeout/Finish genom den sammanfogade vägen. ]]
+	PLANERAT (inte skrivet genom den sammanfogade vägen): plats-nej, dubblett,
+	timeout och Avsluta som FALL — Avsluta används här bara som städning, med
+	identiteten ur serverns begäranbok och godkännandet kontrollerat. ]]
 local function nr() return image().coachNr or 0 end
 
 print("\n── C1. För långsamt: en händelse per färskt prov, inte per läsning ──")
@@ -342,11 +344,23 @@ local function jKnapp(nyckel)
 	return nil
 end
 local function vantaUtSparren() for _ = 1, 600 do VoltLektionController.steg(1 / 60) end end
+--[[ R1-uppföljning: en direkt begäran tar sin identitet ur serverns
+	begäranbok (högsta + 1), eftersom klientens egna begäranden också har
+	flyttat den — fixturens egen räknare kan vara inaktuell. ]]
+local function begaranNu(op, t)
+	local bok = s.lektionsBegaran
+	seq = (bok and bok.hogsta or 0) + 1
+	return HorseService.voltLektionsBegaran(p, id, op, seq, t or "tempo")
+end
+local function avslutaNu(namn)
+	local okA = begaranNu("finish")
+	check("KONTROLL " .. namn .. ": Avsluta godtogs av servern", okA == true)
+end
 do
 	local VCj, UCj = VoltLektionController, UgnetaController
 	LararInstallning._aterstallForProv()
 	Sprak.satVal("sv")
-	request("finish")
+	avslutaNu("J")
 	-- Hästen går redan i skritt (C3 slutade med broms från trav till skritt).
 	gaFart(1.45, 3)
 	VCj.avbryt(); VCj.start(id, nil)
@@ -370,9 +384,9 @@ do
 	check("J2 långsamt -> fort under spärren: raden bort direkt, ingen ny", jCue() == nil
 		and not string.find(jText(), Sprak.t("tempocoach.too_slow"), 1, true)
 		and not string.find(jText(), Sprak.t("tempocoach.too_fast"), 1, true), jText())
-	-- J6: bort, sedan återhämtning till samma skäl FÖRE en ritning: inget.
+	-- J6 (efter en ritning i J2): samma skäl igen under spärren visar ingenting.
 	for _ = 1, 2 do ga(nu.u, nu.v) end -- långsamt igen, fortfarande under spärren
-	check("J6 bortagning följd av samma skäl under spärren: ingenting visas", jCue() == nil)
+	check("J6 samma skäl under spärren efter en borttagning: ingenting visas", jCue() == nil)
 	-- J8: färsk händelse efter spärren.
 	vantaUtSparren()
 	ga(nu.u, nu.v)
@@ -389,6 +403,17 @@ do
 	gaFart(3.0, 1)
 	check("J4 fel gångart (walk_only): raden bort", jCue() == nil)
 	aid("broms")
+	gaFart(1.45, 3)
+	-- J6b: bort och återhämtning UTAN någon ritning emellan (bara `_coachningForProv` läses).
+	vantaUtSparren()
+	gaFart(1.45, 3)
+	ga(nu.u, nu.v)
+	check("KONTROLL J6b: en rad visas (utan att värden ritats)", jCue() ~= nil)
+	gaFart(2.8, 1) -- fort: den godtagna bilden stöder inte raden
+	ga(nu.u, nu.v) -- långsamt igen, under spärren
+	check("J6b borttagen i mottag före någon ritning, och återhämtningen visar inget", jCue() == nil)
+	check("J6b och den första ritningen därefter saknar raden",
+		not string.find(jText(), Sprak.t("tempocoach.too_slow"), 1, true))
 	gaFart(1.45, 3)
 	-- J5: ett högre osett nummer i en nyare oförenlig bild.
 	vantaUtSparren()
@@ -435,7 +460,7 @@ do
 	local VCj, UCj = VoltLektionController, UgnetaController
 	local remote = Networking.get("VoltLektion")
 	local riktig = remote.InvokeServer
-	request("finish")
+	avslutaNu("JD")
 	VCj.valj("halt"); VCj.valj("tempo") -- ny baslinje; valet före schemat
 	gaFart(1.45, 3)
 	__schemaPa(true)
@@ -460,7 +485,7 @@ do
 	vantaUtSparren()
 	ga(nu.u, nu.v)
 	check("JD en färsk händelse efter svaret visas", jCue() ~= nil)
-	request("finish")
+	avslutaNu("JD slut")
 	UCj.satLektionsVal(nil)
 	VCj.avbryt()
 end

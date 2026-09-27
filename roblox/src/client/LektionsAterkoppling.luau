@@ -85,6 +85,11 @@ local function sammanfattning(typ: string, r: any): string?
 		if r.ovning ~= "markbom" or r.passage ~= "rotplan" then return nil end
 		if not (ickeNeg(r.inridningM) and ickeNeg(r.utridningM)) then return nil end
 		return Sprak.t("aterkoppling.markbom.klar", tal(r.inridningM), tal(r.utridningM))
+	elseif typ == "hornet" then
+		if r.figur ~= "hornet" or r.mitt ~= true or not (ickeNeg(r.meter) and fin(r.langd) and r.langd > 0) then
+			return nil
+		end
+		return Sprak.t("aterkoppling.hornet.klar", tal(r.meter), tal(r.langd))
 	elseif typ == "leda" then
 		if not (ickeNeg(r.meter) and ickeNeg(r.sekunder)) then return nil end
 		return Sprak.t("aterkoppling.leda.klar", tal(r.meter), tal(r.sekunder, 0))
