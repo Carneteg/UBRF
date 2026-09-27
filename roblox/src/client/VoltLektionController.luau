@@ -20,6 +20,21 @@ local MINNE_ORDNING = { "halt", "tempo", "volt", "overgang", "vag_mitt", "vag_di
 local minne: { historik: string, lektioner: { [string]: string }, session: number, rev: number }? = nil
 local minneLyssnare: any = nil
 
+--[[ ══ STARTHÄLSNINGEN (C2/#234) — docs/INSTRUCTOR-START-CONTRACT.md ══
+	Skapas BARA i svaret på en egen start/retry som servern godtog, för det
+	försök svaret bär, och bara om det försöket fortfarande är det aktuella
+	och aktiva. Visas först i lektionssidans egen text i HALSNING_S sekunder
+	(räknas i V.steg) och tas bort av allt som byter försök, läge, val,
+	ritt eller ger vänta/fel. Förbrukas en gång per försök; kommer aldrig
+	tillbaka. `halsadForsok` är det senast hälsade/förbrukade försöket i
+	DENNA ritt. ]]
+local HALSNING_S = 6
+local halsning: { forsokId: any, typ: string, ritt: string, kvar: number }? = nil
+local halsadForsok: any = nil
+local AKTIVA_LAGEN = { approach = true, baseline = true, riding = true, halt1 = true, walk = true,
+	walk1 = true, trot = true, walk2 = true, to_start = true, route = true, steady = true,
+	canter = true, crossing = true, exit = true }
+
 local function heltal(x: any): number
 	if type(x) ~= "number" or x ~= x or x < 0 or x == math.huge or x % 1 ~= 0 then return -1 end
 	return x
@@ -355,17 +370,34 @@ local function skicka(op)
 	if not ritt or (pending and op~="finish") then return end
 	requestNr += 1
 	local token, gen, id = requestNr, generation, ritt
+	local typVid = typ
 	if op~="sync" then sekvens += 1 end
 	local seq = sekvens
 	pending, pendingTid, fel = true, 0, nil
+	--[[ C2: en ny begäran tar bort en stående hälsning (den gäller ett
+		försök som inte längre är det enda möjliga). ]]
+	halsning = nil
 	task.spawn(function()
 		local transport, ok, reason, b = pcall(function()
-			return Net.get("VoltLektion"):InvokeServer(id,op,seq,typ)
+			return Net.get("VoltLektion"):InvokeServer(id,op,seq,typVid)
 		end)
 		if gen~=generation or token~=requestNr or ritt~=id then return end
 		pending = false
 		if not transport then fel="network"; return end
 		mottag(b)
+		--[[ C2: STARTHÄLSNINGEN. Bara ett godtaget start/retry, för det försök
+			svaret bär, när samma försök fortfarande är aktuellt och aktivt i den
+			bild som hålls (en nyare push kan ha kommit först), och när försöket
+			inte redan hälsats. Samma typ som begäran skickades med. ]]
+		if ok == true and (op == "start" or op == "retry") and typ == typVid
+			and type(b) == "table" and b.forsokId ~= nil and b.rittId == id and (b.typ or "volt") == typVid
+			and bild ~= nil and bild.forsokId == b.forsokId and AKTIVA_LAGEN[bild.lage]
+			and halsadForsok ~= b.forsokId then
+			halsadForsok = b.forsokId
+			if Ugneta.valfriKommentar() then
+				halsning = { forsokId = b.forsokId, typ = typVid, ritt = id, kvar = HALSNING_S }
+			end
+		end
 		if ok~=true then
 			fel = if reason=="place" or reason=="pole" then reason elseif reason=="active" then "active"
 				else "network"
@@ -381,6 +413,7 @@ function V.valj(vald: string?)
 		or vald == "vag_mitt" or vald == "vag_diag" or vald == "halvvolt" or vald == "galopp"
 		or vald == "markbom" then vald else "volt"
 	if ny ~= typ then typ, bild = ny, nil; rivGuide() end
+	halsning = nil
 	valt, fri, fel, meny = true, false, nil, nil
 	Ugneta.dolj()
 	skicka("sync")
@@ -783,6 +816,20 @@ function V.panel()
 		local at = Aterkoppling.text(b, { typ = typ, ritt = ritt })
 		if at then txt = at end
 	end
+	--[[ C2: starthälsningen först i sidans egen text — bara för exakt det
+		försöket, i samma typ och ritt, i ett aktivt läge och utan vänta/fel.
+		Stämmer något inte längre tas den bort för gott. Uppgiften och
+		framstegen står kvar efter den. ]]
+	local h = halsning
+	if h then
+		if h.ritt == ritt and h.typ == typ and b.forsokId == h.forsokId and AKTIVA_LAGEN[b.lage]
+			and not pending and not fel then
+			txt = Sprak.t("halsning." .. h.typ) .. " " .. txt
+		elseif pending or fel or h.ritt ~= ritt or h.typ ~= typ or b.forsokId ~= h.forsokId
+			or not AKTIVA_LAGEN[b.lage] then
+			halsning = nil
+		end
+	end
 	if (b.lage=="riding" or b.lage=="halt1" or b.lage=="walk" or b.lage=="walk1"
 		or b.lage=="trot" or b.lage=="walk2" or b.lage=="route" or b.lage=="steady"
 		or b.lage=="canter" or b.lage=="approach" or b.lage=="crossing" or b.lage=="exit")
@@ -805,6 +852,10 @@ end
 function V.start(marke, legacy)
 	local samma = ritt==marke
 	generation += 1; requestNr += 1
+	--[[ C2: återkoppling eller ny ritt: en hälsning visas aldrig igen. I en
+		NY ritt glöms även det senast hälsade försöket (ritten avgränsar det). ]]
+	halsning = nil
+	if not samma then halsadForsok = nil end
 	if not samma then valt,fri,bild,sekvens,meny=false,false,nil,0,nil end
 	ritt,gaLektion,pending,fel=marke,legacy,false,nil
 	attached = true
@@ -824,6 +875,11 @@ function V.start(marke, legacy)
 end
 
 function V.steg(dt)
+	local h = halsning
+	if h then
+		h.kvar -= (if type(dt) == "number" and dt == dt and dt > 0 then math.min(dt, 1) else 0)
+		if h.kvar <= 0 then halsning = nil end
+	end
 	if pending then
 		pendingTid += dt
 		if pendingTid>=10 then
@@ -835,11 +891,14 @@ end
 function V.tarOver(): boolean return attached and (valt or fri) end
 --[[ Provkrok: minnets projektion som klienten håller. ]]
 function V._minneForProv(): any return minne end
+--[[ Provkrok: hälsningens läge. ]]
+function V._halsningForProv(): any return halsning end
 function V.lektion(): boolean return attached and valt end
 
 function V.avbryt()
 	-- Keep selection only for reattachment to this SAME accepted ride.
 	generation+=1; requestNr+=1; pending=false; attached=false; rivGuide()
+	halsning = nil
 	Ugneta.satLektionsVal(nil)
 end
 

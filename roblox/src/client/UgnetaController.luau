@@ -967,6 +967,20 @@ local function liveTextNu(): string?
 	return nil
 end
 
+--[[ C2: SAMMA BESLUT för varje valfri kommentar (live-chipet och lektionens
+	starthälsning): Normalt släpper igenom, Färre släpper var andra (den
+	delade räknaren), Inga släpper ingenting. Anropas EN gång per kommentar
+	som annars hade visats; ett nej är en förbrukad kommentar, ingen kö. ]]
+function UgnetaController.valfriKommentar(): boolean
+	local lage = Installning.kommentarer()
+	if lage == "inga" then return false end
+	if lage == "farre" then
+		farreRaknare += 1
+		if farreRaknare % 2 == 0 then return false end
+	end
+	return true
+end
+
 function UgnetaController.live(txt: string, bra: boolean, nyckel: string?, args: { any }?)
 	local visad = if nyckel then Sprak.t(nyckel, table.unpack(args or {})) else txt
 	if visad == "" then return end
@@ -974,12 +988,7 @@ function UgnetaController.live(txt: string, bra: boolean, nyckel: string?, args:
 	     vid visningen: `UgnetaTema` har redan valt tema, räknat mönstret och
 	     satt sin spärr — inget av det ändras. En släppt kommentar köas inte
 	     och visas aldrig senare. ]]
-	local lage = Installning.kommentarer()
-	if lage == "inga" then return end
-	if lage == "farre" then
-		farreRaknare += 1
-		if farreRaknare % 2 == 0 then return end
-	end
+	if not UgnetaController.valfriKommentar() then return end
 	liveNyckelNu = nyckel
 	liveArgsNu = args or {}
 	txt = visad

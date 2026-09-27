@@ -1661,6 +1661,46 @@ Sprak.text = {
 		sv = "Det du klarat nu är inte sparat än.",
 		en = "What you just completed isn't saved yet.",
 	},
+	["halsning.volt"] = {
+		sv = "Nu rider vi volten: följ linjen runt mitten ett helt varv.",
+		en = "Now for the circle: follow the line around the middle for one full circle.",
+	},
+	["halsning.halt"] = {
+		sv = "Nu övar vi halt vid X: stå still, skritta fram och stanna inne i ringen.",
+		en = "Now for the halt at X: stand still, walk on and stop inside the ring.",
+	},
+	["halsning.overgang"] = {
+		sv = "Nu övar vi övergångar: trava vid första ringen och skritta vid den andra.",
+		en = "Now for transitions: trot at the first ring and walk at the second.",
+	},
+	["halsning.serpentin"] = {
+		sv = "Nu rider vi serpentinen: följ strecken genom alla tre bågarna.",
+		en = "Now for the serpentine: follow the dashes through all three loops.",
+	},
+	["halsning.tempo"] = {
+		sv = "Nu övar vi jämn skritt: håll samma lugna fart hela sträckan.",
+		en = "Now for a steady walk: keep the same calm speed all the way.",
+	},
+	["halsning.vag_mitt"] = {
+		sv = "Nu rider vi mittlinjen: håll dig på linjen från startringen till slutringen.",
+		en = "Now for the centre line: stay on the line from the start ring to the end ring.",
+	},
+	["halsning.vag_diag"] = {
+		sv = "Nu rider vi diagonalen: följ linjen över till andra sidan.",
+		en = "Now for the diagonal: follow the line across to the other side.",
+	},
+	["halsning.halvvolt"] = {
+		sv = "Nu rider vi halvvolt: följ bågen från spåret och tillbaka till spåret.",
+		en = "Now for the half-circle: follow the curve off the track and back to it.",
+	},
+	["halsning.galopp"] = {
+		sv = "Nu övar vi galoppfattning: trava först och be om galopp inne i ringen vid K.",
+		en = "Now for the canter departure: trot first and ask for canter inside the ring at K.",
+	},
+	["halsning.markbom"] = {
+		sv = "Nu rider vi över markbommen: skritta rakt mot bommen, mitt emellan märkena.",
+		en = "Now over the ground pole: walk straight towards the pole, between the marks.",
+	},
 	["lektionsminne.markering.forslag"] = {
 		sv = " · förslag",
 		en = " · suggested",
