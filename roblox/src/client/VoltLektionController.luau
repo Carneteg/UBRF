@@ -1020,6 +1020,12 @@ function V.panel()
 	--[[ C1 (docs/TRANSITION-TIMING-ADVICE-CONTRACT.md): kom övergången före
 		eller efter sin ring, och vet servern vilket, blir texten ETT råd om
 		när den ska be om övergången. Annars den vanliga. ]]
+	--[[ D2a (CHATGPT_REVIEW_D2A_CHANGES_REQUESTED): förra rittens avbrutna
+		utfall står först på clear round-sidan tills en ny ritt startas. ]]
+	if typ == "clearround" and key == "intro" and type(b.forraAvbruten) == "table"
+		and b.forraAvbruten.utfall == "avbruten" then
+		txt = Sprak.t("clearround.forra_avbruten") .. " " .. txt
+	end
 	--[[ D2a: nästa hopp med nummer, färg och riktning ur serverns bild. ]]
 	if typ == "clearround" and key == "jump" and type(b.nasta) == "table" and type(b.nasta.nr) == "number" then
 		local farg = if b.nasta.farg == "rod" then Sprak.t("clearround.farg_rod") else Sprak.t("clearround.farg_bla")

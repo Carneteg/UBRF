@@ -579,6 +579,12 @@ local function setRider(session: Session, player: Player?, orsak: string?)
 	     är redan satt, så `replikera` når den nya ryttaren med hennes
 	     utgångsläge i stället för att den förra får ett sista svar. ]]
 	nollstallRitt(session)
+	--[[ D2a (CHATGPT_REVIEW_D2A_CHANGES_REQUESTED): en clear round-ritt som
+		slutar mitt i banan får sitt slutliga utfall ("avbruten") INNAN
+		lektionen rivs — annars försvann tävlingsritten tyst. ]]
+	if gammalRitt and session.voltLektion and session.voltLektion.typ == "clearround" then
+		logga(ClearRoundLektion.vidRittSlut, session.voltLektion, orsak or "avsittning")
+	end
 	session.voltLektion = nil
 	session.lektionsBegaran = nil
 	session.rittId = if player then nyttRittId() else nil

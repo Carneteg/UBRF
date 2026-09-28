@@ -117,6 +117,8 @@ local function sammanfattning(typ: string, r: any): string?
 			rad = Sprak.t("aterkoppling.clearround.ej_startad")
 		elseif r.utfall == "ej_bedomd" then
 			rad = Sprak.t("aterkoppling.clearround.ej_bedomd")
+		elseif r.utfall == "avbruten" then
+			rad = Sprak.t("aterkoppling.clearround.avbruten")
 		end
 		if not rad then return nil end
 		if r.omstartMojlig == true then rad ..= " " .. Sprak.t("aterkoppling.clearround.omstart") end

@@ -48,6 +48,14 @@ ClearRoundLektion.GRANSER = table.freeze({ HOJD_M = HOJD_M, LINJE_M = LINJE_M, L
 
 local AKTIVA = { to_start = true, course = true, to_finish = true }
 
+--[[ CHATGPT_REVIEW_D2A_CHANGES_REQUESTED: en ritt som slutar MITT I banan
+	(avsittning eller annat rittslut) får ETT slutligt utfall, "avbruten" —
+	aldrig ett fall (en frivillig avsittning skiljs inte från ett fall) och
+	aldrig framgång. Lektionsobjektet rivs med ritten, så utfallet sparas per
+	spelare här och visas nästa gång hon öppnar clear round; det tas bort när
+	hon startar en ny ritt. Sessionslokalt, aldrig persistent. ]]
+local senaste: { [number]: any } = {}
+
 function ClearRoundLektion.ny(rittId: string, userId: number, hastId: string): any
 	return { typ = "clearround", rittId = rittId, userId = userId, hastId = hastId, lage = "ready",
 		revision = 0, hogsta = 0, svar = {}, ordning = {}, progress = 0, tips = "intro", forsokNr = 0 }
@@ -60,9 +68,12 @@ local function nasta(s): any
 end
 
 function ClearRoundLektion.bild(s): any
+	local forra = senaste[s.userId]
 	return table.freeze({ typ = "clearround", rittId = s.rittId, forsokId = s.forsokId,
 		revision = s.revision, sekvens = s.hogsta, lage = s.lage, progress = s.progress,
 		tips = s.tips, resultat = s.resultat, referens = s.referens, forsokNr = s.forsokNr,
+		-- Förra rittens avbrutna utfall, bara innan en ny ritt startats.
+		forraAvbruten = if (s.lage == "ready" or s.lage == "closed") and forra then forra else nil,
 		nasta = nasta(s), delmal = if s.lage == "to_start" then 0 elseif s.lage == "course" then s.steg
 			elseif s.lage == "to_finish" then 5 else nil })
 end
@@ -265,6 +276,27 @@ function ClearRoundLektion.steg(s, now: number)
 	if korsarMotC(seg, s.geo.mal) then avsluta(s, "bedomd", nil) end
 end
 
+--[[ Anropas av HorseService när ritten slutar, FÖRE rivningen (försöket och
+	observationerna är då fortfarande öppna). Bara en PÅGÅENDE clear round-ritt
+	får utfallet; en färdig bedömning ändras aldrig. ]]
+function ClearRoundLektion.vidRittSlut(s, orsak: string?)
+	if type(s) ~= "table" or not AKTIVA[s.lage] or not aktiv(s) then return end
+	local tid = if s.tStart then math.max(0, obsTid(s.rittId) - s.tStart) else nil
+	s.resultat = table.freeze({ forsokId = s.forsokId, rittId = s.rittId, userId = s.userId, hastId = s.hastId,
+		ovning = ClearRoundLektion.OVNING, forsokNr = s.forsokNr, bedomning = "forenklad",
+		utfall = "avbruten", orsak = orsak or "avsittning", olydnader = s.olydnader, fel = nil,
+		nedslag = "bedoms_inte", tid = tid, hojdM = HOJD_M, bana = "traningsbana", omstartMojlig = false })
+	Forsok.avbryt(s.rittId, Forsok.nastaSekvens(s.rittId), s.forsokId, obsTid(s.rittId), nil)
+	s.revision += 1
+	andra(s, "complete", "avbruten")
+	senaste[s.userId] = s.resultat
+end
+
+--[[ Provkrok: det senast avbrutna utfallet för en spelare. ]]
+function ClearRoundLektion._senasteForProv(userId: number): any
+	return senaste[userId]
+end
+
 function ClearRoundLektion.begar(s, op: any, seq: any, now: number): (boolean, string?, any)
 	if op == "sync" then
 		ClearRoundLektion.steg(s, now)
@@ -307,6 +339,7 @@ function ClearRoundLektion.begar(s, op: any, seq: any, now: number): (boolean, s
 			ok, fel, id = Forsok.starta(s.rittId, Forsok.nastaSekvens(s.rittId),
 				ClearRoundLektion.OVNING, ClearRoundLektion.VERSION, o.tid, nil)
 			if ok then
+				senaste[s.userId] = nil -- en ny ritt: förra avbrutna utfallet är visat och klart
 				s.forsokId = id
 				s.forsokNr = if op == "retry" then 2 else 1
 				s.resultat = nil

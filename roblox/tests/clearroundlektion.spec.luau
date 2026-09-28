@@ -202,17 +202,40 @@ check("försök 2 med en olydnad: observerade fel men INGEN omstart", r and r.fo
 	and r.utfall == "observerade_fel" and r.omstartMojlig == false, fmt(image()))
 check("och servern nekar en tredje start via omstart", request("retry") == false)
 
-print("\n── 7. Avsittning mitt i banan: ritten avbryts ──")
+print("\n── 7. Avsittning mitt i banan: ETT slutligt utfall, «avbruten» ──")
 nyttForsok(); overStartlinjen(); hopp1()
 local aktivt = RidForsok.aktivt(id)
-check("avsittning stänger försöket (ritten slut)", aktivt ~= nil and HorseService.dismount(p) == true
-	and HorseService.forsok(aktivt.forsokId).orsak == "ritt_slut:avsittning")
+check("avsittning mitt i banan", aktivt ~= nil and HorseService.dismount(p) == true)
+local avb = ClearRoundLektion._senasteForProv(p.UserId)
+check("utfallet är «avbruten» (avsittning), aldrig framgång, ingen omstart, ingen rosett", avb ~= nil
+	and avb.utfall == "avbruten" and avb.orsak == "avsittning" and avb.omstartMojlig == false
+	and avb.rosett == nil and avb.felfri == nil and avb.fel == nil and avb.forsokId == aktivt.forsokId)
+check("försöket är avbrutet, en gång (inte ett slutfört)", HorseService.forsok(aktivt.forsokId).orsak == "avbrutet")
+id = mount(); nu = { u = 0, v = 4 }
+local bi = image()
+check("nästa gång clear round öppnas syns det avbrutna utfallet", bi.lage == "ready" and bi.forraAvbruten ~= nil
+	and bi.forraAvbruten.utfall == "avbruten")
+tillStart(); request("start")
+check("en ny ritt tar bort det", image().forraAvbruten == nil and ClearRoundLektion._senasteForProv(p.UserId) == nil)
+-- En avsittning EFTER ett färdigt resultat ändrar ingenting.
+overStartlinjen(); hopp1(); hopp2(); hopp3(); hopp4(); malet()
+local fardig = image().resultat
+check("KONTROLL: ett färdigt resultat", fardig and fardig.utfall == "inga_observerade_fel")
+HorseService.dismount(p)
+check("avsittning efter ett färdigt resultat ger inget avbrutet utfall",
+	ClearRoundLektion._senasteForProv(p.UserId) == nil)
+id = mount(); nu = { u = 0, v = 4 }
+check("och nästa öppning visar inget avbrutet", image().forraAvbruten == nil)
+-- Avbruten igen, för klientprovet nedan.
+tillStart(); request("start"); overStartlinjen(); hopp1()
+HorseService.dismount(p)
 
 print("\n── 8. Klienten: menyn, sidans texter, guiden och resultatkortet ──")
 ;(function()
 	Skopa._nollstallForProv()
 	id = mount(); nu = { u = 0, v = 4 }
 	local VC, UC = VoltLektionController, UgnetaController
+	local sync0 = Networking.get("VoltLektionSync")
 	local syncC = Networking.get("VoltLektionSync")
 	local function leverera() syncC.OnClientEvent:Fire(image()) end
 	local function hitta(lista, txt)
@@ -235,6 +258,9 @@ print("\n── 8. Klienten: menyn, sidans texter, guiden och resultatkortet ─
 	if val then val.skicka() end
 	check("valet öppnar clear round med Starta ritten", VC.lektion() and hitta(VC.panel().knappar,
 		Sprak.t("clearround.start")) ~= nil)
+	sync0.OnClientEvent:Fire(image())
+	check("sidan säger först att förra ritten avbröts", borjar(VC.panel().text, Sprak.t("clearround.forra_avbruten")),
+		VC.panel().text)
 	-- Startsignalen och startlinjen.
 	tillStart(); request("start"); leverera()
 	check("sidan säger startsignal och startlinjen", borjar(VC.panel().text, Sprak.t("clearround.to_start")),

@@ -3,7 +3,12 @@
 Status: BUILT, local tests green, NOT physically verified, 2026-09-28. Contract written before code (#5865766798; Tobias reconfirmed B #5865805419).
 
 **Deviations found while building (reported openly):**
-- **A dismount during the course** ends the ride, like every other lesson: the attempt closes as `ritt_slut:avsittning`, and **no result card is shown**, because the lesson belongs to the ride that just ended. It was not turned into a shown "elimination".
+- **A dismount during the course** — corrected in R1 (CHATGPT_REVIEW_D2A_CHANGES_REQUESTED, #5866272051):
+  - Before the ride teardown, `HorseService.setRider` calls `ClearRoundLektion.vidRittSlut`. An **active** clear-round ride then gets **exactly one** terminal outcome: `utfall = "avbruten"`, with the ride-end reason (`avsittning` or another).
+  - It is **not** a fall, because a voluntary dismount is not distinguished from one. It is never success, and gives no restart, no rosette and no `felfri`.
+  - The attempt closes once, as `avbrutet`.
+  - The outcome is kept per player (session-local, never persistent) and shown the next time clear round opens ("Förra clear round-ritten avbröts …"). It is cleared when a new ride starts.
+  - A dismount **after** a finished result changes nothing.
 - **The test bundle grew by two modules**, which pushed `voltlektion.spec` over Luau's 200-register limit. Its actor section now has its own function scope.
 Decisions: judging **B** ([#5865714893](https://github.com/Carneteg/UBRF/issues/266#issuecomment-5865714893)), with the prize rule corrected by
 [CHATGPT_CORRECTION_D2_SIMPLIFIED_JUDGING](https://github.com/Carneteg/UBRF/issues/266#issuecomment-5865734148), and course **(ii)**
@@ -116,7 +121,7 @@ This package changes **runtime-mapped** sources, so the A2 build identity (`e231
 3. Three run-outs give elimination.
 4. Jumping red first (wrong course) gives elimination.
 5. Blue in the wrong direction as jump 3 gives elimination.
-6. Dismount mid-course gives elimination.
+6. **Dismount mid-course** (R1) gives exactly one terminal outcome, `avbruten` (with reason `avsittning`). It is never success, gives no restart or rosette, and closes the attempt as `avbrutet`. It shows at the next opening, and a new ride clears it. A dismount after a finished result gives nothing.
 7. More than 180 s gives elimination.
 8. No start line crossing within 45 s gives not started.
 9. An observation break mid-course gives cannot be judged, with no rosette.
