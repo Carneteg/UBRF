@@ -16,15 +16,15 @@ Status date: 2026-09-28. This document records the current delivery gate. It is 
 
 ## Locked physical-test candidate
 
-The current runtime candidate is re-locked after B4c.
+The current runtime candidate is re-locked after D4a.
 
-- Runtime HEAD: **`5d118319e1a5c2a82a66e7f1a32785da0a911cba`**.
+- Runtime HEAD: **`fa418038a496fc608d545cf0927baea16301df90`**.
 - Checklist: [FINAL-PLAYTEST-CHECKLIST.md](FINAL-PLAYTEST-CHECKLIST.md).
-- Roblox build identity `kallhash`: **`0c240ce3a8a00ce14bd03dd898d8b2bbd54cf535950bb12381e722961194dc6f`**.
-- In-game diagnostics must show prefix **`0c240ce3a8a0`**.
+- Roblox build identity `kallhash`: **`2e0b6a877e69f8d29980a6770a57f10166e645883ab221bdafa4871f6a0c1baf`**.
+- In-game diagnostics must show prefix **`2e0b6a877e69`**.
 - Any later mapped Roblox-source change invalidates this lock and requires a new identity/checklist lock.
 
-The candidate includes the reviewed lesson/teaching work, D1, D2a, D2b, D2c, D5 Option A/R1, B4a knockdown evidence, B4b R1 neutral disobedience evidence and B4c course-aware shadow judgment. Physical rows remain **NOT_TESTED**.
+The candidate includes the reviewed lesson/teaching work, D1, D2a, D2b, D2c, D5 Option A/R1, B4a knockdown evidence, B4b R1 neutral disobedience evidence, B4c course-aware shadow judgment and D4a prize persistence foundation. Physical rows remain **NOT_TESTED**.
 
 ## Physical gate A3
 
@@ -35,20 +35,15 @@ Use only [FINAL-PLAYTEST-CHECKLIST.md](FINAL-PLAYTEST-CHECKLIST.md). PC, physica
 ## Current #266 package status
 
 ### A — first pass
-- A2 candidate lock: current and re-locked through B4c.
+- A2 candidate lock: current and re-locked through D4a.
 - A3 physical PC/iPad/iPhone test: **NOT_TESTED / LAST**.
 
 ### B — riding feel and measurement
-- Existing riding core and multiple lesson observations are built.
 - **B4a knockdown event: CHATGPT_REVIEW_ACCEPTED.**
 - **B4b R1 neutral disobedience evidence: CHATGPT_REVIEW_ACCEPTED.**
 - **B4c course-aware shadow consumer: CHATGPT_REVIEW_ACCEPTED.**
-  - only the next course fence is classified;
-  - wrong-direction and ambiguous evidence stay unknown;
-  - knockdown `vantar` stays unknown;
-  - `officiell=false` always;
-  - nothing is exposed in the official result or player snapshot.
-- Remaining B4 gaps are physical: real pole behaviour/replication/calibration, plus circle/track logic and any balking decision.
+- Remaining B4 gaps are physical or later-scope: real pole behaviour/replication/calibration, circle/track logic and any balking decision.
+- Shadow judgment remains non-official until a separate reviewed promotion after physical evidence.
 
 ### C — teaching and learning
 - Concrete feedback, selected comparisons, event-bound advice, free-practice framing and multiple task lessons are built.
@@ -61,7 +56,12 @@ Use only [FINAL-PLAYTEST-CHECKLIST.md](FINAL-PLAYTEST-CHECKLIST.md). PC, physica
 - **D2b pre-ride flow: CHATGPT_REVIEW_ACCEPTED.**
 - **D2c aftercare handoff: CHATGPT_REVIEW_ACCEPTED.**
 - **D5 Option A competition clothing: CHATGPT_REVIEW_ACCEPTED through R1.**
-- **D4 prize/trophy persistence foundation is now the cleanest remaining source-only candidate.**
+- **D4a prize/trophy persistence foundation: CHATGPT_REVIEW_ACCEPTED.**
+  - deterministic prize receipt key;
+  - confirmed prize rights come only from successful storage read/committed write;
+  - ambiguous/failed/refused writes do not confirm;
+  - trophy read model is inert and contains no bonus fields;
+  - no award trigger, no cabinet UI, no Clear Round rosette caller yet.
 - Warm-up remains blocked on verified mapping of UBRF's real "Lilla utebanan" or an explicit Tobias game-simplification decision.
 - Real Clear Round rosette award remains blocked until physical knockdown/refusal evidence is verified and D2 is explicitly promoted from shadow to official.
 
@@ -73,6 +73,7 @@ Use only [FINAL-PLAYTEST-CHECKLIST.md](FINAL-PLAYTEST-CHECKLIST.md). PC, physica
 - Do not let HinderObservation make course-aware sporting judgments.
 - Do not promote B4c shadow output to official D2 judging without a separate review/decision.
 - Do not silently map `UTEBANA` or `PADDOCK` to UBRF's "Lilla utebanan".
+- Prize persistence may exist before awarding; no source path currently awards a real Clear Round prize.
 - Competition results must stay deterministic, versioned and source-backed.
 
 Historical gate material from #264 is preserved in [history/ACTIVE-GATE-20260926](history/ACTIVE-GATE-20260926.md).
