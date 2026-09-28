@@ -10,8 +10,8 @@ Beslut: Tobias «Do A» på [NEXT_PACKAGE_RECOMMENDATION_20260928](https://githu
 |---|---|
 | Gren | `codex/circle-lesson-20260926` |
 | Kodhuvud vid låsning | UI-1-commiten på grenen (se leveransrapporten i #266); första låsningen var `19df5e6` |
-| Byggidentitet (`kallhash`) | `a3a5fae55af8ba3896389f0f565021a156eda4400bc5e40aef108365266390e0` ur 107 mappade filer (106 skript, 1 modell), beräknad med `tools/bygg-identitet.py` (tidigare låsningar: `3217c09395f2…` stegkortet, `0ce4b14c93e2…` vägvisaren, `2e0b6a877e69…` D4a, `0c240ce3a8a0…` B4c, `e79df69c921e…` B4b R1, `9775da2ad7bf…` B4b, `282a232646ad…` B4a, `46b7d67b5bc2…` D5 R1, `82c56922d2c6…` D5, `93f07144a1b5…` D2c, `b22335d27996…` D2b, `5a7d81b05827…` D2a R2, `e23198df4614…`) |
-| Kontroll i spelet | byggidentiteten i spelets diagnostik ska visa **`a3a5fae55af8`**. Visar den något annat är det inte den här kandidaten — avbryt och säg till. |
+| Byggidentitet (`kallhash`) | `ece6df7387182b087fcf25a5053f8dfef493a8dac6d7953192adb3ab8c347049` ur 107 mappade filer (106 skript, 1 modell), beräknad med `tools/bygg-identitet.py` (tidigare låsningar: `a3a5fae55af8…` UI-1, `3217c09395f2…` stegkortet, `0ce4b14c93e2…` vägvisaren, `2e0b6a877e69…` D4a, `0c240ce3a8a0…` B4c, `e79df69c921e…` B4b R1, `9775da2ad7bf…` B4b, `282a232646ad…` B4a, `46b7d67b5bc2…` D5 R1, `82c56922d2c6…` D5, `93f07144a1b5…` D2c, `b22335d27996…` D2b, `5a7d81b05827…` D2a R2, `e23198df4614…`) |
+| Kontroll i spelet | byggidentiteten i spelets diagnostik ska visa **`ece6df738718`**. Visar den något annat är det inte den här kandidaten — avbryt och säg till. |
 | Bas | `main` `7922d70` (#264) |
 
 Varje ändring av en mappad Roblox-källa efter låsningen ger en ny `kallhash`
@@ -38,7 +38,7 @@ anteckning vid FAIL/NOTE. Raderna står i den ordning du möter dem i spelet.
 
 | # | Kontroll | PC | iPad | iPhone |
 |---|---|---|---|---|
-| 0.1 | Byggidentiteten visar `a3a5fae55af8` | | | |
+| 0.1 | Byggidentiteten visar `ece6df738718` | | | |
 | 0.2 | Språk: spela en gång på svenska; byt till engelska minst i en lektion och vid ett slutkort | | | |
 
 ## 1. Spawn, stall och port

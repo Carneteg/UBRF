@@ -1,6 +1,6 @@
 # Web P1a: the stable flow as in Roblox (the step card, the start choice, Rida nu, the welfare stop)
 
-Status: contract written before code, 2026-09-28.
+Status: contract written before code, 2026-09-28. **BUILT, WEB SUITE GREEN (28/28), FALSIFIED (8/8), NOT PHYSICALLY PLAYED BY TOBIAS** — READY_FOR_CHATGPT_REVIEW.
 Order: #264 [5872806726](https://github.com/Carneteg/UBRF/issues/264#issuecomment-5872806726) / [5872897649](https://github.com/Carneteg/UBRF/issues/264#issuecomment-5872897649). Audit: `docs/WEB-ROBLOX-PARITY-AUDIT.md` (P1).
 Decisions:
 - TOBIAS_DECISION_WEB_PARITY_UI_20260928 (the web too; Tobias deploys);
