@@ -59,7 +59,14 @@ async function walk(pos,label){
  }throw Error(`Timeout på väg till ${label}`);
 }
 async function interact(){const s=await state();if(!s.prompt)throw Error(`Ingen E-prompt vid ${stage}`);
- if(mode==='touch'){const b=page.locator('#pekGang [data-tap="KeyE"]');if(!await b.count()||!await b.isVisible())throw Error('Synlig ANVÄND-knapp saknas');await b.tap();}
+ /* Paritetspasset P1a R1: en prompt med hålltid (Roblox HoldDuration) HÅLLS
+    med sin egen tangent — «Rida nu» R, «Sitt upp» E. På pekskärm hålls
+    ANVÄND, som ett finger på prompten. */
+ const p=await page.evaluate(()=>VD.prompt?{hall:VD.prompt.hall||0,tangent:VD.prompt.tangent||'KeyE'}:{hall:0,tangent:'KeyE'});
+ if(mode==='touch'){const b=page.locator('#pekGang [data-tap="KeyE"]');if(!await b.count()||!await b.isVisible())throw Error('Synlig ANVÄND-knapp saknas');
+  if(p.hall>0){await b.dispatchEvent('pointerdown');await page.waitForTimeout(p.hall*1000+350);await b.dispatchEvent('pointerup');}
+  else await b.tap();}
+ else if(p.hall>0){await page.keyboard.down(p.tangent);await page.waitForTimeout(p.hall*1000+350);await page.keyboard.up(p.tangent);}
  else await key('KeyE');await page.waitForTimeout(250);
 }
 async function goToScene(target){
