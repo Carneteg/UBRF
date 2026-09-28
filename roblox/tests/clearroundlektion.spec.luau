@@ -192,6 +192,15 @@ r = image().resultat
 check("försök 2 utan fel: inga observerade fel, ingen rosett, ingen ny omstart", r and r.forsokNr == 2
 	and r.utfall == "inga_observerade_fel" and r.rosett == nil and r.omstartMojlig == false, fmt(image()))
 check("ingen tredje start via omstart", request("retry") == false)
+-- Försök 2 MED fel: TR 314.1.1 ger bara ett försök till, så ingen ny omstart.
+nyttForsok(); overStartlinjen()
+till(R.u, B.v - 6); till(R.u, R.v - 5); till(R.u, R.v + 4) -- fel väg i försök 1
+tillStart(); request("retry")
+overStartlinjen(); utbrytningBla(); hopp1(); hopp2(); hopp3(); hopp4(); malet()
+r = image().resultat
+check("försök 2 med en olydnad: observerade fel men INGEN omstart", r and r.forsokNr == 2
+	and r.utfall == "observerade_fel" and r.omstartMojlig == false, fmt(image()))
+check("och servern nekar en tredje start via omstart", request("retry") == false)
 
 print("\n── 7. Avsittning mitt i banan: ritten avbryts ──")
 nyttForsok(); overStartlinjen(); hopp1()
