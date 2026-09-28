@@ -192,7 +192,7 @@ touch bevaras.
 
 | Paket | Källor | Finns | Gap | Beror på | Teknisk acceptans | Slutprov | Status |
 |---|---|---|---|---|---|---|---|
-| D1 klass och regelprofil | #266 D1 | — | profiler för clear round, A, A:0 | INFRA-3, G-REGEL | räkneprov per profil | — | `EJ_PÅBÖRJAD` |
+| D1 klass och regelprofil | #266 D1 | — | profiler för clear round, A, A:0 | INFRA-3, G-REGEL | räkneprov per profil | — | `DELVIS BYGGT` — profilen **A: Clear Round** (SvRF TR III 2025, [kontrakt](D1-CLEAR-ROUND-PROFILE-CONTRACT.md), [källutdrag](../references/rules/TR-III-2025-hoppning-A-clear-round.md)): ren modul `roblox/regler/Klassprofil.luau`, ej Rojo-mappad; lokala prov gröna. Bedömning A med placeringar och A:0 är INTE byggda |
 | D2 tävlingsdagen | #266 D2, §6 | — | tillstånd på servern: anmälan → bangång → framridning → startlista → signal → ritt → resultat → prisutdelning → eftervård; UI för PC och touch | D1, Hus/Byggnader (platser) | ingen klient kan hoppa ett steg | hela dagen | `EJ_PÅBÖRJAD` |
 | D3 domare och protokoll | #266 D3, §7 | webbens `domaRitt` som referens | deterministisk domare på servern ur händelser | INFRA-2A, INFRA-2B1, INFRA-2B2, B4 | samma händelser ger samma resultat; fel, vägran, tid, lika resultat | protokollet begripligt | `EJ_PÅBÖRJAD` |
 | D4 placering, rosett och persistens | #266 D4, §8 | kvitton i INFRA-1 | placering efter startfält; rosettordning 1 blågul, 2 blå, 3 gul, 4 röd, 5 grön, 6+ vit; clear round och deltagarminne åtskilda | INFRA-1, D3, D4-RÄTT | inga dubbla priser vid återanslutning, omförsök, tvetydig skrivning eller samtidiga sessioner | pris finns kvar | `EJ_PÅBÖRJAD` |

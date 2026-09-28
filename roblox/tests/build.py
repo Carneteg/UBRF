@@ -673,7 +673,10 @@ def modulblock(namn: str, rel: str, kropp: str) -> str:
     return block
 
 
-_PRODUKT = ("src/", "game/", "buildings/")
+#[[ D1 (#266): regler/ ar produktkallan for rena regelmoduler som annu inte
+#   har nagon konsument i spelet och darfor inte ar Rojo-mappade (den lasta
+#   slutspelskandidatens byggidentitet ska inte andras av dem). ]]
+_PRODUKT = ("src/", "game/", "buildings/", "regler/")
 
 
 def kontrolleraBunt(spec_rel: str, moduler) -> None:
@@ -756,6 +759,12 @@ def valjBunt(spec_rel: str):
         stubbar = "tests/stubs.luau"
     elif "tavlingsklader" in spec_rel:
         moduler = [("Tavlingsklader", "src/shared/HorseCore/Tavlingsklader.luau")]
+        stubbar = "tests/stubs.luau"
+    #[[ D1 (#266): klassprofilen ar en REN regelmodul utan beroenden, och
+    #   ligger utanfor Rojo-mappningen tills D2 konsumerar den. Egen minimal
+    #   bunt av samma skal som tavlingsklader-katalogen. ]]
+    elif "regelprofil" in spec_rel:
+        moduler = [("Klassprofil", "regler/Klassprofil.luau")]
         stubbar = "tests/stubs.luau"
     elif "ridefirst" in spec_rel:
         #[[ INTEGRATION, inte FORBEREDELSE: provet kor den VERKLIGA
