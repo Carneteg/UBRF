@@ -16,27 +16,27 @@ Status date: 2026-09-28. This document records the current delivery gate. It is 
 
 ## Locked physical-test candidate
 
-The current runtime candidate is re-locked after D4a.
+The current runtime candidate is re-locked after the assigned-horse guide fix.
 
-- Runtime HEAD: **`fa418038a496fc608d545cf0927baea16301df90`**.
+- Runtime HEAD: **`7fdee3061898456631a914c9902e2363c6fd33a1`**.
 - Checklist: [FINAL-PLAYTEST-CHECKLIST.md](FINAL-PLAYTEST-CHECKLIST.md).
-- Roblox build identity `kallhash`: **`2e0b6a877e69f8d29980a6770a57f10166e645883ab221bdafa4871f6a0c1baf`**.
-- In-game diagnostics must show prefix **`2e0b6a877e69`**.
+- Roblox build identity `kallhash`: **`0ce4b14c93e2e7ef15e082c5dfd89120c010fa719099356f99b5c5a1f99540f7`**.
+- In-game diagnostics must show prefix **`0ce4b14c93e2`**.
 - Any later mapped Roblox-source change invalidates this lock and requires a new identity/checklist lock.
 
-The candidate includes the reviewed lesson/teaching work, D1, D2a, D2b, D2c, D5 Option A/R1, B4a knockdown evidence, B4b R1 neutral disobedience evidence, B4c course-aware shadow judgment and D4a prize persistence foundation. Physical rows remain **NOT_TESTED**.
+The candidate includes the reviewed lesson/teaching work, D1, D2a, D2b, D2c, D5 Option A/R1, B4a knockdown evidence, B4b R1 neutral disobedience evidence, B4c course-aware shadow judgment, D4a prize persistence foundation and the assigned-horse guide. Physical rows remain **NOT_TESTED** except where Tobias explicitly reports them.
 
 ## Physical gate A3
 
-A3 remains deferred until Tobias starts the final physical test.
+A3 is now in progress with Tobias.
 
 Use only [FINAL-PLAYTEST-CHECKLIST.md](FINAL-PLAYTEST-CHECKLIST.md). PC, physical iPad and physical iPhone remain separate evidence. Local tests, source review and emulator evidence do not mark physical rows PASS.
 
 ## Current #266 package status
 
 ### A — first pass
-- A2 candidate lock: current and re-locked through D4a.
-- A3 physical PC/iPad/iPhone test: **NOT_TESTED / LAST**.
+- A2 candidate lock: current and re-locked through assigned-horse guide.
+- A3 physical PC/iPad/iPhone test: **IN PROGRESS**.
 
 ### B — riding feel and measurement
 - **B4a knockdown event: CHATGPT_REVIEW_ACCEPTED.**
@@ -57,18 +57,20 @@ Use only [FINAL-PLAYTEST-CHECKLIST.md](FINAL-PLAYTEST-CHECKLIST.md). PC, physica
 - **D2c aftercare handoff: CHATGPT_REVIEW_ACCEPTED.**
 - **D5 Option A competition clothing: CHATGPT_REVIEW_ACCEPTED through R1.**
 - **D4a prize/trophy persistence foundation: CHATGPT_REVIEW_ACCEPTED.**
-  - deterministic prize receipt key;
-  - confirmed prize rights come only from successful storage read/committed write;
-  - ambiguous/failed/refused writes do not confirm;
-  - trophy read model is inert and contains no bonus fields;
-  - no award trigger, no cabinet UI, no Clear Round rosette caller yet.
 - Warm-up remains blocked on verified mapping of UBRF's real "Lilla utebanan" or an explicit Tobias game-simplification decision.
 - Real Clear Round rosette award remains blocked until physical knockdown/refusal evidence is verified and D2 is explicitly promoted from shadow to official.
+
+### Runtime blocker fixes during Tobias QA
+- **Assigned-horse guide: CHATGPT_REVIEW_ACCEPTED.**
+  - one local marker only, on the assigned horse;
+  - large gold ▼ plus horse name;
+  - visible from spawn, hidden close/leading/mounted;
+  - survives respawn and delayed/replaced horse model;
+  - Studio engine properties verified; human visual quality still requires Tobias.
 
 ## Limits
 
 - No merge, publication or product acceptance is implied by source review.
-- PHYSICAL TEST remains LAST unless Tobias changes that order.
 - Do not award an official Clear Round rosette while knockdowns/refusals are not truthfully established.
 - Do not let HinderObservation make course-aware sporting judgments.
 - Do not promote B4c shadow output to official D2 judging without a separate review/decision.
