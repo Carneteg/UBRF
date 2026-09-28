@@ -74,19 +74,18 @@
 	(alla i dag) ger ALDRIG "nej". Tröskel och fönster är spelantaganden som
 	kalibreras i Studio. `rivning` och `overlapp` är oförändrade.
 
-	── OLYDNAD (B4b, docs/B4B-DISOBEDIENCE-CLASSIFIER-CONTRACT.md) ─────
-	Per försök `olydnad` = "vagran" | "utbrytning" | "ingen" | "okand", med
-	`olydnadGrund`, `tStopp` och `inSida` (sidan hästen kom från, samma tecken
-	som `riktning`). Källan är TR III 2025 moment 385 (references/rules/).
-	Vägran (3.1) bara för ett OBSERVERAT stopp framför hindret (planfart ≤
-	STOPP_FART över ett segment, i zonen, på inridningssidan, före varje
-	korsning) FÖLJT av att hästen rört sig bort från planet mer än BAKAT_TOL —
-	«träder bakåt … eller vänder». Utbrytning (4.1) = `sidan_om`. Ett stopp
-	ensamt är aldrig en vägran; stopp följt av hopp utan att backa är okänt
-	(3.1 «otvetydigt stående» mot 3.5 «omedelbart» anger ingen tid);
-	`ingen_passage` utan observerat stopp är okänt (ett kort stopp mellan
-	sampel kan inte uteslutas). Ett försök klassas en gång (jfr 3.1 / 1.4).
-	Om hindret skulle hoppas, och i vilken riktning, avgör konsumenten.
+	── EVIDENS FÖR OLYDNAD (B4b R1, docs/B4B-DISOBEDIENCE-CLASSIFIER-CONTRACT.md) ──
+	BARA NEUTRAL EVIDENS, ALDRIG EN DOM. TR III 2025 moment 385 dömer vägran
+	(3.1) och utbrytning (4.1) mot «ett hinder som ska hoppas» — och det vet
+	inte den här modulen (banordning, nästa hinder, förnyad anridning). Per
+	försök: `stoppObserverat` (ett segment i zonen, på inridningssidan, före
+	varje korsning, med planfart ≤ STOPP_FART), `tStopp`, `bakatEfterStopp`
+	(|v| växte mer än BAKAT_TOL efter stoppet, före korsning, på inridnings-
+	sidan), `sidanOm` (planet korsat utanför bredden under försöket), `inSida`
+	(inridningssidan, samma tecken som `riktning`) och `evidensGrund`
+	("ofullstandigt" när giltigheten inte är fullständig). Tröskelvärdena är
+	kalibreringsantaganden för evidensen, inga regler. Första lager som får
+	döma är den banmedvetna konsumenten (D2).
 
 	── MINNE ─────────────────────────────────────────────────────────
 	Per steg O(antal hinder). Per ritt högst MAX_FORSOK försök; fler tappas
@@ -107,9 +106,10 @@ HinderObservation.MAX_AVSLUTADE = 32
 --[[ B4a, spelantagande (kalibreras i Studio): hur länge efter att försöket
 	stängts ett fall fortfarande räknas till det, i ritt-tid (s). ]]
 HinderObservation.NEDSLAG_FONSTER = 2.0
---[[ B4b, spelantaganden (TR anger ingen fart eller stegmått; kalibreras i
-	Studio): planfart i studs/s som räknas som stopp, och hur långt bort från
-	planet hästen måste röra sig efter stoppet för att det ska vara bakåt. ]]
+--[[ B4b, kalibreringsantaganden för EVIDENSEN (TR anger ingen fart eller
+	stegmått; kalibreras i Studio): planfart i studs/s som räknas som stopp,
+	och hur långt bort från planet hästen måste röra sig efter stoppet för att
+	det ska räknas som bakåt. Ingen dom byggs på dem här. ]]
 HinderObservation.STOPP_FART = 0.3
 HinderObservation.BAKAT_TOL = 1.0
 local MAX_ID = 64
@@ -128,7 +128,8 @@ type Forsok = {
 	luftfas: string, landning: string, overlapp: boolean, overlappAntal: number,
 	kontakt: string, rivning: boolean, bom: string,
 	nedslag: string, nedslagGrund: string?, tNedslag: number?,
-	olydnad: string, olydnadGrund: string?, tStopp: number?, inSida: string?,
+	stoppObserverat: boolean, tStopp: number?, bakatEfterStopp: boolean, sidanOm: boolean,
+	inSida: string?, evidensGrund: string?,
 	_stoppV: number?, _bakat: boolean, _inSida: number?,
 	_fysisk: boolean, _uppsatt: boolean, _bomY0: number?, _delRef: any, _fallT: number?, _frist: number?,
 	_korsat: boolean, _sidanOm: boolean, _luftAktiv: boolean, _markEfterLuft: boolean,
@@ -261,25 +262,12 @@ local function stangForsok(r: Ritt, f: Forsok, giltighet: string, t: number?)
 			r._vantande[f] = true
 		end
 	end
-	--[[ B4b: olydnaden, i kontraktets prioritetsordning. ]]
+	--[[ B4b R1: neutral evidens — ingen dom (se huvudkommentaren). ]]
 	f.inSida = if f._inSida == nil then nil elseif (f._inSida :: number) < 0 then "fram" else "bak"
-	if giltighet ~= "fullstandig" then
-		f.olydnad, f.olydnadGrund = "okand", "ofullstandigt"
-	elseif f._bakat then
-		f.olydnad, f.olydnadGrund = "vagran", "stopp_och_bakat"
-	elseif f._sidanOm then
-		f.olydnad, f.olydnadGrund = "utbrytning", "sidan_om"
-	elseif f._korsat then
-		if f._stoppV ~= nil then
-			f.olydnad, f.olydnadGrund = "okand", "stopp_sedan_passage"
-		else
-			f.olydnad, f.olydnadGrund = "ingen", "passage_utan_stopp"
-		end
-	elseif f._stoppV ~= nil then
-		f.olydnad, f.olydnadGrund = "okand", "stopp_utan_bakat"
-	else
-		f.olydnad, f.olydnadGrund = "okand", "ingen_passage"
-	end
+	f.stoppObserverat = f._stoppV ~= nil
+	f.bakatEfterStopp = f._bakat
+	f.sidanOm = f._sidanOm
+	f.evidensGrund = if giltighet ~= "fullstandig" then "ofullstandigt" else nil
 	r._aktiva[f.hinderId] = nil
 end
 
@@ -457,7 +445,8 @@ local function nyttForsok(r: Ritt, h: Hinder, t: number): Forsok?
 		luftfas = "okand", landning = "okand", overlapp = false, overlappAntal = 0,
 		kontakt = "otillganglig", rivning = false, bom = "okand",
 		nedslag = "okand", nedslagGrund = nil, tNedslag = nil,
-		olydnad = "okand", olydnadGrund = nil, tStopp = nil, inSida = nil,
+		stoppObserverat = false, tStopp = nil, bakatEfterStopp = false, sidanOm = false,
+		inSida = nil, evidensGrund = nil,
 		_stoppV = nil, _bakat = false, _inSida = nil,
 		_fysisk = false, _uppsatt = false, _bomY0 = nil, _delRef = h._del, _fallT = nil, _frist = nil,
 		_korsat = false, _sidanOm = false, _luftAktiv = false, _markEfterLuft = false,

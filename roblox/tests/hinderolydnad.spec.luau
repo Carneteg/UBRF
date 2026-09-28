@@ -1,5 +1,6 @@
 --!nostrict
---[[ B4b OLYDNAD PER HINDERFÖRSÖK — docs/B4B-DISOBEDIENCE-CLASSIFIER-CONTRACT.md.
+--[[ B4b R1 EVIDENS FÖR OLYDNAD PER HINDERFÖRSÖK — docs/B4B-DISOBEDIENCE-CLASSIFIER-CONTRACT.md (R1).
+	Bara neutral evidens: observationslagret dömer aldrig vägran eller utbrytning.
 	Källa: SvRF TR III 2025 moment 385 (references/rules/TR-III-2025-hoppning-A-clear-round.md).
 
 	MODULKONTRAKT, minimal bänk: bara HinderObservation. Provet bygger en bom
@@ -52,96 +53,109 @@ local function forsok()
 	return b and b.forsok[#b.forsok] or nil
 end
 local function fmt(f)
-	return f and ("%s | %s/%s in=%s tStopp=%s"):format(f.utfall, f.olydnad, tostring(f.olydnadGrund),
-		tostring(f.inSida), tostring(f.tStopp)) or "inget försök"
+	return f and ("%s | stopp=%s bakat=%s sidanOm=%s in=%s tStopp=%s grund=%s"):format(f.utfall,
+		tostring(f.stoppObserverat), tostring(f.bakatEfterStopp), tostring(f.sidanOm), tostring(f.inSida),
+		tostring(f.tStopp), tostring(f.evidensGrund)) or "inget försök"
+end
+local function ev(f, stopp, bakat, sidan)
+	return f ~= nil and f.stoppObserverat == stopp and f.bakatEfterStopp == bakat and f.sidanOm == sidan
+end
+-- Inget domslut någonstans i bilden: inga domfält, inga domvärden.
+local DOMVARDEN = { vagran = true, utbrytning = true, ingen = true }
+local function domfri(v, djup)
+	djup = djup or 0
+	if djup > 8 then return true end
+	if type(v) == "string" then return not DOMVARDEN[v] end
+	if type(v) ~= "table" then return true end
+	for k, x in pairs(v) do
+		if k == "olydnad" or k == "olydnadGrund" then return false end
+		if not domfri(x, djup + 1) then return false end
+	end
+	return true
 end
 
-print("\n── 1. Utbrytning (4.1): planet korsas vid sidan av bommen ──")
+print("\n── 1. Vid sidan om: bara evidensen sidanOm (ingen «utbrytning») ──")
 do
-	ny("utbrytning", 5, -9)
+	ny("sidan", 5, -9)
 	till(5, 8)
 	local f = forsok()
-	check("utbrytning / sidan_om, inridning «fram»", f and f.utfall == "sidan_om" and f.olydnad == "utbrytning"
-		and f.olydnadGrund == "sidan_om" and f.inSida == "fram", fmt(f))
+	check("sidan_om: sidanOm=true, inget stopp, inridning «fram»", f and f.utfall == "sidan_om"
+		and ev(f, false, false, true) and f.inSida == "fram" and f.evidensGrund == nil, fmt(f))
 end
 
-print("\n── 2. Vägran (3.1): stopp framför, sedan bakåt, lämnar zonen ──")
+print("\n── 2. Stopp framför, bakåt, ut ur zonen: evidens, ingen «vagran» ──")
 do
-	ny("vagran")
+	ny("stoppBak")
 	till(0, -2)
 	local tFore = t
 	sta(3)
 	till(0, -5)
 	till(0, -9)
 	local f = forsok()
-	check("vägran / stopp_och_bakat", f and f.utfall == "ingen_passage" and f.olydnad == "vagran"
-		and f.olydnadGrund == "stopp_och_bakat", fmt(f))
+	check("stoppObserverat och bakatEfterStopp, utfall ingen_passage", f and f.utfall == "ingen_passage"
+		and ev(f, true, true, false), fmt(f))
 	check("tStopp är första stoppsegmentet", f.tStopp ~= nil and math.abs(f.tStopp - (tFore + DT)) < 1e-9, tostring(f.tStopp))
 end
 
-print("\n── 3. Vägran, sedan hopp i samma försök ──")
+print("\n── 3. Stopp, bakåt, sedan hopp i samma försök ──")
 do
-	ny("vagranHopp")
+	ny("stoppBakHopp")
 	till(0, -2); sta(2); till(0, -4); till(0, 8)
 	local f = forsok()
-	check("utfallet är passage (oförändrat), olydnaden vägran", f and f.utfall == "passage" and f.riktning == "fram"
-		and f.olydnad == "vagran", fmt(f))
+	check("utfall passage/fram oförändrat, evidensen stopp + bakåt", f and f.utfall == "passage" and f.riktning == "fram"
+		and ev(f, true, true, false), fmt(f))
 end
 
-print("\n── 4. Stopp, sedan hopp utan att backa: okänt (3.1 mot 3.5) ──")
+print("\n── 4. Stopp, sedan hopp utan att backa ──")
 do
 	ny("stoppHopp")
 	till(0, -2); sta(3); till(0, 8)
 	local f = forsok()
-	check("okand / stopp_sedan_passage, aldrig vägran", f and f.utfall == "passage" and f.olydnad == "okand"
-		and f.olydnadGrund == "stopp_sedan_passage", fmt(f))
+	check("stopp=true, bakat=false, passage", f and f.utfall == "passage" and ev(f, true, false, false), fmt(f))
 end
 
-print("\n── 5. Passage utan stopp ──")
+print("\n── 5. Passage utan stopp, åt båda hållen ──")
 do
 	ny("ren")
 	till(0, 8)
 	local f = forsok()
-	check("ingen / passage_utan_stopp", f and f.olydnad == "ingen" and f.olydnadGrund == "passage_utan_stopp", fmt(f))
+	check("ingen evidens för stopp, bakåt eller sidan om", f and f.utfall == "passage" and ev(f, false, false, false)
+		and f.evidensGrund == nil, fmt(f))
 	ny("renBak", 0, 9)
 	till(0, -8)
 	f = forsok()
-	check("från andra hållet: inridning «bak», riktning «bak»", f and f.inSida == "bak" and f.riktning == "bak"
-		and f.olydnad == "ingen", fmt(f))
+	check("från andra hållet: inSida «bak», riktning «bak»", f and f.inSida == "bak" and f.riktning == "bak"
+		and ev(f, false, false, false), fmt(f))
 end
 
-print("\n── 6. Ingen passage: utan stopp okänt; stopp utan bakåt okänt ──")
+print("\n── 6. Ingen passage: vek av utan stopp; stopp utan bakåt ──")
 do
 	ny("vek")
 	till(0, -2); till(12, -2)
 	local f = forsok()
-	check("vek av utan observerat stopp: okand / ingen_passage", f and f.utfall == "ingen_passage"
-		and f.olydnad == "okand" and f.olydnadGrund == "ingen_passage", fmt(f))
+	check("vek av: ingen_passage, inget stopp", f and f.utfall == "ingen_passage" and ev(f, false, false, false), fmt(f))
 	ny("stodKvar")
 	till(0, -2); sta(4); till(12, -2)
 	f = forsok()
-	check("stopp, sedan i sidled ut utan bakåt: okand / stopp_utan_bakat", f and f.olydnad == "okand"
-		and f.olydnadGrund == "stopp_utan_bakat", fmt(f))
+	check("stopp, sidled ut: stopp=true, bakat=false", f and f.utfall == "ingen_passage" and ev(f, true, false, false), fmt(f))
 end
 
-print("\n── 7. Inbromsning (över stoppgränsen) och bakåt: ingen vägran ──")
+print("\n── 7. Inbromsning över stoppgränsen: inget stopp ──")
 do
 	ny("inbromsning")
 	till(0, -2)
-	till(0, -1.8, 0.05) -- 0,5 studs/s: långsamt, men inget stopp
+	till(0, -1.8, 0.05) -- 0,5 studs/s
 	till(0, -9)
 	local f = forsok()
-	check("ingen vägran utan stopp (okand / ingen_passage)", f and f.olydnad == "okand"
-		and f.olydnadGrund == "ingen_passage" and f.tStopp == nil, fmt(f))
+	check("stopp=false, bakat=false, inget tStopp", f and ev(f, false, false, false) and f.tStopp == nil, fmt(f))
 end
 
-print("\n── 8. Bakåt mindre än toleransen: ingen vägran ──")
+print("\n── 8. Bakåt mindre än toleransen ──")
 do
 	ny("litenBak")
 	till(0, -2); sta(2); till(0, -2.5, 0.5); sta(1); till(0, 8)
 	local f = forsok()
-	check("stopp + litet steg bakåt + hopp: okand / stopp_sedan_passage", f and f.olydnad == "okand"
-		and f.olydnadGrund == "stopp_sedan_passage", fmt(f))
+	check("stopp=true, bakat=false", f and ev(f, true, false, false), fmt(f))
 end
 
 print("\n── 9. Stopp EFTER korsningen räknas inte ──")
@@ -149,21 +163,48 @@ do
 	ny("stoppEfter")
 	till(0, 2); sta(3); till(0, 8)
 	local f = forsok()
-	check("ingen / passage_utan_stopp, inget tStopp", f and f.olydnad == "ingen" and f.tStopp == nil, fmt(f))
+	check("stopp=false efter korsningen, inget tStopp", f and ev(f, false, false, false) and f.tStopp == nil, fmt(f))
 end
 
-print("\n── 10. Brott mitt i försöket ──")
+print("\n── 9b. Över, tillbaka över till inridningssidan, stopp där: räknas inte ──")
+do
+	ny("overOchTillbaka")
+	till(0, 3); till(0, -2); sta(3); till(0, -9)
+	local f = forsok()
+	check("stopp EFTER en korsning (fast på inridningssidan) ger inget stoppObserverat", f and f.utfall == "passage"
+		and f.stoppObserverat == false and f.tStopp == nil, fmt(f))
+end
+
+print("\n── 10. Sidan om, sedan tillbaka och över innanför: sidanOm står kvar ──")
+do
+	ny("sidanSedanOver", 5, -9)
+	till(5, 2); till(0, 2); till(0, -4); till(0, -9)
+	local f = forsok()
+	check("utfall passage (bak), sidanOm=true", f and f.utfall == "passage" and f.sidanOm == true, fmt(f))
+end
+
+print("\n── 11. Brott mitt i försöket ──")
 do
 	ny("brott")
 	till(0, -2); sta(2); till(0, -5)
 	HO.brott(ritt, t)
 	local f = forsok()
-	check("okand / ofullstandigt, även efter stopp och bakåt", f and f.olydnad == "okand"
-		and f.olydnadGrund == "ofullstandigt", fmt(f))
+	check("evidensGrund «ofullstandigt», den observerade evidensen redovisas som den var", f
+		and f.evidensGrund == "ofullstandigt" and ev(f, true, true, false), fmt(f))
 end
 
-print("\n── 11. Befintliga fält oförändrade, bilden utan privata nycklar ──")
+print("\n── 12. Ingen dom i observationslagret; befintliga fält oförändrade ──")
 do
+	local alla = {}
+	for _, fall in ipairs({ { "d1", 5, -9, function() till(5, 8) end },
+		{ "d2", 0, -9, function() till(0, -2); sta(3); till(0, -5); till(0, -9) end },
+		{ "d3", 0, -9, function() till(0, 8) end } }) do
+		ny(fall[1], fall[2], fall[3]); fall[4]()
+		table.insert(alla, HO.ogonblick(ritt))
+	end
+	local okAlla = true
+	for _, b in ipairs(alla) do if not domfri(b) then okAlla = false end end
+	check("inga fält olydnad/olydnadGrund och inga värden vagran/utbrytning/ingen i någon bild", okAlla)
 	ny("falt")
 	till(0, -2); sta(2); till(0, -4); till(0, 8)
 	local f = forsok()
