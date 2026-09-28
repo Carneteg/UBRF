@@ -456,9 +456,14 @@ function prova(namn, ok, detalj) {
     G.skotselRes = null; G.hastMott = false;
     return { utan, utrustning, leds, skott };
   });
+  /* Paritetspasset (#264, docs/WEB-P1A-STABLE-FLOW-CONTRACT.md): sadel och
+     träns hämtas vid boxfronten som i Roblox, så "hämta sadel" är inget
+     eget mål längre — uppgiften ÄR hästen tills hon leds. Markören ska
+     därför sitta kvar där; att den flyttade till sadelkammaren var den
+     gamla huvudvägen. */
   prova("markören sitter på hästen bara när uppgiften ÄR hästen",
-    v.utan === true && v.utrustning === false && v.leds === false && v.skott === false,
-    `hitta hästen ${v.utan} · hämta sadel ${v.utrustning} · leds ${v.leds} · skött ${v.skott}`);
+    v.utan === true && v.utrustning === true && v.leds === false && v.skott === false,
+    `hitta hästen ${v.utan} · vid hästen ${v.utrustning} · leds ${v.leds} · skött ${v.skott}`);
   await page.evaluate(() => { startaVandring(); G.vy = "2d"; });
 }
 

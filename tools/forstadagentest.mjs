@@ -324,24 +324,42 @@ await klicka("bSkKlar");
 s = await las();
 prova("rätt sadel och träns ger utrustningen", s.utrustning === true, `utrustning ${s.utrustning}`);
 
-/* ══ 5. BOXEN ═══════════════════════════════════════════════════════ */
-s = await station("sköt om|släpp in", "boxen", v => v.ov === true) || s;
-prova("boxmenyn öppnas", s.ov === true && await knappFinns("bSkots"), `overlay ${s.ov}`);
-if (await knappFinns("bTacke")) await klicka("bTacke");
-await klicka("bMocka"); await klicka("bMockKlar");
-await klicka("bFodra"); await klicka("bFodraKlar");
-await klicka("bSkots");
-for (const id of ["bVisit", "bRykt", "bKrats", "bSadla", "bSkotKlar", "bKlar"]) await klicka(id);
+/* ══ 5. BOXEN — STEGKORTET ═══════════════════════════════════════
+   Paritetspasset (#264, docs/WEB-P1A-STABLE-FLOW-CONTRACT.md): vid hästen
+   tar Roblox stegkort över. Spelaren väljer «Gör i ordning … själv» och
+   gör varje kort med panelens egna knappar — hälsa, kolla, rykta, hovar,
+   sadel och träns från boxfronten — till «Led …». Boxmenyn (mockning,
+   fodring) är en sidoaktivitet och prövas inte som en del av vägen. */
+const gBox = await stallDigVid("rida nu");
+prova("boxen: spelets egen E-prompt står där", gBox.framme === true,
+  gBox.mal ? `"${gBox.dom || gBox.prompt || "INGEN PROMPT"}" · ${gBox.avst} m` : "INGEN sådan interaktion");
+const kortet = () => ev(() => ({ id: document.getElementById("stegkort").dataset.kort,
+  synlig: !document.getElementById("stegkort").hidden,
+  knappar: [...document.querySelectorAll("#stegkort .skV button")].map(b => b.dataset.id),
+  primar: ([...document.querySelectorAll("#stegkort .skV button.primar")][0] || { dataset: {} }).dataset.id }));
+const kortKlick = async id => { await page.click(`#stegkort button[data-id="${id}"]`); await page.waitForTimeout(250); };
+let k = await kortet();
+prova("vid hästen: startvalet med exakt två val (Rida nu / själv)",
+  k.synlig && k.id === "valj" && k.knappar.join(",") === "start:rida_nu,start:sjalv", `${k.id} · ${k.knappar.join(",")}`);
+await kortKlick("start:sjalv");
+const korten = [];
+for (let i = 0; i < 40; i++) {
+  k = await kortet();
+  korten.push(k.id);
+  if (k.id === "halsa") { await kortKlick("halsa1"); continue; }
+  if (!k.primar) break;
+  const sista = k.primar === "leda";
+  await kortKlick(k.primar);
+  if (sista) break;
+}
 s = await las();
-prova("skötseln ger ett resultat", s.skotsel === true, `skotselRes ${s.skotsel}`);
+prova("förberedelsen genom alla Roblox-kort", ["halsa", "visitera", "rykta", "hovar", "hamta_sadel", "sadla",
+  "hamta_trans", "transa", "leda"].every(id => korten.includes(id)), [...new Set(korten)].join(" → "));
 
-/* ══ 6. LED UT — övergången spelaren fastnade i ════════════════════ */
-prova("knappen 'Led ut till lektionen' finns efter skötseln",
-  await knappFinns("bLek"), "bLek");
-await klicka("bLek");
-s = await las();
+/* ══ 6. LED UT ═════════════════════════════════════════════════════ */
 prova("hästen leds — G.leder blir sann genom spelarens knapp",
-  s.plats === "leds" && s.leder === true, `plats ${s.plats} · leder ${s.leder}`);
+  s.skotsel === true && s.plats === "leds" && s.leder === true, `plats ${s.plats} · leder ${s.leder}`);
+
 
 /* ══ 7. VIDARE TILL RIDHUSET ═══════════════════════════════════════
    Sargporten ligger i ridhuset, inte i stallet. Utan det här steget

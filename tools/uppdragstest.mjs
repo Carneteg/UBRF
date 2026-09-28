@@ -179,15 +179,17 @@ sektion = "B–C: kedjan";
       sarg: [(sp.x0+sp.x1)/2, RIDHUSINNE.bana.y + RIDHUSINNE.bana.h] };
   });
   const [s0, s1, s2, s3] = kedja.steg;
-  prova("kedjan: hitta hästen → hämta utrustning → tillbaka till hästen → sitt upp",
-    s0.id === "hitta_hast" && s1.id === "utrustning" && s2.id === "skotsel" && s3.id === "sitt_upp",
+  /* Paritetspasset (#264, docs/WEB-P1A-STABLE-FLOW-CONTRACT.md): Roblox
+     kedja. Sadel och träns hämtas vid boxfronten — målet är hästen hela
+     förberedelsen igenom, och sargporten när hon leds. Sadelkammaren är
+     en sidoaktivitet och aldrig ett steg. */
+  prova("kedjan: hästen → (framme, utrustning) fortfarande hästen → sitt upp",
+    s0.id === "hitta_hast" && s1.id === "hitta_hast" && s2.id === "hitta_hast" && s3.id === "sitt_upp",
     kedja.steg.map(s => s.id).join(" → "));
   prova("och varje steg pekar på den VERIFIERADE punkten, inte på en påhittad",
-    Math.hypot(s0.mal[0]-kedja.box[0], s0.mal[1]-kedja.box[1]) < 0.01 &&
-    Math.hypot(s1.mal[0]-kedja.sadelkammare[0], s1.mal[1]-kedja.sadelkammare[1]) < 0.01 &&
-    Math.hypot(s2.mal[0]-kedja.box[0], s2.mal[1]-kedja.box[1]) < 0.01 &&
+    [s0, s1, s2].every(x => Math.hypot(x.mal[0]-kedja.box[0], x.mal[1]-kedja.box[1]) < 0.01) &&
     Math.hypot(s3.mal[0]-kedja.sarg[0], s3.mal[1]-kedja.sarg[1]) < 0.01,
-    `box [${kedja.box.map(n=>n.toFixed(1))}] · sadelkammaren [${kedja.sadelkammare.map(n=>n.toFixed(1))}] · sargporten [${kedja.sarg.map(n=>n.toFixed(1))}]`);
+    `box [${kedja.box.map(n=>n.toFixed(1))}] · sargporten [${kedja.sarg.map(n=>n.toFixed(1))}]`);
 }
 
 /* ══ E. ETT MÅL, OCH VÄGVISAREN TONAS BORT NÄRA ════════════════════ */
@@ -225,8 +227,6 @@ sektion = "F: kort text";
     visaTilldelning(); overlay(false);
     const b = hittaBox(G.hastId);
     gaTill("stallinne", { x: b.dorr[0], y: b.dorr[1] - 8, rikt: 0 }); las();
-    VD.px = b.dorr[0]; VD.py = b.dorr[1] - 1.5; interagera(); las();
-    G.utrustning = true; las();
     G.skotselRes = { dagsform: 0.7 }; G.hastPlats = "leds"; las();
     return lagen;
   });
@@ -234,7 +234,9 @@ sektion = "F: kort text";
   const flest = f.reduce((m, l) => Math.max(m, l.punkter.length), 0);
   const langstPunkt = f.reduce((m, l) => Math.max(m, ...l.punkter.map(p => p.length)), 0);
   prova("uppgiftstexten är en kort rubrik och 1–3 punkter, aldrig ett stycke",
-    langst <= 40 && flest >= 1 && flest <= 3 && langstPunkt <= 62,
+    /* Punkterna är Roblox stegkortstexter (guide.*) med hästens namn i;
+       gränsen följer den längsta av dem med ett långt namn. */
+    langst <= 40 && flest >= 1 && flest <= 3 && langstPunkt <= 72,
     `${f.length} lägen · längsta rubrik ${langst} tkn · flest punkter ${flest} · längsta punkt ${langstPunkt} tkn`);
   prova("och varje läge har en egen rubrik — ingen står kvar från förra steget",
     new Set(f.map(l => l.id)).size === f.length,
@@ -351,7 +353,11 @@ sektion = "hästbytet";
   /* Uppsittningen: den riktiga interaktionen vid sargporten, på den
      häst som faktiskt är aktiv. */
   const m = await ev(() => {
-    G.skotselRes = { dagsform: 0.7 }; G.hastPlats = "leds";
+    /* Förberedd genom den riktiga vägen — «Rida nu» vid boxen — så att
+       uppsittningsgrinden (Roblox provaUppsittning) har något att pröva. */
+    const bx = hittaBox(G.hastId);
+    gaTill("stallinne", { x: bx.dorr[0], y: bx.dorr[1], rikt: 0 });
+    stegkortRidaNu();
     const sp = SPELABSTRAKTIONER.ridhus.sargport;
     const port = [(sp.x0 + sp.x1) / 2, RIDHUSINNE.bana.y + RIDHUSINNE.bana.h];
     gaTill("ridhusinne", { x: port[0], y: port[1] - 1.0, rikt: 0 });
@@ -408,24 +414,24 @@ sektion = "D: hela produktionsvägen";
   await gaHit(box, "boxen");
   steg.push(["boxen", await prompt()]);
 
-  await gaHit(await ev(() => (STALLINNE.info || []).find(i => i.sadelkammare).pos), "sadelkammaren");
-  steg.push(["sadelkammaren", await prompt()]);
-  await tryckE();
-  await ev(() => { const n = HORSES[G.hastId].namn;
-    for (const b of document.querySelectorAll("button")) if (b.textContent.trim() === n) b.click(); });
-  await page.waitForTimeout(150);
-  await ev(() => { const b = document.getElementById("bSkKlar"); if (b) b.click(); });
+  /* Paritetspasset: förberedelsen sker vid boxen genom stegkortets egna
+     knappar — «Gör i ordning … själv», sedan varje kort — tills «Led …». */
+  const klickaKort = id => ev(id => {
+    const b = [...document.querySelectorAll("#stegkort button")].find(x => x.dataset.id === id);
+    if (b) b.click(); return !!b; }, id);
+  await klickaKort("start:sjalv");
+  for (let i = 0; i < 40; i++) {
+    const k = await ev(() => ({ id: document.getElementById("stegkort").dataset.kort,
+      primar: ([...document.querySelectorAll("#stegkort button.primar")][0] || {}).dataset }));
+    if (k.id === "halsa") { await klickaKort("halsa1"); continue; }
+    if (!k.primar || !k.primar.id) break;
+    const var_leda = k.primar.id === "leda";
+    await klickaKort(k.primar.id);
+    await page.waitForTimeout(60);
+    if (var_leda) break;
+  }
+  steg.push(["stegkortet", await ev(() => G.hastPlats === "leds" ? "Led" : null)]);
   await page.waitForTimeout(300);
-
-  await gaHit(box, "boxen igen");
-  steg.push(["boxen igen", await prompt()]);
-  await tryckE();
-  await ev(() => { const b = document.getElementById("bSkots"); if (b) b.click(); });
-  await page.waitForTimeout(700);
-  await ev(() => { const b = document.getElementById("bKlar"); if (b) b.click(); });
-  await page.waitForTimeout(1100);
-  await ev(() => { const b = document.getElementById("bLek"); if (b) b.click(); });
-  await page.waitForTimeout(400);
 
   await gaHit(await ev(() => STALLINNE.dorrar.find(d => d.mot === "gard").pos), "stallets utdörr");
   const utPrompt = await prompt();

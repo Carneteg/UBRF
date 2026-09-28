@@ -142,7 +142,7 @@ function stegkortDagsform() {
 
 /* ── Kortet ──────────────────────────────────────────────────────── */
 /* {id, rubrik, text, val:[{id,text,primar,gor}], fler:[…]} eller null. */
-function stegkortKort() {
+function stegkortKort(antaNara) {
   if (!G.hastId || !G.forb || G.scen === "lektion" || G.scen === "meny" || G.scen === "resultat") return null;
   const s = G.forb, n = skNamn();
 
@@ -161,7 +161,7 @@ function stegkortKort() {
     return { id: "leder", rubrik: tSpr("guide.leder_rubrik", n), text: tSpr("guide.leder_text", n), val: [] };
   }
 
-  const nara = stegkortNara();
+  const nara = antaNara || stegkortNara();
   if (!nara)
     return { id: "ga_till", rubrik: tSpr("guide.ga_till_rubrik", n), text: tSpr("guide.ga_till_text"), val: [] };
 
@@ -220,9 +220,11 @@ function stegkortKort() {
 }
 
 /* Kortets primära handling — det E gör vid hästen (webbens motsvarighet
-   till den prompt Roblox rankar först). */
+   till den prompt Roblox rankar först). Frågas SOM OM spelaren stod vid
+   hästen: prompten sitter på boxen, och `interagera()` avgör räckvidden —
+   precis som en ProximityPrompt finns på hästen och visas inom räckhåll. */
 function stegkortPrimar() {
-  const k = stegkortKort();
+  const k = stegkortKort(true);
   const v = k && (k.val || []).find(x => x.primar);
   return v ? { text: v.text, gor: v.gor } : null;
 }
