@@ -74,6 +74,20 @@
 	(alla i dag) ger ALDRIG "nej". Tröskel och fönster är spelantaganden som
 	kalibreras i Studio. `rivning` och `overlapp` är oförändrade.
 
+	── OLYDNAD (B4b, docs/B4B-DISOBEDIENCE-CLASSIFIER-CONTRACT.md) ─────
+	Per försök `olydnad` = "vagran" | "utbrytning" | "ingen" | "okand", med
+	`olydnadGrund`, `tStopp` och `inSida` (sidan hästen kom från, samma tecken
+	som `riktning`). Källan är TR III 2025 moment 385 (references/rules/).
+	Vägran (3.1) bara för ett OBSERVERAT stopp framför hindret (planfart ≤
+	STOPP_FART över ett segment, i zonen, på inridningssidan, före varje
+	korsning) FÖLJT av att hästen rört sig bort från planet mer än BAKAT_TOL —
+	«träder bakåt … eller vänder». Utbrytning (4.1) = `sidan_om`. Ett stopp
+	ensamt är aldrig en vägran; stopp följt av hopp utan att backa är okänt
+	(3.1 «otvetydigt stående» mot 3.5 «omedelbart» anger ingen tid);
+	`ingen_passage` utan observerat stopp är okänt (ett kort stopp mellan
+	sampel kan inte uteslutas). Ett försök klassas en gång (jfr 3.1 / 1.4).
+	Om hindret skulle hoppas, och i vilken riktning, avgör konsumenten.
+
 	── MINNE ─────────────────────────────────────────────────────────
 	Per steg O(antal hinder). Per ritt högst MAX_FORSOK försök; fler tappas
 	och `overflode` sätts. Avslutade ritter i en ring om MAX_AVSLUTADE.
@@ -93,6 +107,11 @@ HinderObservation.MAX_AVSLUTADE = 32
 --[[ B4a, spelantagande (kalibreras i Studio): hur länge efter att försöket
 	stängts ett fall fortfarande räknas till det, i ritt-tid (s). ]]
 HinderObservation.NEDSLAG_FONSTER = 2.0
+--[[ B4b, spelantaganden (TR anger ingen fart eller stegmått; kalibreras i
+	Studio): planfart i studs/s som räknas som stopp, och hur långt bort från
+	planet hästen måste röra sig efter stoppet för att det ska vara bakåt. ]]
+HinderObservation.STOPP_FART = 0.3
+HinderObservation.BAKAT_TOL = 1.0
 local MAX_ID = 64
 
 type Hinder = {
@@ -109,6 +128,8 @@ type Forsok = {
 	luftfas: string, landning: string, overlapp: boolean, overlappAntal: number,
 	kontakt: string, rivning: boolean, bom: string,
 	nedslag: string, nedslagGrund: string?, tNedslag: number?,
+	olydnad: string, olydnadGrund: string?, tStopp: number?, inSida: string?,
+	_stoppV: number?, _bakat: boolean, _inSida: number?,
 	_fysisk: boolean, _uppsatt: boolean, _bomY0: number?, _delRef: any, _fallT: number?, _frist: number?,
 	_korsat: boolean, _sidanOm: boolean, _luftAktiv: boolean, _markEfterLuft: boolean,
 	_sida: number?, _kandU: number?, _kandY: number?,
@@ -118,6 +139,7 @@ type Ritt = {
 	oppen: boolean, satt: string?, overflode: boolean, tappade: number,
 	forsok: { Forsok }, _aktiva: { [string]: Forsok }, _nr: { [string]: number },
 	_vantande: { [Forsok]: boolean },
+	_tSist: number?,
 }
 
 local hinder: { [string]: Hinder } = {}
@@ -238,6 +260,25 @@ local function stangForsok(r: Ritt, f: Forsok, giltighet: string, t: number?)
 			f._frist = (t :: number) + HinderObservation.NEDSLAG_FONSTER
 			r._vantande[f] = true
 		end
+	end
+	--[[ B4b: olydnaden, i kontraktets prioritetsordning. ]]
+	f.inSida = if f._inSida == nil then nil elseif (f._inSida :: number) < 0 then "fram" else "bak"
+	if giltighet ~= "fullstandig" then
+		f.olydnad, f.olydnadGrund = "okand", "ofullstandigt"
+	elseif f._bakat then
+		f.olydnad, f.olydnadGrund = "vagran", "stopp_och_bakat"
+	elseif f._sidanOm then
+		f.olydnad, f.olydnadGrund = "utbrytning", "sidan_om"
+	elseif f._korsat then
+		if f._stoppV ~= nil then
+			f.olydnad, f.olydnadGrund = "okand", "stopp_sedan_passage"
+		else
+			f.olydnad, f.olydnadGrund = "ingen", "passage_utan_stopp"
+		end
+	elseif f._stoppV ~= nil then
+		f.olydnad, f.olydnadGrund = "okand", "stopp_utan_bakat"
+	else
+		f.olydnad, f.olydnadGrund = "okand", "ingen_passage"
 	end
 	r._aktiva[f.hinderId] = nil
 end
@@ -416,6 +457,8 @@ local function nyttForsok(r: Ritt, h: Hinder, t: number): Forsok?
 		luftfas = "okand", landning = "okand", overlapp = false, overlappAntal = 0,
 		kontakt = "otillganglig", rivning = false, bom = "okand",
 		nedslag = "okand", nedslagGrund = nil, tNedslag = nil,
+		olydnad = "okand", olydnadGrund = nil, tStopp = nil, inSida = nil,
+		_stoppV = nil, _bakat = false, _inSida = nil,
 		_fysisk = false, _uppsatt = false, _bomY0 = nil, _delRef = h._del, _fallT = nil, _frist = nil,
 		_korsat = false, _sidanOm = false, _luftAktiv = false, _markEfterLuft = false,
 		_sida = nil, _kandU = nil, _kandY = nil,
@@ -437,6 +480,14 @@ function HinderObservation.segment(rittId: string?, fran: Vector3, till: Vector3
 	if not r or not r.oppen then return false end
 	if not (vektorOk(fran) and vektorOk(till) and andligt(t)) then return false end
 	vantande(r, t, nil)
+	-- B4b: planfarten över segmentet (nil för rittens första segment eller efter ett brott).
+	local dt = if r._tSist ~= nil then t - (r._tSist :: number) else nil
+	local fart = nil
+	if dt ~= nil and dt > 0 then
+		local dx, dz = till.X - fran.X, till.Z - fran.Z
+		fart = math.sqrt(dx * dx + dz * dz) / dt
+	end
+	r._tSist = t
 	for id, h in pairs(hinder) do
 		local u0, v0 = lokal(h, fran)
 		local u1, v1 = lokal(h, till)
@@ -522,6 +573,20 @@ function HinderObservation.segment(rittId: string?, fran: Vector3, till: Vector3
 				end
 				f._sida = sida
 			end
+			--[[ B4b: inridningssidan, stoppet och steget bakåt — bara före varje
+				korsning (i planet eller vid sidan om) och på inridningssidan. ]]
+			if f._inSida == nil and f._sida ~= nil then f._inSida = f._sida end
+			if not f._korsat and not f._sidanOm and f._inSida ~= nil
+				and v1 * (f._inSida :: number) > HinderObservation.SID_TOL then
+				if f._stoppV == nil then
+					if fart ~= nil and fart <= HinderObservation.STOPP_FART and iZon(h, u1, v1) then
+						f._stoppV = math.abs(v1)
+						f.tStopp = t
+					end
+				elseif not f._bakat and math.abs(v1) - (f._stoppV :: number) > HinderObservation.BAKAT_TOL then
+					f._bakat = true
+				end
+			end
 			if overlappar(h, u1, v1, till.Y, halv) then
 				f.overlapp = true
 				f.overlappAntal += 1
@@ -541,6 +606,7 @@ function HinderObservation.brott(rittId: string?, t: number?)
 	if not r or not r.oppen then return end
 	for _, f in pairs(r._aktiva) do stangForsok(r, f, "brott", t) end
 	vantande(r, t, "ej_fullstandigt") -- B4a: ett brott under fönstret är okänt
+	r._tSist = nil -- B4b: ingen fart räknas över ett brott
 end
 
 function HinderObservation.avsluta(rittId: string?, satt: string): boolean

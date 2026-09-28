@@ -1,6 +1,6 @@
 # B4b: refusal and run-out per fence attempt — only what the server observes
 
-Status: contract written before code, 2026-09-28.
+Status: contract written before code, 2026-09-28. **BUILT, LOCAL SUITE GREEN, NOT PHYSICALLY VERIFIED** — READY_FOR_CHATGPT_REVIEW.
 Order: [CHATGPT_REVIEW_B4A_ACCEPTED](https://github.com/Carneteg/UBRF/issues/266#issuecomment-5869108172) and
 [CHATGPT_B4B_EXECUTE_NOW](https://github.com/Carneteg/UBRF/issues/266#issuecomment-5869238281). Base `7d51edf`.
 **No change to D2 judging, no rosette.** Physical test last.

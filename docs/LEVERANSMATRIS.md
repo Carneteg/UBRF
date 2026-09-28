@@ -236,7 +236,7 @@ konstruktion hittas på.
 | B1 ridkänsla | #266 B1 | ridkärna | helhet och galoppfattning | — | — | känns levande | `EJ_PÅBÖRJAD` |
 | B2 animation, hovljud, kamera | #266 B2 | procedurella ben; ljudet läser en `Sounds`-konfiguration som ingen skapar | ljud kopplat; klipp | G-ASSET | ljudkällan finns i bygget | hovljud hörs | `EJ_PÅBÖRJAD` |
 | B3 mätning av väg och rytm | #266 B3 | fas och telemetri | övningsspecifik mätning | INFRA-2B1 | fel plats fångas | — | `EJ_PÅBÖRJAD` |
-| B4 hoppkedja | #266 B4 | generellt klienthopp | anridning, avsprång, hinderkontakt, landning, händelser på servern | INFRA-2B2 | bommen som ligger kvar räknas inte som riven | hoppet känns förberett | `DELVIS BYGGT` — **B4a** ([kontrakt](B4A-KNOCKDOWN-EVENT-CONTRACT.md)): nedslagshändelsen på servern per hinderförsök (`nedslag` ja/nej/okand/vantar, `nedslagGrund`, `tNedslag`; registrets `fysisk`). Stängt vid fel: dagens bommar kan inte falla och ger alltid «okand», aldrig «nej»; en fysisk bom ger «nej» först efter ett fönster utan fall. D2-bedömningen oförändrad, ingen rosett. Fallande bommar (Replits miljö), verklig kontakt, replikering och kalibrering är NOT_TESTED (Studio). Vägran/volt väntar på TR-utdraget (`[REFERENCE GAP]`) |
+| B4 hoppkedja | #266 B4 | generellt klienthopp | anridning, avsprång, hinderkontakt, landning, händelser på servern | INFRA-2B2 | bommen som ligger kvar räknas inte som riven | hoppet känns förberett | `DELVIS BYGGT` — **B4a** ([kontrakt](B4A-KNOCKDOWN-EVENT-CONTRACT.md)): nedslagshändelsen på servern per hinderförsök (`nedslag` ja/nej/okand/vantar, `nedslagGrund`, `tNedslag`; registrets `fysisk`). Stängt vid fel: dagens bommar kan inte falla och ger alltid «okand», aldrig «nej»; en fysisk bom ger «nej» först efter ett fönster utan fall. D2-bedömningen oförändrad, ingen rosett. Fallande bommar (Replits miljö), verklig kontakt, replikering och kalibrering är NOT_TESTED (Studio). **B4b** ([kontrakt](B4B-DISOBEDIENCE-CLASSIFIER-CONTRACT.md), TR III 2025 moment 385 i references/rules/): `olydnad` per försök — vägran bara för observerat stopp framför hindret FÖLJT av bakåt (3.1), utbrytning = sidan_om (4.1), stopp följt av hopp och ingen_passage utan stopp = okänt; `inSida` för konsumentens riktningskontroll. Volt (1.3, kräver banordning och spår) och istadighet (5.1, produktbeslut) inte byggda; D2-bedömningen oförändrad |
 | F1 personligheter och variation | #266 F1 | temperament i `Config`, tom `HorseStats` | verkliga hästars profiler (underlag krävs) | G-REFERENS | — | — | `EJ_PÅBÖRJAD` |
 | F2 vidare innehåll | #266 F2 | — | fler övningar och klasser | kärnan klar | — | — | `EJ_PÅBÖRJAD` |
 
@@ -251,8 +251,8 @@ Fysisk iPad och iPhone är uttryckligen uppskjutet och blockerar inte PC.
 
 ## Samlat slutspeltest (uppskjutna fall)
 
-**Samlad och låst i [FINAL-PLAYTEST-CHECKLIST.md](FINAL-PLAYTEST-CHECKLIST.md)** (#266 A2, 2026-09-28, omlåst efter B4a):
-byggidentitet `282a232646ad…`, alla fysiska och motorberoende
+**Samlad och låst i [FINAL-PLAYTEST-CHECKLIST.md](FINAL-PLAYTEST-CHECKLIST.md)** (#266 A2, 2026-09-28, omlåst efter B4b):
+byggidentitet `9775da2ad7bf…`, alla fysiska och motorberoende
 punkter ur varje kontrakt sedan `7922d70` och de kvarvarande R4/R5-fallen från `ecb2f2e`
 (port, layout, avsittning, ledning, hela vägen, fysisk iPad och iPhone), i spelordning
 och med spårbarhet kontrakt → rad. Allt NOT_TESTED tills Tobias fyller i listan.

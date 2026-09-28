@@ -1,6 +1,6 @@
 # Slutspeltest — samlad checklista (#266 A2)
 
-Status: LÅST KANDIDAT för Tobias fysiska slutprov, 2026-09-28 — **omlåst efter B4a** (nedslagshändelsen på servern; clear round: anmälan, startlista, banskiss; eftervården efter resultatet; tävlingskläder vid anmälan), samma dag. Ingenting här är
+Status: LÅST KANDIDAT för Tobias fysiska slutprov, 2026-09-28 — **omlåst efter B4b** (olydnad per hinderförsök; nedslagshändelsen på servern; clear round: anmälan, startlista, banskiss; eftervården efter resultatet; tävlingskläder vid anmälan), samma dag. Ingenting här är
 godkänt; varje rad står som NOT_TESTED tills Tobias fyller i den.
 Beslut: Tobias «Do A» på [NEXT_PACKAGE_RECOMMENDATION_20260928](https://github.com/Carneteg/UBRF/issues/266#issuecomment-5865193035).
 
@@ -9,9 +9,9 @@ Beslut: Tobias «Do A» på [NEXT_PACKAGE_RECOMMENDATION_20260928](https://githu
 | | |
 |---|---|
 | Gren | `codex/circle-lesson-20260926` |
-| Kodhuvud vid låsning | B4a-commiten på grenen (se leveransrapporten i #266); första låsningen var `19df5e6` |
-| Byggidentitet (`kallhash`) | `282a232646ad3a54ded25695fa2c2191eff8cc1cd0a52420ec5a535eaba7a39a` ur 106 mappade filer (105 skript, 1 modell), beräknad med `tools/bygg-identitet.py` (tidigare låsningar: `46b7d67b5bc2…` D5 R1, `82c56922d2c6…` D5, `93f07144a1b5…` D2c, `b22335d27996…` D2b, `5a7d81b05827…` D2a R2, `e23198df4614…`) |
-| Kontroll i spelet | byggidentiteten i spelets diagnostik ska visa **`282a232646ad`**. Visar den något annat är det inte den här kandidaten — avbryt och säg till. |
+| Kodhuvud vid låsning | B4b-commiten på grenen (se leveransrapporten i #266); första låsningen var `19df5e6` |
+| Byggidentitet (`kallhash`) | `9775da2ad7bf8f866c163f5a1c01c4a74a3107125620344fac3b36ed5fa9bdf3` ur 106 mappade filer (105 skript, 1 modell), beräknad med `tools/bygg-identitet.py` (tidigare låsningar: `282a232646ad…` B4a, `46b7d67b5bc2…` D5 R1, `82c56922d2c6…` D5, `93f07144a1b5…` D2c, `b22335d27996…` D2b, `5a7d81b05827…` D2a R2, `e23198df4614…`) |
+| Kontroll i spelet | byggidentiteten i spelets diagnostik ska visa **`9775da2ad7bf`**. Visar den något annat är det inte den här kandidaten — avbryt och säg till. |
 | Bas | `main` `7922d70` (#264) |
 
 Varje ändring av en mappad Roblox-källa efter låsningen ger en ny `kallhash`
@@ -38,7 +38,7 @@ anteckning vid FAIL/NOTE. Raderna står i den ordning du möter dem i spelet.
 
 | # | Kontroll | PC | iPad | iPhone |
 |---|---|---|---|---|
-| 0.1 | Byggidentiteten visar `282a232646ad` | | | |
+| 0.1 | Byggidentiteten visar `9775da2ad7bf` | | | |
 | 0.2 | Språk: spela en gång på svenska; byt till engelska minst i en lektion och vid ett slutkort | | | |
 
 ## 1. Spawn, stall och port
