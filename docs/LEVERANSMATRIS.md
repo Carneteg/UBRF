@@ -251,13 +251,8 @@ Fysisk iPad och iPhone är uttryckligen uppskjutet och blockerar inte PC.
 
 ## Samlat slutspeltest (uppskjutna fall)
 
-Kvar från R4/R5 på `ecb2f2e`, allt NOT_TESTED:
-- **Port:** raden följer motorns visning; X och klick på båda sidor om gränsen; ett dörrbyte; passage.
-- **Layout:** panelen i desktop, kompakt och vanlig layout, hjälpen öppen, lång SV/EN-text.
-- **Avsittning:** normal, hopp och fall.
-- **Ledning:** gång, stopp, sväng, passage genom ledaren.
-- **Hela vägen:** spawn → skötsel → ledning → ridhus 5/5 → uppsittning → ridning → avsittning.
-- **Fysisk iPad och iPhone:** separat från emulator.
-
-Därtill slutprovkolumnen i varje rad ovan. PC, touch, emulator och två
-spelare redovisas separat.
+**Samlad och låst i [FINAL-PLAYTEST-CHECKLIST.md](FINAL-PLAYTEST-CHECKLIST.md)** (#266 A2, 2026-09-28):
+kandidaten `19df5e6`, byggidentitet `e23198df4614…`, alla fysiska och motorberoende
+punkter ur varje kontrakt sedan `7922d70` och de kvarvarande R4/R5-fallen från `ecb2f2e`
+(port, layout, avsittning, ledning, hela vägen, fysisk iPad och iPhone), i spelordning
+och med spårbarhet kontrakt → rad. Allt NOT_TESTED tills Tobias fyller i listan.
