@@ -188,6 +188,39 @@ Beskriv aldrig en saknad webbimplementation som genomförd paritet. Under
 etappen redovisas den som en **medveten, tidsbegränsad avvikelse** med
 hänvisning hit.
 
+### Produktbeslut 2026-09-28: Roblox och webb uppdateras samtidigt
+
+Det tidsbegränsade Roblox-först-undantaget från 2026-09-22 är **avslutat och
+ersatt för allt framtida arbete**.
+
+Från och med detta beslut gäller följande stående regel:
+
+- Varje ändring som påverkar produktbeteende, gameplay, spelarföde,
+  instruktioner, UI, lokalisering, hästhantering, lektioner, miljöbeteende
+  eller annan spelbar upplevelse ska implementeras och verifieras på
+  **både Roblox och HTML/webb i samma leverans**.
+- Roblox är fortsatt primär spelplattform och är facit när versionerna har
+  driftat, men en Roblox-ändring är inte färdiglevererad förrän webben är
+  uppdaterad till motsvarande produktutfall.
+- En webbändring som påverkar den gemensamma spelupplevelsen ska på samma sätt
+  föras över till Roblox i samma leverans.
+- Rendering, input och teknisk implementation får skilja sig mellan
+  plattformarna, men spelarens avsedda regler, flöde, instruktioner och
+  produktutfall ska motsvara varandra.
+- Om identiskt beteende verkligen inte är möjligt av tekniska plattformsskäl
+  krävs ett **uttryckligt produktägarbeslut från Tobias**. Skillnaden ska
+  dokumenteras som ett plattformsundantag med motivering och samma avsedda
+  spelarutfall.
+- Ingen ensidig plattformsändring får lämnas som normal backlog eller
+  "paritet senare".
+- Varje handoff ska redovisa Roblox-filer, webbfiler, parity-kontroll,
+  relevanta tester/build för båda plattformarna och eventuella uttryckligen
+  godkända undantag.
+
+Detta beslut ersätter punkt 1 och 5 i «Tidsbegränsat produktbeslut 2026-09-22»
+i den mån de pausar samtidig webbleverans. Den historiska texten ligger kvar
+för spårbarhet men är inte längre aktuell arbetsorder.
+
 ### Produktbeslut 2026-09-26: completion first
 
 Beslutet är Tobias, förmedlat i PR #264, kommentar `5843082008`.
