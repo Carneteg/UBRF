@@ -1061,6 +1061,14 @@ Sprak.text = {
 		sv = "Linjen rids mot pilarna. Rid till startringen och börja om.",
 		en = "The line goes the way of the arrows. Ride to the start ring and begin again.",
 	},
+	["vaglektion.utan_streck"] = {
+		sv = "Rid utan streck",
+		en = "Ride without lines",
+	},
+	["vaglektion.visa_vagen"] = {
+		sv = "Visa vägen",
+		en = "Show the way",
+	},
 	["vaglektion.walk_or_trot"] = {
 		sv = "Rid linjen i skritt eller trav. Rid till startringen och börja om.",
 		en = "Ride the line in walk or trot. Ride to the start ring and begin again.",

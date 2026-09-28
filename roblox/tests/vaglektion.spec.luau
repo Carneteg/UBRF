@@ -398,6 +398,107 @@ UgnetaController.satLektionsVal(V.panel) -- som LektionController efter varje st
 check("R1: reattaching to the same ride keeps free-riding navigation",
 	#UgnetaController.panel(KAP).knappar == 4)
 
+-- ── C3 (docs/ROUTE-LESS-GUIDANCE-CONTRACT.md): "Rid utan streck", spelarens eget val ──
+-- Egen funktion: huvudchunken har högst 200 lokala register.
+;(function()
+	Skopa._nollstallForProv()
+	HorseService.dismount(p)
+	id = mount(); nu = { u = 0, v = 4 }
+	local remote = Networking.get("VoltLektion")
+	local minneSync = Networking.get("LektionsMinneSync")
+	local syncC = Networking.get("VoltLektionSync")
+	--[[ PÅHITTAT/KONTROLL: lektionsminnet levereras genom klientens riktiga kanal
+		(LektionsMinneSync) med en hög session, eftersom den här bänken inte sparar. ]]
+	local rev = 0
+	local function minne(lektioner)
+		rev += 1
+		minneSync.OnClientEvent:Fire({ historik = "betrodd", lektioner = lektioner, session = 1000000, rev = rev })
+	end
+	local function knapp(nyckel)
+		local sida = V.panel()
+		return sida and hitta(sida.knappar, Sprak.t(nyckel)) or nil
+	end
+	local function leverera() syncC.OnClientEvent:Fire(image()) end
+	--[[ Guidens delar efter bredd: ringstreck 0,3·spm, linjestreck 0,45·spm och
+		pilstreck 0,4·spm, var och en × 0,65 (VoltLektionController.streck). ]]
+	local function delar()
+		local g = workspace:FindFirstChild("Voltguide")
+		if not g then return nil end
+		local spm = HorseService.ridplats(id).studsPerMeter or 3
+		local ring, ovr = 0, 0
+		for _, d in ipairs(g:GetChildren()) do
+			if math.abs(d.Size.X - 0.3 * spm * 0.65) < 1e-3 then ring += 1 else ovr += 1 end
+		end
+		return { ring = ring, ovr = ovr }
+	end
+	Sprak.satVal("sv")
+	V.avbryt(); V.start(id, nil)
+	UgnetaController.satLektionsVal(V.panel)
+	V.valj("vag_mitt")
+	minne({ vag_mitt = "okand", halt = "sparad" })
+	check("C3: not completed gives no 'Rid utan streck'", knapp("vaglektion.utan_streck") == nil
+		and knapp("vaglektion.visa_vagen") == nil)
+	aid("driv")
+	knapp("vaglektion.start").skicka(); leverera()
+	local full = delar()
+	check("C3: the full guide has rings and line/chevron parts", full ~= nil and full.ring > 0 and full.ovr > 0,
+		full and ("%d ringar, %d övriga"):format(full.ring, full.ovr))
+	minne({ vag_mitt = "sparad", halt = "sparad" })
+	local k = knapp("vaglektion.utan_streck")
+	check("C3: completed gives 'Rid utan streck'", k ~= nil)
+	local n = #remote._skickat
+	k.skicka()
+	local mindre = delar()
+	check("C3: pressing it sends nothing to the server", #remote._skickat == n)
+	check("C3: less guidance keeps only the start and end rings", mindre ~= nil and mindre.ovr == 0
+		and mindre.ring == full.ring, mindre and ("%d ringar, %d övriga"):format(mindre.ring, mindre.ovr))
+	check("C3: the button is now 'Visa vägen'", knapp("vaglektion.visa_vagen") ~= nil
+		and knapp("vaglektion.utan_streck") == nil)
+	Sprak.satVal("en")
+	check("C3: English words", knapp("vaglektion.visa_vagen") ~= nil and Sprak.t("vaglektion.visa_vagen") == "Show the way")
+	Sprak.satVal("sv")
+	-- Samma uppgift: en ordnad genomridning slutförs som förut.
+	rakt(U, 2)
+	linje("vag_mitt", -4, -1.9); leverera()
+	check("C3: with less guidance the guide during the route is still rings only",
+		delar() ~= nil and delar().ovr == 0)
+	linje("vag_mitt", -1.9, 0)
+	linje("vag_mitt", 0, langd("vag_mitt"))
+	local klar = image()
+	check("C3: the task completes exactly as before with less guidance", klar.lage == "complete"
+		and klar.resultat ~= nil and klar.resultat.figur == "vag_mitt"
+		and math.abs(klar.resultat.slutS - langd("vag_mitt")) < 1e-6)
+	leverera()
+	knapp("vaglektion.visa_vagen").skicka()
+	knapp("voltlektion.retry").skicka(); leverera()
+	local igen = delar()
+	check("C3: 'Visa vägen' restores the full guide", igen ~= nil and igen.ovr == full.ovr and igen.ring == full.ring,
+		igen and ("%d ringar, %d övriga"):format(igen.ring, igen.ovr))
+	-- Typbyte ger hela guiden igen.
+	knapp("vaglektion.utan_streck").skicka()
+	knapp("vaglektion.finish").skicka(); leverera()
+	V.valj("halt")
+	check("C3: another lesson type never shows the choice, even when completed",
+		knapp("vaglektion.utan_streck") == nil and knapp("vaglektion.visa_vagen") == nil)
+	V.valj("vag_mitt")
+	check("C3: a type switch resets to the full guide", knapp("vaglektion.utan_streck") ~= nil
+		and knapp("vaglektion.visa_vagen") == nil)
+	-- Ny ritt ger hela guiden igen.
+	knapp("vaglektion.utan_streck").skicka()
+	HorseService.dismount(p)
+	id = mount(); nu = { u = 0, v = 4 }
+	V.avbryt(); V.start(id, nil)
+	UgnetaController.satLektionsVal(V.panel)
+	V.valj("vag_mitt")
+	check("C3: a new ride resets to the full guide", knapp("vaglektion.utan_streck") ~= nil
+		and knapp("vaglektion.visa_vagen") == nil)
+	V.avbryt()
+	for _, nyckel in ipairs({ "vaglektion.utan_streck", "vaglektion.visa_vagen" }) do
+		check("C3: " .. nyckel .. " exists in SV and EN", Sprak.iSprak("sv", nyckel) ~= nyckel
+			and Sprak.iSprak("en", nyckel) ~= nyckel)
+	end
+end)()
+
 local sync = Networking.get("VoltLektionSync")
 local toOther = 0
 for _, rad in ipairs(sync._skickat) do if rad[1] ~= p then toOther += 1 end end

@@ -136,10 +136,15 @@ local typ = "volt"
 local meny: string? = nil
 local guideTyp: string? = nil
 local guideDel: number? = nil
+--[[ C3 (docs/ROUTE-LESS-GUIDANCE-CONTRACT.md): spelarens eget val "Rid utan streck"
+	för ridvägarna. Sessionslokalt, aldrig sparat, aldrig automatiskt; ny ritt,
+	typbyte och avbrott ger hela guiden igen. `guideUtan` är cachens nyckel. ]]
+local utanStreck = false
+local guideUtan: boolean? = nil
 
 local function rivGuide()
 	if guide then guide:Destroy() end
-	guide, guideRef, guideDel = nil, nil, nil
+	guide, guideRef, guideDel, guideUtan = nil, nil, nil, nil
 end
 
 -- One flat non-colliding dash, only if the whole dash stays within the arena.
@@ -192,7 +197,7 @@ end
 -- Riding paths: the selected line with direction chevrons, a start ring and
 -- an end ring. The next target is solid (start ring before arming, the line
 -- and end ring while riding), the rest faint.
-local function vagGuide(m, ref, delmal)
+local function vagGuide(m, ref, delmal, utan: boolean?)
 	local p = ref.plats
 	local function lokalt(u, v) return Plats.tillVarld(p, Vector3.new(u, 0.035, v)) end
 	local du, dv = (ref.u1 - ref.u0) / ref.langd, (ref.v1 - ref.v0) / ref.langd
@@ -200,13 +205,14 @@ local function vagGuide(m, ref, delmal)
 	local korsVek = lokalt(ref.u0 + dv, ref.v0 - du) - lokalt(ref.u0, ref.v0)
 	local ridning = delmal ~= nil and delmal >= 1
 	local antal = math.max(2, math.floor(ref.langd / 1.5))
-	for i = 1, antal - 1 do
+	-- C3: med mindre vägvisning ritas bara start- och slutringen nedan.
+	for i = 1, if utan then 0 else antal - 1 do
 		local t = ref.langd * i / antal
 		local pos = lokalt(ref.u0 + du * t, ref.v0 + dv * t)
 		streck(m, p, pos, riktning, 0.45 * p.studsPerMeter, ridning)
 	end
 	-- Chevrons every 6 m point from start to end.
-	local t = 6
+	local t = if utan then math.huge else 6
 	while t < ref.langd - 3 do
 		local spets = lokalt(ref.u0 + du * t, ref.v0 + dv * t)
 		for _, sida in ipairs({ 1, -1 }) do
@@ -370,8 +376,9 @@ end
 
 local function visaGuide(ref, delmal)
 	if not ref or not ref.plats then rivGuide(); return end
+	local utan = utanStreck and vagTyp(typ)
 	if guideRef and guideRef.ramId == ref.ramId and guideRef.nyckel == ref.nyckel and guideTyp == typ
-		and guideDel == delmal then return end
+		and guideDel == delmal and guideUtan == utan then return end
 	rivGuide()
 	local m = Instance.new("Model"); m.Name = "Voltguide"
 	if typ == "serpentin" or vagTyp(typ) or typ == "halvvolt" or typ == "markbom" or typ == "hornet" then
@@ -379,8 +386,8 @@ local function visaGuide(ref, delmal)
 		elseif typ == "hornet" then hornGuide(m, ref, delmal)
 		elseif typ == "halvvolt" then halvvoltGuide(m, ref, delmal)
 		elseif typ == "markbom" then markbomGuide(m, ref, delmal)
-		else vagGuide(m, ref, delmal) end
-		m.Parent = workspace; guide, guideRef, guideTyp, guideDel = m, ref, typ, delmal
+		else vagGuide(m, ref, delmal, utan) end
+		m.Parent = workspace; guide, guideRef, guideTyp, guideDel, guideUtan = m, ref, typ, delmal, utan
 		return
 	end
 	local p = ref.plats
@@ -418,7 +425,7 @@ local function visaGuide(ref, delmal)
 		end
 	end
 	end
-	m.Parent = workspace; guide, guideRef, guideTyp = m, ref, typ
+	m.Parent = workspace; guide, guideRef, guideTyp, guideUtan = m, ref, typ, utan
 end
 
 local function mottag(b)
@@ -513,7 +520,7 @@ function V.valj(vald: string?)
 	local ny = if vald == "halt" or vald == "overgang" or vald == "serpentin" or vald == "tempo"
 		or vald == "vag_mitt" or vald == "vag_diag" or vald == "halvvolt" or vald == "galopp"
 		or vald == "markbom" or vald == "hornet" then vald else "volt"
-	if ny ~= typ then typ, bild = ny, nil; rivGuide() end
+	if ny ~= typ then typ, bild = ny, nil; utanStreck = false; rivGuide() end
 	halsning = nil
 	valGen += 1
 	coachning, coachForsok = nil, nil
@@ -644,6 +651,8 @@ local function vagText(key): string?
 	if key=="off_route" then return Sprak.t("vaglektion.off_route") end
 	if key=="reverse" then return Sprak.t("vaglektion.reverse") end
 	if key=="walk_or_trot" then return Sprak.t("vaglektion.walk_or_trot") end
+	if key=="utan_streck" then return Sprak.t("vaglektion.utan_streck") end
+	if key=="visa_vagen" then return Sprak.t("vaglektion.visa_vagen") end
 	if key=="unknown" then return Sprak.t("vaglektion.unknown") end
 	if key=="complete" then return Sprak.t("vaglektion.complete") end
 	if key=="timeout" then return Sprak.t("vaglektion.timeout") end
@@ -1021,6 +1030,17 @@ function V.panel()
 			table.insert(knappar,val("retry",function() skicka("retry") end))
 		end
 	end
+	--[[ C3 (docs/ROUTE-LESS-GUIDANCE-CONTRACT.md): ridvägarnas egna val. "Rid utan
+		streck" bara när lektionen är klarad enligt minnet; "Visa vägen" alltid när
+		mindre vägvisning är på. Lokalt — inget skickas till servern. ]]
+	if vagTyp(typ) and (utanStreck or klarad(typ)) then
+		table.insert(knappar, val(if utanStreck then "visa_vagen" else "utan_streck", function()
+			utanStreck = not utanStreck
+			local visad = guide ~= nil
+			rivGuide()
+			if visad and bild then visaGuide(bild.referens, bild.delmal) end
+		end))
+	end
 	table.insert(knappar,val("finish",function() skicka("finish") end))
 	return { ersatt=true, knappar=knappar, text=txt, ovning=txt, vantar=false }
 end
@@ -1041,7 +1061,7 @@ function V.start(marke, legacy)
 			if Installning.kommentarer() == "inga" then halsning = nil; coachning = nil end
 		end)
 	end
-	if not samma then valt,fri,bild,sekvens,meny=false,false,nil,0,nil end
+	if not samma then valt,fri,bild,sekvens,meny=false,false,nil,0,nil; utanStreck=false end
 	ritt,gaLektion,pending,fel=marke,legacy,false,nil
 	attached = true
 	if not listener then
@@ -1091,6 +1111,7 @@ function V.lektion(): boolean return attached and valt end
 function V.avbryt()
 	-- Keep selection only for reattachment to this SAME accepted ride.
 	generation+=1; requestNr+=1; pending=false; attached=false; rivGuide()
+	utanStreck = false
 	halsning = nil
 	valGen += 1
 	coachning, coachForsok = nil, nil

@@ -403,6 +403,8 @@ const SPRAK = {
   "vaglektion.to_end": { sv: "Nästan framme! Rid in i slutringen.", en: "Almost there! Ride into the end ring." },
   "vaglektion.off_route": { sv: "Ni kom av linjen. Rid tillbaka till startringen och börja om.", en: "You left the line. Ride back to the start ring and begin again." },
   "vaglektion.reverse": { sv: "Linjen rids mot pilarna. Rid till startringen och börja om.", en: "The line goes the way of the arrows. Ride to the start ring and begin again." },
+  "vaglektion.utan_streck": { sv: "Rid utan streck", en: "Ride without lines" },
+  "vaglektion.visa_vagen": { sv: "Visa vägen", en: "Show the way" },
   "vaglektion.walk_or_trot": { sv: "Rid linjen i skritt eller trav. Rid till startringen och börja om.", en: "Ride the line in walk or trot. Ride to the start ring and begin again." },
   "vaglektion.unknown": { sv: "Jag tappade en bit av ritten. Rid till startringen så börjar vi om.", en: "I missed part of the ride. Ride to the start ring and we begin again." },
   "vaglektion.complete": { sv: "Ridvägen klar! Du red hela linjen från start till mål.", en: "Riding path completed! You rode the whole line from start to finish." },
