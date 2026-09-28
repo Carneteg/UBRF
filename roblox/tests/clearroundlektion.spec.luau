@@ -226,6 +226,24 @@ check("avsittning efter ett färdigt resultat ger inget avbrutet utfall",
 	ClearRoundLektion._senasteForProv(p.UserId) == nil)
 id = mount(); nu = { u = 0, v = 4 }
 check("och nästa öppning visar inget avbrutet", image().forraAvbruten == nil)
+-- R2: ett rittslut som INTE är en avsittning (karaktären försvinner) ger samma
+-- slutliga utfall, med sitt riktiga skäl — aldrig framgång, omstart eller rosett.
+tillStart(); request("start"); overStartlinjen(); hopp1()
+local aktivt2 = RidForsok.aktivt(id)
+p.CharacterRemoving:Fire(p.Character)
+local avb2 = ClearRoundLektion._senasteForProv(p.UserId)
+check("karaktären borta mitt i banan: «avbruten» med skälet karaktar_borta", avb2 ~= nil
+	and avb2.utfall == "avbruten" and avb2.orsak == "karaktar_borta" and avb2.omstartMojlig == false
+	and avb2.rosett == nil and avb2.felfri == nil and avb2.fel == nil
+	and aktivt2 ~= nil and avb2.forsokId == aktivt2.forsokId, avb2 and avb2.orsak)
+check("det försöket är också avbrutet, inte slutfört", aktivt2 ~= nil
+	and HorseService.forsok(aktivt2.forsokId).orsak == "avbrutet")
+p.Character = player(996).Character
+id = mount(); nu = { u = 0, v = 4 }
+local bk = image()
+check("nästa öppning bär skälet karaktar_borta", bk.forraAvbruten ~= nil and bk.forraAvbruten.orsak == "karaktar_borta")
+KARAKTAR_BORTA_BILD = bk
+tillStart(); request("start")
 -- Avbruten igen, för klientprovet nedan.
 tillStart(); request("start"); overStartlinjen(); hopp1()
 HorseService.dismount(p)
@@ -259,8 +277,26 @@ print("\n── 8. Klienten: menyn, sidans texter, guiden och resultatkortet ─
 	check("valet öppnar clear round med Starta ritten", VC.lektion() and hitta(VC.panel().knappar,
 		Sprak.t("clearround.start")) ~= nil)
 	sync0.OnClientEvent:Fire(image())
-	check("sidan säger först att förra ritten avbröts", borjar(VC.panel().text, Sprak.t("clearround.forra_avbruten")),
-		VC.panel().text)
+	check("avsittning: sidan säger att förra ritten avbröts när ni satt av",
+		borjar(VC.panel().text, Sprak.t("clearround.forra_avbruten_avsittning")), VC.panel().text)
+	--[[ R2: ett annat rittslut säger det neutrala — aldrig «satt av». Bilden med
+		skälet karaktar_borta levereras med högre revision (deklarerad klientbild). ]]
+	do
+		local fake = table.clone(KARAKTAR_BORTA_BILD)
+		fake.rittId = id; fake.revision = image().revision + 1000
+		sync0.OnClientEvent:Fire(table.freeze(fake))
+		local tt = VC.panel().text
+		check("karaktären borta: sidan säger det neutrala, inte «satt av»",
+			borjar(tt, Sprak.t("clearround.forra_avbruten")) and not string.find(tt, "satt av", 1, true), tt)
+		Sprak.satVal("en")
+		tt = VC.panel().text
+		check("engelska, neutralt: inte «dismounted»", not string.find(tt, "dismounted", 1, true)
+			and string.find(tt, "interrupted mid-course", 1, true) ~= nil, tt)
+		Sprak.satVal("sv")
+		-- Klientens bild nollställs (typbyte och tillbaka), så att serverns riktiga,
+		-- lägre revisioner tas emot igen för resten av provet.
+		VC.valj("halt"); VC.valj("clearround")
+	end
 	-- Startsignalen och startlinjen.
 	tillStart(); request("start"); leverera()
 	check("sidan säger startsignal och startlinjen", borjar(VC.panel().text, Sprak.t("clearround.to_start")),

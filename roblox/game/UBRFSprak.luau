@@ -1938,6 +1938,10 @@ Sprak.text = {
 		en = "The course fences are not in place right now.",
 	},
 	["clearround.forra_avbruten"] = {
+		sv = "Förra clear round-ritten avbröts mitt i banan – den räknas inte som genomförd.",
+		en = "Your last clear round was interrupted mid-course – it does not count as completed.",
+	},
+	["clearround.forra_avbruten_avsittning"] = {
 		sv = "Förra clear round-ritten avbröts när ni satt av mitt i banan – den räknas inte som genomförd.",
 		en = "Your last clear round was interrupted when you dismounted mid-course – it does not count as completed.",
 	},

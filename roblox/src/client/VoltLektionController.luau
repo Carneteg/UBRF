@@ -1024,7 +1024,11 @@ function V.panel()
 		utfall står först på clear round-sidan tills en ny ritt startas. ]]
 	if typ == "clearround" and key == "intro" and type(b.forraAvbruten) == "table"
 		and b.forraAvbruten.utfall == "avbruten" then
-		txt = Sprak.t("clearround.forra_avbruten") .. " " .. txt
+		--[[ R2: orsaken hittas aldrig på — «satt av» bara när rittslutet var en
+			avsittning; annars (karaktären borta, död, lämnat spelet) neutralt. ]]
+		local nyckel = if b.forraAvbruten.orsak == "avsittning"
+			then "clearround.forra_avbruten_avsittning" else "clearround.forra_avbruten"
+		txt = Sprak.t(nyckel) .. " " .. txt
 	end
 	--[[ D2a: nästa hopp med nummer, färg och riktning ur serverns bild. ]]
 	if typ == "clearround" and key == "jump" and type(b.nasta) == "table" and type(b.nasta.nr) == "number" then

@@ -7,7 +7,8 @@ Status: BUILT, local tests green, NOT physically verified, 2026-09-28. Contract 
   - Before the ride teardown, `HorseService.setRider` calls `ClearRoundLektion.vidRittSlut`. An **active** clear-round ride then gets **exactly one** terminal outcome: `utfall = "avbruten"`, with the ride-end reason (`avsittning` or another).
   - It is **not** a fall, because a voluntary dismount is not distinguished from one. It is never success, and gives no restart, no rosette and no `felfri`.
   - The attempt closes once, as `avbrutet`.
-  - The outcome is kept per player (session-local, never persistent) and shown the next time clear round opens ("Förra clear round-ritten avbröts …"). It is cleared when a new ride starts.
+  - The outcome is kept per player (session-local, never persistent) and shown the next time clear round opens. It is cleared when a new ride starts.
+  - R2 (#5866500256): the notice never invents a cause. "… avbröts när ni satt av mitt i banan" is used **only** when the reason is `avsittning`. Every other ride-end reason (character removed, died, left) gets the neutral "Förra clear round-ritten avbröts mitt i banan – den räknas inte som genomförd."
   - A dismount **after** a finished result changes nothing.
 - **The test bundle grew by two modules**, which pushed `voltlektion.spec` over Luau's 200-register limit. Its actor section now has its own function scope.
 Decisions: judging **B** ([#5865714893](https://github.com/Carneteg/UBRF/issues/266#issuecomment-5865714893)), with the prize rule corrected by

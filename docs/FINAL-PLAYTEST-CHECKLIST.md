@@ -10,8 +10,8 @@ Beslut: Tobias «Do A» på [NEXT_PACKAGE_RECOMMENDATION_20260928](https://githu
 |---|---|
 | Gren | `codex/circle-lesson-20260926` |
 | Kodhuvud vid låsning | D2a-commiten på grenen (se leveransrapporten i #266); första låsningen var `19df5e6` |
-| Byggidentitet (`kallhash`) | `c9556e93b2752beaf9680ee05307769c7d1c55c6c3db4b5e0788467d93940d40` ur 106 mappade filer (105 skript, 1 modell), beräknad med `tools/bygg-identitet.py` (tidigare låsning: `e23198df4614…`) |
-| Kontroll i spelet | byggidentiteten i spelets diagnostik ska visa **`c9556e93b275`**. Visar den något annat är det inte den här kandidaten — avbryt och säg till. |
+| Byggidentitet (`kallhash`) | `5a7d81b058276a0a67d786af61677e198b1b8df308d65c6e7a9ca28aa911d34b` ur 106 mappade filer (105 skript, 1 modell), beräknad med `tools/bygg-identitet.py` (tidigare låsning: `e23198df4614…`) |
+| Kontroll i spelet | byggidentiteten i spelets diagnostik ska visa **`5a7d81b05827`**. Visar den något annat är det inte den här kandidaten — avbryt och säg till. |
 | Bas | `main` `7922d70` (#264) |
 
 Varje ändring av en mappad Roblox-källa efter låsningen ger en ny `kallhash`
@@ -38,7 +38,7 @@ anteckning vid FAIL/NOTE. Raderna står i den ordning du möter dem i spelet.
 
 | # | Kontroll | PC | iPad | iPhone |
 |---|---|---|---|---|
-| 0.1 | Byggidentiteten visar `c9556e93b275` | | | |
+| 0.1 | Byggidentiteten visar `5a7d81b05827` | | | |
 | 0.2 | Språk: spela en gång på svenska; byt till engelska minst i en lektion och vid ett slutkort | | | |
 
 ## 1. Spawn, stall och port
@@ -118,7 +118,7 @@ Avsluta. Därtill de särskilda raderna.
 | 6.22 | Clear round — går blått 0,68 m och rött 0,52 m att hoppa i riktigt spel, åt båda hållen enligt banan? (hoppfysiken, B4) | | | |
 | 6.23 | Clear round — resultatkortet: «Inga observerade fel …», förenklad bedömning och «Träningsbana»; aldrig «felfri», ingen rosett; omstart bara efter fel i försök 1 (D2-CLEAR-ROUND-DAY) | | | |
 | 6.24 | Clear round — en utbrytning, fel väg och 45 s/180 s ger begripliga besked (D2-CLEAR-ROUND-DAY) | | | |
-| 6.25 | Clear round — sitt av mitt i banan, sitt upp igen och öppna clear round: «Förra clear round-ritten avbröts …» syns och försvinner vid ny start (D2-CLEAR-ROUND-DAY R1) | | | |
+| 6.25 | Clear round — sitt av mitt i banan, sitt upp igen och öppna clear round: «Förra clear round-ritten avbröts när ni satt av …» syns och försvinner vid ny start; efter ett annat rittslut (t.ex. återställd karaktär) står det neutrala «… avbröts mitt i banan», aldrig «satt av» (D2-CLEAR-ROUND-DAY R1/R2) | | | |
 
 ## 7. Avsittning, layout och återkomst
 
