@@ -446,6 +446,91 @@ HorseService.dismount(actor)
 	r("finish")
 end)()
 
+-- C1 (docs/CIRCLE-LINE-ADVICE-CONTRACT.md): the advice when a point leaves the line,
+-- through the real HorseService and the real VoltLektionController panel, on a fresh ride.
+;(function()
+	HorseService.dismount(p)
+	id=mount()
+	local q=0
+	local function r(op) q+=1; return request(op,q) end
+	local VC=VoltLektionController
+	local syncC=Networking.get("VoltLektionSync")
+	local function leverera(b) syncC.OnClientEvent:Fire(b) end
+	local function panelText() leverera(image()); local sida=VC.panel(); return sida and sida.text end
+	-- The panel appends the attempt's progress ("… 0%") in approach, as for every text there.
+	local function borjar(t, x) return type(t)=="string" and string.sub(t,1,#x)==x end
+	Sprak.satVal("sv")
+	VC.avbryt(); VC.start(id,nil)
+	UgnetaController.satLektionsVal(VC.panel)
+	VC.valj("volt")
+	local UT, IN, LINE = Sprak.t("voltlektion.line_ut"), Sprak.t("voltlektion.line_in"), Sprak.t("voltlektion.line")
+	local function armed()
+		for _=1,6 do step(0,20) end
+		return image().lage=="riding"
+	end
+	step(0,20,5); step(0,20)
+	r("start")
+	check("KONTROLL C1 line: armed and riding at the band", armed())
+	-- Outward: 1 m per 0.25 s from radius 10 to 14.5 (a jump would be an observation break).
+	for _, v in ipairs({19,18,17,16,15.5}) do step(0,v) end
+	local ut=image()
+	check("C1 line: a point 4.5 m outside the line resets with side ut", ut.lage=="approach"
+		and ut.tips=="line" and ut.linjeSida=="ut")
+	check("C1 line: the real panel shows the outward advice", borjar(panelText(),UT))
+	Sprak.satVal("en")
+	check("C1 line: the locale changes the words", borjar(panelText(),Sprak.t("voltlektion.line_ut")) and not borjar(panelText(),UT))
+	Sprak.satVal("sv")
+	-- Back to the band: arming clears the side.
+	for _, v in ipairs({16,17,18,19,20}) do step(0,v) end
+	check("C1 line: finding the band again clears the side", armed() and image().linjeSida==nil
+		and not borjar(panelText(),UT))
+	-- A delayed older snapshot with the side is not shown (the client's revision guard).
+	leverera(ut)
+	check("C1 line: a delayed older snapshot with a side is not shown", not borjar(VC.panel().text,UT))
+	-- Inward: from radius 10 to 5.5.
+	for _, v in ipairs({21,22,23,24,24.5}) do step(0,v) end
+	local inn=image()
+	check("C1 line: a point 4.5 m inside the line resets with side in", inn.lage=="approach"
+		and inn.tips=="line" and inn.linjeSida=="in")
+	check("C1 line: the real panel shows the inward advice", borjar(panelText(),IN))
+	for _, v in ipairs({23,22,21,20}) do step(0,v) end
+	check("KONTROLL C1 line: armed again", armed())
+	-- KONTROLL (declared snapshot substitution, as metricCase above): an aggregate reset
+	-- (the section's maxAvvikelse) has NO side, and the generic text stays.
+	step(0,20); step(0,20)
+	for i=1,18 do local a=-math.pi/2+2*math.pi*i/72; step(9*math.cos(a),30+9*math.sin(a)) end
+	local real=VoltObservation.ogonblick
+	local source=real(id)
+	local section=table.clone(source.pagar)
+	section.underlag="tillrackligt"; section.varv=0; section.netto=math.pi
+	section.medelAvvikelse=1; section.maxAvvikelse=4.5; section.motriktning=0; section.aterkomst=1
+	local candidate=table.clone(source); candidate.pagar=table.freeze(section); candidate=table.freeze(candidate)
+	VoltObservation.ogonblick=function(rid) return if rid==id then candidate else real(rid) end
+	s.voltLektion.sistaP=nil
+	VoltLektion.steg(s.voltLektion,s.voltLektion.deadline-1)
+	VoltObservation.ogonblick=real
+	local agg=image()
+	check("C1 line: an aggregate reset is line with NO side", agg.lage=="approach" and agg.tips=="line"
+		and agg.linjeSida==nil)
+	check("C1 line: and the panel shows the generic line text", borjar(panelText(),LINE))
+	-- Another reset kind clears a side: out, then an observation gap (unknown/approach).
+	for _, v in ipairs({20,19,18,17,16,15.5}) do step(0,v) end
+	armed()
+	for _, v in ipairs({19,18,17,16,15.5}) do step(0,v) end
+	check("KONTROLL C1 line: outward again", image().linjeSida=="ut")
+	r("finish")
+	check("C1 line: finish carries no side", image().lage=="closed" and image().linjeSida==nil)
+	step(0,20,5); step(0,20)
+	r("start")
+	check("C1 line: a new attempt starts without a side", image().lage=="approach" and image().linjeSida==nil)
+	r("finish")
+	VC.avbryt()
+	UgnetaController.satLektionsVal(nil)
+	for _, n in ipairs({"voltlektion.line_ut","voltlektion.line_in"}) do
+		check("C1 line: "..n.." exists in SV and EN", Sprak.iSprak("sv",n)~=n and Sprak.iSprak("en",n)~=n)
+	end
+end)()
+
 check("lesson never writes persistent data", (__datastore.forsok and __datastore.forsok.skriv or 0)==writes)
 if fails>0 then error(tostring(fails).." FEL") end
 print(string.format("\nVOLTLEKTION: %d prov, alla gröna",total))

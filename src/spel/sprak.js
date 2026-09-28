@@ -301,6 +301,8 @@ const SPRAK = {
   "voltlektion.approach": { sv: "Rid fram till det gröna bandet. Där börjar vi följa ditt varv.", en: "Ride to the green band. We will follow your circle from there." },
   "voltlektion.ride": { sv: "Titta runt volten och följ bandet hela vägen.", en: "Look around the circle and follow the band all the way." },
   "voltlektion.line": { sv: "Hitta bandet igen, så börjar vi ett nytt varv tillsammans.", en: "Find the band again and we will start a fresh circle together." },
+  "voltlektion.line_ut": { sv: "Ni gled lite utåt från volten. Styr in mot mitten och titta dit du vill rida – hitta bandet igen, så börjar vi ett nytt varv.", en: "You drifted a little out from the circle. Steer in towards the middle and look where you want to go – find the band again and we will start a fresh circle." },
+  "voltlektion.line_in": { sv: "Ni kom lite för nära mitten. Styr ut mot bandet och håll samma avstånd runt hela varvet – hitta bandet igen, så börjar vi ett nytt varv.", en: "You came a little too close to the middle. Steer out towards the band and keep the same distance all the way round – find the band again and we will start a fresh circle." },
   "voltlektion.unknown": { sv: "Jag tappade en bit av din väg. Hitta bandet igen för ett nytt varv.", en: "I missed part of your path. Find the band again for a fresh circle." },
   "voltlektion.complete": { sv: "Volt klar! Du red ett helt varv och höll dig nära voltlinjen.", en: "Circle completed! You rode a full circle and stayed close to the line." },
   "voltlektion.timeout": { sv: "Vi har inget helt varv att bedöma ännu. Ta en paus eller prova igen.", en: "We do not have a full circle to assess yet. Take a break or try again." },

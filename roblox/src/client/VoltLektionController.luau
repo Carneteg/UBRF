@@ -947,6 +947,13 @@ function V.panel()
 		elseif b.lage=="ready" or b.lage=="closed" then "intro"
 		else b.tips
 	local txt = text(key)
+	--[[ C1 (docs/CIRCLE-LINE-ADVICE-CONTRACT.md): nollställdes volten för att
+		en punkt låg för långt från linjen, och vet servern åt vilket håll, blir
+		sidans text ETT konkret råd för just det hållet. Annars den vanliga. ]]
+	if key == "line" and typ == "volt" then
+		if b.linjeSida == "ut" then txt = Sprak.t("voltlektion.line_ut")
+		elseif b.linjeSida == "in" then txt = Sprak.t("voltlektion.line_in") end
+	end
 	--[[ Slutet på en övning: Ugnetas sammanfattning av JUST det här försökets
 		frysta resultat och ett nästa steg (docs/LESSON-FEEDBACK-CONTRACT.md). ]]
 	if not pending and not fel then

@@ -653,6 +653,14 @@ Sprak.text = {
 		sv = "Hitta bandet igen, så börjar vi ett nytt varv tillsammans.",
 		en = "Find the band again and we will start a fresh circle together.",
 	},
+	["voltlektion.line_ut"] = {
+		sv = "Ni gled lite utåt från volten. Styr in mot mitten och titta dit du vill rida – hitta bandet igen, så börjar vi ett nytt varv.",
+		en = "You drifted a little out from the circle. Steer in towards the middle and look where you want to go – find the band again and we will start a fresh circle.",
+	},
+	["voltlektion.line_in"] = {
+		sv = "Ni kom lite för nära mitten. Styr ut mot bandet och håll samma avstånd runt hela varvet – hitta bandet igen, så börjar vi ett nytt varv.",
+		en = "You came a little too close to the middle. Steer out towards the band and keep the same distance all the way round – find the band again and we will start a fresh circle.",
+	},
 	["voltlektion.unknown"] = {
 		sv = "Jag tappade en bit av din väg. Hitta bandet igen för ett nytt varv.",
 		en = "I missed part of your path. Find the band again for a fresh circle.",

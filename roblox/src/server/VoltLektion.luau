@@ -28,7 +28,11 @@ function VoltLektion.bild(s): any
 	return table.freeze({ rittId = s.rittId, forsokId = s.forsokId, revision = s.revision,
 		sekvens = s.hogsta, lage = s.lage, progress = s.progress, tips = s.tips,
 		resultat = s.resultat, referens = s.referens,
-		jamforelse = if s.lage == "complete" and j and j.forsokId == s.forsokId then j else nil })
+		jamforelse = if s.lage == "complete" and j and j.forsokId == s.forsokId then j else nil,
+		--[[ C1 (docs/CIRCLE-LINE-ADVICE-CONTRACT.md): åt vilket håll punkten
+			som bröt volten låg, bara medan just den nollställningen visas. ]]
+		linjeSida = if s.lage == "approach" and s.tips == "line" and s.linjeForsok ~= nil
+			and s.linjeForsok == s.forsokId then s.linjeSida else nil })
 end
 
 local function andligtIckeNeg(x: any): boolean
@@ -103,14 +107,24 @@ local function punkt(s, p): boolean
 		and p.ramId ~= nil and (p.status == "segment" or p.status == "baslinje")
 end
 
-local function avvikelse(p): number
-	return math.abs(math.sqrt((p.punkt.u - p.dressyrMitt.u)^2
-		+ (p.punkt.v - p.dressyrMitt.v)^2) - Volt.RADIE)
+--[[ Avståndet till mitten minus radien: positivt utanför linjen, negativt
+	innanför. `avvikelse` är dess belopp — nollställningens egen beräkning. ]]
+local function radieFel(p): number
+	return math.sqrt((p.punkt.u - p.dressyrMitt.u)^2
+		+ (p.punkt.v - p.dressyrMitt.v)^2) - Volt.RADIE
 end
 
-local function disarm(s, tips)
+local function avvikelse(p): number
+	return math.abs(radieFel(p))
+end
+
+--[[ C1: `sida` ("ut"/"in") bara från punktavvikelsens nollställning; varje
+	annan nollställning tar bort den. ]]
+local function disarm(s, tips, sida: string?)
 	Volt.lektionsGrans(s.rittId)
 	s.armAfter, s.avsnitt, s.progress = nil, nil, 0
+	s.linjeSida = sida
+	s.linjeForsok = if sida then s.forsokId else nil
 	andra(s, "approach", tips)
 end
 
@@ -130,6 +144,7 @@ function VoltLektion.steg(s, now: number)
 			if s.armAfter == nil then return end
 			s.referens = referens(s, p)
 			s.avsnitt = nil
+			s.linjeSida, s.linjeForsok = nil, nil
 			andra(s, "baseline", "ride")
 		end
 		return
@@ -137,7 +152,7 @@ function VoltLektion.steg(s, now: number)
 	local r = s.referens
 	if not punkt(s, p) or p.ramId ~= r.ramId or p.dressyrMitt.u ~= r.u
 		or p.dressyrMitt.v ~= r.v then disarm(s, "unknown"); return end
-	if avvikelse(p) > 4 then disarm(s, "line"); return end
+	if avvikelse(p) > 4 then disarm(s, "line", if radieFel(p) > 0 then "ut" else "in"); return end
 	if s.lage == "baseline" then
 		if v.status ~= "lektions_baslinje" then disarm(s, "unknown"); return end
 		andra(s, "riding", "ride")
@@ -202,6 +217,7 @@ function VoltLektion.begar(s, op: any, seq: any, now: number): (boolean, string?
 				s.sistaP, s.armAfter, s.avsnitt, s.resultat = p, nil, nil, nil
 				-- Nytt försök: jämförelsen bort (den förra fullföljningen står kvar).
 				s.jamforelse = nil
+				s.linjeSida, s.linjeForsok = nil, nil
 				s.referens = referens(s, p)
 				s.progress = 0
 				andra(s, "approach", "approach")
