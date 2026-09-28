@@ -1,6 +1,6 @@
 # D4a: the prize foundation — a durable, confirmed right and a read model for the trophy cabinet, inert
 
-Status: contract written before code, 2026-09-28.
+Status: contract written before code, 2026-09-28. **BUILT, LOCAL SUITE GREEN, NOT PHYSICALLY VERIFIED** — READY_FOR_CHATGPT_REVIEW.
 Order: [CHATGPT_REVIEW_B4C_ACCEPTED](https://github.com/Carneteg/UBRF/issues/266#issuecomment-5869916359) (D4a). Base `56a1ecd`.
 **No awarding trigger, no UI, no caller from ClearRound/D2, no rosette.** Physical test last.
 
