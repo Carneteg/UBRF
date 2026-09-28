@@ -154,6 +154,14 @@ pass = LektionController.pass()
 prova("efter försök 1 kommer beskedet, utan att provet rört controllern",
 	CoachBanner.synlig() == true and hitta("Val").Visible == true,
 	("(%s)"):format(lararytaLage()))
+--[[ C3 alternativ A (docs/FREE-PRACTICE-FRAMING-CONTRACT.md): genom den RIKTIGA
+	controllern — rubriken säger att rundan tog slut på passets klocka. ]]
+do
+	local mal = CoachBanner.text()
+	prova("rundans rubrik säger runda 1 och passets sekunder, genom riktiga LektionController",
+		mal == CoachBanner.versaler(Sprak.t("ugneta.runda_slut", 1, Lektion.FORSOK_SEK)),
+		('("%s")'):format(mal))
+end
 prova("med en tryckbar Prova igen",
 	knapp ~= nil and knapp.Visible == true
 		and string.find(knapp.Text, "Prova igen", 1, true) ~= nil,
