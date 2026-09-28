@@ -939,7 +939,10 @@ function interagera(){
      > 0 fylls medan SIN tangent hålls, och utlöses en gång när tiden
      nåtts; släpps tangenten börjar den om. På pekskärm är ANVÄND (KeyE)
      ett tryck på den närmaste prompten, som ett finger på en prompt. */
-  const nu=performance.now(), dt=Math.min(0.1,(nu-(VD.hallT||nu))/1000); VD.hallT=nu;
+  /* Hålltiden är VERKLIG tid sedan hållet började, som Roblox
+     HoldDuration — inte summerade bildrutor, som vid låg bildtakt räknade
+     ett riktigt håll för kort. */
+  const nu=performance.now();
   const pek=typeof PEKSKARM!=="undefined"&&PEKSKARM;
   const inom=bast?L.filter(i=>i.hall>0&&Math.hypot(VD.px-i.pos[0],VD.py-i.pos[1])<2.4):[];
   let hallen=null;
@@ -948,8 +951,8 @@ function interagera(){
   }
   if(!VD.hall)VD.hall={text:null,t:0,klar:false};
   if(hallen){
-    if(VD.hall.text!==hallen.text){VD.hall={text:hallen.text,t:0,klar:false};}
-    VD.hall.t+=dt;
+    if(VD.hall.text!==hallen.text){VD.hall={text:hallen.text,t:0,start:nu,klar:false};}
+    VD.hall.t=(nu-VD.hall.start)/1000;
     if(!VD.hall.klar&&VD.hall.t>=hallen.hall){VD.hall.klar=true;hallen.gor();}
   }else VD.hall={text:null,t:0,klar:false};
   VD.hallAndel=hallen&&hallen===bast?Math.min(1,VD.hall.t/hallen.hall):0;
