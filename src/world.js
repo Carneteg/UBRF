@@ -945,17 +945,27 @@ function interagera(){
   const nu=(typeof performance!=="undefined"?performance:Date).now();
   const pek=typeof PEKSKARM!=="undefined"&&PEKSKARM;
   const inom=bast?L.filter(i=>i.hall>0&&Math.hypot(VD.px-i.pos[0],VD.py-i.pos[1])<2.4):[];
-  let hallen=null;
+  /* Varje håll mäts från tangentens egen keydown-tid (IN.nedT). Ett håll
+     som både började och slutade mellan två bildrutor finns kvar i
+     IN.slappt med sin längd, så att det räknas en gång ändå. */
+  const nedT=IN.nedT||{}, slappt=IN.slappt||{};
+  const langd=k=>IN.ned[k]&&nedT[k]!=null?{s:(nu-nedT[k])/1000,fran:nedT[k],nere:true}
+    :slappt[k]?{s:slappt[k].s,fran:slappt[k].fran,nere:false}:null;
+  let hallen=null, h=null;
   if(!overlayUppe())for(const i of inom){
-    if(IN.ned[i.tangent||"KeyE"]||(pek&&i===bast&&IN.ned.KeyE)){hallen=i;break;}
+    const k=i.tangent||"KeyE";
+    h=langd(k)||(pek&&i===bast?langd("KeyE"):null);
+    if(h){hallen=i;break;}
   }
-  if(!VD.hall)VD.hall={text:null,t:0,klar:false};
+  if(!VD.hall)VD.hall={fran:null,t:0,klar:false};
   if(hallen){
-    if(VD.hall.text!==hallen.text){VD.hall={text:hallen.text,t:0,start:nu,klar:false};}
-    VD.hall.t=(nu-VD.hall.start)/1000;
+    if(VD.hall.fran!==h.fran)VD.hall={fran:h.fran,t:0,klar:false};
+    VD.hall.t=h.s;
     if(!VD.hall.klar&&VD.hall.t>=hallen.hall){VD.hall.klar=true;hallen.gor();}
-  }else VD.hall={text:null,t:0,klar:false};
-  VD.hallAndel=hallen&&hallen===bast?Math.min(1,VD.hall.t/hallen.hall):0;
+    if(!h.nere)VD.hall={fran:null,t:0,klar:false};
+  }else VD.hall={fran:null,t:0,klar:false};
+  for(const k in slappt)delete slappt[k];
+  VD.hallAndel=hallen&&hallen===bast&&h&&h.nere?Math.min(1,VD.hall.t/hallen.hall):0;
   if(e&&bast&&!(bast.hall>0)&&(bast.tangent||"KeyE")==="KeyE"&&!overlayUppe()) bast.gor();
   VD.ePrev=!!IN.ned.KeyE;
 }

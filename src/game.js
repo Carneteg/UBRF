@@ -47,6 +47,10 @@ const RIDIN={
 const IN={
   kan:{skankel:{v:0,mal:0},tygel:{v:0,mal:0},sits:{v:0,mal:0},styrning:{v:0,mal:0}},
   latt:true,diagonal:1,spo:false,hh:-1,paradFore:0,ned:{},
+  /* När varje tangent trycktes ned, och hur länge ett släppt håll varade —
+     hållprompterna (world.js interagera) mäter på HÄNDELSERNA, inte på
+     bildrutorna, så att ett håll räknas även när bildtakten är låg. */
+  nedT:{},slappt:{},
   styrDigital:null,styrKansla:{v:0},
   joy:null,          // pekskärmens analoga spak: {x,y,styrka} eller null
 };
@@ -87,6 +91,7 @@ addEventListener("keydown",e=>{
   if(e.repeat)return;
   const wasDown=!!IN.ned[e.code];
   IN.ned[e.code]=true;
+  if(!wasDown)IN.nedT[e.code]=(typeof performance!=="undefined"?performance:Date).now();
   /* E är en engångshandling i gångläget. Bevara den tills spelet samplar,
      men skapa aldrig en impuls från autorepeat, en overlay eller ridning. */
   if(e.code==="KeyE"&&!wasDown&&
@@ -125,6 +130,11 @@ addEventListener("keydown",e=>{
 });
 addEventListener("keyup",e=>{
   IN.ned[e.code]=false;
+  if(IN.nedT[e.code]!=null){
+    IN.slappt[e.code]={s:((typeof performance!=="undefined"?performance:Date).now()-IN.nedT[e.code])/1000,
+      fran:IN.nedT[e.code]};
+    IN.nedT[e.code]=null;
+  }
   switch(e.code){
     case"KeyW":RIDIN.skankel=IN.ned.KeyS?-1:0;break;
     case"KeyS":RIDIN.skankel=IN.ned.KeyW?1:0;break;
