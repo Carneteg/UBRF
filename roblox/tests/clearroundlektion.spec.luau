@@ -399,6 +399,21 @@ print("\n── 8. Klienten: menyn, sidans texter, guiden och resultatkortet ─
 	check("engelska: förenklad bedömning", har(VC.panel().text, Sprak.t("aterkoppling.clearround.forenklad"))
 		and har(VC.panel().text, "Simplified judging"), VC.panel().text)
 	Sprak.satVal("sv")
+	--[[ Sist i klientdelen, före nedmonteringen (ingen återställning behövs efteråt).
+		Banskissen följer SERVERNS geometri, inte en bana i klienten: en deklarerad
+		bild med en annan bana (tre hinder, andra färger och riktningar) ger det kortet. ]]
+	do
+		local fake = table.clone(image())
+		local ref = table.clone(fake.referens or {})
+		ref.hinder = { { farg = "rod", mot = "A" }, { farg = "bla", mot = "A" }, { farg = "rod", mot = "C" } }
+		fake.lage, fake.tips, fake.anmalan = "banskiss", "banskiss", image().anmalan
+		fake.referens = ref; fake.revision = image().revision + 1000
+		sync0.OnClientEvent:Fire(table.freeze(fake))
+		local tt = VC.panel().text
+		check("banskissen läser serverns bana (deklarerad annan bana syns ordagrant)",
+			string.find(tt, "1 rött mot A · 2 blått mot A · 3 rött mot C.", 1, true) ~= nil
+			and string.find(tt, "efter hinder 3", 1, true) ~= nil, tt)
+	end
 	UC.satLektionsVal(nil)
 	VC.avbryt()
 	request("finish")
