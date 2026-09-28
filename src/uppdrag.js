@@ -155,6 +155,10 @@ function uppdragDorrMot(malScen){
 function uppdragVagvisare(){
   const u=uppdragMal();
   if(!u||!u.mal)return null;
+  /* Paritetspasset P1a R1 (Tobias 2026-09-28): när hon leds finns ingen
+     markör — Roblox DinHast döljer sig under ledning och har ingen pil
+     till ridhuset. Stegkortet «Led … till ridhuset» är instruktionen. */
+  if(G.hastPlats==="leds")return null;
   let pos=u.mal.pos, iScen=(u.mal.scen===G.scen), viaDorr=null;
   if(!iScen){
     viaDorr=uppdragDorrMot(u.mal.scen);

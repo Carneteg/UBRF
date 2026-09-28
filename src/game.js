@@ -100,7 +100,9 @@ addEventListener("keydown",e=>{
     case"ControlLeft":case"ControlRight":RIDIN.sits=1;e.preventDefault();break;
     case"KeyA":IN.styrDigital=-1;RIDIN.pek=false;break;
     case"KeyD":IN.styrDigital=1;RIDIN.pek=false;break;
-    case"KeyR":IN.latt=!IN.latt;break;
+    /* Till fots hör R till «Rida nu» vid hästen (paritetspasset P1a R1,
+       Roblox RidaNuPrompt). Lättridningen växlas bara i sadeln. */
+    case"KeyR":if(G.scen!=="gard"&&G.scen!=="stallinne"&&G.scen!=="ridhusinne")IN.latt=!IN.latt;break;
     case"KeyQ":IN.diagonal=1-IN.diagonal;break;
     case"KeyF":IN.spo=true;break;
     case"KeyE":RIDIN.parad=1;break;

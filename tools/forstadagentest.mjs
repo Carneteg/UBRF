@@ -336,7 +336,13 @@ prova("boxen: spelets egen E-prompt står där", gBox.framme === true,
 const kortet = () => ev(() => ({ id: document.getElementById("stegkort").dataset.kort,
   synlig: !document.getElementById("stegkort").hidden,
   knappar: [...document.querySelectorAll("#stegkort .skV button")].map(b => b.dataset.id),
-  primar: ([...document.querySelectorAll("#stegkort .skV button.primar")][0] || { dataset: {} }).dataset.id }));
+  primar: ([...document.querySelectorAll("#stegkort .skV button.primar")][0] || { dataset: {} }).dataset.id,
+  rader: [...document.querySelectorAll("#stegkort .skRader button")].map(b => b.dataset.id) }));
+/* En promptrad hålls som en Roblox-prompt (P1a R1). */
+const kortHall = async id => {
+  const sel = `#stegkort .skRader button[data-id="${id}"]`;
+  await page.dispatchEvent(sel, "pointerdown"); await page.waitForTimeout(500);
+  await page.dispatchEvent(sel, "pointerup"); await page.waitForTimeout(250); };
 const kortKlick = async id => { await page.click(`#stegkort button[data-id="${id}"]`); await page.waitForTimeout(250); };
 let k = await kortet();
 prova("vid hästen: startvalet med exakt två val (Rida nu / själv)",
@@ -347,10 +353,11 @@ for (let i = 0; i < 40; i++) {
   k = await kortet();
   korten.push(k.id);
   if (k.id === "halsa") { await kortKlick("halsa1"); continue; }
-  if (!k.primar) break;
-  const sista = k.primar === "leda";
-  await kortKlick(k.primar);
-  if (sista) break;
+  if (k.primar) { await kortKlick(k.primar); continue; }
+  const rad = k.rader.find(r => r !== "rad:rida_nu");
+  if (!rad) break;
+  await kortHall(rad);
+  if (rad === "leda") break;
 }
 s = await las();
 prova("förberedelsen genom alla Roblox-kort", ["halsa", "visitera", "rykta", "hovar", "hamta_sadel", "sadla",

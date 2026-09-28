@@ -45,6 +45,10 @@ Sprak.text = {
 		sv = "Håll inne",
 		en = "Hold",
 	},
+	["interaktion.tryck_tangent"] = {
+		sv = "Tryck %s — %s",
+		en = "Press %s — %s",
+	},
 	["gangart.halt"] = {
 		sv = "Halt",
 		en = "Halt",

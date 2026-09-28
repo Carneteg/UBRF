@@ -167,8 +167,14 @@ function stegkortKort(antaNara) {
 
   const fler = [{ id: "fler:boxen", text: tSpr("guide.fler_boxen"), gor() { visaBoxmeny(); } }];
 
+  /* «Rida nu» är en prompt på hästen i Roblox (RidaNuPrompt, R 0,35 s) och
+     finns i världen även när startvalet står i panelen — panelen visar den
+     bara inte som rad där (UI-1: exakt två knappar). */
+  const ridaNuVarld = { id: "rad:rida_nu", text: tSpr("guide.val_rida_nu", n), tangent: "KeyR", hall: 0.35,
+    gor: stegkortRidaNu };
   if (stegkortOrort(s) && !STEGKORT.sjalv[G.hastId])
     return { id: "valj", rubrik: tSpr("guide.valj_rubrik"), text: tSpr("guide.valj_kort", n), fler: [],
+      rader: [], varld: [ridaNuVarld],
       val: [
         { id: "start:rida_nu", text: tSpr("guide.val_rida_nu", n), primar: true, gor: stegkortRidaNu },
         { id: "start:sjalv", text: tSpr("guide.val_sjalv", n), primar: false,
@@ -184,49 +190,72 @@ function stegkortKort(antaNara) {
     return `  ·  ${gjorda}/${alla.length}`;
   };
 
+  /* PROMPTRADERNA — Roblox ProximityPrompts vid hästen, med samma tangent
+     och hålltid som InteractionController (RidaNuPrompt R 0,35 s,
+     LedPrompt L 0,2 s, Sadla/Tränsa F 0,35 s, tack på boxfronten 0 s).
+     Den kortspecifika prompten rankas först, «Rida nu» sist — samma
+     ordning som Naromrade ger under utr:- och leda-stegen. */
+  const ridaNuRad = { id: "rad:rida_nu", text: tSpr("guide.val_rida_nu", n), tangent: "KeyR", hall: 0.35,
+    gor: stegkortRidaNu };
+  const kort = (id, rubrik, text, val, egna) => ({ id, rubrik, text, val: val || [], fler,
+    rader: [...(egna || []), ridaNuRad].slice(0, 3) });
+
   if (fas.id === "halsa")
-    return { id: "halsa", rubrik: tSpr("guide.halsa_rubrik", n), text: skKanon(fas, "text"), fler,
-      val: Forb.moment("halsa").map(m => ({ id: m.id, text: skKanon(m, "namn"), primar: false,
-        gor() { skUtfor("halsa", m); } })) };
+    return kort("halsa", tSpr("guide.halsa_rubrik", n), skKanon(fas, "text"),
+      Forb.moment("halsa").map(m => ({ id: m.id, text: skKanon(m, "namn"), primar: false,
+        gor() { skUtfor("halsa", m); } })));
 
   const m = Forb.nastaMoment(s, fas.id);
   if (fas.id === "visitera")
-    return { id: "visitera", rubrik: tSpr("guide.visitera_rubrik", n) + raknare("visitera"),
-      text: skKanon(fas, "text"), val: [knapp(m, "visitera")], fler };
+    return kort("visitera", tSpr("guide.visitera_rubrik", n) + raknare("visitera"),
+      skKanon(fas, "text"), [knapp(m, "visitera")]);
   if (fas.id === "rykta")
-    return { id: "rykta", rubrik: tSpr("guide.rykta_rubrik", n) + raknare("rykta"),
-      text: skKanon(m, "text"), val: [knapp(m, "rykta")], fler };
+    return kort("rykta", tSpr("guide.rykta_rubrik", n) + raknare("rykta"),
+      skKanon(m, "text"), [knapp(m, "rykta")]);
   if (fas.id === "iordning") {
     if (!m.utr)
-      return { id: "hovar", rubrik: tSpr("guide.hovar_rubrik"), text: skKanon(m, "text"),
-        val: [knapp(m, "iordning")], fler };
+      return kort("hovar", tSpr("guide.hovar_rubrik"), skKanon(m, "text"), [knapp(m, "iordning")]);
     const trans = m.utr === SADELFAS.length;
     if (!s.hand[trans ? "trans" : "sadel"])
       return trans
-        ? { id: "hamta_trans", rubrik: tSpr("guide.hamta_trans_rubrik"), text: tSpr("guide.hamta_trans_text"), fler,
-            val: [{ id: "tack:trans", text: tSpr("tack.ta_transet"), primar: true,
-              gor() { s.hand.trans = true; skAterkoppla(""); } }] }
-        : { id: "hamta_sadel", rubrik: tSpr("guide.hamta_sadel_rubrik"), text: tSpr("guide.hamta_sadel_text", n), fler,
-            val: [{ id: "tack:sadel", text: tSpr("tack.ta_sadeln"), primar: true,
-              gor() { s.hand.sadel = true; skAterkoppla(""); } }] };
-    return { id: trans ? "transa" : "sadla", rubrik: tSpr(trans ? "guide.transa_rubrik" : "guide.sadla_rubrik"),
-      text: skKanon(m, "text"), val: [knapp(m, "iordning")], fler };
+        ? kort("hamta_trans", tSpr("guide.hamta_trans_rubrik"), tSpr("guide.hamta_trans_text"), [],
+            [{ id: "tack:trans", text: tSpr("tack.ta_transet"), tangent: "KeyE", hall: 0,
+              gor() { s.hand.trans = true; skAterkoppla(""); } }])
+        : kort("hamta_sadel", tSpr("guide.hamta_sadel_rubrik"), tSpr("guide.hamta_sadel_text", n), [],
+            [{ id: "tack:sadel", text: tSpr("tack.ta_sadeln"), tangent: "KeyE", hall: 0,
+              gor() { s.hand.sadel = true; skAterkoppla(""); } }]);
+    return kort(trans ? "transa" : "sadla", tSpr(trans ? "guide.transa_rubrik" : "guide.sadla_rubrik"),
+      skKanon(m, "text"), [knapp(m, "iordning")],
+      [{ id: trans ? "rad:transa" : "rad:sadla", text: tSpr(trans ? "interaktion.transa_namn" : "interaktion.sadla_namn", n),
+        tangent: "KeyF", hall: 0.35, gor() { skUtfor("iordning", Forb.nastaMoment(s, "iordning")); } }]);
   }
   if (fas.id === "leda")
-    return { id: "leda", rubrik: tSpr("guide.leda_rubrik", n), text: tSpr("guide.leda_text"), fler,
-      val: [{ id: "leda", text: tSpr("led.borja_namn", n), primar: true,
-        gor() { stegkortForberedd(); G.hastPlats = "leds"; VD.spår.length = 0; skAterkoppla(""); } }] };
+    return kort("leda", tSpr("guide.leda_rubrik", n), tSpr("guide.leda_text"), [],
+      [{ id: "leda", text: tSpr("led.borja_namn", n), tangent: "KeyL", hall: 0.2,
+        gor() { stegkortForberedd(); G.hastPlats = "leds"; VD.spår.length = 0; skAterkoppla(""); } }]);
   return null;
 }
 
-/* Kortets primära handling — det E gör vid hästen (webbens motsvarighet
-   till den prompt Roblox rankar först). Frågas SOM OM spelaren stod vid
-   hästen: prompten sitter på boxen, och `interagera()` avgör räckvidden —
-   precis som en ProximityPrompt finns på hästen och visas inom räckhåll. */
-function stegkortPrimar() {
+/* Tangentens namn i raden och prompten: "R", "L", "F", "E". */
+const skTangent = kod => String(kod || "KeyE").replace(/^Key/, "");
+/* "[Håll inne R]" för en hållprompt, "[E]" för en omedelbar. */
+function skTangentText(r) {
+  return r.hall > 0 ? `${tSpr("interaktion.hall_inne")} ${skTangent(r.tangent)}` : skTangent(r.tangent);
+}
+
+/* Promptraderna vid boxen — det `interagera()` erbjuder i världen, med
+   varsin tangent och hålltid. Frågas SOM OM spelaren stod vid hästen:
+   prompten sitter på hästen och `interagera()` avgör räckvidden, precis
+   som en ProximityPrompt finns på hästen och visas inom räckhåll.
+   Valknapparna (startvalet, hälsningen, momenten) har ingen tangent —
+   i Roblox är de knappar i panelen, inte prompter. */
+function stegkortRader() {
   const k = stegkortKort(true);
-  const v = k && (k.val || []).find(x => x.primar);
-  return v ? { text: v.text, gor: v.gor } : null;
+  return k ? [...(k.rader || []), ...(k.varld || [])] : [];
+}
+function stegkortPrimar() {
+  const r = stegkortRader()[0];
+  return r ? { text: r.text, gor: r.gor, tangent: r.tangent, hall: r.hall } : null;
 }
 
 /* ── Ritningen ───────────────────────────────────────────────────── */
@@ -252,6 +281,12 @@ function stegkortInstallera() {
   #stegkort button:hover,#stegkort button:focus-visible{background:rgba(255,255,255,.13);outline:none}
   #stegkort button.primar{background:rgb(92,76,38);color:#FFF6E0}
   #stegkort button.primar:hover{background:rgb(112,93,47)}
+  #stegkort .skRader{margin-top:6px;display:grid;gap:6px}
+  #stegkort button.rad{position:relative;overflow:hidden;display:flex;gap:8px;align-items:center;
+    background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.10);touch-action:none;user-select:none}
+  #stegkort button.rad .skRt{flex:1;position:relative}
+  #stegkort button.rad .skK{position:relative;font-size:12px;color:#BFB8A8;white-space:nowrap}
+  #stegkort button.rad .skFyll{position:absolute;left:0;top:0;bottom:0;width:0%;background:rgba(236,196,92,.28)}
   #stegkort .skF{margin-top:6px;font-size:12.5px;color:#BFB8A8}
   #stegkort .skA{margin-top:8px;color:rgb(236,196,92);min-height:0}
   #stegkort .skA:empty{display:none}
@@ -272,17 +307,21 @@ function stegkortRita(tvinga) {
   if (!k || oppen) { el.hidden = true; STEGKORT.sig = ""; return; }
   const fler = k.fler || [];
   const sig = [k.id, k.rubrik, k.text, (k.val || []).map(v => v.id + v.text).join("|"),
+    (k.rader || []).map(r => r.id + r.text).join("|"),
     fler.length, STEGKORT.fler, STEGKORT.aterkoppling, typeof SPRAKET !== "undefined" ? SPRAKET : ""].join("§");
   el.hidden = false;
   if (!tvinga && sig === STEGKORT.sig) return;
   STEGKORT.sig = sig;
   const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const val = (k.val || []).slice(0, 4);
+  const rader = (k.rader || []).slice(0, 3);
   el.dataset.kort = k.id;
   el.innerHTML = `<div class="skR">${esc(k.rubrik)}</div>`
     + (k.text ? `<div class="skT">${esc(k.text)}</div>` : "")
     + (val.length ? `<div class="skV">${val.map((v, i) =>
         `<button data-i="${i}" data-id="${esc(v.id)}" class="${v.primar ? "primar" : ""}">${esc(v.text)}</button>`).join("")}</div>` : "")
+    + (rader.length ? `<div class="skRader">${rader.map((r, i) =>
+        `<button data-r="${i}" data-id="${esc(r.id)}" class="rad"><span class="skFyll"></span><span class="skRt">${esc(r.text)}</span><span class="skK">[${esc(skTangentText(r))}]</span></button>`).join("")}</div>` : "")
     + (fler.length ? `<div class="skF"><button data-fler="1">+  ${esc(tSpr("panel.fler"))}</button>${
         STEGKORT.fler ? `<div class="skV" style="margin-top:6px">${fler.map((v, i) =>
           `<button data-f="${i}" data-id="${esc(v.id)}">${esc(v.text)}</button>`).join("")}</div>` : ""}</div>` : "")
@@ -291,6 +330,30 @@ function stegkortRita(tvinga) {
     b.onclick = () => { const v = val[+b.dataset.i]; if (v) v.gor(); stegkortRita(true); };
   for (const b of el.querySelectorAll("button[data-f]"))
     b.onclick = () => { const v = fler[+b.dataset.f]; STEGKORT.fler = false; if (v) v.gor(); };
+  /* En rad är en prompt: den HÅLLS, som när man trycker på en
+     ProximityPrompt i Roblox — pekaren nere lika länge som promptens
+     HoldDuration, med en synlig fyllning. Hålltid 0 är ett vanligt klick. */
+  for (const b of el.querySelectorAll("button[data-r]")) {
+    const r = rader[+b.dataset.r];
+    if (!r) continue;
+    const fyll = b.querySelector(".skFyll");
+    let t0 = 0, raf = 0;
+    const slapp = () => { t0 = 0; cancelAnimationFrame(raf); if (fyll) fyll.style.width = "0%"; };
+    const steg = () => {
+      if (!t0) return;
+      const andel = Math.min(1, (performance.now() - t0) / (r.hall * 1000));
+      if (fyll) fyll.style.width = (andel * 100).toFixed(0) + "%";
+      if (andel >= 1) { slapp(); r.gor(); stegkortRita(true); return; }
+      raf = requestAnimationFrame(steg);
+    };
+    b.onpointerdown = e => {
+      e.preventDefault();
+      if (!(r.hall > 0)) { r.gor(); stegkortRita(true); return; }
+      t0 = performance.now(); raf = requestAnimationFrame(steg);
+    };
+    b.onpointerup = slapp; b.onpointerleave = slapp; b.onpointercancel = slapp;
+    b.onclick = e => e.preventDefault();
+  }
   const fb = el.querySelector("button[data-fler]");
   if (fb) fb.onclick = () => { STEGKORT.fler = !STEGKORT.fler; stegkortRita(true); };
 }

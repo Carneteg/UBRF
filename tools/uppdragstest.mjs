@@ -395,7 +395,9 @@ sektion = "D: hela produktionsvägen";
     }
     return { p, d: Math.hypot(p.x - mal[0], p.y - mal[1]) };
   }
-  async function tryckE() { await page.keyboard.down("e"); await page.waitForTimeout(80);
+  /* Hålls som en spelare håller en prompt: uppsittningen har Roblox
+     MountPrompts hålltid 0,35 s (paritetspasset P1a R1). */
+  async function tryckE() { await page.keyboard.down("e"); await page.waitForTimeout(600);
     await page.keyboard.up("e"); await page.waitForTimeout(400); }
   const prompt = () => ev(() => { interagera(); return VD.prompt ? VD.prompt.text : null; });
 
@@ -422,13 +424,16 @@ sektion = "D: hela produktionsvägen";
   await klickaKort("start:sjalv");
   for (let i = 0; i < 40; i++) {
     const k = await ev(() => ({ id: document.getElementById("stegkort").dataset.kort,
-      primar: ([...document.querySelectorAll("#stegkort button.primar")][0] || {}).dataset }));
+      primar: ([...document.querySelectorAll("#stegkort .skV button.primar")][0] || {}).dataset,
+      rader: [...document.querySelectorAll("#stegkort .skRader button")].map(b => b.dataset.id) }));
     if (k.id === "halsa") { await klickaKort("halsa1"); continue; }
-    if (!k.primar || !k.primar.id) break;
-    const var_leda = k.primar.id === "leda";
-    await klickaKort(k.primar.id);
-    await page.waitForTimeout(60);
-    if (var_leda) break;
+    if (k.primar && k.primar.id) { await klickaKort(k.primar.id); await page.waitForTimeout(60); continue; }
+    const rad = k.rader.find(r => r !== "rad:rida_nu");
+    if (!rad) break;
+    const sel = `#stegkort .skRader button[data-id="${rad}"]`;
+    await page.dispatchEvent(sel, "pointerdown"); await page.waitForTimeout(500);
+    await page.dispatchEvent(sel, "pointerup"); await page.waitForTimeout(150);
+    if (rad === "leda") break;
   }
   steg.push(["stegkortet", await ev(() => G.hastPlats === "leds" ? "Led" : null)]);
   await page.waitForTimeout(300);

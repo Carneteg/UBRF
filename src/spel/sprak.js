@@ -57,6 +57,9 @@ const SPRAK = {
      när menyn ersätter den, så menyn säger det själv — medan hållet
      pågår, och när någon släppt för tidigt. */
   "interaktion.hall_inne": { sv: "Håll inne", en: "Hold" },
+  /* Webbens promptrad längst ned (paritetspasset P1a R1): en omedelbar
+     prompt. Hållprompterna skrivs med «Håll inne» ovan. */
+  "interaktion.tryck_tangent": { sv: "Tryck %s — %s", en: "Press %s — %s" },
   /* #264 PLAYER_INTERACTION_CONSOLIDATION: panelens rubrik uppsutten visar
      den gångart servern säger att hästen går i. `Gaits.label` finns bara
      på svenska och är kanonens identitet, inte spelartext. */

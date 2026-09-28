@@ -71,10 +71,12 @@ async function vidBoxen(page, { pass = 0, sprak = "sv" } = {}) {
 const vanta = page => page.waitForTimeout(250);
 const kort = page => page.evaluate(() => {
   const el = document.getElementById("stegkort");
-  const knappar = [...el.querySelectorAll(".skV > button, .skV button")].map(b => ({
+  const knappar = [...el.querySelectorAll(".skV button")].map(b => ({
     id: b.dataset.id, text: b.textContent.trim(), primar: b.classList.contains("primar") }));
+  const rader = [...el.querySelectorAll(".skRader button")].map(b => ({ id: b.dataset.id, text: b.textContent.trim() }));
   const tl = document.getElementById("moment").closest(".hudh");
-  return { synlig: !el.hidden, id: el.dataset.kort, text: el.innerText, knappar,
+  return { synlig: !el.hidden, id: el.dataset.kort, text: el.innerText, knappar, rader,
+    vagvisare: typeof uppdragVagvisare === "function" ? !!uppdragVagvisare() : null,
     fler: !!el.querySelector("button[data-fler]"),
     rubrik: (el.querySelector(".skR") || {}).textContent || "",
     aterkoppling: (el.querySelector(".skA") || {}).textContent || "",
@@ -91,6 +93,25 @@ async function klicka(page, id) {
   await vanta(page);
   return ok;
 }
+/* En promptrad HÅLLS som en Roblox-prompt: pekaren nere i `ms`. */
+async function halla(page, id, ms = 500) {
+  const ok = await page.evaluate(id => {
+    const b = [...document.querySelectorAll("#stegkort .skRader button")].find(x => x.dataset.id === id);
+    if (b) b.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    return !!b;
+  }, id);
+  await page.waitForTimeout(ms);
+  await page.evaluate(id => {
+    const b = [...document.querySelectorAll("#stegkort .skRader button")].find(x => x.dataset.id === id);
+    if (b) b.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }));
+  }, id);
+  await vanta(page);
+  return ok;
+}
+async function tangent(page, kod, ms) {
+  await page.keyboard.down(kod); await page.waitForTimeout(ms); await page.keyboard.up(kod);
+  await page.waitForTimeout(250);
+}
 /* Spelaren gör resten själv: den primära knappen, kort för kort, tills
    kortet är `stopp` (ledningen). Hälsningen väljs med första rätta. */
 async function gorSjalv(page, stopp = "leda", texter = []) {
@@ -99,8 +120,11 @@ async function gorSjalv(page, stopp = "leda", texter = []) {
     texter.push(k.text);
     if (k.id === stopp || !k.synlig) return k;
     const val = k.id === "halsa" ? k.knappar.find(b => b.id === "halsa1") : k.knappar.find(b => b.primar);
-    if (!val) return k;
-    await klicka(page, val.id);
+    if (val) { await klicka(page, val.id); continue; }
+    /* Kort utan momentknapp (hämta sadel/träns): kortets egen prompt. */
+    const rad = k.rader.find(r => r.id !== "rad:rida_nu");
+    if (!rad) return k;
+    await halla(page, rad.id);
   }
   return kort(page);
 }
@@ -130,10 +154,18 @@ console.log("\n── A. Startvalet vid hästen ──");
   prova("själv → «Hälsa på …» med tre val", k.id === "halsa" && k.rubrik === `Hälsa på ${h.namn}` && k.knappar.length === 3,
     `${k.rubrik} · ${k.knappar.length}`);
   prova("boxen finns under «Fler handlingar»", k.fler);
+  prova("R1: «Rida nu» står som prompt med «[Håll inne R]», som i Roblox",
+    k.rader.some(r => r.id === "rad:rida_nu" && r.text.includes("[Håll inne R]")), k.rader.map(r => r.text).join(" / "));
   await klicka(page, "halsa3");
   k = await kort(page);
   prova("rakt bakifrån: kanonens svar, hälsningen står kvar",
     k.id === "halsa" && k.aterkoppling === "Hon skräms. Gå aldrig rakt bakifrån.", k.aterkoppling);
+  await klicka(page, "halsa1");
+  const foreE = await kort(page);
+  await tangent(page, "KeyE", 550);
+  const efterE = await kort(page);
+  prova("R1: E gör inget skötselmoment — momenten är panelknappar, som i Roblox",
+    foreE.id === "visitera" && efterE.id === "visitera" && efterE.rubrik === foreE.rubrik, `${foreE.rubrik} → ${efterE.rubrik}`);
   const texter = [];
   k = await gorSjalv(page, "leda", texter);
   const sagda = texter.join("\n");
@@ -142,9 +174,12 @@ console.log("\n── A. Startvalet vid hästen ──");
       .every((t, i, a) => sagda.indexOf(t) >= 0 && (i === 0 || sagda.indexOf(t) > sagda.indexOf(a[i - 1]))),
     `sista kortet ${k.id}`);
   prova("uppsittning nekas innan hon är ledd", !k.redo);
-  await klicka(page, "leda");
+  prova("R1: ledningen är en prompt «[Håll inne L]»", k.rader.some(r => r.id === "leda" && r.text.includes("[Håll inne L]")),
+    k.rader.map(r => r.text).join(" / "));
+  await halla(page, "leda", 400);
   k = await kort(page);
   prova("«Led …» → hon leds, kortet säger vart", k.plats === "leds" && k.id === "leder", `${k.plats} · ${k.id}`);
+  prova("R1: ingen vägvisare när hon leds (Roblox har ingen)", k.vagvisare === false, String(k.vagvisare));
   const ut = await page.evaluate(() => {
     const [x, y] = skSargport(); gaTill("ridhusinne", { x, y: y + 1.2, rikt: 0 });
     VD.hastX = x + 1; VD.hastY = y + 1.6; return true; });
@@ -162,17 +197,24 @@ console.log("\n── C. «Rida nu» ──");
   const page = await oppna();
   const h = await vidBoxen(page);
   await vanta(page);
-  await klicka(page, "start:rida_nu");
-  await page.waitForTimeout(400);
+  await tangent(page, "KeyR", 100);
   let k = await kort(page);
-  prova("stallet leder henne till ridhuset", k.scen === "ridhusinne" && k.plats === "leds", `${k.scen} · ${k.plats}`);
+  prova("R1: ett kort tryck på R är INTE «Rida nu» (hålltid 0,35 s)", k.id === "valj" && k.scen === "stallinne", `${k.id} · ${k.scen}`);
+  await tangent(page, "KeyR", 550);
+  await page.waitForTimeout(300);
+  k = await kort(page);
+  prova("R hållen: «Rida nu» — stallet leder henne till ridhuset", k.scen === "ridhusinne" && k.plats === "leds", `${k.scen} · ${k.plats}`);
   prova("hon är redo: «Sitt upp på …»", k.redo && k.id === "sittupp", k.id);
   prova("stallets hand ger ingen omsorgsbonus: dagsform 0,70", k.dagsform === 0.7, String(k.dagsform));
   prova("E vid sargporten är uppsittningen", /Sitt upp/.test(String(k.prompt)), String(k.prompt));
-  await page.keyboard.press("KeyE");
-  await page.waitForTimeout(500);
+  const promptRad = await page.evaluate(() => document.getElementById("approach").textContent);
+  prova("R1: prompten säger «Håll inne E»", promptRad.startsWith("Håll inne E — "), promptRad);
+  await tangent(page, "KeyE", 100);
+  prova("R1: ett kort tryck på E sitter inte upp", (await page.evaluate(() => G.scen)) === "ridhusinne");
+  await tangent(page, "KeyE", 550);
+  await page.waitForTimeout(300);
   const scen = await page.evaluate(() => G.scen);
-  prova("E sitter upp och lektionen börjar", scen === "lektion", scen);
+  prova("E hållen sitter upp och lektionen börjar", scen === "lektion", scen);
   await page.close();
 }
 
@@ -220,7 +262,7 @@ console.log("\n── E. Engelska ──");
   const texter = [k.text];
   await klicka(page, "start:sjalv");
   k = await gorSjalv(page, "leda", texter);
-  await klicka(page, "leda");
+  await halla(page, "leda", 400);
   texter.push((await kort(page)).text);
   const SVENSKA = /[åäöÅÄÖ]|\b(och|Välj|Rida|Gör|Hälsa|Rykta|Kratsa|sadeln|tränset|hästen|henne|Sitt upp)\b/;
   const blandat = texter.filter(t => SVENSKA.test(t.replace(h.namn, "")));
