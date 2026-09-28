@@ -1,6 +1,6 @@
 # D5: competition clothing at the clear round entry (option A)
 
-Status: contract written before code, 2026-09-28.
+Status: contract written before code, 2026-09-28. **BUILT, LOCAL SUITE GREEN, NOT PHYSICALLY VERIFIED** — READY_FOR_CHATGPT_REVIEW.
 Decision: [TOBIAS_DECISION_D5_A_20260928](https://github.com/Carneteg/UBRF/issues/266#issuecomment-5867703495)
 (1a on at the entry · 2a off at Avsluta/ride end · 3a optional · 4a colour names only · 5a session only), on
 [CLAUDE_D5_DECISION_PACKAGE_20260928](https://github.com/Carneteg/UBRF/issues/266#issuecomment-5867673148).
@@ -41,7 +41,7 @@ Origin: #248 (the catalogue, server authority, preserving the avatar). Base `15a
 ## Client (presentation; sends only a catalogue id)
 
 - **`ready`/`closed`:** two buttons, because the panel shows at most four rows:
-  - **"Kläder: Egna kläder"** cycles Egna → White → Pink → Oak in catalogue order (`Tavlingsklader.alla()`);
+  - **"Kläder: Egna kläder"** cycles Egna → White → Pink → Oak in catalogue order. *Changed during the build:* the order and names come from the **server snapshot** (`kladerVal = {id, namn}` in `ready`/`closed`, built from `Tavlingsklader.alla()`), not from the client requiring the catalogue. So the client decides nothing, and no asset number ever reaches it;
   - **"Anmäl dig"** sends `anmal` or `anmal_<id>`.
   - The choice lives only in the panel. **Nothing is persisted.**
 - **Names:** the catalogue's own `namn` ("White Equestrian Set", …), the product name in both SV and EN.

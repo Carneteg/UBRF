@@ -584,6 +584,8 @@ local function setRider(session: Session, player: Player?, orsak: string?)
 		lektionen rivs — annars försvann tävlingsritten tyst. ]]
 	if gammalRitt and session.voltLektion and session.voltLektion.typ == "clearround" then
 		logga(ClearRoundLektion.vidRittSlut, session.voltLektion, orsak or "avsittning")
+		-- D5: rittslut i vilket läge som helst ger spelarens egna kläder tillbaka.
+		logga(ClearRoundLektion.kladerAv, session.voltLektion, previous, orsak or "avsittning")
 	end
 	session.voltLektion = nil
 	session.lektionsBegaran = nil
@@ -1992,8 +1994,9 @@ function HorseService.voltLektionsBegaran(player: any, rittId: any, op: any, seq
 	local session = forsokRitt(player, rittId)
 	if not session then return false, "stale", nil end
 	-- D2b: clear round-rittens anmälan och banskiss (andra lektioner svarar "unknown").
-	if op ~= "sync" and op ~= "start" and op ~= "retry" and op ~= "finish" and op ~= "anmal"
-		and op ~= "ga_banan" then
+	-- D5: `anmal_<id>` för tävlingskläder ur katalogen (ClearRoundLektion.arAnmal).
+	if op ~= "sync" and op ~= "start" and op ~= "retry" and op ~= "finish"
+		and not ClearRoundLektion.arAnmal(op) and op ~= "ga_banan" then
 		return false, "unknown", nil
 	end
 	--[[ Lektionstyp: utelämnad = volt (oförändrat beteende), "halt" =
@@ -2051,6 +2054,8 @@ function HorseService.voltLektionsBegaran(player: any, rittId: any, op: any, seq
 	elseif byte and RidForsok.aktivt(rittId) then
 		fel = "active"
 	elseif byte then
+		-- D5: lektionsbyte bort från clear round ger egna kläder tillbaka.
+		if nu.typ == "clearround" then ClearRoundLektion.kladerAv(nu, player, "byte") end
 		session.voltLektion = nil
 	end
 	if fel == nil then
@@ -2058,7 +2063,7 @@ function HorseService.voltLektionsBegaran(player: any, rittId: any, op: any, seq
 		if not session.voltLektion then
 			session.voltLektion = nyLektion(session, anvand, rittId, player.UserId, hastId)
 		end
-		ok, fel, bild = L.begar(session.voltLektion, op, seq, os.clock(), gangart, ryggar)
+		ok, fel, bild = L.begar(session.voltLektion, op, seq, os.clock(), gangart, ryggar, player)
 	end
 	bok.svar[seq] = { op = op, typ = typ, ok = ok, fel = fel, bild = bild }
 	table.insert(bok.ordning, seq)

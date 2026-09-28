@@ -1957,6 +1957,26 @@ Sprak.text = {
 		sv = "%s %s mot %s",
 		en = "%s %s towards %s",
 	},
+	["clearround.klader_val"] = {
+		sv = "Kläder: %s",
+		en = "Clothes: %s",
+	},
+	["clearround.klader_egna"] = {
+		sv = "Egna kläder",
+		en = "Own clothes",
+	},
+	["clearround.klader_laddar"] = {
+		sv = "Tävlingskläderna laddas …",
+		en = "Loading the competition clothes …",
+	},
+	["clearround.klader_pa"] = {
+		sv = "Tävlingskläder: %s.",
+		en = "Competition clothes: %s.",
+	},
+	["clearround.klader_misslyckades"] = {
+		sv = "Tävlingskläderna kunde inte laddas – du rider i dina egna kläder.",
+		en = "The competition clothes could not be loaded – you ride in your own clothes.",
+	},
 	["clearround.forra_avbruten"] = {
 		sv = "Förra clear round-ritten avbröts mitt i banan – den räknas inte som genomförd.",
 		en = "Your last clear round was interrupted mid-course – it does not count as completed.",

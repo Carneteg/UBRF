@@ -187,6 +187,8 @@ FORBEREDELSE = SPEL + [
     ("MarkbomLektion", "src/server/MarkbomLektion.luau"),  # bom pa marken i skritt
     ("HornLektion", "src/server/HornLektion.luau"),  # genom hornet (egen typ hornet)
     ("Klassprofil", "src/shared/HorseCore/Klassprofil.luau"),  # D1: regelprofilen A: Clear Round
+    ("Tavlingsklader", "src/shared/HorseCore/Tavlingsklader.luau"),  # D5: katalogen (#248)
+    ("TavlingskladerService", "src/server/TavlingskladerService.luau"),  # D5: livscykeln (#248)
     ("ClearRoundLektion", "src/server/ClearRoundLektion.luau"),  # D2a: forsta clear round-ritten
     # AKTOREN (#252 DEL C) FORE tjansterna: GameplayService, HorseService
     # och LedService fragar den om aktoren har en klient att skicka till.
@@ -470,6 +472,8 @@ KOHERENS = GEOMETRI + [
     ("MarkbomLektion", "src/server/MarkbomLektion.luau"),  # bom pa marken i skritt
     ("HornLektion", "src/server/HornLektion.luau"),  # genom hornet (egen typ hornet)
     ("Klassprofil", "src/shared/HorseCore/Klassprofil.luau"),  # D1: regelprofilen A: Clear Round
+    ("Tavlingsklader", "src/shared/HorseCore/Tavlingsklader.luau"),  # D5: katalogen (#248)
+    ("TavlingskladerService", "src/server/TavlingskladerService.luau"),  # D5: livscykeln (#248)
     ("ClearRoundLektion", "src/server/ClearRoundLektion.luau"),  # D2a: forsta clear round-ritten
     # AKTOREN (#252 DEL C) FORE tjansterna: GameplayService, HorseService
     # och LedService fragar den om aktoren har en klient att skicka till.
@@ -794,6 +798,9 @@ def valjBunt(spec_rel: str):
         moduler, stubbar = KOHERENS, "tests/stubs.luau"
     #[[ D2c: kedjan clear round -> eftervard behover ridhuset OCH
     #   tjanstestacken (GameplayService finns i KOHERENS). ]]
+    #[[ D5: tavlingsklader vid clear round-anmalan: ridhuset, tjansterna och klienten. ]]
+    elif "clearround-klader" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
     elif "clearround-eftervard" in spec_rel:
         moduler, stubbar = KOHERENS, "tests/stubs.luau"
     elif "clearroundlektion" in spec_rel:

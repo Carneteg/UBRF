@@ -134,6 +134,7 @@ local typ = "volt"
 -- därför också en kompakt lista med EN post (R1), som Ugneta väljer när den
 -- fulla inte ryms. Varje sida har högst tre val plus Tillbaka.
 local meny: string? = nil
+local kladerVal = 0 -- D5: 0 = egna kläder, annars index i bildens `kladerVal`
 local guideTyp: string? = nil
 local guideDel: number? = nil
 --[[ C3 (docs/ROUTE-LESS-GUIDANCE-CONTRACT.md): spelarens eget val "Rid utan streck"
@@ -1050,6 +1051,18 @@ function V.panel()
 		end
 		txt = Sprak.t("clearround.banskiss", table.concat(delar, " · "), #b.referens.hinder)
 	end
+	--[[ D5: tävlingskläderna, ur serverns bild. Namnet är katalogens (från
+		serverns val-lista); saknas det står bara läget. ]]
+	if typ == "clearround" and (key == "startlista" or key == "banskiss") and type(b.klader) == "table" then
+		local k = b.klader
+		if k.lage == "laddar" then
+			txt ..= " " .. Sprak.t("clearround.klader_laddar")
+		elseif k.lage == "misslyckades" then
+			txt ..= " " .. Sprak.t("clearround.klader_misslyckades")
+		elseif k.lage == "pa" and type(k.namn) == "string" then
+			txt ..= " " .. Sprak.t("clearround.klader_pa", k.namn)
+		end
+	end
 	--[[ D2a: nästa hopp med nummer, färg och riktning ur serverns bild. ]]
 	if typ == "clearround" and key == "jump" and type(b.nasta) == "table" and type(b.nasta.nr) == "number" then
 		local farg = if b.nasta.farg == "rod" then Sprak.t("clearround.farg_rod") else Sprak.t("clearround.farg_bla")
@@ -1115,7 +1128,26 @@ function V.panel()
 		--[[ D2b (docs/D2B-PRE-RIDE-CONTRACT.md): clear round börjar med anmälan och
 			banskissen; startsignalen finns först efter banskissen. ]]
 		elseif typ == "clearround" and (b.lage=="ready" or b.lage=="closed") then
-			table.insert(knappar,val("anmal",function() skicka("anmal") end))
+			--[[ D5 (docs/D5-COMPETITION-CLOTHING-CONTRACT.md, Tobias A): frivilliga
+				tävlingskläder. En knapp bläddrar Egna → setten i SERVERNS ordning
+				(`b.kladerVal`: id och namn, aldrig asset-nummer); anmälan skickar
+				bara id:t. Valet lever i panelen och sparas ingenstans. ]]
+			local sets = if type(b.kladerVal) == "table" then b.kladerVal else {}
+			if kladerVal > #sets then kladerVal = 0 end
+			local valt = sets[kladerVal]
+			if #sets > 0 then
+				local namn = if type(valt) == "table" and type(valt.namn) == "string" then valt.namn
+					else Sprak.t("clearround.klader_egna")
+				local gen, id = generation, ritt
+				table.insert(knappar, { text = Sprak.t("clearround.klader_val", namn), aktiv = true,
+					skicka = function()
+						if attached and gen == generation and id == ritt then
+							kladerVal = (kladerVal + 1) % (#sets + 1)
+						end
+					end })
+			end
+			local op = if type(valt) == "table" and type(valt.id) == "string" then "anmal_" .. valt.id else "anmal"
+			table.insert(knappar,val("anmal",function() skicka(op) end))
 		elseif typ == "clearround" and b.lage=="startlista" then
 			table.insert(knappar,val("ga_banan",function() skicka("ga_banan") end))
 		elseif typ == "clearround" and b.lage=="banskiss" then

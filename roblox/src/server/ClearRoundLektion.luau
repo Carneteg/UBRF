@@ -19,6 +19,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Ridhusplats = require(ReplicatedStorage.HorseCore.Ridhusplats)
 local Klassprofil = require(ReplicatedStorage.HorseCore.Klassprofil)
 local Pass = require(ReplicatedStorage.HorseCore.Pass)
+local Tavlingsklader = require(ReplicatedStorage.HorseCore.Tavlingsklader)
+local TavlingskladerService = require(script.Parent.TavlingskladerService)
 local Forsok = require(script.Parent.RidForsok)
 local Observation = require(script.Parent.RidObservation)
 local Plats = require(script.Parent.RidPlatsObservation)
@@ -68,6 +70,66 @@ local function nasta(s): any
 	return b and table.freeze({ nr = s.steg, farg = b.farg, mot = b.mot }) or nil
 end
 
+--[[ ── D5 TÄVLINGSKLÄDER (docs/D5-COMPETITION-CLOTHING-CONTRACT.md, Tobias A) ──
+	Frivilliga: `anmal` = egna kläder, `anmal_<id>` = ett set ur KATALOGEN
+	(`Tavlingsklader.idn()`; klienten skickar aldrig ett asset-nummer).
+	Anmälan sker DIREKT; `TavlingskladerService.starta` väntar på Roblox och
+	körs därför i bakgrunden. Ett misslyckat set stoppar aldrig anmälan eller
+	ritten — spelaren rider i sina egna kläder (tjänsten lämnar avataren orörd).
+	Av vid Avsluta, rittslut och lektionsbyte, plus tjänstens egna fyra vakter.
+	Generationen gör att ett sent svar för en indragen anmälan aldrig syns. ]]
+local klader = TavlingskladerService.nya()
+
+--[[ Valen klienten får visa: katalogens id och namn, i katalogens ordning.
+	Asset-numren lämnar aldrig servern (#248). ]]
+local KLADER_VAL = (function()
+	local ut = {}
+	for _, set in ipairs(Tavlingsklader.alla()) do
+		table.insert(ut, table.freeze({ id = set.id, namn = set.namn }))
+	end
+	return table.freeze(ut)
+end)()
+
+--[[ Är `op` en anmälan? Svarar (ja, setId|nil). Bara katalogens egna id:n,
+	exakt skiftläge; allt annat är inte en anmälan. ]]
+function ClearRoundLektion.arAnmal(op: any): (boolean, string?)
+	if op == "anmal" then return true, nil end
+	if type(op) == "string" and string.sub(op, 1, 6) == "anmal_" then
+		local id = string.sub(op, 7)
+		if Tavlingsklader.giltig(id) then return true, id end
+	end
+	return false, nil
+end
+
+local function kladerPa(s, spelare: any, setId: string)
+	s.kladerGen = (s.kladerGen or 0) + 1
+	local gen = s.kladerGen
+	local namn = (Tavlingsklader.set(setId) :: any).namn
+	s.klader = table.freeze({ set = setId, namn = namn, lage = "laddar" })
+	task.spawn(function()
+		local okAnrop, okStart = pcall(klader.starta, spelare, setId)
+		local ok = okAnrop and okStart == true
+		-- Indragen, avslutad eller ersatt under väntan: svaret gäller ingenting.
+		if s.kladerGen ~= gen or s.klader == nil or s.klader.set ~= setId then return end
+		s.klader = table.freeze({ set = setId, namn = namn, lage = if ok then "pa" else "misslyckades" })
+		s.revision += 1
+	end)
+end
+
+--[[ Spelarens egna kläder tillbaka. Idempotent; anropas även när inget set
+	valdes (ett pågående uppslag avbryts då av tjänstens generation). ]]
+function ClearRoundLektion.kladerAv(s, spelare: any, orsak: string?)
+	if type(s) ~= "table" then return end
+	s.kladerGen = (s.kladerGen or 0) + 1
+	s.klader = nil
+	if spelare ~= nil then pcall(klader.avsluta, spelare, orsak or "tavling_slut") end
+end
+
+--[[ Provkrok: en tjänst med injicerade adaptrar (katalogen går inte att fråga i bänken). ]]
+function ClearRoundLektion._satKladerForProv(tjanst: any)
+	klader = tjanst or TavlingskladerService.nya()
+end
+
 --[[ D2c (docs/D2C-AFTERCARE-CONTRACT.md): eftervårdens moment i KANONENS
 	ordning, ur `Pass` (`UBRFSkotsel.eftervard`) — samma lista som passet
 	vaktar. Klienten visar dem på resultatkortet; den hittar inte på någon. ]]
@@ -88,6 +150,9 @@ function ClearRoundLektion.bild(s): any
 		forraAvbruten = if (s.lage == "ready" or s.lage == "closed") and forra then forra else nil,
 		-- D2b: anmälan (solo startlista) och banans geometri för banskissen.
 		anmalan = s.anmalan,
+		-- D5: tävlingskläderna (set och laddningsläge), bara efter en anmälan med set.
+		klader = s.klader,
+		kladerVal = if s.lage == "ready" or s.lage == "closed" then KLADER_VAL else nil,
 		-- D2c: eftervården, bara när ett resultat står.
 		eftervard = if s.lage == "complete" and s.resultat ~= nil then EFTERVARD_BILD else nil,
 		nasta = nasta(s), delmal = if s.lage == "to_start" or s.lage == "banskiss" then 0
@@ -313,13 +378,16 @@ function ClearRoundLektion._senasteForProv(userId: number): any
 	return senaste[userId]
 end
 
-function ClearRoundLektion.begar(s, op: any, seq: any, now: number): (boolean, string?, any)
+function ClearRoundLektion.begar(s, op: any, seq: any, now: number, _gangart: any, _ryggar: any,
+	spelare: any): (boolean, string?, any)
 	if op == "sync" then
 		ClearRoundLektion.steg(s, now)
 		return true, nil, ClearRoundLektion.bild(s)
 	end
 	-- D2b (docs/D2B-PRE-RIDE-CONTRACT.md): anmälan och banskiss före startsignalen.
-	if op ~= "start" and op ~= "retry" and op ~= "finish" and op ~= "anmal" and op ~= "ga_banan" then
+	-- D5: `anmal_<id>` för ett set ur katalogen.
+	local arAnmal, setId = ClearRoundLektion.arAnmal(op)
+	if op ~= "start" and op ~= "retry" and op ~= "finish" and not arAnmal and op ~= "ga_banan" then
 		return false, "unknown", nil
 	end
 	if type(seq) ~= "number" or seq ~= seq or seq < 1 or seq > 2147483647 or seq % 1 ~= 0 then
@@ -340,6 +408,7 @@ function ClearRoundLektion.begar(s, op: any, seq: any, now: number): (boolean, s
 		else ok = true end
 		if ok then
 			s.anmalan = nil -- anmälan dras tillbaka
+			ClearRoundLektion.kladerAv(s, spelare, "tavling_slut") -- D5: egna kläder tillbaka
 			andra(s, "closed", "closed")
 		end
 	elseif aktiv(s) or Forsok.aktivt(s.rittId) then fel = "active"
@@ -356,7 +425,7 @@ function ClearRoundLektion.begar(s, op: any, seq: any, now: number): (boolean, s
 	-- D2b: startsignalen bara efter anmälan och banskiss; anmälan bara från början.
 	elseif op == "start" and s.lage ~= "banskiss" then
 		fel = "request"
-	elseif op == "anmal" and s.lage ~= "ready" and s.lage ~= "closed" then
+	elseif arAnmal and s.lage ~= "ready" and s.lage ~= "closed" then
 		fel = "request"
 	else
 		local o = Observation.ogonblick(s.rittId)
@@ -366,7 +435,7 @@ function ClearRoundLektion.begar(s, op: any, seq: any, now: number): (boolean, s
 			fel = "place"
 		elseif banGeometri(Plats.lektionsRam(s.rittId)) == nil then
 			fel = "course"
-		elseif op == "anmal" then
+		elseif arAnmal then
 			--[[ Anmälan: INGET försök öppnas. Solo startlista (Tobias 1a): startnummer
 				1, en anmäld — inga påhittade ryttare. Banans geometri till banskissen. ]]
 			ok = true
@@ -377,6 +446,9 @@ function ClearRoundLektion.begar(s, op: any, seq: any, now: number): (boolean, s
 				hojdM = HOJD_M, hastId = s.hastId })
 			s.progress = 0
 			s.revision += 1
+			-- D5: setet laddas i bakgrunden; anmälan väntar aldrig på det.
+			s.klader = nil
+			if setId and spelare ~= nil then kladerPa(s, spelare, setId) end
 			andra(s, "startlista", "startlista")
 		else
 			local id
