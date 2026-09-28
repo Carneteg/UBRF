@@ -142,6 +142,17 @@ check("utan fel ingen omstart; tiden är mätt", r ~= nil and r.omstartMojlig ==
 	and r.tid > 0, tostring(r and r.tid))
 check("försöket är slutfört i RidForsok", HorseService.forsok(klar.forsokId).orsak == "slutford")
 check("en omstart efter ett försök utan fel nekas", request("retry") == false)
+-- B4c: skuggbedömningen på servern — aldrig i bilden, det officiella orört.
+;(function()
+	local u = ClearRoundLektion.underlag(s.voltLektion)
+	check("B4c: underlaget efter hela banan: 4 steg passerade, 0 olydnader, nedslag okända, officiell=false",
+		u ~= nil and #u.steg == 4 and u.steg[4].passerad and u.summa.olydnader == 0 and u.summa.nedslagOkanda == 4
+		and u.summa.fullstandigt == false and u.officiell == false)
+	local b = image()
+	check("B4c: underlaget finns varken i bilden eller i resultatet", b.underlag == nil and b.resultat.underlag == nil)
+	check("B4c: det officiella resultatet oförändrat (förenklad, bedoms_inte, ingen rosett)",
+		b.resultat.bedomning == "forenklad" and b.resultat.nedslag == "bedoms_inte" and b.resultat.rosett == nil)
+end)()
 
 print("\n── 2. Olydnader (utbrytningar, TR 385) ──")
 nyttForsok(); overStartlinjen()
@@ -151,6 +162,13 @@ hopp1(); hopp2(); hopp3(); hopp4(); malet()
 r = image().resultat
 check("resultat: 1 olydnad = 4 fel, observerade fel, omstart möjlig", r and r.utfall == "observerade_fel"
 	and r.olydnader == 1 and r.fel == 4 and r.omstartMojlig == true, fmt(image()))
+;(function()
+	local u = ClearRoundLektion.underlag(s.voltLektion)
+	local h = u and u.steg[1].handelser
+	check("B4c: utbrytningen vid hopp 1 blir en utbrytning i underlaget (steg 1), sedan ingen",
+		h ~= nil and #h == 2 and h[1].dom == "utbrytning" and h[2].dom == "ingen" and u.summa.olydnader == 1,
+		h and (h[1] and h[1].dom or "-") .. "," .. (h[2] and h[2].dom or "-"))
+end)()
 nyttForsok(); overStartlinjen()
 for _ = 1, 3 do utbrytningBla() end
 r = image().resultat

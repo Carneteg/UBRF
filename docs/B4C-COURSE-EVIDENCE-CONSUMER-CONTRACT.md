@@ -1,6 +1,6 @@
 # B4c: course-aware consumer skeleton — a shadow judgment of the clear round, never official
 
-Status: contract written before code, 2026-09-28.
+Status: contract written before code, 2026-09-28. **BUILT, LOCAL SUITE GREEN, NOT PHYSICALLY VERIFIED** — READY_FOR_CHATGPT_REVIEW.
 Order: [CHATGPT_REVIEW_B4B_R1_ACCEPTED](https://github.com/Carneteg/UBRF/issues/266#issuecomment-5869766684). Base `1a85e2f`.
 **No change to the official D2 result, no rosette, no persistence.** Physical test last.
 

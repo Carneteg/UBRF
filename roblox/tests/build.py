@@ -187,6 +187,7 @@ FORBEREDELSE = SPEL + [
     ("MarkbomLektion", "src/server/MarkbomLektion.luau"),  # bom pa marken i skritt
     ("HornLektion", "src/server/HornLektion.luau"),  # genom hornet (egen typ hornet)
     ("Klassprofil", "src/shared/HorseCore/Klassprofil.luau"),  # D1: regelprofilen A: Clear Round
+    ("ClearRoundUnderlag", "src/server/ClearRoundUnderlag.luau"),  # B4c: skuggbedomningen
     ("Tavlingsklader", "src/shared/HorseCore/Tavlingsklader.luau"),  # D5: katalogen (#248)
     ("TavlingskladerService", "src/server/TavlingskladerService.luau"),  # D5: livscykeln (#248)
     ("ClearRoundLektion", "src/server/ClearRoundLektion.luau"),  # D2a: forsta clear round-ritten
@@ -472,6 +473,7 @@ KOHERENS = GEOMETRI + [
     ("MarkbomLektion", "src/server/MarkbomLektion.luau"),  # bom pa marken i skritt
     ("HornLektion", "src/server/HornLektion.luau"),  # genom hornet (egen typ hornet)
     ("Klassprofil", "src/shared/HorseCore/Klassprofil.luau"),  # D1: regelprofilen A: Clear Round
+    ("ClearRoundUnderlag", "src/server/ClearRoundUnderlag.luau"),  # B4c: skuggbedomningen
     ("Tavlingsklader", "src/shared/HorseCore/Tavlingsklader.luau"),  # D5: katalogen (#248)
     ("TavlingskladerService", "src/server/TavlingskladerService.luau"),  # D5: livscykeln (#248)
     ("ClearRoundLektion", "src/server/ClearRoundLektion.luau"),  # D2a: forsta clear round-ritten
@@ -826,6 +828,10 @@ def valjBunt(spec_rel: str):
         moduler, stubbar = KOHERENS, "tests/stubs.luau"
     #[[ B4a: nedslagshandelsen ar ett MODULKONTRAKT -- bara HinderObservation. ]]
     #[[ B4b: olydnadsklassificeringen, samma modulkontrakt som nedslaget. ]]
+    #[[ B4c: skuggbedomningen ar ren -- bara modulen. ]]
+    elif "clearroundunderlag" in spec_rel:
+        moduler = [("ClearRoundUnderlag", "src/server/ClearRoundUnderlag.luau")]
+        stubbar = "tests/stubs.luau"
     elif "hinderolydnad" in spec_rel:
         moduler = [("HinderObservation", "src/server/HinderObservation.luau")]
         stubbar = "tests/stubs.luau"

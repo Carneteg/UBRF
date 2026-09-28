@@ -25,6 +25,7 @@ local Forsok = require(script.Parent.RidForsok)
 local Observation = require(script.Parent.RidObservation)
 local Plats = require(script.Parent.RidPlatsObservation)
 local Hinder = require(script.Parent.HinderObservation)
+local Underlag = require(script.Parent.ClearRoundUnderlag)
 
 local ClearRoundLektion = {}
 ClearRoundLektion.OVNING = "clearround"
@@ -235,6 +236,16 @@ end
 
 --[[ Försöket slutar. `utfall`: "bedomd" (med profilens fel), "ej_startad"
 	eller "ej_bedomd". Ingen rosett, aldrig "felfri". ]]
+--[[ B4c (docs/B4C-COURSE-EVIDENCE-CONSUMER-CONTRACT.md): underlaget för det
+	visade försöket, eller nil när ritten inte startat (ingen startlinje). ]]
+local function byggUnderlag(s): any
+	if s.geo == nil or s.nrBas == nil then return nil end
+	local hs = Hinder.ogonblick(s.rittId)
+	if hs == nil then return nil end
+	local ok, u = pcall(Underlag.bygg, s.geo.hinder, hs.forsok, s.nrBas)
+	return if ok then u else nil
+end
+
 local function avsluta(s, utfall: string, orsak: string?)
 	local tid = if s.tStart then math.max(0, obsTid(s.rittId) - s.tStart) else nil
 	local profil = nil
@@ -262,6 +273,8 @@ local function avsluta(s, utfall: string, orsak: string?)
 		Forsok.slutfor(s.rittId, s.forsokId, if utfall == "ej_startad" then "tidsgrans" else "slutford",
 			obsTid(s.rittId), nil)
 	end
+	-- B4c: skuggbedömningen ur evidensen, på servern; aldrig i bilden eller resultatet.
+	s.underlag = byggUnderlag(s)
 	s.progress = 100
 	s.revision += 1
 	andra(s, "complete", resultatUtfall)
@@ -368,9 +381,16 @@ function ClearRoundLektion.vidRittSlut(s, orsak: string?)
 		utfall = "avbruten", orsak = orsak or "avsittning", olydnader = s.olydnader, fel = nil,
 		nedslag = "bedoms_inte", tid = tid, hojdM = HOJD_M, bana = "traningsbana", omstartMojlig = false })
 	Forsok.avbryt(s.rittId, Forsok.nastaSekvens(s.rittId), s.forsokId, obsTid(s.rittId), nil)
+	s.underlag = byggUnderlag(s) -- B4c
 	s.revision += 1
 	andra(s, "complete", "avbruten")
 	senaste[s.userId] = s.resultat
+end
+
+--[[ B4c: skuggbedömningen för det visade försöket (server-sidan; aldrig i
+	bilden). För framtida D3/D4-konsumenter och prov; aldrig officiell. ]]
+function ClearRoundLektion.underlag(s): any
+	return if type(s) == "table" then s.underlag else nil
 end
 
 --[[ Provkrok: det senast avbrutna utfallet för en spelare. ]]
@@ -441,6 +461,7 @@ function ClearRoundLektion.begar(s, op: any, seq: any, now: number, _gangart: an
 			ok = true
 			senaste[s.userId] = nil
 			s.resultat, s.forsokNr = nil, 0
+			s.underlag = nil -- B4c
 			nyBaslinje(s, o, p)
 			s.anmalan = table.freeze({ startnummer = 1, anmalda = 1, klass = "clearround_traning",
 				hojdM = HOJD_M, hastId = s.hastId })
@@ -459,6 +480,7 @@ function ClearRoundLektion.begar(s, op: any, seq: any, now: number, _gangart: an
 				s.forsokId = id
 				s.forsokNr = if op == "retry" then 2 else 1
 				s.resultat = nil
+				s.underlag = nil -- B4c
 				nyBaslinje(s, o, p)
 				s.tSignal, s.tStart, s.steg, s.olydnader = o.tid, nil, 0, 0
 				s.progress = 0
