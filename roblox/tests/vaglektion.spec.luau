@@ -392,7 +392,7 @@ if f then f.skicka() end
 local friSida = UgnetaController.panel(KAP)
 check("R1: after Finish, free riding shows all groups and the way back to lessons",
 	#friSida.knappar == 4 and hitta(friSida.knappar, Sprak.t("lektionsval.vagar")) ~= nil
-	and hitta(friSida.knappar, Sprak.t("voltlektion.lessons")) ~= nil)
+	and hitta(friSida.knappar, Sprak.t("voltlektion.fri_traning")) ~= nil)
 V.avbryt(); V.start(id, nil)
 UgnetaController.satLektionsVal(V.panel) -- som LektionController efter varje start
 check("R1: reattaching to the same ride keeps free-riding navigation",

@@ -621,6 +621,10 @@ Sprak.text = {
 		sv = "Andra övningar",
 		en = "Other exercises",
 	},
+	["voltlektion.fri_traning"] = {
+		sv = "Fri träning med återspelning",
+		en = "Free practice with replay",
+	},
 	["voltlektion.start"] = {
 		sv = "Starta volten",
 		en = "Start circle",
@@ -1964,6 +1968,18 @@ Sprak.text = {
 	["ugneta.nasta_ovning"] = {
 		sv = "Nästa övning",
 		en = "Next exercise",
+	},
+	["ugneta.borja_fri_traning"] = {
+		sv = "Börja fri träning – rundor på %d s",
+		en = "Start free practice – %d s rounds",
+	},
+	["ugneta.runda_slut"] = {
+		sv = "Runda %d – tiden (%d s) är slut",
+		en = "Round %d – time (%d s) is up",
+	},
+	["ugneta.runda_slut_kort"] = {
+		sv = "Runda %d – tiden är slut",
+		en = "Round %d – time is up",
 	},
 	["led.borja"] = {
 		sv = "Led hästen",

@@ -1143,7 +1143,7 @@ end
 --[[ Efter ett försök. `fore` är nil på första försöket. Observationerna
 	kommer ur HorseCore/Ugneta — samma rangordning som webben. ]]
 function UgnetaController.efterForsok(ovningId: string, nu: { [string]: number },
-	fore: { [string]: number }?, forsokNr: number, kanSeRitten: boolean?)
+	fore: { [string]: number }?, forsokNr: number, kanSeRitten: boolean?, sekunder: number?)
 	local obs = Ugneta.observationer(ovningId, nu, fore)
 	local forsta = fore == nil
 	--[[ #264: beskedet är en BYGGARE, så att ett språkbyte kan skriva om det
@@ -1167,7 +1167,14 @@ function UgnetaController.efterForsok(ovningId: string, nu: { [string]: number }
 		--[[ "Se ritten" bara när det FINNS en inspelning av försöket, och
 		     "Gå vidare" bara efter första försöket — efter det sista är
 		     huvudknappen redan vägen vidare. ]]
-		return (if forsta then Sprak.t("ugneta.prova_igen") else Sprak.t("ugneta.forsok", forsokNr)),
+		--[[ C3 alternativ A (docs/FREE-PRACTICE-FRAMING-CONTRACT.md): rubriken säger vad
+			som hände — rundan tog slut på tiden — i stället för "Prova igen"/"Försök N",
+			som läste som ett besked om övningen. Sekunderna kommer från passets klocka
+			(`Lektion.FORSOK_SEK`, via anroparen); saknas de hittas inget tal på. ]]
+		local rubrik = if type(sekunder) == "number" and sekunder == sekunder and sekunder > 0
+			then Sprak.t("ugneta.runda_slut", forsokNr, sekunder)
+			else Sprak.t("ugneta.runda_slut_kort", forsokNr)
+		return rubrik,
 			punkter, true,
 			(if forsta then Sprak.t("ugneta.prova_igen") else Sprak.t("ugneta.nasta_ovning")),
 			kanSeRitten == true, forsta

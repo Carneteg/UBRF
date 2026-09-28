@@ -766,7 +766,9 @@ local function text(key)
 	local h = haltText(key)
 	if h then return h end
 	if key=="choose" then return Sprak.t("voltlektion.choose") end
-	if key=="lessons" then return Sprak.t("voltlektion.lessons") end
+	--[[ C3 alternativ A (docs/FREE-PRACTICE-FRAMING-CONTRACT.md): det gamla 22 s-passet är
+		fri träning med återspelning, inte "andra övningar" bredvid lektionerna. ]]
+	if key=="lessons" then return Sprak.t("voltlektion.fri_traning") end
 	if key=="start" then return Sprak.t("voltlektion.start") end
 	if key=="retry" then return Sprak.t("voltlektion.retry") end
 	if key=="finish" then return Sprak.t("voltlektion.finish") end

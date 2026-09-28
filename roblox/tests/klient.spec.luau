@@ -580,17 +580,21 @@ do
 		do
 			local kn = hitta("UgnetaKnapp") or hitta("Knapp")
 			local txt = kn and kn.Text or ""
-			prova("kortets knapp förklarar att den startar lektionen",
-				txt:find(Sprak.iSprak("sv", "ugneta.borja_lektionen"), 1, true) ~= nil,
+			--[[ C3 alternativ A (docs/FREE-PRACTICE-FRAMING-CONTRACT.md): passet är fri
+				träning i rundor på passets egen klocka — knappen säger det. ]]
+			prova("kortets knapp säger fri träning i rundor på passets klocka",
+				txt:find(Sprak.iSprak("sv", "ugneta.borja_fri_traning", Lektion.FORSOK_SEK), 1, true) ~= nil
+				and txt:find("22", 1, true) ~= nil and not txt:find("lektionen", 1, true),
 				('("%s")'):format(txt))
 
 			--[[ …och på engelska. Samma mätning, andra locale — annars är
 				det bara en svensk konstant som råkar stämma. ]]
 			local fore = Sprak.eget()
 			Sprak.satLocale("en-us")
-			local en = Sprak.t("ugneta.borja_lektionen")
+			local en = Sprak.t("ugneta.borja_fri_traning", Lektion.FORSOK_SEK)
 			prova("och samma knapp finns på engelska",
-				en == "Continue to start the lesson" and en ~= Sprak.iSprak("sv", "ugneta.borja_lektionen"),
+				en == "Start free practice – 22 s rounds"
+					and en ~= Sprak.iSprak("sv", "ugneta.borja_fri_traning", Lektion.FORSOK_SEK),
 				('("%s")'):format(en))
 			Sprak.satLocale(fore)
 		end

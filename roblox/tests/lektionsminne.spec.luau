@@ -635,8 +635,8 @@ do
 	local fin = hitta(VC.panel().knappar, Sprak.t("haltlektion.finish"))
 	if fin then fin.skicka() end
 	local friSida = UC.panel(4)
-	check("KONTROLL: fri ridning (ersättningssida med 'Andra övningar')", friSida.ersatt == true
-		and hitta(friSida.knappar, Sprak.t("voltlektion.lessons")) ~= nil)
+	check("KONTROLL: fri ridning (ersättningssida med 'Fri träning med återspelning')", friSida.ersatt == true
+		and hitta(friSida.knappar, Sprak.t("voltlektion.fri_traning")) ~= nil)
 	check("fri ridning: fyra rader, och förslaget med plats står i texten",
 		#friSida.knappar <= 4 and string.find(friSida.text or "", Sprak.t("lektionsminne.forslag_var",
 			Sprak.t("galopplektion.choose"), Sprak.t("lektionsval.gangart")), 1, true) ~= nil, friSida.text)

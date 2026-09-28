@@ -322,8 +322,11 @@ check("same ride reattachment preserves attempt", RidForsok.aktivt(id)==current 
 n=#remote._skickat; oldButton.skicka()
 check("old detached button ignored", #remote._skickat==n)
 click("finish")
-check("explicit finish returns to free riding", not LektionController.pagar() and button("lessons")~=nil)
-click("lessons")
+check("explicit finish returns to free riding", not LektionController.pagar() and button("fri_traning")~=nil)
+-- C3 alternativ A (docs/FREE-PRACTICE-FRAMING-CONTRACT.md): the way back is labelled free practice.
+check("C3 A: the free-riding button says free practice with replay, not other exercises",
+	button("fri_traning")~=nil and button("lessons")==nil)
+click("fri_traning")
 check("legacy lessons still reachable", not V.tarOver() and LektionController.vantar())
 
 -- Delay only the transport; production client owns pending/late response logic.

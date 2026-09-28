@@ -423,8 +423,10 @@ local function presentera(p: Lektion.Pass)
 		for i, reserv in ipairs(o.punkter) do
 			punkter[i] = kortText("p" .. i, reserv)
 		end
+		--[[ C3 alternativ A (docs/FREE-PRACTICE-FRAMING-CONTRACT.md): passet är fri
+			träning i rundor som klockan avslutar — knappen säger det. ]]
 		return kortText("rubrik", o.rubrik), punkter, true,
-			Sprak.t("ugneta.borja_lektionen")
+			Sprak.t("ugneta.borja_fri_traning", Lektion.FORSOK_SEK)
 	end)
 	lage = "presentation"
 end
@@ -519,7 +521,7 @@ function LektionController.steg(dt: number, tm: { [string]: any }?,
 	stangInspelning()
 	local h = Lektion.avslutaForsok(p)
 	if h then
-		UgnetaController.efterForsok(h.ovningId, h.nu, h.fore, h.forsokNr, harRitt())
+		UgnetaController.efterForsok(h.ovningId, h.nu, h.fore, h.forsokNr, harRitt(), Lektion.FORSOK_SEK)
 		lage = "efter"
 	else
 		--[[ INGET UNDERLAG → INGET OMDÖME, men spelaren får veta varför.

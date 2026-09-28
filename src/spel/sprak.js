@@ -293,6 +293,7 @@ const SPRAK = {
   "ugneta.prova_igen": { sv: "Prova igen", en: "Try again" },
   "voltlektion.choose": { sv: "Träna volt", en: "Practice a circle" },
   "voltlektion.lessons": { sv: "Andra övningar", en: "Other exercises" },
+  "voltlektion.fri_traning": { sv: "Fri träning med återspelning", en: "Free practice with replay" },
   "voltlektion.start": { sv: "Starta volten", en: "Start circle" },
   "voltlektion.retry": { sv: "Prova igen", en: "Try again" },
   "voltlektion.finish": { sv: "Avsluta voltlektionen", en: "Finish circle lesson" },
@@ -630,6 +631,9 @@ const SPRAK = {
   "ugneta.jamnare_forsok": { sv: "Jämnare försök. Behåll samma känsla.",
     en: "A steadier attempt. Keep the same feel." },
   "ugneta.nasta_ovning": { sv: "Nästa övning", en: "Next exercise" },
+  "ugneta.borja_fri_traning": { sv: "Börja fri träning – rundor på %d s", en: "Start free practice – %d s rounds" },
+  "ugneta.runda_slut": { sv: "Runda %d – tiden (%d s) är slut", en: "Round %d – time (%d s) is up" },
+  "ugneta.runda_slut_kort": { sv: "Runda %d – tiden är slut", en: "Round %d – time is up" },
 
   /* ATT LEDA HÄSTEN (#162 blockerare 2). Varje nej har en egen nyckel:
      ett samlat "gick inte" gör de negativa fallen omöjliga att skilja åt,
