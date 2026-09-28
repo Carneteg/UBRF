@@ -1772,12 +1772,25 @@ end
 	härlett ur spelets läge (`guide`) och ur en STÄNGD dörr inom räckhåll.
 	Nil = gäller inte (welfare-stopp, rättelse, eftervård, ritten …): då
 	står de gamla texterna kvar. ]]
-local function guideSteg(g: any, lage: string?, text: string?, hastnamn: string?, stangdDorr: boolean): any
+--[[ UI-1: har spelaren valt «Gör i ordning … själv» för den här hästen? Sessionslokalt;
+	nollställs när hästen är redo eller man sitter upp. ]]
+local startvalSjalv: { [string]: boolean } = {}
+
+--[[ UI-1: startskärmen — vid hästen, inget gjort, och inget val än. ]]
+local function arStartskarm(g: any, minHast: string?, lage: string?): boolean
+	return type(g) == "table" and not g.rattelse and not g.fynd and lage ~= "fynd"
+		and not g.utomRackhall and g.status == "preparing"
+		and g.nasta == "halsa" and (g.klaraFaser or 0) == 0 and minHast ~= nil and not startvalSjalv[minHast]
+		and PreparationController.kontext() ~= "ledning"
+end
+
+local function guideSteg(g: any, lage: string?, text: string?, hastnamn: string?, stangdDorr: boolean,
+	valtSjalv: boolean?): any
 	if type(g) ~= "table" then return nil end
-	if g.rattelse or g.status == "welfare_stop" or g.status == "waiting_model" or g.status == "riding" then
+	if g.rattelse or g.fynd or g.status == "welfare_stop" or g.status == "waiting_model" or g.status == "riding" then
 		return nil
 	end
-	if lage == "eftervard" or lage == "raknat" then return nil end
+	if lage == "eftervard" or lage == "raknat" or lage == "fynd" then return nil end
 	local namn = if hastnamn and hastnamn ~= "" then hastnamn else Sprak.t("guide.din_hast")
 	local function kort(nyckel: string, instr: string?, raknare: boolean?)
 		return { rubrik = Sprak.t("guide." .. nyckel .. "_rubrik", namn), text = instr or "", raknare = raknare == true }
@@ -1796,8 +1809,9 @@ local function guideSteg(g: any, lage: string?, text: string?, hastnamn: string?
 	local m = if type(g.nastaMoment) == "string" then g.nastaMoment else ""
 	local buren = g.buren or {}
 	if g.nasta == "halsa" and (g.klaraFaser or 0) == 0 then
-		local fraga = text or ""
-		return kort("valj", Sprak.t("guide.valj_text", namn) .. (if fraga ~= "" then (" " .. fraga) else ""))
+		-- UI-1: startskärmen bär bara de två vägarna; hälsningen kommer först efter «själv».
+		if not valtSjalv then return kort("valj", Sprak.t("guide.valj_kort", namn)) end
+		return kort("halsa", text)
 	elseif g.nasta == "visitera" then
 		return kort("visitera", text, true)
 	elseif g.nasta == "rykta" then
@@ -1818,8 +1832,9 @@ local function guideSteg(g: any, lage: string?, text: string?, hastnamn: string?
 end
 
 --[[ Provkrok: stegkortet för ett givet läge (samma funktion som panelen). ]]
-function Naromrade._guideFor(g: any, lage: string?, text: string?, hastnamn: string?, stangdDorr: boolean): any
-	return guideSteg(g, lage, text, hastnamn, stangdDorr)
+function Naromrade._guideFor(g: any, lage: string?, text: string?, hastnamn: string?, stangdDorr: boolean,
+	valtSjalv: boolean?): any
+	return guideSteg(g, lage, text, hastnamn, stangdDorr, valtSjalv)
 end
 
 --[[ Finns en STÄNGD dörr bland prompterna inom räckhåll? (`SprakNyckel`
@@ -1859,8 +1874,12 @@ local function fyllText(data: any, minHast: string?, hastnamn: string?)
 		end
 		--[[ ONBOARDING: ett steg i taget. Instruktionen ur guiden; en kvittens
 			eller ett nej står kvar i återkopplingsfältet som förut. ]]
-		local gs = guideSteg(data.guide, data.lage, if data.aterkoppling then nil else data.text, hastnamn,
-			stangdDorrNara())
+		local g = data.guide
+		if type(g) == "table" and minHast and (g.redo or g.status == "riding" or g.status == "ready_to_mount") then
+			startvalSjalv[minHast] = nil -- nästa gång börjar med valet igen
+		end
+		local gs = guideSteg(g, data.lage, if data.aterkoppling then nil else data.text, hastnamn,
+			stangdDorrNara(), minHast ~= nil and startvalSjalv[minHast] == true)
 		if gs then
 			local r = gs.rubrik
 			if gs.raknare and data.totalt and data.totalt > 0 then
@@ -2096,6 +2115,23 @@ rita = function()
 		for _, v in ipairs(data.val) do
 			if v.aktiv and #valen < MAX_VAL then table.insert(valen, v) end
 		end
+	end
+	--[[ UI-1: STARTSKÄRMEN. Exakt två val — «Rida nu — {häst}» (primärt, samma
+	     funktion som prompten) och «Gör i ordning {häst} själv». Inga
+	     hälsningssvar, inga promptrader, inget «Fler». ]]
+	if data and arStartskarm(data.guide, minHast, data.lage) then
+		local namn = if hastnamn and hastnamn ~= "" then hastnamn else Sprak.t("guide.din_hast")
+		local hast = minHast :: string
+		valen = {
+			{ id = "start:rida_nu", text = Sprak.t("guide.val_rida_nu", namn), aktiv = true, paTur = true, klar = false,
+				skicka = function() task.spawn(InteractionController.ridaNu) end },
+			{ id = "start:sjalv", text = Sprak.t("guide.val_sjalv", namn), aktiv = true, paTur = false, klar = false,
+				skicka = function()
+					startvalSjalv[hast] = true
+					if rita then rita() end
+				end },
+		}
+		ordnade = {}
 	end
 	--[[ Under en fråga står EN sekundär handling fast — Rida nu, enligt
 	     produktordningen — så att frågans alternativ får plats att synas. ]]

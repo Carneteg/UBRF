@@ -27,7 +27,9 @@ local N = Naromrade
 Sprak.satLocale("sv-se")
 
 RunService._server = true
-Net.get("MountRequest"); Net.get("LedBorja"); Net.get("LedSlapp"); Net.get("LedSync"); Net.get("RidaNu")
+Net.get("MountRequest"); Net.get("LedBorja"); Net.get("LedSlapp"); Net.get("LedSync")
+local ridaNuAnrop = 0
+Net.get("RidaNu").OnServerInvoke = function() ridaNuAnrop += 1; return true end
 RunService._server = false
 RSt:SetAttribute("G01Enabled", true)
 
@@ -103,15 +105,37 @@ prova("dörren öppen: «Gå till Trixie» + följ pilen",
 	rubrik() == Sprak.t("guide.ga_till_rubrik", "Trixie") and steg() == Sprak.t("guide.ga_till_text"), rubrik() .. " | " .. steg())
 prova("åtgärdsraderna finns kvar (panelen visar dörren)", #N._rader() >= 1, #N._rader())
 
-print("\n── 2. Vid hästen, inget gjort: välj väg ──")
+print("\n── 2. Vid hästen, inget gjort: STARTSKÄRMEN med bara två vägar (UI-1) ──")
 flytta(vidHasten)
 visa("preparing")
-prova("«Välj hur du börjar»", rubrik() == Sprak.t("guide.valj_rubrik", "Trixie"), rubrik())
-prova("instruktionen erbjuder «Rida nu» OCH hälsningens fråga", har(steg(), "Rida nu") and har(steg(), "gör i ordning själv")
-	and #steg() > #Sprak.t("guide.valj_text", "Trixie") + 5, steg())
-prova("hälsningens val står kvar som knappar", #N._val() >= 2, #N._val())
+local function valTexter()
+	local ut = {}
+	for _, v in ipairs(N._val()) do table.insert(ut, tostring(v.text)) end
+	return ut
+end
+local function valMed(id)
+	for _, v in ipairs(N._val()) do if v.id == id then return v end end
+	return nil
+end
+prova("«Välj hur du börjar» med den korta instruktionen (ingen hälsningsfråga)",
+	rubrik() == Sprak.t("guide.valj_rubrik", "Trixie") and steg() == Sprak.t("guide.valj_kort", "Trixie"), steg())
+local vt = valTexter()
+prova("exakt två val: «Rida nu — Trixie» och «Gör i ordning Trixie själv»", #vt == 2
+	and vt[1] == Sprak.t("guide.val_rida_nu", "Trixie") and vt[2] == Sprak.t("guide.val_sjalv", "Trixie"), table.concat(vt, " / "))
+-- `_rader()` är ALLT synligt i skärmordning (valen först, sedan promptraderna).
+local synligt = N._rader()
+prova("inga promptrader och inget «Fler»: det synliga är exakt de två valen", #synligt == 2
+	and synligt[1] == vt[1] and synligt[2] == vt[2], table.concat(synligt, " / "))
+local harHalsning = false
+for _, v in ipairs(N._val()) do if v.fel ~= nil then harHalsning = true end end
+prova("inga hälsningssvar på startskärmen", not harHalsning)
 
 print("\n── 3. Den manuella kedjan genom den riktiga Preparation ──")
+valMed("start:sjalv").skicka()
+N.satRider(false)
+prova("«Gör i ordning själv»: «Hälsa på Trixie» med fasens fråga och hälsningens val",
+	rubrik() == Sprak.t("guide.halsa_rubrik", "Trixie") and steg() ~= "" and #N._val() >= 2 and valMed("start:sjalv") == nil,
+	rubrik() .. " | " .. steg())
 gorFas("halsa"); visa("preparing")
 prova("visitera: «Kolla Trixie · x/y» med momentets egen text", borjar(rubrik(), Sprak.t("guide.visitera_rubrik", "Trixie"))
 	and har(rubrik(), "/") and steg() ~= "", rubrik() .. " | " .. steg())
@@ -151,10 +175,15 @@ gorFas("leda"); visa("ready_to_mount")
 prova("redo: «Sitt upp på Trixie» + rid", rubrik() == Sprak.t("guide.sittupp_rubrik", "Trixie")
 	and steg() == Sprak.t("guide.sittupp_text"), rubrik() .. " | " .. steg())
 
-print("\n── 4. «Rida nu»-vägen: från valet direkt till «Sitt upp» ──")
+print("\n── 4. «Rida nu»-vägen: knappen på startskärmen, sedan «Sitt upp» ──")
 state = Preparation.nyState(HAST_ID, 2)
 visa("preparing")
-prova("ny dag: «Välj hur du börjar»", rubrik() == Sprak.t("guide.valj_rubrik", "Trixie"), rubrik())
+prova("ny dag (efter att hästen varit redo): startskärmen igen", rubrik() == Sprak.t("guide.valj_rubrik", "Trixie")
+	and valMed("start:rida_nu") ~= nil, rubrik())
+local fore = ridaNuAnrop
+valMed("start:rida_nu").skicka()
+prova("«Rida nu — Trixie» anropar serverns RidaNu genom InteractionController.ridaNu", ridaNuAnrop == fore + 1,
+	("%d → %d"):format(fore, ridaNuAnrop))
 local okA = Preparation.autoForbered(state)
 visa("ready_to_mount")
 prova("efter «Rida nu» (stallet förberett): «Sitt upp på Trixie»", okA ~= false and rubrik() == Sprak.t("guide.sittupp_rubrik", "Trixie"),
@@ -172,12 +201,18 @@ prova("eftervården och räknat pass: nil", N._guideFor(med({}), "eftervard", "x
 prova("hästen långt bort och dörren STÄNGD: dörren; ÖPPEN: gå till",
 	N._guideFor(med({ utomRackhall = true }), "skotsel", "", "Trixie", true).rubrik == Sprak.t("guide.dorr_rubrik", "Trixie")
 	and N._guideFor(med({ utomRackhall = true }), "skotsel", "", "Trixie", false).rubrik == Sprak.t("guide.ga_till_rubrik", "Trixie"))
-prova("engelska: «Choose how to start» och «Ride now»", (function()
+prova("engelska: «Choose how to start»/«Ride now»; efter valet «Greet Trixie» + frågan", (function()
 	Sprak.satLocale("en-us")
-	local k = N._guideFor(med({}), "skotsel:halsa", "Walk up from the side.", "Trixie", false)
+	local k = N._guideFor(med({}), "skotsel:halsa", "Walk up from the side.", "Trixie", false, false)
+	local h = N._guideFor(med({}), "skotsel:halsa", "Walk up from the side.", "Trixie", false, true)
+	local r, sj = Sprak.t("guide.val_rida_nu", "Trixie"), Sprak.t("guide.val_sjalv", "Trixie")
 	Sprak.satLocale("sv-se")
-	return k and k.rubrik == "Choose how to start" and har(k.text, "Ride now") and har(k.text, "Walk up from the side.")
+	return k and k.rubrik == "Choose how to start" and har(k.text, "Ride now") and not har(k.text, "Walk up")
+		and h and h.rubrik == "Greet Trixie" and h.text == "Walk up from the side."
+		and r == "Ride now — Trixie" and sj == "Get Trixie ready myself"
 end)())
+prova("en öppen välfärdsfråga (stallets fynd) går före: ingen guide", N._guideFor(med({ fynd = true }), "fynd", "x", "Trixie", false) == nil
+	and N._guideFor(med({}), "fynd", "x", "Trixie", false) == nil)
 
 print("\n── 6. «Rida nu» finns även när hästen strömmar in EFTER vyn ──")
 do

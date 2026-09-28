@@ -1658,6 +1658,8 @@ local function guideData(): any
 		status = vy.status, nasta = vy.nasta, nastaMoment = vy.nastaMoment, redo = vy.redo == true,
 		klaraFaser = klara, buren = table.freeze(buren), utomRackhall = utomRackhall,
 		rattelse = rattelseAktiv,
+		-- En öppen välfärdsfråga (stallets fynd) går alltid före guiden och startskärmen.
+		fynd = type(vy.svar) == "table" and #vy.svar > 0,
 	})
 end
 

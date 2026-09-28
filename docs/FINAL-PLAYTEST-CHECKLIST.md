@@ -1,6 +1,6 @@
 # Slutspeltest — samlad checklista (#266 A2)
 
-Status: LÅST KANDIDAT för Tobias fysiska slutprov, 2026-09-28 — **omlåst efter stegkortet** (onboardingen ett steg i taget; Tobias fynd i Play: den tilldelade hästen syns från spawn; skuggbedömningen på servern, aldrig officiell; neutral olydnadsevidens per hinderförsök; nedslagshändelsen på servern; clear round: anmälan, startlista, banskiss; eftervården efter resultatet; tävlingskläder vid anmälan), samma dag. Ingenting här är
+Status: LÅST KANDIDAT för Tobias fysiska slutprov, 2026-09-28 — **omlåst efter UI-1** (startskärmen: två vägar; onboardingen ett steg i taget; Tobias fynd i Play: den tilldelade hästen syns från spawn; skuggbedömningen på servern, aldrig officiell; neutral olydnadsevidens per hinderförsök; nedslagshändelsen på servern; clear round: anmälan, startlista, banskiss; eftervården efter resultatet; tävlingskläder vid anmälan), samma dag. Ingenting här är
 godkänt; varje rad står som NOT_TESTED tills Tobias fyller i den.
 Beslut: Tobias «Do A» på [NEXT_PACKAGE_RECOMMENDATION_20260928](https://github.com/Carneteg/UBRF/issues/266#issuecomment-5865193035).
 
@@ -9,9 +9,9 @@ Beslut: Tobias «Do A» på [NEXT_PACKAGE_RECOMMENDATION_20260928](https://githu
 | | |
 |---|---|
 | Gren | `codex/circle-lesson-20260926` |
-| Kodhuvud vid låsning | stegkorts-commiten på grenen (se leveransrapporten i #266); första låsningen var `19df5e6` |
-| Byggidentitet (`kallhash`) | `3217c09395f2c156e53a1d07acac8d94cc3116c7724903ce50eff0ec82016ef6` ur 107 mappade filer (106 skript, 1 modell), beräknad med `tools/bygg-identitet.py` (tidigare låsningar: `0ce4b14c93e2…` vägvisaren, `2e0b6a877e69…` D4a, `0c240ce3a8a0…` B4c, `e79df69c921e…` B4b R1, `9775da2ad7bf…` B4b, `282a232646ad…` B4a, `46b7d67b5bc2…` D5 R1, `82c56922d2c6…` D5, `93f07144a1b5…` D2c, `b22335d27996…` D2b, `5a7d81b05827…` D2a R2, `e23198df4614…`) |
-| Kontroll i spelet | byggidentiteten i spelets diagnostik ska visa **`3217c09395f2`**. Visar den något annat är det inte den här kandidaten — avbryt och säg till. |
+| Kodhuvud vid låsning | UI-1-commiten på grenen (se leveransrapporten i #266); första låsningen var `19df5e6` |
+| Byggidentitet (`kallhash`) | `a3a5fae55af8ba3896389f0f565021a156eda4400bc5e40aef108365266390e0` ur 107 mappade filer (106 skript, 1 modell), beräknad med `tools/bygg-identitet.py` (tidigare låsningar: `3217c09395f2…` stegkortet, `0ce4b14c93e2…` vägvisaren, `2e0b6a877e69…` D4a, `0c240ce3a8a0…` B4c, `e79df69c921e…` B4b R1, `9775da2ad7bf…` B4b, `282a232646ad…` B4a, `46b7d67b5bc2…` D5 R1, `82c56922d2c6…` D5, `93f07144a1b5…` D2c, `b22335d27996…` D2b, `5a7d81b05827…` D2a R2, `e23198df4614…`) |
+| Kontroll i spelet | byggidentiteten i spelets diagnostik ska visa **`a3a5fae55af8`**. Visar den något annat är det inte den här kandidaten — avbryt och säg till. |
 | Bas | `main` `7922d70` (#264) |
 
 Varje ändring av en mappad Roblox-källa efter låsningen ger en ny `kallhash`
@@ -38,7 +38,7 @@ anteckning vid FAIL/NOTE. Raderna står i den ordning du möter dem i spelet.
 
 | # | Kontroll | PC | iPad | iPhone |
 |---|---|---|---|---|
-| 0.1 | Byggidentiteten visar `3217c09395f2` | | | |
+| 0.1 | Byggidentiteten visar `a3a5fae55af8` | | | |
 | 0.2 | Språk: spela en gång på svenska; byt till engelska minst i en lektion och vid ett slutkort | | | |
 
 ## 1. Spawn, stall och port
@@ -46,7 +46,7 @@ anteckning vid FAIL/NOTE. Raderna står i den ordning du möter dem i spelet.
 | # | Kontroll (källa) | PC | iPad | iPhone |
 |---|---|---|---|---|
 | 1.0 | **Din häst från spawn** (Tobias fynd 2026-09-28): direkt vid spawn syns en stor gyllene ▼-pil med «Din häst» + namnet över DIN häst — genom stallets väggar, ingen annan häst markerad; den släcks när du står vid hästen, när du leder och när du rider, och kommer tillbaka efter en respawn (ASSIGNED-HORSE-GUIDE) | | | |
-| 1.0b | **Stegkortet till vänster** (Tobias C, 2026-09-28): vid spawn «Öppna stalldörren», efter dörren «Gå till …», vid hästen «Välj hur du börjar» (Rida nu eller gör i ordning själv). «Rida nu» (håll R) finns direkt och ger «Sitt upp på …». Gör man själv: ett steg i taget — hälsa, kolla, rykta, hovar, «Hämta sadeln», «Hämta tränset», «Lägg på sadeln», «Sätt på tränset», «Led … till ridhuset», «Sitt upp …». Knapparna finns kvar; texterna läsbara på telefon (ONBOARDING-STEP-CARD) | | | |
+| 1.0b | **Stegkortet till vänster** (Tobias C, 2026-09-28): vid spawn «Öppna stalldörren», efter dörren «Gå till …», vid hästen «Välj hur du börjar» med EXAKT två knappar, «Rida nu — …» och «Gör i ordning … själv» (inga hälsningssvar, inga andra rader, inget «Fler»); «Rida nu — …» ger «Sitt upp på …», «själv» ger «Hälsa på …» (UI-1). Gör man själv: ett steg i taget — hälsa, kolla, rykta, hovar, «Hämta sadeln», «Hämta tränset», «Lägg på sadeln», «Sätt på tränset», «Led … till ridhuset», «Sitt upp …». Knapparna finns kvar; texterna läsbara på telefon (ONBOARDING-STEP-CARD) | | | |
 | 1.1 | Porten: raden följer vad motorn visar; X och klick på båda sidor om gränsen; ett dörrbyte; passage (R4/R5) | | | |
 | 1.2 | Norra stallentrén: den inre ytan följer dörrbladet — stängd ser rätt ut, öppen ger synlig passage, kamera och spelare syns genom öppningen (DOOR-VISUAL) | | | |
 | 1.3 | Närområdets lista: fler handlingar än rader bläddrar; tangenterna följer raderna; «Leda till ridhuset» tar bara en ledig rad och står sist, också på en ofullständig sista sida (närområdet, alternativ 3) | | | |

@@ -683,6 +683,12 @@ do
 	state = Preparation.nyState(HAST_ID, 1)
 	visa(Preparation.STATUS.FORBEREDER)
 	NR.satRider(false)
+	--[[ UI-1 (docs/UI1-START-CHOICE-CONTRACT.md): startskärmen visar bara de två
+	     vägarna; hälsningens fråga kommer först efter «Gör i ordning … själv». ]]
+	for _, v in ipairs(NR._val()) do
+		if v.id == "start:sjalv" then v.skicka() end
+	end
+	NR.satRider(false)
 	local harFel = false
 	for _, v in ipairs(NR._val()) do if v.fel then harFel = true end end
 	local l1, n1 = lyfta()
@@ -825,6 +831,13 @@ do
 		end
 		return table.concat(ut, " | "), #ut, fraga
 	end
+	NR.satRider(false)
+	--[[ UI-1 (docs/UI1-START-CHOICE-CONTRACT.md): startskärmen visar bara de två
+	     vägarna; hälsningens fråga kommer först efter «Gör i ordning … själv». ]]
+	for _, v in ipairs(NR._val()) do
+		if v.id == "start:sjalv" then v.skicka() end
+	end
+	NR.satRider(false)
 	local _, _, fraga0 = rader()
 	prova("KONTROLL: skötselfrågan står i panelen", fraga0 >= 2, fraga0)
 	for n = 0, 3 do

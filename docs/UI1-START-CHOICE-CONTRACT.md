@@ -1,6 +1,6 @@
 # UI-1: the start screen shows only the two real paths
 
-Status: contract written before code, 2026-09-28.
+Status: contract written before code, 2026-09-28. **BUILT, LOCAL SUITE GREEN, VERIFIED IN STUDIO (engine), NOT VISUALLY VERIFIED** — READY_FOR_CHATGPT_REVIEW.
 Order: [#264 comment 5872220574](https://github.com/Carneteg/UBRF/issues/264#issuecomment-5872220574) ("one coherent change at a time"). This is **the first of three packages**:
 - **UI-1** (this one): the start screen;
 - **UI-2**: the Ugneta box on top, the action box below, the strip integrated, and guidance instead of a quiz;
@@ -58,3 +58,9 @@ In Studio (`3217c09395f2`) I switched language through **the player attribute** 
    - "Rida nu" not calling the shared function.
 
 **Full suite; re-lock; Studio before and after.**
+
+## Found during the build: the stable's finding (welfare) must never be hidden
+With a stable finding (`vy.svar`, panel mode `fynd`), the finding question arrives at exactly the moment the start screen applies (nothing done yet). The first version of UI-1 **hid it** (caught by `klient-uikontext.spec` "FYNDET").
+
+Now `guide.fynd` (open answer choices) and `lage == "fynd"` stop **both** the start screen and the step card: **a welfare question always goes first.**
+

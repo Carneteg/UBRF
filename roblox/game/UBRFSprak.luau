@@ -477,9 +477,21 @@ Sprak.text = {
 		sv = "Välj hur du börjar",
 		en = "Choose how to start",
 	},
-	["guide.valj_text"] = {
-		sv = "Rida nu: håll «Rida nu» (R) vid %s — stallet gör i ordning henne rätt och leder henne till ridhuset. Eller gör i ordning själv:",
-		en = "Ride now: hold «Ride now» (R) at %s — the stable gets her ready properly and leads her to the arena. Or get her ready yourself:",
+	["guide.valj_kort"] = {
+		sv = "Rida nu: stallet gör i ordning %s rätt och leder henne till ridhuset. Eller gör i ordning henne själv — steg för steg.",
+		en = "Ride now: the stable gets %s ready properly and leads her to the arena. Or get her ready yourself — step by step.",
+	},
+	["guide.val_rida_nu"] = {
+		sv = "Rida nu — %s",
+		en = "Ride now — %s",
+	},
+	["guide.val_sjalv"] = {
+		sv = "Gör i ordning %s själv",
+		en = "Get %s ready myself",
+	},
+	["guide.halsa_rubrik"] = {
+		sv = "Hälsa på %s",
+		en = "Greet %s",
 	},
 	["guide.visitera_rubrik"] = {
 		sv = "Kolla %s",
