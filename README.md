@@ -1,6 +1,6 @@
 > **Aktuellt fokus: Roblox.** Enligt det tidsbegränsade produktbeslutet
 > 2026-09-22 är Roblox enda aktiva leveransmålet fram till verifierad
-> First Playable. Webbpelet nedan är bevarat i befintligt skick — nya
+> First Playable. Webbspelet nedan är bevarat i befintligt skick — nya
 > webbfeatures är pausade tills produktägaren beslutar annat.
 > Se `roblox/README.md` för Roblox-spåret och `docs/ACTIVE-GATE.md`
 > för vad som är aktivt just nu.
