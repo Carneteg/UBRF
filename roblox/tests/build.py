@@ -824,6 +824,10 @@ def valjBunt(spec_rel: str):
         moduler, stubbar = KOHERENS, "tests/stubs.luau"
     elif "ridplats" in spec_rel:
         moduler, stubbar = KOHERENS, "tests/stubs.luau"
+    #[[ B4a: nedslagshandelsen ar ett MODULKONTRAKT -- bara HinderObservation. ]]
+    elif "hindernedslag" in spec_rel:
+        moduler = [("HinderObservation", "src/server/HinderObservation.luau")]
+        stubbar = "tests/stubs.luau"
     elif "hinderobservation" in spec_rel:
         moduler, stubbar = KOHERENS, "tests/stubs.luau"
     elif "ridobservation" in spec_rel:

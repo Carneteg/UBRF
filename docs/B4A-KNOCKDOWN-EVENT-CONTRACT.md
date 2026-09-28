@@ -1,6 +1,6 @@
 # B4a: the knockdown event on the server — truthful "unknown" today, real events once the poles are physical
 
-Status: contract written before code, 2026-09-28.
+Status: contract written before code, 2026-09-28. **BUILT, LOCAL SUITE GREEN, NOT PHYSICALLY VERIFIED** — READY_FOR_CHATGPT_REVIEW.
 Order: [CHATGPT_REVIEW_D5_R1_ACCEPTED](https://github.com/Carneteg/UBRF/issues/266#issuecomment-5868811989) and
 [CHATGPT_B4_EXECUTE_NOW](https://github.com/Carneteg/UBRF/issues/266#issuecomment-5868851094). Base `dab83b2`.
 **No change to D2 judging, no rosette, no physical evidence.** Physical test last.
