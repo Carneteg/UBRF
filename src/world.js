@@ -942,7 +942,7 @@ function interagera(){
   /* Hålltiden är VERKLIG tid sedan hållet började, som Roblox
      HoldDuration — inte summerade bildrutor, som vid låg bildtakt räknade
      ett riktigt håll för kort. */
-  const nu=performance.now();
+  const nu=(typeof performance!=="undefined"?performance:Date).now();
   const pek=typeof PEKSKARM!=="undefined"&&PEKSKARM;
   const inom=bast?L.filter(i=>i.hall>0&&Math.hypot(VD.px-i.pos[0],VD.py-i.pos[1])<2.4):[];
   let hallen=null;

@@ -342,7 +342,9 @@ const kortet = () => ev(() => ({ id: document.getElementById("stegkort").dataset
 const kortHall = async id => {
   const sel = `#stegkort .skRader button[data-id="${id}"]`;
   await page.dispatchEvent(sel, "pointerdown"); await page.waitForTimeout(500);
-  await page.dispatchEvent(sel, "pointerup"); await page.waitForTimeout(250); };
+  /* En omedelbar rad (hålltid 0) utlöses redan på pointerdown och kortet
+     byts — släppet får då inte vänta på en knapp som inte finns kvar. */
+  await ev(s => { const b = document.querySelector(s); if (b) b.dispatchEvent(new PointerEvent("pointerup", { bubbles: true })); }, sel); await page.waitForTimeout(250); };
 const kortKlick = async id => { await page.click(`#stegkort button[data-id="${id}"]`); await page.waitForTimeout(250); };
 let k = await kortet();
 prova("vid hästen: startvalet med exakt två val (Rida nu / själv)",

@@ -432,7 +432,7 @@ sektion = "D: hela produktionsvägen";
     if (!rad) break;
     const sel = `#stegkort .skRader button[data-id="${rad}"]`;
     await page.dispatchEvent(sel, "pointerdown"); await page.waitForTimeout(500);
-    await page.dispatchEvent(sel, "pointerup"); await page.waitForTimeout(150);
+    await ev(s => { const b = document.querySelector(s); if (b) b.dispatchEvent(new PointerEvent("pointerup", { bubbles: true })); }, sel); await page.waitForTimeout(150);
     if (rad === "leda") break;
   }
   steg.push(["stegkortet", await ev(() => G.hastPlats === "leds" ? "Led" : null)]);
