@@ -2067,13 +2067,6 @@ rita = function()
 		end)
 		promptPlatser = math.min(2, platser)
 	end
-	--[[ Alternativ 3: det sekundära valet tar bara en rad som prompterna inte
-		behöver. Fyller prompterna listan står det inte med (det kommer tillbaka
-		så snart en rad blir ledig); prompterna krymps aldrig för dess skull. ]]
-	if valEfter and #ordnade >= promptPlatser then
-		valen = {}
-		valEfter = false
-	end
 	antalHandlingar = #ordnade
 	local sidor = math.max(1, math.ceil(#ordnade / promptPlatser))
 	--[[ Sidan klampas varje ritning: listan krymper när hon går därifrån,
@@ -2081,13 +2074,22 @@ rita = function()
 	if sida > sidor then sida = sidor end
 	if sida < 1 then sida = 1 end
 	senaste = {}
-	table.clear(valRader)
-	for i, v in ipairs(valen) do valRader[i] = v end
 	for j = 1, promptPlatser do
 		local p = ordnade[(sida - 1) * promptPlatser + j]
 		if p == nil then break end
 		senaste[j] = p
 	end
+	--[[ Alternativ 3: det sekundära valet tar bara en rad som prompterna inte
+		behöver. Fyller prompterna listan står det inte med (det kommer tillbaka
+		så snart en rad blir ledig); prompterna krymps aldrig för dess skull.
+		Räknat på DEN HÄR SIDANS rader, inte på alla prompter (CHATGPT_REVIEW_R1):
+		med overflow har en ofullständig sista sida en ledig rad. ]]
+	if valEfter and #senaste >= promptPlatser then
+		valen = {}
+		valEfter = false
+	end
+	table.clear(valRader)
+	for i, v in ipairs(valen) do valRader[i] = v end
 	--[[ Först av allt: höll hon i något som inte längre finns i panelen? ]]
 	provaHallet()
 

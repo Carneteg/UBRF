@@ -1461,6 +1461,105 @@ do
 	N.stopp()
 end
 
+print("\n── Alternativ 3 med overflow: ingången får den lediga raden på sista sidan ──")
+
+--[[ CHATGPT_REVIEW_R1_CHANGES_REQUESTED_20260928: suppressionen räknade ALLA
+	prompter (`#ordnade`), inte sidans. Fyra prompter på tre rader: sida 1 är
+	full och ingången får inte tränga undan någon; sida 2 har en prompt och två
+	lediga rader, och där ska ingången stå — efter prompten. Tangenterna följer
+	fortfarande bara promptraderna. Ingången kommer från den riktiga
+	`LedLektionController` (startad av klientens init), inte från en attrapp. ]]
+do
+	local UIS = game:GetService("UserInputService")
+	UIS.TouchEnabled = true
+	--[[ Inga prompter utom provets: tidigare blocks prompter (Rida nu, Led,
+		sadel, tränset — en del i hästmodeller) skulle annars fylla sidorna. ]]
+	for _, d in ipairs(workspace:GetDescendants()) do
+		if d:IsA("ProximityPrompt") then d:Destroy() end
+	end
+	N.stopp()
+	N.start()
+	N.satRider(false)
+	local CHOOSE = Sprak.t("ledlektion.choose")
+	local function arIngang(t) return string.sub(t, 1, #CHOOSE) == CHOOSE end
+	local fyra = {}
+	for i = 1, 4 do
+		local p = nyPrompt("Rest" .. i, "Öppna", "Rest " .. i, Vector3.new(i * 0.3, 0, 0))
+		p.KeyboardKeyCode = Enum.KeyCode.E
+		table.insert(fyra, p)
+	end
+	N.satRider(false)
+	check("premissen: tre promptrader och två sidor för fyra prompter",
+		N.radplatser() == 3 and select(2, N._sida()) == 2,
+		("%d platser, %d sidor"):format(N.radplatser(), select(2, N._sida())))
+
+	--[[ Sidans rader, tangenter och ingång på en gång. `rad[i]` för i ≤ antal
+		prompter ska vara prompt i:s rad, och bara de ska bära en tangent. ]]
+	local function lage()
+		local rader, prompter = N._rader(), N._prompter()
+		local ingangar, ingangSist = 0, false
+		for i, t in ipairs(rader) do
+			if arIngang(t) then ingangar += 1; ingangSist = i == #rader end
+		end
+		local justerad = true
+		for i, p in ipairs(prompter) do
+			if rader[i] == nil or not string.find(rader[i], p.ObjectText, 1, true) then justerad = false end
+		end
+		local synlig = {}
+		for _, p in ipairs(prompter) do synlig[p] = true end
+		--[[ Samma invariant som «TANGENTEN FÖLJER RADEN» ovan: det som inte står
+			på sidan är tystat, och minst en synlig promptrad bär en tangent (fyra
+			prompter med samma E kan inte alla bära den). ]]
+		local tangentFel = {}
+		local medTangent = 0
+		for _, p in ipairs(fyra) do
+			local dod = p.KeyboardKeyCode == N.DODTANGENT
+			if not synlig[p] and not dod then table.insert(tangentFel, p.Name) end
+			if synlig[p] and not dod then medTangent += 1 end
+		end
+		if medTangent < 1 then table.insert(tangentFel, "ingen synlig tangent") end
+		return { rader = rader, prompter = #prompter, ingangar = ingangar, ingangSist = ingangSist,
+			justerad = justerad, tangentFel = tangentFel }
+	end
+
+	local s1 = lage()
+	check("sida 1 är full: tre promptrader, ingen ingång som tränger undan",
+		N._sida() == 1 and s1.prompter == 3 and s1.ingangar == 0,
+		table.concat(s1.rader, " | "))
+	check("sida 1: tangent ↔ rad följs åt", s1.justerad and #s1.tangentFel == 0,
+		table.concat(s1.tangentFel, " "))
+
+	N._bladdra()
+	local s2 = lage()
+	check("SISTA SIDAN, EN LEDIG RAD: ingången syns, efter promptraden",
+		N._sida() == 2 and s2.prompter == 1 and s2.ingangar == 1 and s2.ingangSist,
+		table.concat(s2.rader, " | "))
+	check("sista sidan: tangent ↔ rad följs åt, ingången bär ingen tangent",
+		s2.justerad and #s2.tangentFel == 0, table.concat(s2.tangentFel, " "))
+	do
+		local ram = N._panel().ram
+		local fr, li = ram and ram:FindFirstChild("Fragan"), ram and ram:FindFirstChild("Lista")
+		check("sista sidan: i layouten ligger ingången under listan",
+			fr ~= nil and li ~= nil and fr.Visible and fr.LayoutOrder > li.LayoutOrder,
+			("%s / %s"):format(tostring(fr and fr.LayoutOrder), tostring(li and li.LayoutOrder)))
+	end
+	local fyrade = 0
+	fyra[4].Triggered:Connect(function() fyrade += 1 end)
+	N._tryckPa(1)
+	task.wait()
+	check("sista sidan: rad 1 utlöser sidans egen prompt", fyrade == 1, tostring(fyrade))
+
+	N._bladdra()
+	local s3 = lage()
+	check("och tillbaka på sida 1 försvinner ingången igen",
+		N._sida() == 1 and s3.prompter == 3 and s3.ingangar == 0, table.concat(s3.rader, " | "))
+
+	for _, p in ipairs(fyra) do
+		if p.Parent then p.Parent:Destroy() end
+	end
+	N.stopp()
+end
+
 --[[ ══ ETT AVBRUTET HÅLL ÄR INGEN HANDLING (#264 R2) ═══════════════
 
 	Raden startade förut sitt håll på `MouseButton1Click` — som fyrar när
