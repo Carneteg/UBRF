@@ -404,6 +404,118 @@ check("Back from the subgroup returns to Riding paths",
 	hitta(UgnetaController.panel(KAP).knappar, Sprak.t("lektionsval.bojda")) ~= nil)
 UgnetaController.dolj()
 
+-- ── C3 (docs/HALF-CIRCLE-LESS-GUIDANCE-CONTRACT.md): utan strecken längs spåret ──
+-- Egen funktion: huvudchunken har högst 200 lokala register.
+;(function()
+	Skopa._nollstallForProv()
+	HorseService.dismount(p)
+	id = mount(); nu = { u = 0, v = 4 }
+	local remote = Networking.get("VoltLektion")
+	local syncC = Networking.get("VoltLektionSync")
+	local minneSync = Networking.get("LektionsMinneSync")
+	--[[ PÅHITTAT/KONTROLL: lektionsminnet levereras genom klientens riktiga kanal
+		(LektionsMinneSync) med en hög session, eftersom den här bänken inte sparar. ]]
+	local rev = 0
+	local function minne(lektioner)
+		rev += 1
+		minneSync.OnClientEvent:Fire({ historik = "betrodd", lektioner = lektioner, session = 1000000, rev = rev })
+	end
+	local function knapp(nyckel)
+		local sida = V.panel()
+		return sida and hitta(sida.knappar, Sprak.t(nyckel)) or nil
+	end
+	local function leverera() syncC.OnClientEvent:Fire(image()) end
+	--[[ Guidens delar i ramen (Ridhusplats.tillLokal): ringstreck efter bredd
+		(0,3·spm × 0,65); "spår" = på spårlinjen mellan startringen och bågen;
+		"övrigt" = bågen och returdiagonalen. ]]
+	local function delar()
+		local g = workspace:FindFirstChild("Voltguide")
+		local r = image().referens
+		if not g or not r then return nil end
+		local spm = r.plats.studsPerMeter
+		local ut = { ring = 0, spar = 0, ovrigt = 0 }
+		for _, d in ipairs(g:GetChildren()) do
+			if math.abs(d.Size.X - 0.3 * spm * 0.65) < 1e-3 then ut.ring += 1
+			else
+				local l = Ridhusplats.tillLokal(r.plats, d.Position)
+				if math.abs(l.X - r.uT) < 1 and l.Z > r.p0v and l.Z < r.t1v then ut.spar += 1
+				else ut.ovrigt += 1 end
+			end
+		end
+		return ut
+	end
+	local function txt(u)
+		return if u then ("ring %d, spår %d, övrigt %d"):format(u.ring, u.spar, u.ovrigt) else "ingen guide"
+	end
+	Sprak.satVal("sv")
+	V.avbryt(); V.start(id, nil)
+	UgnetaController.satLektionsVal(V.panel)
+	V.valj("halvvolt")
+	minne({ halvvolt = "okand", halt = "sparad" })
+	check("C3 halvvolt: not completed gives no choice", knapp("halvvoltlektion.mindre_stod") == nil
+		and knapp("vaglektion.visa_vagen") == nil)
+	aid("driv")
+	knapp("halvvoltlektion.start").skicka(); leverera()
+	local full = delar()
+	check("C3 halvvolt: the full guide has track, curve/return and ring parts", full ~= nil and full.spar > 0
+		and full.ovrigt > 0 and full.ring > 0)
+	minne({ halvvolt = "sparad", halt = "sparad" })
+	check("C3 halvvolt: completed gives its own label, not the route or corner label",
+		knapp("halvvoltlektion.mindre_stod") ~= nil and knapp("vaglektion.utan_streck") == nil
+		and knapp("hornlektion.mindre_stod") == nil)
+	local n = #remote._skickat
+	knapp("halvvoltlektion.mindre_stod").skicka()
+	local mindre = delar()
+	check("C3 halvvolt: pressing it sends nothing to the server", #remote._skickat == n)
+	check("C3 halvvolt: only the track straight is gone — curve, return and rings stay", mindre ~= nil
+		and mindre.spar == 0 and mindre.ovrigt == full.ovrigt and mindre.ring == full.ring)
+	check("C3 halvvolt: the button is now 'Visa vägen'", knapp("vaglektion.visa_vagen") ~= nil
+		and knapp("halvvoltlektion.mindre_stod") == nil)
+	Sprak.satVal("en")
+	check("C3 halvvolt: English", Sprak.t("halvvoltlektion.mindre_stod") == "Ride without the lines along the track")
+	Sprak.satVal("sv")
+	-- Samma uppgift: den ordnade figuren slutförs som förut.
+	tillStart()
+	ga(uT, G.P0_V - 1.9); leverera()
+	local under = delar()
+	check("C3 halvvolt: during the route the track straight is still not drawn", under ~= nil and under.spar == 0)
+	rutt(-1.9, G.LANGD)
+	local klar = image()
+	check("C3 halvvolt: the task completes exactly as before with less guidance", klar.lage == "complete"
+		and klar.resultat ~= nil and klar.resultat.figur == "halvvolt"
+		and math.abs(klar.resultat.slutS - G.LANGD) < 1e-6)
+	leverera()
+	knapp("vaglektion.visa_vagen").skicka()
+	knapp("voltlektion.retry").skicka(); leverera()
+	local igen = delar()
+	check("C3 halvvolt: 'Visa vägen' restores the full guide", igen ~= nil and igen.spar == full.spar
+		and igen.ovrigt == full.ovrigt and igen.ring == full.ring)
+	-- Nollställning: typbyte, avbrott med återkoppling, ny ritt.
+	knapp("halvvoltlektion.mindre_stod").skicka()
+	knapp("halvvoltlektion.finish").skicka(); leverera()
+	V.valj("halt")
+	check("C3 halvvolt: another type shows no choice (counted: Start + Finish)", #V.panel().knappar == 2,
+		("%d"):format(#V.panel().knappar))
+	V.valj("halvvolt")
+	check("C3 halvvolt: a type switch resets to the full guide", knapp("halvvoltlektion.mindre_stod") ~= nil)
+	knapp("halvvoltlektion.mindre_stod").skicka()
+	V.avbryt(); V.start(id, nil); UgnetaController.satLektionsVal(V.panel)
+	check("C3 halvvolt: cancel and reattach resets to the full guide", knapp("halvvoltlektion.mindre_stod") ~= nil)
+	knapp("halvvoltlektion.mindre_stod").skicka()
+	HorseService.dismount(p)
+	id = mount(); nu = { u = 0, v = 4 }
+	V.avbryt(); V.start(id, nil); UgnetaController.satLektionsVal(V.panel)
+	V.valj("halvvolt")
+	check("C3 halvvolt: a new ride resets to the full guide", knapp("halvvoltlektion.mindre_stod") ~= nil
+		and knapp("vaglektion.visa_vagen") == nil)
+	UgnetaController.satLektionsVal(nil)
+	V.avbryt()
+	check("C3 halvvolt: the key exists in SV and EN",
+		Sprak.iSprak("sv", "halvvoltlektion.mindre_stod") ~= "halvvoltlektion.mindre_stod"
+		and Sprak.iSprak("en", "halvvoltlektion.mindre_stod") ~= "halvvoltlektion.mindre_stod")
+	print("   parts full: " .. txt(full) .. " · less: " .. txt(mindre))
+end)()
+
 local sync = Networking.get("VoltLektionSync")
 local toOther = 0
 for _, rad in ipairs(sync._skickat) do if rad[1] ~= p then toOther += 1 end end

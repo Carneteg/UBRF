@@ -430,6 +430,7 @@ const SPRAK = {
   "halvvoltlektion.timeout": { sv: "Vi hann inte hela halvvolten. Ta en paus eller prova igen.", en: "We did not finish the half-circle. Take a break or try again." },
   "halvvoltlektion.closed": { sv: "Halvvolten är avslutad.", en: "The half-circle has ended." },
   "halvvoltlektion.place": { sv: "Rid in på dressyrbanan innan du startar.", en: "Enter the dressage arena before you start." },
+  "halvvoltlektion.mindre_stod": { sv: "Rid utan strecken längs spåret", en: "Ride without the lines along the track" },
   "lektionsval.overgangar": { sv: "Övergångar", en: "Transitions" },
   "galopplektion.choose": { sv: "Galoppfattning", en: "Canter departure" },
   "galopplektion.start": { sv: "Starta galoppfattningen", en: "Start the canter departure" },

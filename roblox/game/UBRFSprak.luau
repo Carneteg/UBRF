@@ -1169,6 +1169,10 @@ Sprak.text = {
 		sv = "Rid in på dressyrbanan innan du startar.",
 		en = "Enter the dressage arena before you start.",
 	},
+	["halvvoltlektion.mindre_stod"] = {
+		sv = "Rid utan strecken längs spåret",
+		en = "Ride without the lines along the track",
+	},
 	["lektionsval.overgangar"] = {
 		sv = "Övergångar",
 		en = "Transitions",

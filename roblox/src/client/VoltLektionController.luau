@@ -236,7 +236,7 @@ end
 -- Half-circle back to the track: the server's route parameters (track, arc,
 -- return line), direction chevrons on the straight parts, and the start and end
 -- rings. delmal: 0 start ring, 1 track, 2 half-circle, 3 return, 4 end ring.
-local function halvvoltGuide(m, ref, delmal)
+local function halvvoltGuide(m, ref, delmal, utan: boolean?)
 	local p = ref.plats
 	local function lokalt(u, v) return Plats.tillVarld(p, Vector3.new(u, 0.035, v)) end
 	local function rak(au, av, bu, bv, stark)
@@ -259,7 +259,9 @@ local function halvvoltGuide(m, ref, delmal)
 			t += 5
 		end
 	end
-	rak(ref.uT, ref.p0v, ref.uT, ref.t1v, delmal == 1)
+	--[[ C3 (docs/HALF-CIRCLE-LESS-GUIDANCE-CONTRACT.md): med mindre vägvisning ritas inte
+		inridningen längs spåret — bågen, returdiagonalen och ringarna står kvar. ]]
+	if not utan then rak(ref.uT, ref.p0v, ref.uT, ref.t1v, delmal == 1) end
 	local cu, cv = ref.uT - ref.r, ref.t1v
 	local antal = 16
 	for i = 0, antal - 1 do
@@ -378,7 +380,7 @@ end
 
 local function visaGuide(ref, delmal)
 	if not ref or not ref.plats then rivGuide(); return end
-	local utan = utanStreck and (vagTyp(typ) or typ == "hornet")
+	local utan = utanStreck and (vagTyp(typ) or typ == "hornet" or typ == "halvvolt")
 	if guideRef and guideRef.ramId == ref.ramId and guideRef.nyckel == ref.nyckel and guideTyp == typ
 		and guideDel == delmal and guideUtan == utan then return end
 	rivGuide()
@@ -386,7 +388,7 @@ local function visaGuide(ref, delmal)
 	if typ == "serpentin" or vagTyp(typ) or typ == "halvvolt" or typ == "markbom" or typ == "hornet" then
 		if typ == "serpentin" then serpentinGuide(m, ref, delmal)
 		elseif typ == "hornet" then hornGuide(m, ref, delmal, utan)
-		elseif typ == "halvvolt" then halvvoltGuide(m, ref, delmal)
+		elseif typ == "halvvolt" then halvvoltGuide(m, ref, delmal, utan)
 		elseif typ == "markbom" then markbomGuide(m, ref, delmal)
 		else vagGuide(m, ref, delmal, utan) end
 		m.Parent = workspace; guide, guideRef, guideTyp, guideDel, guideUtan = m, ref, typ, delmal, utan
@@ -628,6 +630,8 @@ local function halvvoltText(key): string?
 	if key=="timeout" then return Sprak.t("halvvoltlektion.timeout") end
 	if key=="closed" then return Sprak.t("halvvoltlektion.closed") end
 	if key=="place" then return Sprak.t("halvvoltlektion.place") end
+	if key=="mindre_stod" then return Sprak.t("halvvoltlektion.mindre_stod") end
+	if key=="visa_vagen" then return Sprak.t("vaglektion.visa_vagen") end
 	return nil
 end
 
@@ -1039,8 +1043,9 @@ function V.panel()
 		mindre vägvisning är på. Lokalt — inget skickas till servern. ]]
 	--[[ Hörnet (docs/CORNER-LESS-GUIDANCE-CONTRACT.md): samma val med egen etikett —
 		bågens streck står kvar, så "utan streck" vore osant där. ]]
-	if (vagTyp(typ) or typ == "hornet") and (utanStreck or klarad(typ)) then
-		local nyckel = if utanStreck then "visa_vagen" elseif typ == "hornet" then "mindre_stod" else "utan_streck"
+	if (vagTyp(typ) or typ == "hornet" or typ == "halvvolt") and (utanStreck or klarad(typ)) then
+		local nyckel = if utanStreck then "visa_vagen"
+			elseif typ == "hornet" or typ == "halvvolt" then "mindre_stod" else "utan_streck"
 		table.insert(knappar, val(nyckel, function()
 			utanStreck = not utanStreck
 			local visad = guide ~= nil
