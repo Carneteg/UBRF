@@ -35,13 +35,36 @@ local AKTIVA = { halt1 = true, walk = true }
 
 function HaltLektion.ny(rittId: string, userId: number, hastId: string): any
 	return { typ = "halt", rittId = rittId, userId = userId, hastId = hastId, lage = "ready",
-		revision = 0, hogsta = 0, svar = {}, ordning = {}, progress = 0, tips = "intro" }
+		revision = 0, hogsta = 0, svar = {}, ordning = {}, progress = 0, tips = "intro",
+		--[[ C1 (docs/HALT-COMPARISON-CONTRACT.md): den förra DISTINKTA giltiga
+			fullföljningen i det här lektionsobjektet och jämförelsen som fryses
+			mot den. Resultatet självt ändras inte. ]]
+		forraKlar = nil, jamforelse = nil }
 end
 
 function HaltLektion.bild(s): any
 	return table.freeze({ typ = "halt", rittId = s.rittId, forsokId = s.forsokId,
 		revision = s.revision, sekvens = s.hogsta, lage = s.lage, progress = s.progress,
-		tips = s.tips, resultat = s.resultat, referens = s.referens })
+		tips = s.tips, resultat = s.resultat, referens = s.referens,
+		jamforelse = if s.lage == "complete" and s.jamforelse and s.jamforelse.forsokId == s.forsokId
+			then s.jamforelse else nil })
+end
+
+local function andligt(x: any): boolean
+	return type(x) == "number" and x == x and x ~= math.huge and x ~= -math.huge
+end
+
+--[[ C1: det fullföljande haltets avstånd till X i planet, ur den frysta
+	haltpunkten och lektionens X (samma två punkter som zonprovet), eller nil. ]]
+local function jamforbar(s): any
+	local sp, r = s.slutpunkt, s.referens
+	if type(sp) ~= "table" or type(r) ~= "table" then return nil end
+	if not (andligt(sp.u) and andligt(sp.v) and andligt(r.u) and andligt(r.v)) then return nil end
+	local du, dv = sp.u - r.u, sp.v - r.v
+	local avstand = math.sqrt(du * du + dv * dv)
+	if not andligt(avstand) then return nil end
+	return { forsokId = s.forsokId, rittId = s.rittId, userId = s.userId, hastId = s.hastId,
+		version = HaltLektion.VERSION, ramId = r.ramId, u = r.u, v = r.v, avstand = avstand }
 end
 
 local function andra(s, lage, tips)
@@ -111,6 +134,18 @@ local function stang(s, orsak): boolean
 			hastId = s.hastId, mal = "X", zonRadie = ZON_R, skrittMeter = s.skritt,
 			haltSekunder = s.haltTid, slutpunkt = s.slutpunkt,
 			start = Forsok.ogonblick(s.forsokId).start })
+		--[[ C1: jämförelsen med den FÖRRA distinkta fullföljningen, bara vid
+			samma ritt, ryttare, häst, version, ram och X. Den nya blir baslinje
+			först därefter. ]]
+		local ny, forra = jamforbar(s), s.forraKlar
+		s.jamforelse = nil
+		if ny and forra and forra.forsokId ~= ny.forsokId and forra.rittId == ny.rittId
+			and forra.userId == ny.userId and forra.hastId == ny.hastId and forra.version == ny.version
+			and forra.ramId ~= nil and forra.ramId == ny.ramId and forra.u == ny.u and forra.v == ny.v then
+			s.jamforelse = table.freeze({ forsokId = ny.forsokId, forraForsokId = forra.forsokId,
+				forraAvvikelse = forra.avstand, avvikelse = ny.avstand })
+		end
+		if ny then s.forraKlar = table.freeze(ny) end
 		s.progress = 100
 		s.revision += 1
 		andra(s, "complete", "complete")
@@ -272,6 +307,8 @@ function HaltLektion.begar(s, op: any, seq: any, now: number, gangart: string?,
 			if ok then
 				s.forsokId, s.deadline = id, now + DEADLINE
 				s.resultat, s.slutpunkt, s.progress = nil, nil, 0
+				-- Nytt försök: jämförelsen bort (den förra fullföljningen står kvar).
+				s.jamforelse = nil
 				nyBaslinje(s, o, p, logg)
 				andra(s, "halt1", "halt_first")
 			end

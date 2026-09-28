@@ -363,6 +363,87 @@ do
 	UgnetaController.satLektionsVal(nil)
 end
 
+-- ── C1 (docs/HALT-COMPARISON-CONTRACT.md): närmare X än förra haltet, på en ny ritt ──
+-- Egen funktion: huvudchunken har högst 200 lokala register.
+;(function()
+	HorseService.dismount(p)
+	id = mount()
+	local function text() return LektionsAterkoppling.text(image(), { typ = "halt", ritt = id }) end
+	local NARMARE, FORRA = "Närmare X än förra haltet", "Förra haltet"
+	Sprak.satVal("sv")
+	LararInstallning.satDetalj("detaljerad")
+	-- Ett helt försök från ett stillastående vid X: halt, skritt på hjälp ≥ 4 m
+	-- bort och tillbaka, och det fullföljande haltet d m från X längs v.
+	local function haltVid(d)
+		still(X.u, X.v, G.HALT_FORE + 0.5)
+		aid("driv")
+		for v = X.v + 1, X.v + 5 do step(X.u, v) end
+		for v = X.v + 4, X.v + 1, -1 do step(X.u, v) end
+		step(X.u, X.v + d)
+		aid("broms")
+		still(X.u, X.v + d, G.HALT_EFTER + 0.75)
+	end
+	-- Första försöket: från platsen där hon satt upp, som den lyckliga vägen ovan.
+	local function forstaHaltet()
+		request("start")
+		still(0, 18, G.HALT_FORE + 0.5)
+		aid("driv")
+		for v = 19, X.v - 2 do step(X.u, v) end
+		step(X.u, X.v - 1)
+		aid("broms")
+		still(X.u, X.v - 1, G.HALT_EFTER + 0.75)
+	end
+	forstaHaltet()
+	local c1 = image()
+	check("C1: first completion on a fresh ride has no comparison", c1.lage == "complete" and c1.jamforelse == nil
+		and not string.find(text(), FORRA, 1, true))
+	local _, _, retried = request("retry")
+	check("C1: a retry snapshot carries no comparison", retried.lage == "halt1" and retried.jamforelse == nil)
+	haltVid(0.4)
+	local c2 = image(); local j2 = c2.jamforelse
+	check("C1: a halt nearer X compares with the first", c2.lage == "complete" and j2 ~= nil
+		and j2.forsokId == c2.forsokId and j2.forraForsokId == c1.forsokId
+		and math.abs(j2.forraAvvikelse - 1) < 1e-6 and math.abs(j2.avvikelse - 0.4) < 1e-6)
+	check("C1: the panel text confirms it, previous first", string.find(text(), NARMARE, 1, true) ~= nil
+		and string.find(text(), "1,0 m från X, nu 0,4 m", 1, true) ~= nil)
+	check("C1: the frozen result has no new field", c2.resultat.avvikelse == nil and c2.resultat.avstand == nil)
+	check("C1: a duplicate read keeps the same frozen comparison", image().jamforelse == j2)
+	request("retry"); haltVid(0.4)
+	local c3 = image()
+	check("C1: the third completion compares with the second", c3.lage == "complete" and c3.jamforelse ~= nil
+		and c3.jamforelse.forraForsokId == c2.forsokId)
+	check("C1: an equal halt is neutral", string.find(text(), FORRA, 1, true) ~= nil
+		and not string.find(text(), NARMARE, 1, true))
+	request("retry")
+	s.voltLektion.deadline = os.clock()
+	step(X.u, X.v)
+	local to = image()
+	check("C1: a timeout carries no comparison and keeps the baseline", to.lage == "timeout"
+		and to.jamforelse == nil and s.voltLektion.forraKlar ~= nil and s.voltLektion.forraKlar.forsokId == c3.forsokId)
+	request("retry"); haltVid(0.2)
+	local c5 = image()
+	check("C1: after a timeout the comparison is with the last completion", c5.lage == "complete"
+		and c5.jamforelse ~= nil and c5.jamforelse.forraForsokId == c3.forsokId)
+	-- KONTROLL (deklarerad tillståndsinjektion): en baslinje med annat X, annan
+	-- ram, version eller häst jämförs aldrig.
+	for _, fall in ipairs({ { "u", X.u + 3, "another X" }, { "ramId", -1, "another frame" },
+		{ "version", "server-halt-0", "another version" }, { "hastId", "another-horse", "another horse" } }) do
+		request("retry")
+		local b = table.clone(s.voltLektion.forraKlar); b[fall[1]] = fall[2]
+		s.voltLektion.forraKlar = table.freeze(b)
+		haltVid(0.2)
+		local c = image()
+		check("C1: " .. fall[3] .. " is never compared", c.lage == "complete" and c.jamforelse == nil)
+	end
+	request("finish")
+	check("C1: closed carries no comparison", image().lage == "closed" and image().jamforelse == nil)
+	HorseService.dismount(p)
+	id = mount()
+	forstaHaltet()
+	check("C1: a new ride has no baseline", image().lage == "complete" and image().jamforelse == nil)
+	request("finish")
+end)()
+
 local sync = Networking.get("VoltLektionSync")
 local toOther = 0
 for _, rad in ipairs(sync._skickat) do if rad[1] ~= p then toOther += 1 end end

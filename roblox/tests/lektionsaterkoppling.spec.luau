@@ -299,6 +299,67 @@ do
 	end
 end
 
+print("\n── 5c. C1 haltet: närmare X än förra haltet (docs/HALT-COMPARISON-CONTRACT.md) ──")
+do
+	local function medJ(nu, forr, over)
+		local b = ridBild("halt", "complete", RESULTAT.halt)
+		local j = { forsokId = 7, forraForsokId = 6, avvikelse = nu, forraAvvikelse = forr }
+		for k, v in over or {} do j[k] = v end
+		b.jamforelse = j
+		return A.text(b, ridKontext("halt"))
+	end
+	local NARMARE, FORRA = "Närmare X än förra haltet", "Förra haltet"
+	local utan = A.text(ridBild("halt", "complete", RESULTAT.halt), ridKontext("halt"))
+	local t = medJ(0.3, 0.9)
+	check("halt närmare: bekräftas, förra först", har(t, NARMARE) and har(t, "0,9 m från X, nu 0,3 m"), t)
+	check("halt närmare: sammanfattningen och nästa steg står kvar",
+		har(t, FAKTA.halt) and har(t, Sprak.t("aterkoppling.halt.nasta")), t)
+	check("halt närmare: voltens ord används inte", not har(t, "linjen"), t)
+	t = medJ(0.6, 0.6)
+	check("halt lika: neutralt", har(t, FORRA) and not har(t, NARMARE), t)
+	t = medJ(1.2, 0.4)
+	check("halt längre bort: neutralt, förra först", har(t, FORRA) and har(t, "0,4 m från X, nu 1,2 m")
+		and not har(t, NARMARE), t)
+	check("halt avrundning: 0,54 → 0,46 är INTE närmare", not har(medJ(0.46, 0.54), NARMARE))
+	check("halt avrundning: 0,56 → 0,44 är närmare", har(medJ(0.44, 0.56), NARMARE))
+	local NAN = 0 / 0
+	for _, fall in {
+		{ { forsokId = 8 }, "annat försök" },
+		{ { forraForsokId = 7 }, "samma försök som förra" },
+		{ { avvikelse = NAN }, "NaN" },
+		{ { forraAvvikelse = -math.huge }, "minus oändligt" },
+		{ { avvikelse = -0.2 }, "negativt" },
+	} do
+		local ok, tt = pcall(medJ, 0.3, 0.9, fall[1])
+		check("halt ingen jämförelse: " .. fall[2], ok and tt == utan, tt)
+	end
+	do -- Ogiltig sammanfattning: ingen jämförelse på "inga detaljer".
+		local b = ridBild("halt", "complete", { mal = "Y", skrittMeter = 6.3, haltSekunder = 3.1 })
+		b.jamforelse = { forsokId = 7, forraForsokId = 6, avvikelse = 0.3, forraAvvikelse = 0.9 }
+		check("halt: ogiltig sammanfattning får ingen jämförelse",
+			A.text(b, ridKontext("halt")) == Sprak.t("aterkoppling.okant"))
+	end
+	do -- Volten läser voltens nycklar, haltet haltets — samma jämförelse, olika typ.
+		local b = ridBild("volt", "complete", RESULTAT.volt)
+		b.jamforelse = { forsokId = 7, forraForsokId = 6, avvikelse = 0.3, forraAvvikelse = 0.9 }
+		local tv = A.text(b, ridKontext("volt"))
+		check("volten får inte haltets ord", not har(tv, NARMARE) and har(tv, "Närmare linjen"), tv)
+	end
+	LararInstallning.satDetalj("kort")
+	local kortUtan = A.text(ridBild("halt", "complete", RESULTAT.halt), ridKontext("halt"))
+	check("halt kort närmare: bara den korta bekräftelsen",
+		har(medJ(0.3, 0.9), Sprak.t("aterkoppling.halt.narmare_kort")) and not har(medJ(0.3, 0.9), "0,9"))
+	check("halt kort lika och längre bort: ingenting", medJ(0.6, 0.6) == kortUtan and medJ(1.2, 0.4) == kortUtan)
+	LararInstallning.satDetalj("detaljerad")
+	Sprak.satVal("en")
+	t = medJ(0.3, 0.9)
+	check("halt engelska", har(t, "Closer to X than your previous halt") and har(t, "0.9 m from X, now 0.3 m"), t)
+	Sprak.satVal("sv")
+	for _, n in { "aterkoppling.halt.narmare", "aterkoppling.halt.forra", "aterkoppling.halt.narmare_kort" } do
+		check(n, Sprak.iSprak("sv", n) ~= n and Sprak.iSprak("en", n) ~= n)
+	end
+end
+
 print("\n── 6. Varje nyckel finns på båda språken ──")
 for _, typ in { "volt", "halt", "overgang", "serpentin", "tempo", "vag_mitt", "vag_diag", "halvvolt",
 	"galopp", "markbom", "leda" } do

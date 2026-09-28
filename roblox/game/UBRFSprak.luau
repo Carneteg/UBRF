@@ -1753,6 +1753,18 @@ Sprak.text = {
 		sv = "Närmare linjen än förra gången.",
 		en = "Closer to the line than last time.",
 	},
+	["aterkoppling.halt.narmare"] = {
+		sv = "Närmare X än förra haltet: %s m från X, nu %s m.",
+		en = "Closer to X than your previous halt: %s m from X, now %s m.",
+	},
+	["aterkoppling.halt.forra"] = {
+		sv = "Förra haltet: %s m från X, nu %s m.",
+		en = "Previous halt: %s m from X, now %s m.",
+	},
+	["aterkoppling.halt.narmare_kort"] = {
+		sv = "Närmare X än förra gången.",
+		en = "Closer to X than last time.",
+	},
 	["lektionsval.bojda"] = {
 		sv = "Böjda vägar",
 		en = "Curved paths",

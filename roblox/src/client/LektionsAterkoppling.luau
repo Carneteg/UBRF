@@ -97,6 +97,15 @@ local function sammanfattning(typ: string, r: any): string?
 	return nil
 end
 
+--[[ C1: typerna med en jämförelse av ett uppmätt avstånd (mindre är närmare),
+	med sina egna ordagranna nycklar. ]]
+local NARMARE = {
+	volt = { narmare = "aterkoppling.volt.narmare", forra = "aterkoppling.volt.forra",
+		kort = "aterkoppling.volt.narmare_kort" },
+	halt = { narmare = "aterkoppling.halt.narmare", forra = "aterkoppling.halt.forra",
+		kort = "aterkoppling.halt.narmare_kort" },
+}
+
 --[[ Hör resultatet till det VISADE försöket? "ja", "kontext" (ledningen:
 	samma försök men en annan bunden häst/modell eller karaktär sedan det
 	slutfördes) eller "nej".
@@ -150,17 +159,20 @@ function A.text(b: any, kontext: any): string?
 					tostring(forr), tostring(nu))
 			end
 		end
-		--[[ C1, volten (docs/CIRCLE-COMPARISON-CONTRACT.md): medelavståndet till
-			linjen mot förra DISTINKTA fullföljningen i samma lektionsobjekt, bundet
-			till det här försöket. "Närmare" bara när de visade tiondelarna faktiskt
-			minskat; annars neutralt. Aldrig orsak, aldrig behärskning. ]]
-		if typ == "volt" and type(j) == "table" and j.forsokId == b.forsokId and j.forraForsokId ~= b.forsokId
+		--[[ C1, volten och haltet (docs/CIRCLE-COMPARISON-CONTRACT.md,
+			docs/HALT-COMPARISON-CONTRACT.md): ett avstånd i meter — till linjen
+			respektive till X — mot förra DISTINKTA fullföljningen i samma
+			lektionsobjekt, bundet till det här försöket. "Närmare" bara när de
+			visade tiondelarna faktiskt minskat; annars neutralt. Aldrig orsak,
+			aldrig behärskning. ]]
+		local nycklar = NARMARE[typ]
+		if nycklar and type(j) == "table" and j.forsokId == b.forsokId and j.forraForsokId ~= b.forsokId
 			and ickeNeg(j.avvikelse) and ickeNeg(j.forraAvvikelse) then
 			local nu, forr = math.floor(j.avvikelse * 10 + 0.5), math.floor(j.forraAvvikelse * 10 + 0.5)
 			if Installning.detalj() == "kort" then
-				if nu < forr then s ..= " " .. Sprak.t("aterkoppling.volt.narmare_kort") end
+				if nu < forr then s ..= " " .. Sprak.t(nycklar.kort) end
 			else
-				s ..= " " .. Sprak.t(if nu < forr then "aterkoppling.volt.narmare" else "aterkoppling.volt.forra",
+				s ..= " " .. Sprak.t(if nu < forr then nycklar.narmare else nycklar.forra,
 					tal(forr / 10), tal(nu / 10))
 			end
 		end
