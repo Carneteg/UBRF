@@ -453,6 +453,94 @@ Sprak.text = {
 		sv = "Gå till din häst",
 		en = "Go to your horse",
 	},
+	["guide.din_hast"] = {
+		sv = "din häst",
+		en = "your horse",
+	},
+	["guide.dorr_rubrik"] = {
+		sv = "Öppna stalldörren",
+		en = "Open the stable door",
+	},
+	["guide.dorr_text"] = {
+		sv = "Öppna dörren framför dig. Den gyllene pilen visar var %s står.",
+		en = "Open the door in front of you. The gold arrow shows where %s is.",
+	},
+	["guide.ga_till_rubrik"] = {
+		sv = "Gå till %s",
+		en = "Go to %s",
+	},
+	["guide.ga_till_text"] = {
+		sv = "Följ den gyllene pilen till hennes box.",
+		en = "Follow the gold arrow to her box.",
+	},
+	["guide.valj_rubrik"] = {
+		sv = "Välj hur du börjar",
+		en = "Choose how to start",
+	},
+	["guide.valj_text"] = {
+		sv = "Rida nu: håll «Rida nu» (R) vid %s — stallet gör i ordning henne rätt och leder henne till ridhuset. Eller gör i ordning själv:",
+		en = "Ride now: hold «Ride now» (R) at %s — the stable gets her ready properly and leads her to the arena. Or get her ready yourself:",
+	},
+	["guide.visitera_rubrik"] = {
+		sv = "Kolla %s",
+		en = "Check %s over",
+	},
+	["guide.rykta_rubrik"] = {
+		sv = "Rykta %s",
+		en = "Groom %s",
+	},
+	["guide.hovar_rubrik"] = {
+		sv = "Kratsa hovarna",
+		en = "Pick out the hooves",
+	},
+	["guide.hamta_sadel_rubrik"] = {
+		sv = "Hämta sadeln",
+		en = "Fetch the saddle",
+	},
+	["guide.hamta_sadel_text"] = {
+		sv = "Sadeln hänger på boxfronten hos %s. Ta den därifrån.",
+		en = "The saddle hangs on the box front at %s. Take it from there.",
+	},
+	["guide.hamta_trans_rubrik"] = {
+		sv = "Hämta tränset",
+		en = "Fetch the bridle",
+	},
+	["guide.hamta_trans_text"] = {
+		sv = "Tränset hänger också på boxfronten. Ta det med dig.",
+		en = "The bridle hangs on the box front too. Take it with you.",
+	},
+	["guide.sadla_rubrik"] = {
+		sv = "Lägg på sadeln",
+		en = "Put the saddle on",
+	},
+	["guide.transa_rubrik"] = {
+		sv = "Sätt på tränset",
+		en = "Put the bridle on",
+	},
+	["guide.leda_rubrik"] = {
+		sv = "Led %s till ridhuset",
+		en = "Lead %s to the arena",
+	},
+	["guide.leda_text"] = {
+		sv = "Välj «Led till ridhuset» i listan. Hon följer dig.",
+		en = "Choose «Lead to the arena» in the list. She follows you.",
+	},
+	["guide.leder_rubrik"] = {
+		sv = "Led %s till ridhuset",
+		en = "Lead %s to the arena",
+	},
+	["guide.leder_text"] = {
+		sv = "Gå till ridhuset — %s följer dig. Där sitter du upp.",
+		en = "Walk to the arena — %s follows you. You mount there.",
+	},
+	["guide.sittupp_rubrik"] = {
+		sv = "Sitt upp på %s",
+		en = "Mount %s",
+	},
+	["guide.sittupp_text"] = {
+		sv = "Sitt upp och rid! Välj sedan en lektion hos Ugneta eller rid fritt.",
+		en = "Mount up and ride! Then choose a lesson with Ugneta or ride freely.",
+	},
 	["hjalp.rubrik"] = {
 		sv = "Kontroller",
 		en = "Controls",

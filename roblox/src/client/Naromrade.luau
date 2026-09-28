@@ -1762,6 +1762,75 @@ local function visaAterkoppling(text: string?)
 	a.Visible = text ~= nil and text ~= ""
 end
 
+--[[ ── ONBOARDINGENS STEGKORT (docs/ONBOARDING-STEP-CARD-CONTRACT.md) ────
+
+	Tobias i Play (2026-09-28): rutan sa fasens NAMN, inte vad han skulle göra
+	härnäst — dörren, att hämta sadeln, att «Rida nu» fanns. Tobias val C: två
+	vägar. «Rida nu» (stallet gör i ordning henne rätt och leder henne till
+	ridhuset) eller «Gör i ordning själv»: spelets egen ordning. Samma ruta,
+	samma knappar — bara rubriken och instruktionen säger nu ETT steg i taget,
+	härlett ur spelets läge (`guide`) och ur en STÄNGD dörr inom räckhåll.
+	Nil = gäller inte (welfare-stopp, rättelse, eftervård, ritten …): då
+	står de gamla texterna kvar. ]]
+local function guideSteg(g: any, lage: string?, text: string?, hastnamn: string?, stangdDorr: boolean): any
+	if type(g) ~= "table" then return nil end
+	if g.rattelse or g.status == "welfare_stop" or g.status == "waiting_model" or g.status == "riding" then
+		return nil
+	end
+	if lage == "eftervard" or lage == "raknat" then return nil end
+	local namn = if hastnamn and hastnamn ~= "" then hastnamn else Sprak.t("guide.din_hast")
+	local function kort(nyckel: string, instr: string?, raknare: boolean?)
+		return { rubrik = Sprak.t("guide." .. nyckel .. "_rubrik", namn), text = instr or "", raknare = raknare == true }
+	end
+	if PreparationController.kontext() == "ledning" then
+		return kort("leder", Sprak.t("guide.leder_text", namn))
+	end
+	if g.utomRackhall then
+		if stangdDorr then return kort("dorr", Sprak.t("guide.dorr_text", namn)) end
+		return kort("ga_till", Sprak.t("guide.ga_till_text"))
+	end
+	if g.redo or g.status == "ready_to_mount" then
+		return kort("sittupp", Sprak.t("guide.sittupp_text"))
+	end
+	if g.status ~= "preparing" then return nil end
+	local m = if type(g.nastaMoment) == "string" then g.nastaMoment else ""
+	local buren = g.buren or {}
+	if g.nasta == "halsa" and (g.klaraFaser or 0) == 0 then
+		local fraga = text or ""
+		return kort("valj", Sprak.t("guide.valj_text", namn) .. (if fraga ~= "" then (" " .. fraga) else ""))
+	elseif g.nasta == "visitera" then
+		return kort("visitera", text, true)
+	elseif g.nasta == "rykta" then
+		return kort("rykta", text, true)
+	elseif g.nasta == "iordning" then
+		if string.sub(m, 1, 4) == "hov:" then return kort("hovar", text) end
+		local sadelPa = m == "utr:3" or m == "utr:4" or m == "utr:5"
+		if not sadelPa and not buren.sadel then return kort("hamta_sadel", Sprak.t("guide.hamta_sadel_text", namn)) end
+		if not sadelPa and not buren.trans then return kort("hamta_trans", Sprak.t("guide.hamta_trans_text")) end
+		if not sadelPa then return kort("sadla", text) end
+		if m == "utr:5" and not buren.trans then return kort("hamta_trans", Sprak.t("guide.hamta_trans_text")) end
+		if m == "utr:5" then return kort("transa", text) end
+		return kort("sadla", text)
+	elseif g.nasta == "leda" then
+		return kort("leda", Sprak.t("guide.leda_text"))
+	end
+	return nil
+end
+
+--[[ Provkrok: stegkortet för ett givet läge (samma funktion som panelen). ]]
+function Naromrade._guideFor(g: any, lage: string?, text: string?, hastnamn: string?, stangdDorr: boolean): any
+	return guideSteg(g, lage, text, hastnamn, stangdDorr)
+end
+
+--[[ Finns en STÄNGD dörr bland prompterna inom räckhåll? (`SprakNyckel`
+	"dorr.oppna" = stängd; `ActionText` skrivs om av Prompttext.) ]]
+local function stangdDorrNara(): boolean
+	for _, p in ipairs(relevanta) do
+		if arDorr(p) and p:GetAttribute("SprakNyckel") == "dorr.oppna" then return true end
+	end
+	return false
+end
+
 --[[ ── RUBRIK, NÄSTA STEG, ÅTERKOPPLING ──────────────────────────────────
 
 	Ur skötselns adapter (`PreparationController.panel`). En kvittens eller
@@ -1787,6 +1856,32 @@ local function fyllText(data: any, minHast: string?, hastnamn: string?)
 		else
 			steg = data.text or ""
 			sistaInstruktion = steg
+		end
+		--[[ ONBOARDING: ett steg i taget. Instruktionen ur guiden; en kvittens
+			eller ett nej står kvar i återkopplingsfältet som förut. ]]
+		local gs = guideSteg(data.guide, data.lage, if data.aterkoppling then nil else data.text, hastnamn,
+			stangdDorrNara())
+		if gs then
+			local r = gs.rubrik
+			if gs.raknare and data.totalt and data.totalt > 0 then
+				r ..= ("  ·  %d/%d"):format(data.klara or 0, data.totalt)
+			end
+			if rubrikEtikett then rubrikEtikett.Text = r end
+			if not data.aterkoppling then
+				steg = gs.text
+				sistaInstruktion = steg
+			end
+			if stegEtikett then
+				stegEtikett.Text = steg
+				stegEtikett.Visible = steg ~= ""
+			end
+			visaAterkoppling(ater)
+			local hjalpG = stegLista(data.steg or {})
+			if type(data.historik) == "string" and data.historik ~= "" then
+				hjalpG = if hjalpG ~= "" then (hjalpG .. "\n\n" .. data.historik) else data.historik
+			end
+			visaHjalp(hjalpG)
+			return
 		end
 	end
 	if rubrikEtikett then rubrikEtikett.Text = rubrikFor(hastnamn, lage) end

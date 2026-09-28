@@ -1,6 +1,6 @@
 # Onboarding: one clear step at a time in the left panel (Tobias C: two paths)
 
-Status: contract written before code, 2026-09-28.
+Status: contract written before code, 2026-09-28. **BUILT, LOCAL SUITE GREEN, VERIFIED IN STUDIO (engine), NOT VISUALLY VERIFIED** — READY_FOR_CHATGPT_REVIEW.
 Order: TOBIAS_RUNTIME_FAIL_ONBOARDING_MENU_MISSING ([relay](https://github.com/Carneteg/UBRF/issues/266#issuecomment-5871402927),
 [ChatGPT](https://github.com/Carneteg/UBRF/issues/266#issuecomment-5871460775)); decision
 [TOBIAS_DECISION_ONBOARDING_C](https://github.com/Carneteg/UBRF/issues/266#issuecomment-5871425267). Base `2730558` (runtime `7fdee30`).
@@ -64,3 +64,16 @@ Order: TOBIAS_RUNTIME_FAIL_ONBOARDING_MENU_MISSING ([relay](https://github.com/C
 **Full suite; re-lock. Studio:** the before state (the phase text, reproduced), then after the fix: the step card from spawn, at the horse and after "Rida nu".
 
 **Not tested:** whether the texts are **clear** to a human, and how they fit on a phone. That is Tobias's checklist.
+
+## Found during the build (Studio): "Rida nu" did not exist after join
+
+The card says "hold «Rida nu» (R)". **In a fresh session there was no `RidaNuPrompt`** (and no `MountPrompt`) until the player had done something.
+
+The cause: `InteractionController.uppdatera()` only ran on a **new view**. At join, the view arrived before the horse model had streamed in, so no prompt was created, and there was no later refresh.
+
+**The fix (`init.client.luau`):**
+- the prompts are also refreshed when a horse **appears** (`GetInstanceAddedSignal("Horse")`);
+- and once a second in the existing Heartbeat. The refresh is idempotent: an existing prompt is left alone.
+
+**Verified in Studio:** in a fresh session, `RidaNuPrompt` exists on Troy by itself, and holding R gives "Mount Troy". A bench case covers it (`klient-guide.spec` §6).
+

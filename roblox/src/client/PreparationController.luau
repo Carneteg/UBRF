@@ -1642,6 +1642,25 @@ end
 	hjälptexten, framstegen, interaktionspanelens existens och layouten
 	hänger ihop, och fem kopior av den kopplingen hade glidit isär vid
 	första ändringen — precis som rubriken och servern gjorde i P0-3. ]]
+--[[ ONBOARDING: vad panelen behöver för att säga nästa handling. Den
+	utrustning spelaren BÄR räknas bara för hennes egen häst. ]]
+local function guideData(): any
+	local vy = senasteVy
+	if type(vy) ~= "table" then return nil end
+	local klara = 0
+	for _, s in ipairs(vy.steg or {}) do if s.klar then klara += 1 end end
+	local buren = {}
+	local b = vy.burenUtrustning
+	if type(b) == "table" and b.hastId == vy.hastId and type(b.delar) == "table" then
+		for _, d in ipairs(b.delar) do buren[d] = true end
+	end
+	return table.freeze({
+		status = vy.status, nasta = vy.nasta, nastaMoment = vy.nastaMoment, redo = vy.redo == true,
+		klaraFaser = klara, buren = table.freeze(buren), utomRackhall = utomRackhall,
+		rattelse = rattelseAktiv,
+	})
+end
+
 local function avsluta(lage: string, antalVal: number, ledtext: string,
 	synlig: boolean)
 	--[[ R2: kontexten för väntande återlämningar, i slutet av VARJE vy. ]]
@@ -1682,6 +1701,10 @@ local function avsluta(lage: string, antalVal: number, ledtext: string,
 	     så att panelen kan visa dem i sitt återkopplingsfält i stället för
 	     att de tar över instruktionens plats för gott. ]]
 	panelData = {
+		--[[ ONBOARDING (docs/ONBOARDING-STEP-CARD-CONTRACT.md, Tobias C): ett
+		     litet sammandrag av läget, så att panelen kan säga NÄSTA HANDLING
+		     i stället för fasens namn. Samma vy, ingen ny källa. ]]
+		guide = guideData(),
 		lage = lage,
 		rubrik = if rubrik then rubrik.Text else "",
 		text = ledtext,
