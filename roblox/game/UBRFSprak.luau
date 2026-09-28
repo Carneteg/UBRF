@@ -1337,6 +1337,10 @@ Sprak.text = {
 		sv = "Rid in i ridhuset innan du startar.",
 		en = "Ride into the indoor arena before you start.",
 	},
+	["markbomlektion.mindre_stod"] = {
+		sv = "Rid bara efter bommen och märkena",
+		en = "Ride by the pole and its marks only",
+	},
 	["ledlektion.choose"] = {
 		sv = "Leda till ridhuset",
 		en = "Lead to the arena",

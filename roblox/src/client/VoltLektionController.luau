@@ -287,7 +287,7 @@ end
 -- direction W towards C). Dashed corridor edges on the approach, chevrons on
 -- a = 0 towards the pole, a mark beside each pole end (never on the pole) and
 -- an exit lane. delmal: 0 approach, 1 crossing, 2 exit.
-local function markbomGuide(m, ref, delmal)
+local function markbomGuide(m, ref, delmal, utan: boolean?)
 	local p = ref.plats
 	local function lokalt(a, w)
 		return Plats.tillVarld(p, Vector3.new(ref.u + ref.au * a + ref.wu * w, 0.035,
@@ -296,14 +296,16 @@ local function markbomGuide(m, ref, delmal)
 	local fram = lokalt(0, 1) - lokalt(0, 0)
 	local sidled = lokalt(1, 0) - lokalt(0, 0)
 	local kant = ref.bredd / 2 + ref.sida
-	local w = -ref.djup
+	--[[ C3 (docs/GROUND-POLE-LESS-GUIDANCE-CONTRACT.md): med mindre vägvisning ritas
+		bara märkena vid bomändarna — inridningens kanter och pilar och utlöpet bort. ]]
+	local w = if utan then 0 else -ref.djup
 	while w < -0.6 do
 		for _, a in ipairs({ -kant, kant }) do
 			streck(m, p, lokalt(a, w), fram, 0.35 * p.studsPerMeter, delmal == 0)
 		end
 		w += 1.2
 	end
-	w = -ref.djup + 1
+	w = if utan then 0 else -ref.djup + 1
 	while w < -1.5 do
 		local spets = lokalt(0, w)
 		for _, sida in ipairs({ 1, -1 }) do
@@ -315,7 +317,7 @@ local function markbomGuide(m, ref, delmal)
 	for _, a in ipairs({ -(ref.bredd / 2 + 0.3), ref.bredd / 2 + 0.3 }) do
 		streck(m, p, lokalt(a, 0), fram, 0.3 * p.studsPerMeter, delmal == 1)
 	end
-	w = 0.6
+	w = if utan then math.huge else 0.6
 	while w <= 3 do
 		for _, a in ipairs({ -kant, kant }) do
 			streck(m, p, lokalt(a, w), fram, 0.35 * p.studsPerMeter, delmal == 2)
@@ -380,7 +382,7 @@ end
 
 local function visaGuide(ref, delmal)
 	if not ref or not ref.plats then rivGuide(); return end
-	local utan = utanStreck and (vagTyp(typ) or typ == "hornet" or typ == "halvvolt")
+	local utan = utanStreck and (vagTyp(typ) or typ == "hornet" or typ == "halvvolt" or typ == "markbom")
 	if guideRef and guideRef.ramId == ref.ramId and guideRef.nyckel == ref.nyckel and guideTyp == typ
 		and guideDel == delmal and guideUtan == utan then return end
 	rivGuide()
@@ -389,7 +391,7 @@ local function visaGuide(ref, delmal)
 		if typ == "serpentin" then serpentinGuide(m, ref, delmal)
 		elseif typ == "hornet" then hornGuide(m, ref, delmal, utan)
 		elseif typ == "halvvolt" then halvvoltGuide(m, ref, delmal, utan)
-		elseif typ == "markbom" then markbomGuide(m, ref, delmal)
+		elseif typ == "markbom" then markbomGuide(m, ref, delmal, utan)
 		else vagGuide(m, ref, delmal, utan) end
 		m.Parent = workspace; guide, guideRef, guideTyp, guideDel, guideUtan = m, ref, typ, delmal, utan
 		return
@@ -559,6 +561,8 @@ local function markbomText(key): string?
 	if key=="timeout" then return Sprak.t("markbomlektion.timeout") end
 	if key=="closed" then return Sprak.t("markbomlektion.closed") end
 	if key=="place" then return Sprak.t("markbomlektion.place") end
+	if key=="mindre_stod" then return Sprak.t("markbomlektion.mindre_stod") end
+	if key=="visa_vagen" then return Sprak.t("vaglektion.visa_vagen") end
 	return nil
 end
 
@@ -1043,9 +1047,9 @@ function V.panel()
 		mindre vägvisning är på. Lokalt — inget skickas till servern. ]]
 	--[[ Hörnet (docs/CORNER-LESS-GUIDANCE-CONTRACT.md): samma val med egen etikett —
 		bågens streck står kvar, så "utan streck" vore osant där. ]]
-	if (vagTyp(typ) or typ == "hornet" or typ == "halvvolt") and (utanStreck or klarad(typ)) then
+	if (vagTyp(typ) or typ == "hornet" or typ == "halvvolt" or typ == "markbom") and (utanStreck or klarad(typ)) then
 		local nyckel = if utanStreck then "visa_vagen"
-			elseif typ == "hornet" or typ == "halvvolt" then "mindre_stod" else "utan_streck"
+			elseif typ == "hornet" or typ == "halvvolt" or typ == "markbom" then "mindre_stod" else "utan_streck"
 		table.insert(knappar, val(nyckel, function()
 			utanStreck = not utanStreck
 			local visad = guide ~= nil

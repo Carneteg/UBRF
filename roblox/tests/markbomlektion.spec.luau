@@ -392,6 +392,111 @@ check("Back from the lines-and-pole subgroup returns to Riding paths",
 	hitta(UgnetaController.panel(KAP).knappar, Sprak.t("lektionsval.bojda")) ~= nil)
 UgnetaController.dolj()
 
+-- ── C3 (docs/GROUND-POLE-LESS-GUIDANCE-CONTRACT.md): bara bommen och märkena ──
+-- Egen funktion: huvudchunken har högst 200 lokala register.
+;(function()
+	Skopa._nollstallForProv()
+	request("finish")
+	local remote = Networking.get("VoltLektion")
+	local syncC = Networking.get("VoltLektionSync")
+	local minneSync = Networking.get("LektionsMinneSync")
+	--[[ PÅHITTAT/KONTROLL: lektionsminnet levereras genom klientens riktiga kanal
+		(LektionsMinneSync) med en hög session, eftersom den här bänken inte sparar. ]]
+	local rev = 0
+	local function minne(lektioner)
+		rev += 1
+		minneSync.OnClientEvent:Fire({ historik = "betrodd", lektioner = lektioner, session = 1000000, rev = rev })
+	end
+	local function knapp(nyckel)
+		local sida = V.panel()
+		return sida and hitta(sida.knappar, Sprak.t(nyckel)) or nil
+	end
+	local function leverera() syncC.OnClientEvent:Fire(image()) end
+	--[[ Guidens delar efter bredd: märket vid bomänden 0,3·spm, allt annat i
+		bommens guide (kanter, pilar, utlöp) 0,35·spm, var och en × 0,65. ]]
+	local function delar()
+		local g = workspace:FindFirstChild("Voltguide")
+		local r = image().referens
+		if not g or not r then return nil end
+		local spm = r.plats.studsPerMeter
+		local ut = { marke = 0, ovrigt = 0 }
+		for _, d in ipairs(g:GetChildren()) do
+			if math.abs(d.Size.X - 0.3 * spm * 0.65) < 1e-3 then ut.marke += 1 else ut.ovrigt += 1 end
+		end
+		return ut
+	end
+	local function txt(u)
+		return if u then ("märken %d, övrigt %d"):format(u.marke, u.ovrigt) else "ingen guide"
+	end
+	Sprak.satVal("sv")
+	V.avbryt(); V.start(id, nil)
+	UgnetaController.satLektionsVal(V.panel)
+	V.valj("markbom")
+	minne({ markbom = "okand", halt = "sparad" })
+	check("C3 markbom: not completed gives no choice", knapp("markbomlektion.mindre_stod") == nil
+		and knapp("vaglektion.visa_vagen") == nil)
+	runt(0, -9)
+	knapp("markbomlektion.start").skicka(); leverera()
+	local full = delar()
+	check("C3 markbom: the full guide has edges/chevrons/exit and the pole-end marks", full ~= nil
+		and full.ovrigt > 0 and full.marke > 0)
+	minne({ markbom = "sparad", halt = "sparad" })
+	check("C3 markbom: completed gives its own label, not another lesson's",
+		knapp("markbomlektion.mindre_stod") ~= nil and knapp("vaglektion.utan_streck") == nil
+		and knapp("hornlektion.mindre_stod") == nil and knapp("halvvoltlektion.mindre_stod") == nil)
+	local n = #remote._skickat
+	knapp("markbomlektion.mindre_stod").skicka()
+	local mindre = delar()
+	check("C3 markbom: pressing it sends nothing to the server", #remote._skickat == n)
+	check("C3 markbom: only the pole-end marks remain", mindre ~= nil and mindre.ovrigt == 0
+		and mindre.marke == full.marke)
+	check("C3 markbom: the button is now 'Visa vägen'", knapp("vaglektion.visa_vagen") ~= nil
+		and knapp("markbomlektion.mindre_stod") == nil)
+	Sprak.satVal("en")
+	check("C3 markbom: English", Sprak.t("markbomlektion.mindre_stod") == "Ride by the pole and its marks only")
+	Sprak.satVal("sv")
+	-- Samma uppgift: inridning, passage mot C och utridning slutförs som förut.
+	ga(0, -8.6)
+	till(0, -8); leverera()
+	local under = delar()
+	check("C3 markbom: during the approach still only the marks", under ~= nil and under.ovrigt == 0)
+	till(0, -4)
+	till(0, 4)
+	local klar = image()
+	check("C3 markbom: the task completes exactly as before with less guidance", klar.lage == "complete"
+		and klar.resultat ~= nil and klar.resultat.passage == "rotplan" and klar.resultat.inridningM >= 4)
+	leverera()
+	knapp("vaglektion.visa_vagen").skicka()
+	runt(0, -9)
+	knapp("voltlektion.retry").skicka(); leverera()
+	local igen = delar()
+	check("C3 markbom: 'Visa vägen' restores the full guide", igen ~= nil and igen.ovrigt == full.ovrigt
+		and igen.marke == full.marke)
+	-- Nollställning: typbyte, avbrott med återkoppling, ny ritt.
+	knapp("markbomlektion.mindre_stod").skicka()
+	knapp("markbomlektion.finish").skicka(); leverera()
+	V.valj("halt")
+	check("C3 markbom: another type shows no choice (counted: Start + Finish)", #V.panel().knappar == 2)
+	V.valj("markbom")
+	check("C3 markbom: a type switch resets to the full guide", knapp("markbomlektion.mindre_stod") ~= nil)
+	knapp("markbomlektion.mindre_stod").skicka()
+	V.avbryt(); V.start(id, nil); UgnetaController.satLektionsVal(V.panel)
+	check("C3 markbom: cancel and reattach resets to the full guide", knapp("markbomlektion.mindre_stod") ~= nil)
+	knapp("markbomlektion.mindre_stod").skicka()
+	HorseService.dismount(p)
+	id = mount()
+	V.avbryt(); V.start(id, nil); UgnetaController.satLektionsVal(V.panel)
+	V.valj("markbom")
+	check("C3 markbom: a new ride resets to the full guide", knapp("markbomlektion.mindre_stod") ~= nil
+		and knapp("vaglektion.visa_vagen") == nil)
+	UgnetaController.satLektionsVal(nil)
+	V.avbryt()
+	check("C3 markbom: the key exists in SV and EN",
+		Sprak.iSprak("sv", "markbomlektion.mindre_stod") ~= "markbomlektion.mindre_stod"
+		and Sprak.iSprak("en", "markbomlektion.mindre_stod") ~= "markbomlektion.mindre_stod")
+	print("   parts full: " .. txt(full) .. " · less: " .. txt(mindre))
+end)()
+
 local sync = Networking.get("VoltLektionSync")
 local toOther = 0
 for _, rad in ipairs(sync._skickat) do if rad[1] ~= p then toOther += 1 end end

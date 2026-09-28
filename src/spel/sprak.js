@@ -472,6 +472,7 @@ const SPRAK = {
   "markbomlektion.timeout": { sv: "Vi hann inte klart. Ta en paus eller prova igen.", en: "We did not finish in time. Take a break or try again." },
   "markbomlektion.closed": { sv: "Bommen på marken är avslutad.", en: "The ground pole has ended." },
   "markbomlektion.place": { sv: "Rid in i ridhuset innan du startar.", en: "Ride into the indoor arena before you start." },
+  "markbomlektion.mindre_stod": { sv: "Rid bara efter bommen och märkena", en: "Ride by the pole and its marks only" },
   "ledlektion.choose": { sv: "Leda till ridhuset", en: "Lead to the arena" },
   "ledlektion.start": { sv: "Starta ledningen", en: "Start leading" },
   "ledlektion.retry": { sv: "Leda igen", en: "Lead again" },
