@@ -161,6 +161,19 @@ do
 	prova("rundans rubrik säger runda 1 och passets sekunder, genom riktiga LektionController",
 		mal == CoachBanner.versaler(Sprak.t("ugneta.runda_slut", 1, Lektion.FORSOK_SEK)),
 		('("%s")'):format(mal))
+	--[[ CHATGPT_C3_OPTION_A_CONTRACT_ACCEPTED: rubriken får inte återanvända något
+		som kan läsas som klarad uppgift eller godkännande — inte heller den gamla
+		lektionsramen — på något av språken. ]]
+	local forbjudet = {}
+	for _, sprak in ipairs({ "sv", "en" }) do
+		local m = CoachBanner.versaler(Sprak.iSprak(sprak, "ugneta.runda_slut", 1, Lektion.FORSOK_SEK))
+		for _, ord in ipairs({ "KLAR", "GODK", "LEKTION", "PROVA IGEN", "FÖRSÖK", "DONE", "PASS",
+			"COMPLETE", "LESSON", "ATTEMPT", "TRY AGAIN" }) do
+			if string.find(m, ord, 1, true) then table.insert(forbjudet, sprak .. ":" .. ord) end
+		end
+	end
+	prova("rundans rubrik bär inga ord för klarad/godkänd eller den gamla lektionsramen (sv, en)",
+		#forbjudet == 0, ('(%s)'):format(table.concat(forbjudet, " ")))
 end
 prova("med en tryckbar Prova igen",
 	knapp ~= nil and knapp.Visible == true
