@@ -111,20 +111,28 @@ När logik delas mellan plattformarna: porta **avsikt, regler, parametrar och ac
 
 ### Paritetsregel
 
-> **Tidsbegränsat undantag 2026-09-22 — Roblox först.** Fram till verifierad
-> First Playable är Roblox enda aktiva leveransmålet. Nya webbfeatures och
-> kravet att samtidigt implementera varje ny Roblox-funktion på webben är
-> pausade. Webben bevaras i befintligt skick — pausen är inte tillstånd att
-> radera, avveckla eller försämra den, och befintliga tester och
-> regressionsskydd behålls. Delade källor, generering och export får ändras
-> när det behövs, utan att en andra Luau-sanning skapas. Fullständig text och
-> villkor: `docs/PRODUCT-CANON.md`, «Tidsbegränsat produktbeslut 2026-09-22».
-> Återstart kräver ett nytt produktägarbeslut. Stycket nedan gäller i övrigt
-> oförändrat och återfår full verkan när etappen är klar.
+> **Stående produktregel från 2026-09-28 — Roblox + webb samtidigt.**
+> Det tidsbegränsade Roblox-först-undantaget från 2026-09-22 är avslutat.
+> Varje framtida ändring som påverkar produktbeteende, gameplay, spelarföde,
+> instruktioner, UI, lokalisering, hästhantering, lektioner, miljöbeteende eller
+> annan spelbar upplevelse ska implementeras och verifieras på **både Roblox och
+> HTML/webb i samma leverans**. En uppgift är inte klar när bara en plattform är
+> uppdaterad.
 
-Kärnloop, hästlogik, lärande, ansvar, UBRF-värld och centrala gameplayregler ska motsvara varandra. Rendering, UI och inputadapter får vara plattformsspecifika.
+Roblox är fortsatt primär spelplattform och är facit när plattformarna har driftat. Webben ska följa samma produktavsikt, regler, spelarföde, instruktioner och aktuella state. Rendering, input och teknisk implementation får vara plattformsspecifika.
 
-Bygg inte en ny JS-only kärnfeature eller Roblox-only kärnfeature utan att aktivt redovisa hur motsvarande upplevelse hålls möjlig på den andra ytan. Miljöändringar ska levereras genom gemensam källstyrd miljösanning och båda plattformarnas implementation enligt `docs/ENVIRONMENT-DELIVERY.md`.
+**Ingen ensidig plattformsändring får lämnas som skuld.** Om en verklig teknisk plattformsskillnad gör identisk implementation omöjlig ska den:
+1. dokumenteras innan leveransen avslutas,
+2. beskriva samma avsedda spelarutfall på båda ytorna,
+3. ha uttryckligt godkännande från Tobias som ett plattformsundantag.
+
+Varje implementation/handoff ska därför redovisa:
+- Roblox-filer och webbfiler som ändrats,
+- parity-kontroll mellan plattformarna,
+- test/build-resultat för båda,
+- eventuella uttryckligen godkända plattformsskillnader.
+
+Bygg inte en ny JS-only kärnfeature eller Roblox-only kärnfeature. Miljöändringar ska levereras genom gemensam källstyrd miljösanning och båda plattformarnas implementation enligt `docs/ENVIRONMENT-DELIVERY.md`.
 
 ## Scope guardrail
 
