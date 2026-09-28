@@ -415,6 +415,63 @@ print("\n── 9. Varje livscykelutgång i bänken: död, karaktär borta, resp
 	check("lämnar: egna kläder tillbaka, hästen ledig", egna(pl) and HorseService.horseOf(pl) == nil)
 end)()
 
+print("\n── 10. R1: vakterna faller EFTER skrivningen — egna kläder, ingen session, anmälan går vidare ──")
+;(function()
+	local function provSignal(karaktarFor)
+		--[[ En signal som kan fås att FALLA vid Connect, och som räknar sina
+			levande kopplingar. `karaktarFor` ger kroppen vars tröja noteras i
+			felögonblicket — beviset att felet kom EFTER skrivningen. ]]
+		local sig = { kopplingar = {}, fela = false, vidFel = nil }
+		function sig:Connect(fn)
+			if self.fela then
+				local k = karaktarFor and karaktarFor()
+				local sh = k and k:FindFirstChildOfClass("Shirt")
+				self.vidFel = sh and sh.ShirtTemplate or "ingen"
+				error("bindningen föll (prov)")
+			end
+			local c = { Connected = true, fn = fn }
+			function c:Disconnect() self.Connected = false end
+			table.insert(self.kopplingar, c)
+			return c
+		end
+		function sig:Fire(...)
+			for _, c in ipairs(self.kopplingar) do if c.Connected then c.fn(...) end end
+		end
+		function sig:anslutna()
+			local n = 0
+			for _, c in ipairs(self.kopplingar) do if c.Connected then n += 1 end end
+			return n
+		end
+		return sig
+	end
+	local pf = player(820)
+	pf.CharacterAdded = provSignal(nil)
+	pf.CharacterRemoving = provSignal(function() return pf.Character end)
+	mount(pf)
+	tillStart()
+	local fore = pf.CharacterAdded:anslutna()
+	pf.CharacterRemoving.fela = true -- vakt nummer två faller, efter att nummer ett bundits
+	local okA, felA, ba = request("anmal_white")
+	pf.CharacterRemoving.fela = false
+	check("felet kom EFTER skrivningen (tröjan var tävlingens i felögonblicket)",
+		pf.CharacterRemoving.vidFel == TavlingskladerService.mall(T.set("white").shirtAssetId),
+		tostring(pf.CharacterRemoving.vidFel))
+	check("anmälan gick igenom: startlistan", okA and ba.lage == "startlista", tostring(felA))
+	local b = image()
+	check("bilden säger «misslyckades»", b.klader and b.klader.lage == "misslyckades", b.klader and b.klader.lage)
+	check("EGNA kläder tillbaka (exakt läget före skrivningen)", egna(pf))
+	check("ingen klädsession registrerad", aktivTjanst.aktivt(pf) == nil and #aktivTjanst.aktivaSpelare() == 0)
+	check("den redan bundna vakten (CharacterAdded) är bortkopplad", pf.CharacterAdded:anslutna() == fore,
+		("%d anslutna, %d före"):format(pf.CharacterAdded:anslutna(), fore))
+	check("tjänsten håller inget kvar om spelaren", aktivTjanst.kvarvarande() == 0, aktivTjanst.kvarvarande())
+	request("ga_banan")
+	local okS, _, bs = request("start")
+	check("ritten går vidare: banskiss och startsignal", okS and bs.lage == "to_start")
+	request("finish")
+	check("och Avsluta: fortfarande egna", egna(pf))
+	HorseService.dismount(pf)
+end)()
+
 check("inget persistent skrevs", (__datastore.forsok and __datastore.forsok.skriv or 0) == writes)
 if fails > 0 then error(("%d mätning(ar) föll."):format(fails), 0) end
 print(string.format("\nclearround-klader.spec: %d prov, alla gröna", total))

@@ -81,3 +81,16 @@ Origin: #248 (the catalogue, server authority, preserving the avatar). Base `15a
 - touch, and the button text length on a phone.
 
 All of these are Studio/network, PHYSICAL TEST LAST.
+
+## R1 (CHATGPT_REVIEW_D5_CHANGES_REQUESTED_20260928, #5868690505)
+
+**One fail-closed hardening in `TavlingskladerService`**, and the only change to the service. The product behaviour is unchanged.
+
+`bindVakter` runs **after** the shirt/pants write. A throw there used to leave the avatar in competition clothes with no session, so no `avsluta` could restore it. Now:
+- binding runs under `pcall`, and on any fault every connection already created is disconnected;
+- **a session is registered only when all guards are bound**;
+- otherwise the exact pre-write state is restored (`aterstall(character, fore)`);
+- `starta` returns a normal refusal, **`vakter_foll`**, and never throws.
+
+The clear round shows `misslyckades`, and the entry and ride continue in the player's own clothes.
+
