@@ -354,6 +354,8 @@ task.spawn=originalSpawn; remote.OnServerInvoke=handler
 -- smoke drives server paths. The lesson must progress for it without addressing
 -- an owner event to it: in the engine, FireClient on a non-Player throws inside
 -- the shared Heartbeat loop and would skip every later session that frame.
+-- Egen funktion: huvudchunken har högst 200 lokala register (bunten växer med modulerna).
+;(function()
 local actor=player(913); actor.harKlient=false
 Players._spelare={p,other,actor}
 local horse2=HastRigg.bygg("circle_actor","Circle actor",CFrame.new(Ridhusplats.tillVarld(RP,vec(4,0,2))))
@@ -382,6 +384,7 @@ check("client-less actor lesson progresses server-side", okA and okStart and sta
 check("client-less actor receives no owner event", toActor==0)
 HorseService.voltLektionsBegaran(actor,actorRide,"finish",2)
 HorseService.dismount(actor)
+end)()
 
 -- C1 (docs/CIRCLE-COMPARISON-CONTRACT.md): the comparison with the previous DISTINCT
 -- completion in the same lesson object, on a fresh ride with its own request sequence.

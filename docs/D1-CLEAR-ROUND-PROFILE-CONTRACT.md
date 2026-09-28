@@ -19,7 +19,7 @@ A pure, versioned rule module that turns **one already decided round outcome** i
 - placings (clear round has none);
 - jump-off.
 
-**Where it lives:** `roblox/regler/Klassprofil.luau`, which is **not Rojo-mapped**, together with its spec. The locked playtest candidate's build identity (`kallhash e23198df4614…`, #266 A2) therefore stays valid. D2 moves or maps it when the competition day consumes it.
+**Where it lives:** `roblox/regler/Klassprofil.luau`, which is **not Rojo-mapped**, together with its spec. The locked playtest candidate's build identity (`kallhash e23198df4614…`, #266 A2) therefore stays valid. D2 moves or maps it when the competition day consumes it. **Update (D2a):** it now lives in `roblox/src/shared/HorseCore/Klassprofil.luau` and is consumed by `ClearRoundLektion`.
 
 ## Profile `A_CLEAR_ROUND` · `TR III 2025`
 

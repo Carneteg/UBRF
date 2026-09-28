@@ -90,6 +90,8 @@ RidForsok.OVNINGAR = table.freeze({
 	markbom = table.freeze({ ["server-markbom-1"] = true }),
 	-- Genom hörnet (docs/CORNER-LESSON-CONTRACT.md).
 	genom_hornet = table.freeze({ ["server-horn-1"] = true }),
+	-- D2a: clear round på träningsbanan, förenklad bedömning (docs/D2-CLEAR-ROUND-DAY-CONTRACT.md).
+	clearround = table.freeze({ ["server-clearround-1"] = true }),
 })
 RidForsok.MAX_PER_RITT = 8
 RidForsok.MAX_BEGARAN = 16

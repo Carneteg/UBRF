@@ -90,6 +90,37 @@ local function sammanfattning(typ: string, r: any): string?
 			return nil
 		end
 		return Sprak.t("aterkoppling.hornet.klar", tal(r.meter), tal(r.langd))
+	elseif typ == "clearround" then
+		--[[ D2a (docs/D2-CLEAR-ROUND-DAY-CONTRACT.md): den FÖRENKLADE bedömningen.
+			Aldrig "felfri", aldrig rosett — rivningar bedöms inte ännu. ]]
+		if r.ovning ~= "clearround" or r.bedomning ~= "forenklad" or not (r.forsokNr == 1 or r.forsokNr == 2) then
+			return nil
+		end
+		if r.tid ~= nil and not ickeNeg(r.tid) then return nil end
+		local tid = if r.tid ~= nil then tal(r.tid, 0) else "–"
+		local rad: string? = nil
+		if r.utfall == "inga_observerade_fel" then
+			rad = Sprak.t("aterkoppling.clearround.inga_fel", tid)
+		elseif r.utfall == "observerade_fel" then
+			if not heltal(r.olydnader) then return nil end
+			rad = if r.fel ~= nil and heltal(r.fel)
+				then Sprak.t("aterkoppling.clearround.fel", tostring(r.olydnader), tostring(r.fel), tid)
+				else Sprak.t("aterkoppling.clearround.fel_okand", tostring(r.olydnader), tid)
+		elseif r.utfall == "utesluten" then
+			rad = if r.orsak == "fel_vag" then Sprak.t("aterkoppling.clearround.utesluten_fel_vag")
+				elseif r.orsak == "tillaten_tid" then Sprak.t("aterkoppling.clearround.utesluten_tid")
+				elseif r.orsak == "olydnader" then Sprak.t("aterkoppling.clearround.utesluten_olydnader")
+				else nil
+		elseif r.utfall == "utesluten_ej_faststalld" then
+			rad = Sprak.t("aterkoppling.clearround.utesluten_okand")
+		elseif r.utfall == "ej_startad" then
+			rad = Sprak.t("aterkoppling.clearround.ej_startad")
+		elseif r.utfall == "ej_bedomd" then
+			rad = Sprak.t("aterkoppling.clearround.ej_bedomd")
+		end
+		if not rad then return nil end
+		if r.omstartMojlig == true then rad ..= " " .. Sprak.t("aterkoppling.clearround.omstart") end
+		return rad .. " " .. Sprak.t("aterkoppling.clearround.forenklad")
 	elseif typ == "leda" then
 		if not (ickeNeg(r.meter) and ickeNeg(r.sekunder)) then return nil end
 		return Sprak.t("aterkoppling.leda.klar", tal(r.meter), tal(r.sekunder, 0))
@@ -141,7 +172,8 @@ function A.text(b: any, kontext: any): string?
 			bindningen och varje fält höll. Siffrorna utelämnas, statusen, nästa
 			steg och galopp-/markbomsbegränsningarna står kvar (egna ord,
 			ingen avkapning). ]]
-		if Installning.detalj() == "kort" then
+		-- D2a: clear round-domen ÄR beskedet, och det förenklade förbehållet med — inget kortas bort.
+		if Installning.detalj() == "kort" and typ ~= "clearround" then
 			s = Sprak.t("aterkoppling." .. typ .. ".kort")
 		end
 		--[[ Tempocoachning: jämförelsen med förra DISTINKTA fullföljningen i

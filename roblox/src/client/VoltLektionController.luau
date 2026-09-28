@@ -56,7 +56,7 @@ local coachCd = 0
 local coachning: { forsokId: any, ritt: string, skal: string, kvar: number }? = nil
 local AKTIVA_LAGEN = { approach = true, baseline = true, riding = true, halt1 = true, walk = true,
 	walk1 = true, trot = true, walk2 = true, to_start = true, route = true, steady = true,
-	canter = true, crossing = true, exit = true }
+	canter = true, crossing = true, exit = true, course = true, to_finish = true }
 
 local function heltal(x: any): number
 	if type(x) ~= "number" or x ~= x or x < 0 or x == math.huge or x % 1 ~= 0 then return -1 end
@@ -376,6 +376,22 @@ local function hornGuide(m, ref, delmal, utan: boolean?)
 	end
 end
 
+-- D2a clear round: startlinjen och mållinjen som streck tvärs banan (hindren är de riktiga).
+-- delmal: 0 mot startlinjen (den stark), 1–4 banan, 5 mot mållinjen (den stark).
+local function clearroundGuide(m, ref, delmal)
+	local p = ref.plats
+	local function lokalt(u, v) return Plats.tillVarld(p, Vector3.new(u, 0.035, v)) end
+	for j, L in ipairs({ ref.start, ref.mal }) do
+		local tvars = lokalt(L.u + 1, L.v) - lokalt(L.u, L.v)
+		local antal = math.max(2, math.floor(2 * ref.halv / 0.8))
+		for i = 0, antal do
+			local u = L.u - ref.halv + 2 * ref.halv * i / antal
+			streck(m, p, lokalt(u, L.v), tvars, 0.3 * p.studsPerMeter,
+				(j == 1 and delmal == 0) or (j == 2 and delmal == 5))
+		end
+	end
+end
+
 local function vagTyp(t: string?): boolean
 	return t == "vag_mitt" or t == "vag_diag"
 end
@@ -387,8 +403,10 @@ local function visaGuide(ref, delmal)
 		and guideDel == delmal and guideUtan == utan then return end
 	rivGuide()
 	local m = Instance.new("Model"); m.Name = "Voltguide"
-	if typ == "serpentin" or vagTyp(typ) or typ == "halvvolt" or typ == "markbom" or typ == "hornet" then
+	if typ == "serpentin" or vagTyp(typ) or typ == "halvvolt" or typ == "markbom" or typ == "hornet"
+		or typ == "clearround" then
 		if typ == "serpentin" then serpentinGuide(m, ref, delmal)
+		elseif typ == "clearround" then clearroundGuide(m, ref, delmal)
 		elseif typ == "hornet" then hornGuide(m, ref, delmal, utan)
 		elseif typ == "halvvolt" then halvvoltGuide(m, ref, delmal, utan)
 		elseif typ == "markbom" then markbomGuide(m, ref, delmal, utan)
@@ -470,8 +488,10 @@ local function mottag(b)
 		or b.lage=="halt1" or b.lage=="walk"
 		or b.lage=="walk1" or b.lage=="trot" or b.lage=="walk2"
 		or b.lage=="to_start" or b.lage=="route" or b.lage=="canter"
-		or b.lage=="approach" or b.lage=="crossing" or b.lage=="exit") then
-		local delmal = if typ == "serpentin" or vagTyp(typ) or typ == "halvvolt" or typ == "hornet" then b.delmal
+		or b.lage=="approach" or b.lage=="crossing" or b.lage=="exit"
+		or b.lage=="course" or b.lage=="to_finish") then
+		local delmal = if typ == "serpentin" or vagTyp(typ) or typ == "halvvolt" or typ == "hornet"
+			or typ == "clearround" then b.delmal
 			elseif typ == "markbom" then (if b.lage == "exit" then 2 elseif b.lage == "crossing" then 1 else 0)
 			else nil
 		visaGuide(b.referens, delmal)
@@ -513,7 +533,7 @@ local function skicka(op)
 			end
 		end
 		if ok~=true then
-			fel = if reason=="place" or reason=="pole" then reason elseif reason=="active" then "active"
+			fel = if reason=="place" or reason=="pole" or reason=="course" then reason elseif reason=="active" then "active"
 				else "network"
 		elseif op=="finish" then
 			valt, fri, meny = false, true, nil; rivGuide()
@@ -525,7 +545,7 @@ function V.valj(vald: string?)
 	if not ritt then return end
 	local ny = if vald == "halt" or vald == "overgang" or vald == "serpentin" or vald == "tempo"
 		or vald == "vag_mitt" or vald == "vag_diag" or vald == "halvvolt" or vald == "galopp"
-		or vald == "markbom" or vald == "hornet" then vald else "volt"
+		or vald == "markbom" or vald == "hornet" or vald == "clearround" then vald else "volt"
 	if ny ~= typ then typ, bild = ny, nil; utanStreck = false; rivGuide() end
 	halsning = nil
 	valGen += 1
@@ -590,6 +610,22 @@ end
 
 -- Halvvoltens egna texter; gemensamma nycklar faller igenom.
 -- Genom hörnets egna texter; gemensamma nycklar faller igenom.
+--[[ D2a CLEAR ROUND: sidans texter. Resultatet skrivs av LektionsAterkoppling. ]]
+local function clearroundText(key): string?
+	if key=="choose_clearround" then return Sprak.t("clearround.choose") end
+	if typ ~= "clearround" then return nil end
+	if key=="start" then return Sprak.t("clearround.start") end
+	if key=="finish" then return Sprak.t("clearround.finish") end
+	if key=="retry" then return Sprak.t("clearround.retry") end
+	if key=="intro" then return Sprak.t("clearround.intro") end
+	if key=="to_start" then return Sprak.t("clearround.to_start") end
+	if key=="to_finish" then return Sprak.t("clearround.to_finish") end
+	if key=="closed" then return Sprak.t("clearround.closed") end
+	if key=="place" then return Sprak.t("clearround.place") end
+	if key=="course" then return Sprak.t("clearround.course_missing") end
+	return nil
+end
+
 local function hornText(key): string?
 	if key=="choose_hornet" then return Sprak.t("hornlektion.choose") end
 	if key=="group_bojda" then return Sprak.t("lektionsval.bojda") end
@@ -772,6 +808,8 @@ local function text(key)
 	if mb then return mb end
 	local ga = galoppText(key)
 	if ga then return ga end
+	local cr = clearroundText(key)
+	if cr then return cr end
 	local ho = hornText(key)
 	if ho then return ho end
 	local hv = halvvoltText(key)
@@ -911,6 +949,8 @@ function V.panel()
 			return { ersatt=true, text=medMinne(text("pick")), ovning="", vantar=false, knappar={
 				valGrupp("group_bojda", "bojda", function() meny = "bojda" end),
 				valGrupp("group_linjer", "linjer", function() meny = "linjer" end),
+				-- D2a: den första clear round-ritten (docs/D2-CLEAR-ROUND-DAY-CONTRACT.md).
+				valLektion("clearround"),
 				val("back",function() meny = nil end) } }
 		elseif meny == "bojda" then
 			-- Undergrupp: böjda vägar; Tillbaka leder till Ridvägar.
@@ -980,6 +1020,11 @@ function V.panel()
 	--[[ C1 (docs/TRANSITION-TIMING-ADVICE-CONTRACT.md): kom övergången före
 		eller efter sin ring, och vet servern vilket, blir texten ETT råd om
 		när den ska be om övergången. Annars den vanliga. ]]
+	--[[ D2a: nästa hopp med nummer, färg och riktning ur serverns bild. ]]
+	if typ == "clearround" and key == "jump" and type(b.nasta) == "table" and type(b.nasta.nr) == "number" then
+		local farg = if b.nasta.farg == "rod" then Sprak.t("clearround.farg_rod") else Sprak.t("clearround.farg_bla")
+		txt = Sprak.t("clearround.hopp", b.nasta.nr, farg, b.nasta.mot == "A" and "A" or "C")
+	end
 	if typ == "overgang" and key == "trot_outside" then
 		if b.malSida == "fore" then txt = Sprak.t("overganglektion.trot_early")
 		elseif b.malSida == "efter" then txt = Sprak.t("overganglektion.trot_late") end
@@ -1029,7 +1074,8 @@ function V.panel()
 	end
 	if (b.lage=="riding" or b.lage=="halt1" or b.lage=="walk" or b.lage=="walk1"
 		or b.lage=="trot" or b.lage=="walk2" or b.lage=="route" or b.lage=="steady"
-		or b.lage=="canter" or b.lage=="approach" or b.lage=="crossing" or b.lage=="exit")
+		or b.lage=="canter" or b.lage=="approach" or b.lage=="crossing" or b.lage=="exit"
+		or b.lage=="course" or b.lage=="to_finish")
 		and not pending and not fel then
 		txt ..= " "..tostring(b.progress).."%"
 	end
@@ -1038,7 +1084,10 @@ function V.panel()
 		if fel=="network" then table.insert(knappar,val("sync",function() skicka("sync") end))
 		elseif b.lage=="ready" or b.lage=="closed" then
 			table.insert(knappar,val("start",function() skicka("start") end))
-		elseif b.lage=="complete" or b.lage=="timeout" then
+		elseif (b.lage=="complete" or b.lage=="timeout")
+			--[[ D2a: clear round har ETT försök till, och bara efter fel eller
+				uteslutning i det första (TR 314.1.1) — servern säger när. ]]
+			and (typ ~= "clearround" or (type(b.resultat) == "table" and b.resultat.omstartMojlig == true)) then
 			table.insert(knappar,val("retry",function() skicka("retry") end))
 		end
 	end

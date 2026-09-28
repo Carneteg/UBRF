@@ -186,6 +186,8 @@ FORBEREDELSE = SPEL + [
     ("GaloppLektion", "src/server/GaloppLektion.luau"),  # galoppfattning vid K (delvis)
     ("MarkbomLektion", "src/server/MarkbomLektion.luau"),  # bom pa marken i skritt
     ("HornLektion", "src/server/HornLektion.luau"),  # genom hornet (egen typ hornet)
+    ("Klassprofil", "src/shared/HorseCore/Klassprofil.luau"),  # D1: regelprofilen A: Clear Round
+    ("ClearRoundLektion", "src/server/ClearRoundLektion.luau"),  # D2a: forsta clear round-ritten
     # AKTOREN (#252 DEL C) FORE tjansterna: GameplayService, HorseService
     # och LedService fragar den om aktoren har en klient att skicka till.
     ("Aktor",        "src/shared/HorseCore/Aktor.luau"),
@@ -467,6 +469,8 @@ KOHERENS = GEOMETRI + [
     ("GaloppLektion", "src/server/GaloppLektion.luau"),  # galoppfattning vid K (delvis)
     ("MarkbomLektion", "src/server/MarkbomLektion.luau"),  # bom pa marken i skritt
     ("HornLektion", "src/server/HornLektion.luau"),  # genom hornet (egen typ hornet)
+    ("Klassprofil", "src/shared/HorseCore/Klassprofil.luau"),  # D1: regelprofilen A: Clear Round
+    ("ClearRoundLektion", "src/server/ClearRoundLektion.luau"),  # D2a: forsta clear round-ritten
     # AKTOREN (#252 DEL C) FORE tjansterna: GameplayService, HorseService
     # och LedService fragar den om aktoren har en klient att skicka till.
     ("Aktor",        "src/shared/HorseCore/Aktor.luau"),
@@ -673,10 +677,7 @@ def modulblock(namn: str, rel: str, kropp: str) -> str:
     return block
 
 
-#[[ D1 (#266): regler/ ar produktkallan for rena regelmoduler som annu inte
-#   har nagon konsument i spelet och darfor inte ar Rojo-mappade (den lasta
-#   slutspelskandidatens byggidentitet ska inte andras av dem). ]]
-_PRODUKT = ("src/", "game/", "buildings/", "regler/")
+_PRODUKT = ("src/", "game/", "buildings/")
 
 
 def kontrolleraBunt(spec_rel: str, moduler) -> None:
@@ -760,11 +761,10 @@ def valjBunt(spec_rel: str):
     elif "tavlingsklader" in spec_rel:
         moduler = [("Tavlingsklader", "src/shared/HorseCore/Tavlingsklader.luau")]
         stubbar = "tests/stubs.luau"
-    #[[ D1 (#266): klassprofilen ar en REN regelmodul utan beroenden, och
-    #   ligger utanfor Rojo-mappningen tills D2 konsumerar den. Egen minimal
-    #   bunt av samma skal som tavlingsklader-katalogen. ]]
+    #[[ D1 (#266): klassprofilen ar en REN regelmodul utan beroenden. Egen
+    #   minimal bunt av samma skal som tavlingsklader-katalogen. ]]
     elif "regelprofil" in spec_rel:
-        moduler = [("Klassprofil", "regler/Klassprofil.luau")]
+        moduler = [("Klassprofil", "src/shared/HorseCore/Klassprofil.luau")]
         stubbar = "tests/stubs.luau"
     elif "ridefirst" in spec_rel:
         #[[ INTEGRATION, inte FORBEREDELSE: provet kor den VERKLIGA
@@ -791,6 +791,8 @@ def valjBunt(spec_rel: str):
         moduler, stubbar = KOHERENS, "tests/stubs.luau"
     #[[ Start/halt-lektionen: samma bank som voltlektionen. ]]
     elif "markbomlektion" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
+    elif "clearroundlektion" in spec_rel:
         moduler, stubbar = KOHERENS, "tests/stubs.luau"
     elif "galopplektion" in spec_rel:
         moduler, stubbar = KOHERENS, "tests/stubs.luau"

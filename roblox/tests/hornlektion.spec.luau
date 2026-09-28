@@ -337,8 +337,10 @@ do
 	local vagar = hitta(rot, Sprak.t("lektionsval.vagar"))
 	if vagar then vagar.skicka() end
 	local sidaV = UC.panel(4).knappar
-	check("H15 Ridvägar: Böjda vägar, Raka linjer och Tillbaka", #sidaV == 3
-		and hitta(sidaV, Sprak.t("lektionsval.bojda")) ~= nil and hitta(sidaV, Sprak.t("lektionsval.linjer")) ~= nil)
+	-- D2a: Ridvägar bär sedan clear round-ritten ett fjärde val (fyra rader).
+	check("H15 Ridvägar: Böjda vägar, Raka linjer, Clear round och Tillbaka", #sidaV == 4
+		and hitta(sidaV, Sprak.t("lektionsval.bojda")) ~= nil and hitta(sidaV, Sprak.t("lektionsval.linjer")) ~= nil
+		and hitta(sidaV, Sprak.t("clearround.choose")) ~= nil)
 	hitta(sidaV, Sprak.t("lektionsval.bojda")).skicka()
 	local sidaB = UC.panel(4).knappar
 	check("H15 Böjda vägar: serpentin, halvvolt, hörnet och Tillbaka",

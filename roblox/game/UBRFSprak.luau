@@ -1885,6 +1885,118 @@ Sprak.text = {
 		sv = "Rid in på dressyrbanan innan du startar.",
 		en = "Enter the dressage arena before you start.",
 	},
+	["clearround.choose"] = {
+		sv = "Clear round (träning)",
+		en = "Clear round (training)",
+	},
+	["clearround.start"] = {
+		sv = "Starta ritten",
+		en = "Start the round",
+	},
+	["clearround.finish"] = {
+		sv = "Avsluta clear round",
+		en = "Finish clear round",
+	},
+	["clearround.retry"] = {
+		sv = "Omstart",
+		en = "Restart",
+	},
+	["clearround.intro"] = {
+		sv = "Träningsbana i ridhuset: blått, rött, blått, rött. Förenklad bedömning – rivningar bedöms inte ännu.",
+		en = "Training course in the indoor arena: blue, red, blue, red. Simplified judging – knockdowns are not judged yet.",
+	},
+	["clearround.to_start"] = {
+		sv = "Startsignal! Rid över startlinjen framför det blå hindret inom 45 sekunder.",
+		en = "Start signal! Ride over the start line in front of the blue fence within 45 seconds.",
+	},
+	["clearround.hopp"] = {
+		sv = "Hinder %s: %s, mot %s.",
+		en = "Fence %s: %s, towards %s.",
+	},
+	["clearround.farg_bla"] = {
+		sv = "blått",
+		en = "blue",
+	},
+	["clearround.farg_rod"] = {
+		sv = "rött",
+		en = "red",
+	},
+	["clearround.to_finish"] = {
+		sv = "Bra! Rid över mållinjen efter det röda hindret.",
+		en = "Good! Ride over the finish line after the red fence.",
+	},
+	["clearround.closed"] = {
+		sv = "Clear round-ritten är avslutad.",
+		en = "The clear round has ended.",
+	},
+	["clearround.place"] = {
+		sv = "Rid in i ridhuset innan du startar.",
+		en = "Ride into the indoor arena before you start.",
+	},
+	["clearround.course_missing"] = {
+		sv = "Banans hinder står inte på sin plats just nu.",
+		en = "The course fences are not in place right now.",
+	},
+	["halsning.clearround"] = {
+		sv = "Dags för clear round: rid över startlinjen och ta hindren i ordning.",
+		en = "Time for clear round: ride over the start line and take the fences in order.",
+	},
+	["aterkoppling.clearround.inga_fel"] = {
+		sv = "Inga observerade fel, tid %s s.",
+		en = "No observed faults, time %s s.",
+	},
+	["aterkoppling.clearround.fel"] = {
+		sv = "%s olydnad(er), %s fel, tid %s s.",
+		en = "%s disobedience(s), %s faults, time %s s.",
+	},
+	["aterkoppling.clearround.fel_okand"] = {
+		sv = "%s olydnader – felpoängen kan inte fastställas ännu. Tid %s s.",
+		en = "%s disobediences – the faults cannot be established yet. Time %s s.",
+	},
+	["aterkoppling.clearround.utesluten_fel_vag"] = {
+		sv = "Utesluten: fel väg.",
+		en = "Eliminated: wrong course.",
+	},
+	["aterkoppling.clearround.utesluten_tid"] = {
+		sv = "Utesluten: tillåten tid (180 s) överskriden.",
+		en = "Eliminated: the allowed time (180 s) was exceeded.",
+	},
+	["aterkoppling.clearround.utesluten_olydnader"] = {
+		sv = "Utesluten: tredje olydnaden.",
+		en = "Eliminated: third disobedience.",
+	},
+	["aterkoppling.clearround.utesluten_okand"] = {
+		sv = "Två olydnader – om ritten är utesluten går inte att fastställa ännu.",
+		en = "Two disobediences – whether the round is eliminated cannot be established yet.",
+	},
+	["aterkoppling.clearround.ej_startad"] = {
+		sv = "Ni kom inte över startlinjen inom 45 sekunder efter startsignalen.",
+		en = "You did not cross the start line within 45 seconds of the start signal.",
+	},
+	["aterkoppling.clearround.ej_bedomd"] = {
+		sv = "Ritten kunde inte bedömas – jag tappade en bit av den.",
+		en = "The round could not be judged – I missed part of it.",
+	},
+	["aterkoppling.clearround.omstart"] = {
+		sv = "Du får en omstart direkt.",
+		en = "You may restart straight away.",
+	},
+	["aterkoppling.clearround.forenklad"] = {
+		sv = "Förenklad bedömning: rivningar bedöms inte ännu – clear round-rosetten delas ut när de kan bedömas. Träningsbana, inte en standardklass.",
+		en = "Simplified judging: knockdowns are not judged yet – the clear round rosette is given once they can be. Training course, not a standard class.",
+	},
+	["aterkoppling.clearround.nasta"] = {
+		sv = "Nästa gång: rid banan igen – blått, rött, blått, rött.",
+		en = "Next time: ride the course again – blue, red, blue, red.",
+	},
+	["aterkoppling.clearround.kort"] = {
+		sv = "Ritten är bedömd (förenklat).",
+		en = "The round is judged (simplified).",
+	},
+	["aterkoppling.clearround.igen"] = {
+		sv = "Rid över startlinjen och ta hindren i ordning.",
+		en = "Ride over the start line and take the fences in order.",
+	},
 	["hornlektion.mindre_stod"] = {
 		sv = "Rid med bara bågen och ringarna",
 		en = "Ride with only the curve and rings",

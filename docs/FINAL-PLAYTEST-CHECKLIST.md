@@ -1,6 +1,6 @@
 # Slutspeltest — samlad checklista (#266 A2)
 
-Status: LÅST KANDIDAT för Tobias fysiska slutprov, 2026-09-28. Ingenting här är
+Status: LÅST KANDIDAT för Tobias fysiska slutprov, 2026-09-28 — **omlåst efter D2a** (clear round-ritten), samma dag. Ingenting här är
 godkänt; varje rad står som NOT_TESTED tills Tobias fyller i den.
 Beslut: Tobias «Do A» på [NEXT_PACKAGE_RECOMMENDATION_20260928](https://github.com/Carneteg/UBRF/issues/266#issuecomment-5865193035).
 
@@ -9,9 +9,9 @@ Beslut: Tobias «Do A» på [NEXT_PACKAGE_RECOMMENDATION_20260928](https://githu
 | | |
 |---|---|
 | Gren | `codex/circle-lesson-20260926` |
-| Kodhuvud vid låsning | `19df5e69102866a67f3ea09936dcdd30915230ec` (sista kodändringen; låsningen själv är dokument och byggidentitet) |
-| Byggidentitet (`kallhash`) | `e23198df4614fbfdec56d2a7a5047c2a69e20fbcbc10563c5300faf49469a13e` ur 104 mappade filer (103 skript, 1 modell), beräknad med `tools/bygg-identitet.py` |
-| Kontroll i spelet | byggidentiteten i spelets diagnostik ska visa **`e23198df4614`**. Visar den något annat är det inte den här kandidaten — avbryt och säg till. |
+| Kodhuvud vid låsning | D2a-commiten på grenen (se leveransrapporten i #266); första låsningen var `19df5e6` |
+| Byggidentitet (`kallhash`) | `7f4ff1a1f0f46afbefebeabe7bbbee4f7a14233e4fd56e9b77ae855877b2fb14` ur 106 mappade filer (105 skript, 1 modell), beräknad med `tools/bygg-identitet.py` (tidigare låsning: `e23198df4614…`) |
+| Kontroll i spelet | byggidentiteten i spelets diagnostik ska visa **`7f4ff1a1f0f4`**. Visar den något annat är det inte den här kandidaten — avbryt och säg till. |
 | Bas | `main` `7922d70` (#264) |
 
 Varje ändring av en mappad Roblox-källa efter låsningen ger en ny `kallhash`
@@ -38,7 +38,7 @@ anteckning vid FAIL/NOTE. Raderna står i den ordning du möter dem i spelet.
 
 | # | Kontroll | PC | iPad | iPhone |
 |---|---|---|---|---|
-| 0.1 | Byggidentiteten visar `e23198df4614` | | | |
+| 0.1 | Byggidentiteten visar `7f4ff1a1f0f4` | | | |
 | 0.2 | Språk: spela en gång på svenska; byt till engelska minst i en lektion och vid ett slutkort | | | |
 
 ## 1. Spawn, stall och port
@@ -114,6 +114,10 @@ Avsluta. Därtill de särskilda raderna.
 | 6.18 | Hörn — «Rid med bara bågen och ringarna»: räcker det från sadeln (korridor 1,2 m)? (CORNER-LESS-GUIDANCE) | | | |
 | 6.19 | **Bom på marken** — rakt över bommen i skritt klaras (GROUND-POLE-LESSON) | | | |
 | 6.20 | Bom — «Rid bara efter bommen och märkena»: räcker bommen och märkena; förstår man «Börja lite längre bak» utan ritat djup? (GROUND-POLE-LESS-GUIDANCE) | | | |
+| 6.21 | **Clear round (träning)** — hittas under Ridvägar; «Starta ritten» ger startsignal; start- och mållinjen syns; texten visar nästa hinder (nummer, färg, riktning) (D2-CLEAR-ROUND-DAY) | | | |
+| 6.22 | Clear round — går blått 0,68 m och rött 0,52 m att hoppa i riktigt spel, åt båda hållen enligt banan? (hoppfysiken, B4) | | | |
+| 6.23 | Clear round — resultatkortet: «Inga observerade fel …», förenklad bedömning och «Träningsbana»; aldrig «felfri», ingen rosett; omstart bara efter fel i försök 1 (D2-CLEAR-ROUND-DAY) | | | |
+| 6.24 | Clear round — en utbrytning, fel väg och 45 s/180 s ger begripliga besked (D2-CLEAR-ROUND-DAY) | | | |
 
 ## 7. Avsittning, layout och återkomst
 
@@ -169,6 +173,7 @@ Avsluta. Därtill de särskilda raderna.
 | TEMPO-LESSON | 6.7 |
 | TRANSITION-LESSON | 6.8 |
 | TRANSITION-TIMING-ADVICE | 6.9 |
+| D2-CLEAR-ROUND-DAY | 6.21–6.24 |
 | Närområdet, alternativ 3 (#266 R1) | 1.3 |
 | R4/R5 (`ecb2f2e`) | 1.1, 3.3, 4.1, 7.1, 7.2 |
 | INFRA-1 | 5.6, 7.4 |

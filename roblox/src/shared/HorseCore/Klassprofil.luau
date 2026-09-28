@@ -7,9 +7,8 @@
 	references/rules/TR-III-2025-hoppning-A-clear-round.md. Allt som den
 	källan inte säger är [REFERENCE GAP] och räknas aldrig fram.
 
-	Modulen ligger med flit UTANFÖR Rojo-mappningen (roblox/regler/): den har
-	ingen konsument i spelet än, och den låsta slutspelskandidatens
-	byggidentitet (#266 A2) ska inte ändras av den. D2 mappar den. ]]
+	D1 byggdes utanför Rojo-mappningen; sedan D2a (ClearRoundLektion) har den
+	en konsument och ligger i HorseCore. ]]
 
 local Klassprofil = {}
 
