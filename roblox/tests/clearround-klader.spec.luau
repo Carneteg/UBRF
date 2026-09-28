@@ -44,10 +44,11 @@ local function nyKatalog(svar, pausa)
 	end
 	return a
 end
-local katalog
+local katalog, aktivTjanst
 local function tjanst(svar, pausa)
 	katalog = nyKatalog(svar, pausa)
-	ClearRoundLektion._satKladerForProv(TavlingskladerService.nya({ katalog = katalog }))
+	aktivTjanst = TavlingskladerService.nya({ katalog = katalog })
+	ClearRoundLektion._satKladerForProv(aktivTjanst)
 end
 
 -- ── Spelare med EGNA kläder ──
@@ -353,6 +354,65 @@ print("\n── 8. Klienten: knapparna, bläddringen och raderna ──")
 	check("och Avsluta: egna", okF and egna(p))
 	UC.satLektionsVal(nil)
 	VC.avbryt()
+end)()
+
+print("\n── 9. Varje livscykelutgång i bänken: död, karaktär borta, respawn, lämnar ──")
+;(function()
+	HorseService.dismount(p)
+	--[[ Varje utgång med EN ny spelare i white. Död, karaktär borta och lämnar
+		går både genom rittslutet (HorseService sitter av → kladerAv) och genom
+		tjänstens egen vakt; respawn går bara genom tjänstens vakt. ]]
+	local function klarSpelare(uid)
+		local pl = player(uid)
+		mount(pl)
+		tillStart()
+		request("anmal_white")
+		return pl
+	end
+	-- Död.
+	local pd = klarSpelare(811)
+	local kd = pd.Character
+	check("död: white på före", iSet(pd, "white"))
+	kd:FindFirstChildOfClass("Humanoid").Health = 0
+	check("död: egna kläder tillbaka, hästen ledig", egna(pd) and HorseService.horseOf(pd) == nil)
+	-- Karaktären borta.
+	local pk = klarSpelare(812)
+	check("karaktär borta: white på före", iSet(pk, "white"))
+	pk.CharacterRemoving:Fire(pk.Character)
+	check("karaktär borta: egna kläder tillbaka, hästen ledig", egna(pk) and HorseService.horseOf(pk) == nil)
+	--[[ Respawn, i Robloxs ordning: den gamla kroppen tas bort (CharacterRemoving)
+		och en ny läggs till (CharacterAdded). Tjänsten skriver ALDRIG på en gammal
+		kropp (TavlingskladerService: «den gamla kroppen skrivs aldrig på någon
+		annan») — återställningen sker innan bytet, via rittslutet och vakten. ]]
+	local pr = klarSpelare(813)
+	local gammal = pr.Character
+	check("respawn: white på före, tjänsten håller en session", iSet(pr, "white") and aktivTjanst.aktivt(pr) == "white")
+	pr.CharacterRemoving:Fire(gammal)
+	local ny = player(9813).Character
+	pr.Character = ny
+	pr.CharacterAdded:Fire(ny)
+	local gs, gb = gammal:FindFirstChildOfClass("Shirt"), gammal:FindFirstChildOfClass("Pants")
+	check("respawn: gamla kroppen återställd innan bytet, nya kroppen orörd, ingen session kvar",
+		gs and gs.ShirtTemplate == EGEN_T and gb and gb.PantsTemplate == EGEN_B and egna(pr)
+		and aktivTjanst.aktivt(pr) == nil and HorseService.horseOf(pr) == nil,
+		("gammal %s, ny %s, session %s"):format(tostring(gs and gs.ShirtTemplate), tostring(egna(pr)),
+			tostring(aktivTjanst.aktivt(pr))))
+	--[[ Bara CharacterAdded (utan borttagning): tjänstens vakt avslutar sessionen
+		och rör inte den gamla kroppen — dess design. Mäts för att den vägen
+		också lämnar noll kvar, inte för att den förekommer i spelet. ]]
+	local pa2 = klarSpelare(815)
+	local gammal2 = pa2.Character
+	local ny2 = player(9815).Character
+	pa2.Character = ny2
+	pa2.CharacterAdded:Fire(ny2)
+	check("bara CharacterAdded: sessionen slut, nya kroppen orörd, gamla kroppen inte skriven på igen",
+		aktivTjanst.aktivt(pa2) == nil and egna(pa2) and iSet({ Character = gammal2 }, "white"))
+	HorseService.dismount(pa2)
+	-- Lämnar spelet.
+	local pl = klarSpelare(814)
+	check("lämnar: white på före", iSet(pl, "white"))
+	Players.PlayerRemoving:Fire(pl)
+	check("lämnar: egna kläder tillbaka, hästen ledig", egna(pl) and HorseService.horseOf(pl) == nil)
 end)()
 
 check("inget persistent skrevs", (__datastore.forsok and __datastore.forsok.skriv or 0) == writes)
