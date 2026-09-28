@@ -150,6 +150,20 @@ function A.text(b: any, kontext: any): string?
 					tostring(forr), tostring(nu))
 			end
 		end
+		--[[ C1, volten (docs/CIRCLE-COMPARISON-CONTRACT.md): medelavståndet till
+			linjen mot förra DISTINKTA fullföljningen i samma lektionsobjekt, bundet
+			till det här försöket. "Närmare" bara när de visade tiondelarna faktiskt
+			minskat; annars neutralt. Aldrig orsak, aldrig behärskning. ]]
+		if typ == "volt" and type(j) == "table" and j.forsokId == b.forsokId and j.forraForsokId ~= b.forsokId
+			and ickeNeg(j.avvikelse) and ickeNeg(j.forraAvvikelse) then
+			local nu, forr = math.floor(j.avvikelse * 10 + 0.5), math.floor(j.forraAvvikelse * 10 + 0.5)
+			if Installning.detalj() == "kort" then
+				if nu < forr then s ..= " " .. Sprak.t("aterkoppling.volt.narmare_kort") end
+			else
+				s ..= " " .. Sprak.t(if nu < forr then "aterkoppling.volt.narmare" else "aterkoppling.volt.forra",
+					tal(forr / 10), tal(nu / 10))
+			end
+		end
 		return s .. " " .. Sprak.t("aterkoppling." .. typ .. ".nasta")
 	elseif b.lage == "timeout" then
 		--[[ Neutralt: ingen gratulation, inget lånat resultat, ingen påhittad

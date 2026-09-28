@@ -16,13 +16,35 @@ end
 
 function VoltLektion.ny(rittId: string, userId: number, hastId: string): any
 	return { rittId = rittId, userId = userId, hastId = hastId, lage = "ready",
-		revision = 0, hogsta = 0, svar = {}, ordning = {}, progress = 0, tips = "approach" }
+		revision = 0, hogsta = 0, svar = {}, ordning = {}, progress = 0, tips = "approach",
+		--[[ C1 (docs/CIRCLE-COMPARISON-CONTRACT.md): den förra DISTINKTA giltiga
+			fullföljningen i det här lektionsobjektet (samma ritt, ryttare, häst och
+			version), och jämförelsen som fryses mot den när ett försök fullföljs. ]]
+		forraKlar = nil, jamforelse = nil }
 end
 
 function VoltLektion.bild(s): any
+	local j = s.jamforelse
 	return table.freeze({ rittId = s.rittId, forsokId = s.forsokId, revision = s.revision,
 		sekvens = s.hogsta, lage = s.lage, progress = s.progress, tips = s.tips,
-		resultat = s.resultat, referens = s.referens })
+		resultat = s.resultat, referens = s.referens,
+		jamforelse = if s.lage == "complete" and j and j.forsokId == s.forsokId then j else nil })
+end
+
+local function andligtIckeNeg(x: any): boolean
+	return type(x) == "number" and x == x and x ~= math.huge and x >= 0
+end
+local function andligtPositivt(x: any): boolean
+	return andligtIckeNeg(x) and x > 0
+end
+
+--[[ C1: ett fullföljt varvs jämförbara fakta, eller nil. Avståndet till linjen
+	och referensradien ur det frysta avsnittet; versionen är observationens. ]]
+local function jamforbar(s, a): any
+	if type(a) ~= "table" or type(a.referens) ~= "table" then return nil end
+	if not (andligtIckeNeg(a.medelAvvikelse) and andligtPositivt(a.referens.radie)) then return nil end
+	return { forsokId = s.forsokId, rittId = s.rittId, userId = s.userId, hastId = s.hastId,
+		version = Volt.VERSION, radie = a.referens.radie, avvikelse = a.medelAvvikelse }
 end
 
 local function referens(s, p)
@@ -53,6 +75,18 @@ local function stang(s, orsak, a): boolean
 		s.resultat = table.freeze({ forsokId = s.forsokId, rittId = s.rittId,
 			userId = s.userId, hastId = s.hastId, armAfter = s.armAfter,
 			start = Forsok.ogonblick(s.forsokId).start, avsnitt = a })
+		--[[ C1: jämförelsen med den FÖRRA distinkta fullföljningen, bara med
+			ändliga, jämförbara fakta (samma ritt, ryttare, häst, version och
+			radie). Den nya blir baslinje först därefter. ]]
+		local ny, forra = jamforbar(s, a), s.forraKlar
+		s.jamforelse = nil
+		if ny and forra and forra.forsokId ~= ny.forsokId and forra.rittId == ny.rittId
+			and forra.userId == ny.userId and forra.hastId == ny.hastId and forra.version == ny.version
+			and forra.radie == ny.radie then
+			s.jamforelse = table.freeze({ forsokId = ny.forsokId, forraForsokId = forra.forsokId,
+				forraAvvikelse = forra.avvikelse, avvikelse = ny.avvikelse })
+		end
+		if ny then s.forraKlar = table.freeze(ny) end
 		s.progress = 100
 		andra(s, "complete", "complete")
 		--[[ C4: övergången till "complete", med det frysta resultatet på
@@ -166,6 +200,8 @@ function VoltLektion.begar(s, op: any, seq: any, now: number): (boolean, string?
 			if ok then
 				s.forsokId, s.deadline, s.startP = id, now + DEADLINE, p
 				s.sistaP, s.armAfter, s.avsnitt, s.resultat = p, nil, nil, nil
+				-- Nytt försök: jämförelsen bort (den förra fullföljningen står kvar).
+				s.jamforelse = nil
 				s.referens = referens(s, p)
 				s.progress = 0
 				andra(s, "approach", "approach")

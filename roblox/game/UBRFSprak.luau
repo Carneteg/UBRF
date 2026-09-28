@@ -1741,6 +1741,18 @@ Sprak.text = {
 		sv = "Jämnare än förra gången.",
 		en = "More even than last time.",
 	},
+	["aterkoppling.volt.narmare"] = {
+		sv = "Närmare linjen än förra volten: i snitt %s m, nu %s m.",
+		en = "Closer to the line than your previous circle: on average %s m, now %s m.",
+	},
+	["aterkoppling.volt.forra"] = {
+		sv = "Förra volten: i snitt %s m från linjen, nu %s m.",
+		en = "Previous circle: on average %s m from the line, now %s m.",
+	},
+	["aterkoppling.volt.narmare_kort"] = {
+		sv = "Närmare linjen än förra gången.",
+		en = "Closer to the line than last time.",
+	},
 	["lektionsval.bojda"] = {
 		sv = "Böjda vägar",
 		en = "Curved paths",

@@ -216,6 +216,89 @@ do
 		A.text(b, ridKontext("halt")) == A.text(b, ridKontext("halt")))
 end
 
+print("\n── 5b. C1 volten: jämförelsen med förra volten (docs/CIRCLE-COMPARISON-CONTRACT.md) ──")
+do
+	--[[ Producentens sanning: jämförelsens `avvikelse` ÄR det frysta avsnittets
+		`medelAvvikelse` (samma varv), så provets data håller dem lika. ]]
+	local function voltRes(nu)
+		local r = table.clone(RESULTAT.volt)
+		r.avsnitt = table.clone(r.avsnitt); r.avsnitt.medelAvvikelse = nu
+		return r
+	end
+	local function medJ(nu, forr, over)
+		local b = ridBild("volt", "complete", voltRes(nu))
+		local j = { forsokId = 7, forraForsokId = 6, avvikelse = nu, forraAvvikelse = forr }
+		for k, v in over or {} do j[k] = v end
+		b.jamforelse = j
+		return A.text(b, ridKontext("volt"))
+	end
+	local NARMARE, FORRA = "Närmare linjen än förra volten", "Förra volten"
+	local utan = A.text(ridBild("volt", "complete", voltRes(0.5)), ridKontext("volt"))
+	local t = medJ(0.5, 1.0)
+	check("närmare: bekräftas med båda talen", har(t, NARMARE) and har(t, "1,0") and har(t, "0,5"), t)
+	check("närmare: sammanfattningen och nästa steg står kvar",
+		har(t, "radie 10") and har(t, Sprak.t("aterkoppling.volt.nasta")), t)
+	t = medJ(0.8, 0.8)
+	check("lika: neutralt, inget «närmare»", har(t, FORRA) and not har(t, NARMARE), t)
+	t = medJ(1.2, 0.6)
+	check("längre bort: neutralt, ingen kritik", har(t, FORRA) and har(t, "0,6") and har(t, "1,2")
+		and not har(t, NARMARE), t)
+	check("avrundning: 0,54 → 0,46 visar 0,5 → 0,5 och är INTE närmare",
+		not har(medJ(0.46, 0.54), NARMARE) and har(medJ(0.46, 0.54), FORRA), medJ(0.46, 0.54))
+	check("avrundning: 0,56 → 0,44 visar 0,6 → 0,4 och är närmare",
+		har(medJ(0.44, 0.56), NARMARE) and har(medJ(0.44, 0.56), "0,6") and har(medJ(0.44, 0.56), "0,4"),
+		medJ(0.44, 0.56))
+	-- Bindning och bevis: inget av detta får ge en jämförelse, och inget får kasta.
+	local NAN = 0 / 0
+	for _, fall in {
+		{ { forsokId = 8 }, "jämförelsen hör till ett annat försök" },
+		{ { forraForsokId = 7 }, "förra försöket är samma som det visade" },
+		{ { avvikelse = NAN }, "NaN nu" },
+		{ { forraAvvikelse = math.huge }, "oändlig förra" },
+		{ { avvikelse = -0.1 }, "negativt avstånd" },
+		{ { forraAvvikelse = "1.0" }, "text i stället för tal" },
+	} do
+		local ok, tt = pcall(medJ, 0.5, 1.0, fall[1])
+		check("ingen jämförelse: " .. fall[2], ok and tt == utan, tt)
+	end
+	do
+		local b = ridBild("volt", "complete", voltRes(0.5)); b.jamforelse = "trasig"
+		local ok, tt = pcall(A.text, b, ridKontext("volt"))
+		check("ingen jämförelse: ingen tabell", ok and tt == utan, tt)
+	end
+	do -- Ogiltig sammanfattning: jämförelsen hängs aldrig på den ärliga "inga detaljer"-texten.
+		local trasig = { avsnitt = { varv = 1, referens = { radie = 10 }, medelAvvikelse = false, tid = 41.2 } }
+		local b = ridBild("volt", "complete", trasig)
+		b.jamforelse = { forsokId = 7, forraForsokId = 6, avvikelse = 0.5, forraAvvikelse = 1.0 }
+		local tt = A.text(b, ridKontext("volt"))
+		check("ogiltig sammanfattning får ingen jämförelse", tt == Sprak.t("aterkoppling.okant"), tt)
+	end
+	do -- En annan typ läser aldrig voltens jämförelse.
+		local b = ridBild("halt", "complete", RESULTAT.halt)
+		b.jamforelse = { forsokId = 7, forraForsokId = 6, avvikelse = 0.5, forraAvvikelse = 1.0 }
+		check("halten läser inte voltens jämförelse", not har(A.text(b, ridKontext("halt")), NARMARE))
+	end
+	-- KORT: bara bekräftelsen när den håller, annars ingenting.
+	LararInstallning.satDetalj("kort")
+	local kortUtan = A.text(ridBild("volt", "complete", voltRes(0.5)), ridKontext("volt"))
+	t = medJ(0.5, 1.0)
+	check("kort närmare: bara den korta bekräftelsen",
+		har(t, Sprak.t("aterkoppling.volt.narmare_kort")) and not har(t, "1,0"), t)
+	check("kort lika: ingenting läggs till", medJ(0.8, 0.8) == kortUtan, medJ(0.8, 0.8))
+	check("kort längre bort: ingenting läggs till", medJ(1.2, 0.6) == kortUtan, medJ(1.2, 0.6))
+	LararInstallning.satDetalj("detaljerad")
+	-- Språkbyte: orden byts, talen står kvar.
+	Sprak.satVal("en")
+	t = medJ(0.5, 1.0)
+	check("engelska: närmare med talen", har(t, "Closer to the line than your previous circle")
+		and har(t, "1.0") and har(t, "0.5"), t)
+	Sprak.satVal("sv")
+	check("tillbaka till svenska", har(medJ(0.5, 1.0), NARMARE))
+	for _, n in { "aterkoppling.volt.narmare", "aterkoppling.volt.forra", "aterkoppling.volt.narmare_kort" } do
+		check(n, Sprak.iSprak("sv", n) ~= n and Sprak.iSprak("en", n) ~= n)
+	end
+end
+
 print("\n── 6. Varje nyckel finns på båda språken ──")
 for _, typ in { "volt", "halt", "overgang", "serpentin", "tempo", "vag_mitt", "vag_diag", "halvvolt",
 	"galopp", "markbom", "leda" } do

@@ -380,6 +380,72 @@ check("client-less actor receives no owner event", toActor==0)
 HorseService.voltLektionsBegaran(actor,actorRide,"finish",2)
 HorseService.dismount(actor)
 
+-- C1 (docs/CIRCLE-COMPARISON-CONTRACT.md): the comparison with the previous DISTINCT
+-- completion in the same lesson object, on a fresh ride with its own request sequence.
+-- Its own function: the main chunk has at most 200 local registers.
+;(function()
+	HorseService.dismount(p)
+	id=mount()
+	local q=0
+	local function r(op) q+=1; return request(op,q) end
+	local function recover() step(0,20,5); step(0,20); step(0,20); step(0,20) end
+	local function text() return LektionsAterkoppling.text(image(),{typ="volt",ritt=id}) end
+	local NARMARE, FORRA = "Närmare linjen än förra volten", "Förra volten"
+	Sprak.satVal("sv")
+	step(0,20,5); step(0,20)
+	r("start"); step(0,20); step(0,20); step(0,20)
+	circle(1,9)
+	local c1=image()
+	check("C1: first completion on a fresh ride has no comparison", c1.lage=="complete" and c1.jamforelse==nil
+		and not string.find(text(),FORRA,1,true))
+	local _,_,retried=r("retry")
+	check("C1: a retry snapshot carries no comparison", retried.lage=="approach" and retried.jamforelse==nil)
+	recover(); circle(1,9.5)
+	local c2=image(); local j2=c2.jamforelse
+	local a1, a2 = c1.resultat.avsnitt.medelAvvikelse, c2.resultat and c2.resultat.avsnitt.medelAvvikelse
+	check("C1: a closer circle compares with the first", c2.lage=="complete" and j2~=nil
+		and j2.forsokId==c2.forsokId and j2.forraForsokId==c1.forsokId
+		and j2.forraAvvikelse==a1 and j2.avvikelse==a2 and a2<a1,
+		("%s -> %s"):format(tostring(a1),tostring(a2)))
+	check("C1: the panel text confirms it", string.find(text(),NARMARE,1,true)~=nil, text())
+	check("C1: a duplicate read keeps the same frozen comparison", image().jamforelse==j2)
+	r("retry"); recover(); circle(1,9.5)
+	local c3=image(); local j3=c3.jamforelse
+	check("C1: the third completion compares with the second, not the first", c3.lage=="complete" and j3~=nil
+		and j3.forraForsokId==c2.forsokId)
+	check("C1: an equal circle is neutral", string.find(text(),FORRA,1,true)~=nil
+		and not string.find(text(),NARMARE,1,true), text())
+	r("retry"); recover()
+	VoltLektion.steg(s.voltLektion,s.voltLektion.deadline)
+	local to=image()
+	check("C1: a timeout carries no comparison and keeps the baseline", to.lage=="timeout" and to.jamforelse==nil
+		and s.voltLektion.forraKlar~=nil and s.voltLektion.forraKlar.forsokId==c3.forsokId)
+	r("retry"); recover(); circle(1,10)
+	local c5=image()
+	check("C1: after a timeout the comparison is with the last completion", c5.lage=="complete"
+		and c5.jamforelse~=nil and c5.jamforelse.forraForsokId==c3.forsokId)
+	-- KONTROLL (declared state injection): a baseline with another radius or version is not comparable.
+	for _, fall in ipairs({{"radie",9,"another radius"},{"version","legacy-1","another version"},
+		{"hastId","another-horse","another horse"}}) do
+		r("retry"); recover()
+		local b=table.clone(s.voltLektion.forraKlar); b[fall[1]]=fall[2]
+		s.voltLektion.forraKlar=table.freeze(b)
+		circle(1,10)
+		local c=image()
+		check("C1: "..fall[3].." is never compared", c.lage=="complete" and c.jamforelse==nil)
+	end
+	r("finish")
+	check("C1: closed carries no comparison", image().lage=="closed" and image().jamforelse==nil)
+	HorseService.dismount(p)
+	id=mount()
+	q=0
+	step(0,20,5); step(0,20)
+	r("start"); step(0,20); step(0,20); step(0,20)
+	circle(1,9)
+	check("C1: a new ride has no baseline", image().lage=="complete" and image().jamforelse==nil)
+	r("finish")
+end)()
+
 check("lesson never writes persistent data", (__datastore.forsok and __datastore.forsok.skriv or 0)==writes)
 if fails>0 then error(tostring(fails).." FEL") end
 print(string.format("\nVOLTLEKTION: %d prov, alla gröna",total))
