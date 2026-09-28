@@ -523,6 +523,16 @@ end)()
 	step(0,20,5); step(0,20)
 	r("start")
 	check("C1 line: a new attempt starts without a side", image().lage=="approach" and image().linjeSida==nil)
+	-- KONTROLL (declared client-side snapshot): the client's own rule — a side is advice only
+	-- with the key "line". The server never sends one elsewhere, so this is the only way to reach it.
+	do
+		local cur=image(); local fake=table.clone(cur)
+		fake.revision=cur.revision+1000; fake.lage="riding"; fake.tips="ride"; fake.linjeSida="ut"
+		leverera(table.freeze(fake))
+		local t=VC.panel().text
+		check("C1 line: the client never shows the advice outside the line reset", not borjar(t,UT)
+			and borjar(t,Sprak.t("voltlektion.ride")))
+	end
 	r("finish")
 	VC.avbryt()
 	UgnetaController.satLektionsVal(nil)
