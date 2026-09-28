@@ -16,15 +16,15 @@ Status date: 2026-09-28. This document records the current delivery gate. It is 
 
 ## Locked physical-test candidate
 
-The current runtime candidate is re-locked after D2c.
+The current runtime candidate is re-locked after D5 R1.
 
-- Runtime HEAD: **`ff8fd2611e054386e7256b178dd12466e091634f`**.
+- Runtime HEAD: **`86f335b1a63f6fa779882a2d95f3b5a0907b7e58`**.
 - Checklist: [FINAL-PLAYTEST-CHECKLIST.md](FINAL-PLAYTEST-CHECKLIST.md).
-- Roblox build identity `kallhash`: **`93f07144a1b5d1de55f3dc0da75876374a0629dd2cfd111ab1def9c208be88c7`**.
-- In-game diagnostics must show prefix **`93f07144a1b5`**.
+- Roblox build identity `kallhash`: **`46b7d67b5bc2db2e7e39f3cbe1ff9ff2ca4a7cab58ef52d4c37c15d5df265e6f`**.
+- In-game diagnostics must show prefix **`46b7d67b5bc2`**.
 - Any later mapped Roblox-source change invalidates this lock and requires a new identity/checklist lock.
 
-The candidate includes the reviewed lesson/teaching work, D1, D2a, D2b and D2c aftercare handoff. Physical rows remain **NOT_TESTED**.
+The candidate includes the reviewed lesson/teaching work, D1, D2a, D2b, D2c and D5 Option A/R1. Physical rows remain **NOT_TESTED**.
 
 ## Physical gate A3
 
@@ -35,13 +35,13 @@ Use only [FINAL-PLAYTEST-CHECKLIST.md](FINAL-PLAYTEST-CHECKLIST.md). PC, physica
 ## Current #266 package status
 
 ### A — first pass
-- A2 candidate lock: current and re-locked through D2c.
+- A2 candidate lock: current and re-locked through D5 R1.
 - A3 physical PC/iPad/iPhone test: **NOT_TESTED / LAST**.
 
 ### B — riding feel and measurement
 - Existing riding core and multiple lesson observations are built.
 - Remaining rhythm, canter-lead and full fence-event measurement require new observation/model work.
-- B4 knockdown/refusal detection remains missing; therefore D2 uses simplified judging and cannot award a real Clear Round rosette.
+- **B4 knockdown/refusal detection is now the main blocker** for truthful Clear Round fault-free judging, D3 and D4.
 
 ### C — teaching and learning
 - Concrete feedback, selected comparisons, event-bound advice, free-practice framing and multiple task lessons are built.
@@ -53,13 +53,14 @@ Use only [FINAL-PLAYTEST-CHECKLIST.md](FINAL-PLAYTEST-CHECKLIST.md). PC, physica
 - **D2a clear-round training ride: CHATGPT_REVIEW_ACCEPTED through R2.**
 - **D2b pre-ride flow: CHATGPT_REVIEW_ACCEPTED.**
 - **D2c aftercare handoff: CHATGPT_REVIEW_ACCEPTED.**
-  - result snapshot exposes existing canonical aftercare steps only after a completed result;
-  - result card reads the server-provided canonical step names;
-  - existing pass lifecycle handles dismount → aftercare → counted once;
-  - an aborted mid-course ride still enters aftercare, without becoming a competition success or prize.
+- **D5 Option A competition clothing: CHATGPT_REVIEW_ACCEPTED through R1.**
+  - Own / White / Pink / Oak is optional at entry;
+  - clothing failure never blocks entry/ride;
+  - lifecycle restores original clothing;
+  - guard-binding failure is rollback-safe and leak-safe;
+  - preview and saved preference remain deferred.
 - Warm-up remains blocked on verified mapping of UBRF's real "Lilla utebanan" or an explicit Tobias game-simplification decision.
 - Prize-giving / real Clear Round rosette remain blocked on B4/D4.
-- D5 competition clothing exists as an unconsumed service and is the next likely source-testable branch once Tobias chooses the product behaviour.
 
 ## Limits
 
