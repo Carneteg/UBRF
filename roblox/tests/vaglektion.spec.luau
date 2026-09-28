@@ -478,11 +478,21 @@ check("R1: reattaching to the same ride keeps free-riding navigation",
 	knapp("vaglektion.utan_streck").skicka()
 	knapp("vaglektion.finish").skicka(); leverera()
 	V.valj("halt")
+	--[[ Räknat, inte bara sökt på text: på en annan typ får en felaktig knapp en
+		annan text (nyckeln finns inte där) och skulle annars glida förbi. Haltens
+		sida i ready: Starta + Avsluta. ]]
 	check("C3: another lesson type never shows the choice, even when completed",
-		knapp("vaglektion.utan_streck") == nil and knapp("vaglektion.visa_vagen") == nil)
+		knapp("vaglektion.utan_streck") == nil and knapp("vaglektion.visa_vagen") == nil
+		and #V.panel().knappar == 2, ("%d knappar"):format(#V.panel().knappar))
 	V.valj("vag_mitt")
 	check("C3: a type switch resets to the full guide", knapp("vaglektion.utan_streck") ~= nil
 		and knapp("vaglektion.visa_vagen") == nil)
+	-- Avbrott och återkoppling till SAMMA ritt ger också hela guiden igen.
+	knapp("vaglektion.utan_streck").skicka()
+	V.avbryt(); V.start(id, nil)
+	UgnetaController.satLektionsVal(V.panel)
+	check("C3: cancel and reattach to the same ride resets to the full guide",
+		knapp("vaglektion.utan_streck") ~= nil and knapp("vaglektion.visa_vagen") == nil)
 	-- Ny ritt ger hela guiden igen.
 	knapp("vaglektion.utan_streck").skicka()
 	HorseService.dismount(p)
