@@ -954,6 +954,16 @@ function V.panel()
 		if b.linjeSida == "ut" then txt = Sprak.t("voltlektion.line_ut")
 		elseif b.linjeSida == "in" then txt = Sprak.t("voltlektion.line_in") end
 	end
+	--[[ C1 (docs/TRANSITION-TIMING-ADVICE-CONTRACT.md): kom övergången före
+		eller efter sin ring, och vet servern vilket, blir texten ETT råd om
+		när den ska be om övergången. Annars den vanliga. ]]
+	if typ == "overgang" and key == "trot_outside" then
+		if b.malSida == "fore" then txt = Sprak.t("overganglektion.trot_early")
+		elseif b.malSida == "efter" then txt = Sprak.t("overganglektion.trot_late") end
+	elseif typ == "overgang" and key == "walk_outside" then
+		if b.malSida == "fore" then txt = Sprak.t("overganglektion.walk_early")
+		elseif b.malSida == "efter" then txt = Sprak.t("overganglektion.walk_late") end
+	end
 	--[[ Slutet på en övning: Ugnetas sammanfattning av JUST det här försökets
 		frysta resultat och ett nästa steg (docs/LESSON-FEEDBACK-CONTRACT.md). ]]
 	if not pending and not fel then

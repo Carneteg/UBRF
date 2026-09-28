@@ -41,7 +41,11 @@ end
 function OvergangLektion.bild(s): any
 	return table.freeze({ typ = "overgang", rittId = s.rittId, forsokId = s.forsokId,
 		revision = s.revision, sekvens = s.hogsta, lage = s.lage, progress = s.progress,
-		tips = s.tips, resultat = s.resultat, referens = s.referens })
+		tips = s.tips, resultat = s.resultat, referens = s.referens,
+		--[[ C1 (docs/TRANSITION-TIMING-ADVICE-CONTRACT.md): före eller efter
+			ringen, bara medan just den missen visas. ]]
+		malSida = if s.lage == "walk1" and (s.tips == "trot_outside" or s.tips == "walk_outside")
+			and s.malForsok ~= nil and s.malForsok == s.forsokId then s.malSida else nil })
 end
 
 local function andra(s, lage, tips)
@@ -82,8 +86,11 @@ end
 
 --[[ Första fasen med nya baslinjer och samma tidsgräns: vid Start,
 	efter observationsbrott, ramfel och fel plats/ordning. ]]
-local function tillSkritt(s, tips)
+local function tillSkritt(s, tips, sida: string?)
 	s.skritt1, s.trav, s.skritt2 = 0, 0, 0
+	--[[ C1: bara missen utanför ringen bär en sida; varje annan återgång tar bort den. ]]
+	s.malSida = sida
+	s.malForsok = if sida then s.forsokId else nil
 	andra(s, "walk1", tips)
 	satProgress(s, 0)
 end
@@ -108,6 +115,27 @@ local function iMal(s, p, malV: number): boolean
 		return math.abs(q.u - s.referens.u) <= ZON_HALV and math.abs(q.v - malV) <= ZON_HALV
 	end
 	return inne(seg.fran) and inne(seg.till)
+end
+
+--[[ C1: samma två ändpunkter som `iMal`, på mittlinjen men utanför ringen —
+	"fore" om hästen ännu inte nått ringen i sin färdriktning, "efter" om den
+	redan passerat den. Annars nil (vid sidan av, över kanten, ingen rörelse). ]]
+local function malSida(s, p, malV: number): string?
+	local seg = p.segment
+	if type(seg) ~= "table" or type(seg.fran) ~= "table" or type(seg.till) ~= "table" or not s.referens then
+		return nil
+	end
+	local dv = seg.till.v - seg.fran.v
+	if not (dv == dv) or dv == 0 then return nil end
+	local riktning = if dv > 0 then 1 else -1
+	local fore, efter = true, true
+	for _, q in { seg.fran, seg.till } do
+		if not (math.abs(q.u - s.referens.u) <= ZON_HALV) then return nil end
+		local d = (q.v - malV) * riktning
+		if not (d < -ZON_HALV) then fore = false end
+		if not (d > ZON_HALV) then efter = false end
+	end
+	return if fore then "fore" elseif efter then "efter" else nil
 end
 
 local function stang(s, orsak): boolean
@@ -141,7 +169,8 @@ local function overgang(s, p, d): boolean
 			andra(s, "trot", "trot_on")
 			return true
 		elseif d.till == "trot" then
-			tillSkritt(s, if s.skritt1 < SKRITT_FORE then "walk_first" else "trot_outside")
+			if s.skritt1 < SKRITT_FORE then tillSkritt(s, "walk_first")
+			else tillSkritt(s, "trot_outside", malSida(s, p, T1_V)) end
 			return false
 		elseif d.till ~= "walk" or d.tillRyggar then
 			tillSkritt(s, "walk_only")
@@ -160,7 +189,8 @@ local function overgang(s, p, d): boolean
 			tillSkritt(s, "tired")
 			return false
 		elseif d.till == "walk" then
-			tillSkritt(s, if s.trav < TRAV_M then "trot_longer" else "walk_outside")
+			if s.trav < TRAV_M then tillSkritt(s, "trot_longer")
+			else tillSkritt(s, "walk_outside", malSida(s, p, T2_V)) end
 			return false
 		end
 		tillSkritt(s, "trot_only")
@@ -286,6 +316,7 @@ function OvergangLektion.begar(s, op: any, seq: any, now: number, gangart: strin
 				s.resultat, s.vidT1, s.vidT2 = nil, nil, nil
 				nyBaslinje(s, o, p, logg)
 				s.skritt1, s.trav, s.skritt2 = 0, 0, 0
+				s.malSida, s.malForsok = nil, nil
 				s.progress = 0
 				andra(s, "walk1", "walk_on")
 			end

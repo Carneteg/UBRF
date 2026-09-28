@@ -200,6 +200,107 @@ local sync = Networking.get("VoltLektionSync")
 local toOther = 0
 for _, rad in ipairs(sync._skickat) do if rad[1] ~= p then toOther += 1 end end
 check("owner events only to the owner", toOther == 0)
+-- ── C1 (docs/TRANSITION-TIMING-ADVICE-CONTRACT.md): före eller efter ringen, på en ny ritt ──
+-- Egen funktion: huvudchunken har högst 200 lokala register.
+;(function()
+	HorseService.dismount(p)
+	id = mount()
+	local VC = VoltLektionController
+	local syncC = Networking.get("VoltLektionSync")
+	local function leverera(b) syncC.OnClientEvent:Fire(b) end
+	local function panelText() leverera(image()); local sida = VC.panel(); return sida and sida.text end
+	-- Panelen lägger till framstegen ("… 0%") i walk1, som för varje text där.
+	local function borjar(t, x) return type(t) == "string" and string.sub(t, 1, #x) == x end
+	Sprak.satVal("sv")
+	VC.avbryt(); VC.start(id, nil)
+	UgnetaController.satLektionsVal(VC.panel)
+	VC.valj("overgang")
+	local T = function(k) return Sprak.t("overganglektion." .. k) end
+	local function nyttForsok()
+		tillbakaTillHalt()
+		request("finish"); request("start")
+	end
+	request("start")
+	-- Trav före T1 (v 10 → 11, ringen 15–21).
+	aid("driv"); linje(5, 10)
+	aid("driv"); step(U, 11)
+	local b = image()
+	check("C1 timing: trot before T1 gives trot_outside + fore", b.lage == "walk1" and b.tips == "trot_outside"
+		and b.malSida == "fore")
+	check("C1 timing: the real panel shows the early-trot advice", borjar(panelText(), T("trot_early")))
+	Sprak.satVal("en")
+	check("C1 timing: the locale changes the words", borjar(panelText(), T("trot_early"))
+		and not borjar(panelText(), Sprak.iSprak("sv", "overganglektion.trot_early")))
+	Sprak.satVal("sv")
+	aid("broms"); linje(12, 14)
+	check("C1 timing: walking again removes the side", image().tips ~= "trot_outside" and image().malSida == nil
+		and not borjar(panelText(), T("trot_early")))
+	-- Trav efter T1 (v 23 → 24).
+	linje(15, 23)
+	aid("driv"); step(U, 24)
+	b = image()
+	check("C1 timing: trot after T1 gives efter", b.tips == "trot_outside" and b.malSida == "efter")
+	check("C1 timing: the real panel shows the late-trot advice", borjar(panelText(), T("trot_late")))
+	-- Mot A: trav vid v 27 → 26 har ännu inte nått T1 i färdriktningen.
+	aid("broms"); step(U, 25); linje(26, 30); linje(29, 27)
+	aid("driv"); step(U, 26)
+	b = image()
+	check("C1 timing: towards A, a trot not yet at T1 is fore", b.tips == "trot_outside" and b.malSida == "fore")
+	-- Vid sidan av linjen inne i ringens v-band: ingen sida, den vanliga texten.
+	aid("broms"); linje(25, 22)
+	step(U + 1, 21); step(U + 2, 20); step(U + 3, 19); step(U + 4, 18); step(U + 4, 17)
+	aid("driv"); step(U + 4, 16)
+	b = image()
+	check("C1 timing: a trot beside the line has NO side", b.tips == "trot_outside" and b.malSida == nil)
+	check("C1 timing: and the panel shows the generic text", borjar(panelText(), T("trot_outside")))
+	-- Skritt före T2 (v 30 → 31, ringen 39–45).
+	nyttForsok()
+	aid("driv"); linje(5, 17)
+	aid("driv"); step(U, G.T1_V)
+	linje(G.T1_V + 1, 30)
+	aid("broms"); step(U, 31)
+	b = image()
+	check("C1 timing: walk before T2 gives walk_outside + fore", b.tips == "walk_outside" and b.malSida == "fore")
+	check("C1 timing: the real panel shows the early-walk advice", borjar(panelText(), T("walk_early")))
+	-- Skritt efter T2 (v 46 → 47).
+	nyttForsok()
+	aid("driv"); linje(5, 17)
+	aid("driv"); step(U, G.T1_V)
+	linje(G.T1_V + 1, 46)
+	aid("broms"); step(U, 47)
+	b = image()
+	check("C1 timing: walk after T2 gives efter", b.tips == "walk_outside" and b.malSida == "efter")
+	check("C1 timing: the real panel shows the late-walk advice", borjar(panelText(), T("walk_late")))
+	-- En annan miss (walk_first) bär ingen sida.
+	nyttForsok()
+	aid("driv"); step(U, 5)
+	aid("driv"); step(U, 6)
+	b = image()
+	check("C1 timing: another failure (walk_first) has no side", b.tips == "walk_first" and b.malSida == nil)
+	request("finish")
+	check("C1 timing: finish carries no side", image().lage == "closed" and image().malSida == nil)
+	tillbakaTillHalt()
+	request("start")
+	check("C1 timing: a new attempt starts without a side", image().lage == "walk1" and image().malSida == nil)
+	-- KONTROLL (deklarerad klientbild): klientens egen regel — en sida blir råd bara med
+	-- nycklarna trot_outside/walk_outside. Servern skickar aldrig en sida annars.
+	do
+		local cur = image(); local fake = table.clone(cur)
+		fake.revision = cur.revision + 1000; fake.tips = "trot_at_t1"; fake.malSida = "fore"
+		leverera(table.freeze(fake))
+		local t = VC.panel().text
+		check("C1 timing: the client never shows the advice outside the miss keys",
+			not borjar(t, T("trot_early")) and borjar(t, T("trot_at_t1")))
+	end
+	request("finish")
+	VC.avbryt()
+	UgnetaController.satLektionsVal(nil)
+	for _, k in ipairs({ "trot_early", "trot_late", "walk_early", "walk_late" }) do
+		local n = "overganglektion." .. k
+		check("C1 timing: " .. n .. " exists in SV and EN", Sprak.iSprak("sv", n) ~= n and Sprak.iSprak("en", n) ~= n)
+	end
+end)()
+
 check("lesson never writes persistent data", (__datastore.forsok and __datastore.forsok.skriv or 0) == writes)
 if fails > 0 then error(tostring(fails) .. " FEL") end
 print(string.format("\nOVERGANGLEKTION: %d prov, alla gröna", total))
