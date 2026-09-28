@@ -44,7 +44,7 @@ No checklist row is considered PASS from local tests, emulator evidence or sourc
 
 ### A — first pass
 - Source/build preparation: current.
-- A2 candidate lock: **BUILT / CHATGPT review pending on the docs-only lock package**.
+- A2 candidate lock: **CHATGPT_REVIEW_ACCEPTED**.
 - A3 physical PC/iPad/iPhone test: **NOT_TESTED / LAST**.
 
 ### B — riding feel and measurement
