@@ -236,6 +236,24 @@ do
 	prova("inom en sekund finns «Rida nu» på den nyss inströmmade hästen", ridaNu(cosmo) ~= nil)
 end
 
+print("\n── 7. En ny dag med stallets FYND: välfärdsfrågan, aldrig startskärmen ──")
+do
+	-- Hästen var redo i avsnitt 4, så valet «själv» är nollställt: utan fyndspärren hade startskärmen tagit över.
+	state = Preparation.nyState(HAST_ID, 3)
+	rev += 1
+	local vy = Preparation.vy(state, "preparing", rev, "Trixie")
+	vy.svar = { { id = "fel1", namn = "Det går nog bra idag", fel = true }, { id = "ratt", namn = "Säg till en vuxen", fel = false } }
+	vy.fynd = "Något i hoven"
+	PC.tillampa(vy)
+	PC.uppdateraKontext()
+	N.satRider(false)
+	local texter = {}
+	for _, v in ipairs(N._val()) do table.insert(texter, tostring(v.text)) end
+	prova("fyndets svar står i panelen, inte «Rida nu»/«själv»", valMed("start:rida_nu") == nil and valMed("start:sjalv") == nil
+		and #texter >= 2, table.concat(texter, " / "))
+	prova("rubriken är inte startskärmens", rubrik() ~= Sprak.t("guide.valj_rubrik", "Trixie"), rubrik())
+end
+
 print("")
 if fel > 0 then
 	error(("%d mätning(ar) föll."):format(fel), 0)
