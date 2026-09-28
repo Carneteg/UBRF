@@ -97,3 +97,39 @@ The whiteboard's list is updated to show the new chain.
 **5. Build:** `python tools/build.py`, `node tools/sprakgrind.mjs`, `node tools/bootkoll.mjs`. The Roblox `kor.sh` stays green if the export is touched.
 
 **Report:** `HANDOFF_READY_FOR_CHATGPT` with the exact web files, the tests, the falsification, the SHA, and screenshots (desktop + iPad landscape). **Tobias deploys; Vercel is not triggered.**
+
+## R1: the prompts are held, as in Roblox (TOBIAS_DECISION_WEB_P1A_PLATFORM_EXCEPTIONS_20260928, #264 5874393103)
+Tobias approved **only** "+ Fler handlingar" folding out. The other two differences are removed.
+
+**1. The web's world prompts are held, with Roblox's keys and times** (`InteractionController.luau`):
+
+| Action | Roblox | Web after R1 |
+|---|---|---|
+| "Rida nu — {horse}" | `RidaNuPrompt` R, 0.35 s | R held 0.35 s |
+| "Led {horse}" | `LedPrompt` L, 0.2 s | L held 0.2 s |
+| "Sadla {horse}" / "Tränsa {horse}" | `SadlaPrompt` / `TransaPrompt` F, 0.35 s | F held 0.35 s |
+| "Sitt upp" | `MountPrompt` E, 0.35 s | E held 0.35 s (arena gate, outdoor arena, trail) |
+| "Ta sadeln" / "Ta tränset" at the box front | 0 s | E, instant |
+| Doors, box, information | 0 s (`DorrService`, `StallService`) | E, instant (unchanged) |
+
+- **Care moments** (hälsa, kolla, rykta, hovar, utrustning n/5) are **panel buttons** that are clicked, as in Roblox (`PreparationController.momentRad`). They have **no** E shortcut on the web any more; that was a web-only addition.
+- **The panel shows the prompts as rows**, as in Roblox: "Rida nu — {horse}  [Håll inne R]" during the manual care, "Sadla …  [Håll inne F]" and so on. A row is activated by being **held** (pointer/touch) for the same time, with a visible fill.
+- **The start choice is unchanged:** two click buttons, as in Roblox UI-1.
+- **The prompt line** at the bottom shows "Håll inne R — Rida nu — {horse}" through `tSpr`, with a fill while holding. A new key `interaktion.tryck_tangent` is used for the instant prompts ("Tryck E — …").
+- **Touch:** ANVÄND held = holding the prompt within reach (a touch on a Roblox prompt also holds).
+- **R while walking** no longer toggles rising trot (`IN.latt`): the key belongs to "Rida nu" at the horse. In the saddle it works as before.
+
+**2. No marker to the arena while leading:** the waypoint and the 3D marker at the arena gate are hidden while leading, as in Roblox (`DinHast` hides while leading; no arena marker). The step card "Led {horse} till ridhuset" is the instruction.
+
+**Acceptance (added to `tools/stegkorttest.mjs`):**
+- R pressed for 0.1 s does **not** give Rida nu; R held ≥ 0.35 s does;
+- E does nothing on a care card;
+- the Rida nu row with `[Håll inne R]` is shown after "själv";
+- the mount at the arena gate requires E held;
+- no waypoint while leading;
+- the existing tests hold their prompts as a player does.
+
+**Falsification:**
+- the hold time 0 on Rida nu;
+- E still performing the care moment;
+- the waypoint visible while leading.
