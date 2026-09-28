@@ -16,15 +16,15 @@ Status date: 2026-09-28. This document records the current delivery gate. It is 
 
 ## Locked physical-test candidate
 
-The current runtime candidate is re-locked after B4b R1.
+The current runtime candidate is re-locked after B4c.
 
-- Runtime HEAD: **`f163d54e7a82efa5fe5036de1482f5c45886246c`**.
+- Runtime HEAD: **`5d118319e1a5c2a82a66e7f1a32785da0a911cba`**.
 - Checklist: [FINAL-PLAYTEST-CHECKLIST.md](FINAL-PLAYTEST-CHECKLIST.md).
-- Roblox build identity `kallhash`: **`e79df69c921e3fbcabe0c60083cb6b4dfc77b3cc1f1a3892acb063b21c8fcc5e`**.
-- In-game diagnostics must show prefix **`e79df69c921e`**.
+- Roblox build identity `kallhash`: **`0c240ce3a8a00ce14bd03dd898d8b2bbd54cf535950bb12381e722961194dc6f`**.
+- In-game diagnostics must show prefix **`0c240ce3a8a0`**.
 - Any later mapped Roblox-source change invalidates this lock and requires a new identity/checklist lock.
 
-The candidate includes the reviewed lesson/teaching work, D1, D2a, D2b, D2c, D5 Option A/R1, B4a knockdown-event observation and B4b R1 neutral disobedience evidence. Physical rows remain **NOT_TESTED**.
+The candidate includes the reviewed lesson/teaching work, D1, D2a, D2b, D2c, D5 Option A/R1, B4a knockdown evidence, B4b R1 neutral disobedience evidence and B4c course-aware shadow judgment. Physical rows remain **NOT_TESTED**.
 
 ## Physical gate A3
 
@@ -35,19 +35,20 @@ Use only [FINAL-PLAYTEST-CHECKLIST.md](FINAL-PLAYTEST-CHECKLIST.md). PC, physica
 ## Current #266 package status
 
 ### A — first pass
-- A2 candidate lock: current and re-locked through B4b R1.
+- A2 candidate lock: current and re-locked through B4c.
 - A3 physical PC/iPad/iPhone test: **NOT_TESTED / LAST**.
 
 ### B — riding feel and measurement
 - Existing riding core and multiple lesson observations are built.
 - **B4a knockdown event: CHATGPT_REVIEW_ACCEPTED.**
-  - each fence attempt exposes knockdown evidence;
-  - today's non-physical poles remain truthfully unknown.
 - **B4b R1 neutral disobedience evidence: CHATGPT_REVIEW_ACCEPTED.**
-  - HinderObservation exposes only neutral evidence: stop observed, time of stop, backwards-after-stop, beside-fence crossing, entry side and validity;
-  - HinderObservation does **not** judge refusal/run-out/no-disobedience;
-  - the first layer allowed to make that sporting classification is a course-aware consumer.
-- Remaining B4 gaps: physical pole behaviour/replication/calibration, course-aware consumer, circle/track logic and any balking decision.
+- **B4c course-aware shadow consumer: CHATGPT_REVIEW_ACCEPTED.**
+  - only the next course fence is classified;
+  - wrong-direction and ambiguous evidence stay unknown;
+  - knockdown `vantar` stays unknown;
+  - `officiell=false` always;
+  - nothing is exposed in the official result or player snapshot.
+- Remaining B4 gaps are physical: real pole behaviour/replication/calibration, plus circle/track logic and any balking decision.
 
 ### C — teaching and learning
 - Concrete feedback, selected comparisons, event-bound advice, free-practice framing and multiple task lessons are built.
@@ -60,8 +61,9 @@ Use only [FINAL-PLAYTEST-CHECKLIST.md](FINAL-PLAYTEST-CHECKLIST.md). PC, physica
 - **D2b pre-ride flow: CHATGPT_REVIEW_ACCEPTED.**
 - **D2c aftercare handoff: CHATGPT_REVIEW_ACCEPTED.**
 - **D5 Option A competition clothing: CHATGPT_REVIEW_ACCEPTED through R1.**
+- **D4 prize/trophy persistence foundation is now the cleanest remaining source-only candidate.**
 - Warm-up remains blocked on verified mapping of UBRF's real "Lilla utebanan" or an explicit Tobias game-simplification decision.
-- Prize-giving / real Clear Round rosette remain blocked until the course-aware B4/D2 consumer is source-ready and the physical evidence needed for knockdowns/calibration is verified.
+- Real Clear Round rosette award remains blocked until physical knockdown/refusal evidence is verified and D2 is explicitly promoted from shadow to official.
 
 ## Limits
 
@@ -69,9 +71,8 @@ Use only [FINAL-PLAYTEST-CHECKLIST.md](FINAL-PLAYTEST-CHECKLIST.md). PC, physica
 - PHYSICAL TEST remains LAST unless Tobias changes that order.
 - Do not award an official Clear Round rosette while knockdowns/refusals are not truthfully established.
 - Do not let HinderObservation make course-aware sporting judgments.
-- Do not change D2 from simplified judging until B4 consumers are explicitly reviewed.
+- Do not promote B4c shadow output to official D2 judging without a separate review/decision.
 - Do not silently map `UTEBANA` or `PADDOCK` to UBRF's "Lilla utebanan".
-- Do not invent measurements for rhythm, canter lead, rider body position or unobserved fence events.
 - Competition results must stay deterministic, versioned and source-backed.
 
 Historical gate material from #264 is preserved in [history/ACTIVE-GATE-20260926](history/ACTIVE-GATE-20260926.md).
