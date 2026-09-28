@@ -251,8 +251,8 @@ Fysisk iPad och iPhone är uttryckligen uppskjutet och blockerar inte PC.
 
 ## Samlat slutspeltest (uppskjutna fall)
 
-**Samlad och låst i [FINAL-PLAYTEST-CHECKLIST.md](FINAL-PLAYTEST-CHECKLIST.md)** (#266 A2, 2026-09-28, omlåst efter D4a):
-byggidentitet `2e0b6a877e69…`, alla fysiska och motorberoende
+**Samlad och låst i [FINAL-PLAYTEST-CHECKLIST.md](FINAL-PLAYTEST-CHECKLIST.md)** (#266 A2, 2026-09-28, omlåst efter vägvisaren):
+byggidentitet `0ce4b14c93e2…`, alla fysiska och motorberoende
 punkter ur varje kontrakt sedan `7922d70` och de kvarvarande R4/R5-fallen från `ecb2f2e`
 (port, layout, avsittning, ledning, hela vägen, fysisk iPad och iPhone), i spelordning
 och med spårbarhet kontrakt → rad. Allt NOT_TESTED tills Tobias fyller i listan.

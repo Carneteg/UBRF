@@ -1,6 +1,6 @@
 # Assigned horse guide: a clear local marker from spawn to your own horse
 
-Status: contract written before code, 2026-09-28.
+Status: contract written before code, 2026-09-28. **BUILT, LOCAL SUITE GREEN, VERIFIED IN STUDIO (engine properties), NOT VISUALLY VERIFIED** — READY_FOR_CHATGPT_REVIEW.
 Order: [TOBIAS_RUNTIME_FAIL_ASSIGNED_HORSE_NOT_FINDABLE](https://github.com/Carneteg/UBRF/issues/266#issuecomment-5870875685)
 and [EXECUTE_RUNTIME_BLOCKER…](https://github.com/Carneteg/UBRF/issues/266#issuecomment-5870906640). Base `dcf2be1` (runtime `fa41803`).
 **A human runtime blocker found by Tobias in Play.** No other scope.
