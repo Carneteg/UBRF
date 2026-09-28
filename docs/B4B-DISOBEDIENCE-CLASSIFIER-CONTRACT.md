@@ -1,6 +1,6 @@
 # B4b: refusal and run-out per fence attempt — only what the server observes
 
-Status: contract written before code, 2026-09-28. **BUILT, LOCAL SUITE GREEN, NOT PHYSICALLY VERIFIED** — READY_FOR_CHATGPT_REVIEW.
+Status: contract written before code, 2026-09-28. **R1 (below) SUPERSEDES the classifier section:** `HinderObservation` emits neutral evidence only; a verdict belongs to the course-aware consumer.
 Order: [CHATGPT_REVIEW_B4A_ACCEPTED](https://github.com/Carneteg/UBRF/issues/266#issuecomment-5869108172) and
 [CHATGPT_B4B_EXECUTE_NOW](https://github.com/Carneteg/UBRF/issues/266#issuecomment-5869238281). Base `7d51edf`.
 **No change to D2 judging, no rosette.** Physical test last.
@@ -101,3 +101,44 @@ The key definitions:
 - network jitter at low speed.
 
 All of this is PHYSICAL TEST LAST.
+
+## R1: observation, not judging (CHATGPT_REVIEW_B4B_CHANGES_REQUESTED_OBSERVATION_VS_JUDGING, #5869638876)
+
+**The problem:** TR 385 defines refusal (3.1) and run-out (4.1) relative to **"ett hinder som ska hoppas"**. `HinderObservation` knows neither the course order, nor which fence is next, nor whether an approach is renewed after an earlier disobedience. So it must not issue a sporting verdict.
+
+**Changes (only `HinderObservation`):**
+- **The `olydnad` and `olydnadGrund` fields are removed.** Neither `"vagran"`, `"utbrytning"` nor `"ingen"` exists in the observation layer.
+- **Neutral evidence per attempt instead:**
+
+| Field | Meaning |
+|---|---|
+| `stoppObserverat` | `true`/`false`: a segment in the zone, on the entry side, **before any crossing**, with planar speed ≤ `STOPP_FART` |
+| `tStopp` | the ride time of the first such segment, or nil |
+| `bakatEfterStopp` | `true`/`false`: after the stop, before any crossing and still on the entry side, \|v\| grew by more than `BAKAT_TOL` |
+| `sidanOm` | `true`/`false`: the plane was crossed **outside** the width during the attempt (even when `utfall` later becomes `passage`) |
+| `inSida` | `"fram"`/`"bak"`/nil: the entry side (the same sign as `riktning`) |
+| `evidensGrund` | why the evidence is incomplete: `"ofullstandigt"` when the validity ≠ `fullstandig`, and otherwise nil |
+
+- `STOPP_FART` (0.3 studs/s) and `BAKAT_TOL` (1.0 stud) are **calibration assumptions for candidate evidence**, not a rule.
+- **`utfall`, `riktning`, `nedslag` and everything else are unchanged.**
+
+**First allowed verdict layer: the course-aware consumer (D2, not built now).** Only it knows "ska hoppas" and the expected direction. The mapping the consumer is expected to use later, which must never live in `HinderObservation`, applies **only** to the next course fence with `inSida` in the course direction:
+
+| The observation for the next fence | Verdict (the consumer) |
+|---|---|
+| incomplete | unknown |
+| `stoppObserverat` and `bakatEfterStopp` | refusal (3.1) |
+| `sidanOm` | run-out (4.1) |
+| a stop and then `passage` without moving back | unknown (3.1 vs 3.5) |
+| `passage` with no stop | no disobedience |
+| `ingen_passage` (with or without a stop, without moving back) | unknown |
+
+A stop alone never counts. The thresholds do not create a verdict on their own before calibration in Studio.
+
+**R1 acceptance (`hinderolydnad.spec`):**
+1. The same movement patterns as before give **only neutral evidence**, with the values in the table above.
+2. **No field named `olydnad`/`olydnadGrund` exists, and no value `vagran`/`utbrytning` appears anywhere in the snapshot.**
+3. `utfall` is unchanged.
+4. **Falsification:** reintroducing an `olydnad` verdict makes the tests red. So does removing the speed requirement, the back tolerance, the "before any crossing" condition, or the `sidanOm` evidence.
+5. The full suite is green, the identity re-locked, then `HANDOFF_READY_FOR_CHATGPT`. **No change to D2 and no rosette.**
+
