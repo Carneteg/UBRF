@@ -45,7 +45,11 @@ end
 function GaloppLektion.bild(s): any
 	return table.freeze({ typ = "galopp", rittId = s.rittId, forsokId = s.forsokId,
 		revision = s.revision, sekvens = s.hogsta, lage = s.lage, progress = s.progress,
-		tips = s.tips, resultat = s.resultat, referens = s.referens })
+		tips = s.tips, resultat = s.resultat, referens = s.referens,
+		--[[ C1 (docs/CANTER-TIMING-ADVICE-CONTRACT.md): före eller efter K,
+			bara medan just den missen visas. ]]
+		malSida = if s.lage == "trot" and s.tips == "canter_outside" and s.malForsok ~= nil
+			and s.malForsok == s.forsokId then s.malSida else nil })
 end
 
 local function andra(s, lage, tips)
@@ -91,8 +95,11 @@ local function referens(s, p, plats)
 end
 
 --[[ Förberedelsen från början, med nya baslinjer och samma tidsgräns. ]]
-local function tillTrav(s, tips)
+local function tillTrav(s, tips, sida: string?)
 	s.trav, s.galopp = 0, 0
+	--[[ C1: bara missen utanför K bär en sida; varje annan återgång tar bort den. ]]
+	s.malSida = sida
+	s.malForsok = if sida then s.forsokId else nil
 	andra(s, "trot", tips)
 	satProgress(s, 0)
 end
@@ -127,6 +134,27 @@ local function iK(s, p): boolean
 	return inne(seg.fran) and inne(seg.till)
 end
 
+--[[ C1: samma två ändpunkter och samma ZON_R som `iK`, på mittlinjen men
+	utanför K — "fore" om hästen ännu inte nått K i sin färdriktning, "efter"
+	om den redan passerat. Annars nil (vid sidan av, över kanten, ingen rörelse). ]]
+local function malSida(s, p): string?
+	local seg = p.segment
+	if type(seg) ~= "table" or type(seg.fran) ~= "table" or type(seg.till) ~= "table" or not s.referens then
+		return nil
+	end
+	local dv = seg.till.v - seg.fran.v
+	if not (dv == dv) or dv == 0 then return nil end
+	local riktning = if dv > 0 then 1 else -1
+	local fore, efter = true, true
+	for _, q in { seg.fran, seg.till } do
+		if not (math.abs(q.u - s.referens.u) <= ZON_R) then return nil end
+		local d = (q.v - K_V) * riktning
+		if not (d < -ZON_R) then fore = false end
+		if not (d > ZON_R) then efter = false end
+	end
+	return if fore then "fore" elseif efter then "efter" else nil
+end
+
 local function stang(s, orsak): boolean
 	if not aktiv(s) then return false end
 	if not Forsok.slutfor(s.rittId, s.forsokId, orsak, obsTid(s.rittId), nil) then return false end
@@ -153,7 +181,7 @@ local function overgang(s, p, d): boolean
 	if s.lage == "trot" then
 		if d.till == "canter" and d.fran == "trot" and hjalp then
 			if s.trav < TRAV_M then tillTrav(s, "trot_first"); return false end
-			if not iK(s, p) then tillTrav(s, "canter_outside"); return false end
+			if not iK(s, p) then tillTrav(s, "canter_outside", malSida(s, p)); return false end
 			s.vidK = table.freeze({ u = p.segment.till.u, v = p.segment.till.v })
 			s.travVid, s.galopp = s.trav, 0
 			andra(s, "canter", "canter_on")
@@ -284,6 +312,7 @@ function GaloppLektion.begar(s, op: any, seq: any, now: number, gangart: string?
 				s.resultat, s.vidK, s.travVid = nil, nil, nil
 				nyBaslinje(s, o, p, logg)
 				s.trav, s.galopp = 0, 0
+				s.malSida, s.malForsok = nil, nil
 				s.progress = 0
 				s.revision += 1
 				andra(s, "trot", "trot_on")

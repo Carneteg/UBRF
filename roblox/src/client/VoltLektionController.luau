@@ -963,6 +963,10 @@ function V.panel()
 	elseif typ == "overgang" and key == "walk_outside" then
 		if b.malSida == "fore" then txt = Sprak.t("overganglektion.walk_early")
 		elseif b.malSida == "efter" then txt = Sprak.t("overganglektion.walk_late") end
+	elseif typ == "galopp" and key == "canter_outside" then
+		-- C1 (docs/CANTER-TIMING-ADVICE-CONTRACT.md): samma regel för galoppfattningen vid K.
+		if b.malSida == "fore" then txt = Sprak.t("galopplektion.canter_early")
+		elseif b.malSida == "efter" then txt = Sprak.t("galopplektion.canter_late") end
 	end
 	--[[ Slutet på en övning: Ugnetas sammanfattning av JUST det här försökets
 		frysta resultat och ett nästa steg (docs/LESSON-FEEDBACK-CONTRACT.md). ]]

@@ -281,6 +281,98 @@ local sync = Networking.get("VoltLektionSync")
 local toOther = 0
 for _, rad in ipairs(sync._skickat) do if rad[1] ~= p then toOther += 1 end end
 check("owner events only to the owner", toOther == 0)
+-- ── C1 (docs/CANTER-TIMING-ADVICE-CONTRACT.md): före eller efter K, på en ny ritt ──
+-- Egen funktion: huvudchunken har högst 200 lokala register.
+;(function()
+	HorseService.dismount(p)
+	id = mount()
+	nuV = 4
+	local VC = VoltLektionController
+	local syncC = Networking.get("VoltLektionSync")
+	local function leverera(bb) syncC.OnClientEvent:Fire(bb) end
+	local function panelText() leverera(image()); local sida = VC.panel(); return sida and sida.text end
+	-- Panelen lägger till framstegen ("… 0%") i trot, som för varje text där.
+	local function borjar(t, x) return type(t) == "string" and string.sub(t, 1, #x) == x end
+	local T = function(k) return Sprak.t("galopplektion." .. k) end
+	Sprak.satVal("sv")
+	--[[ PÅHITTAT/KONTROLL (som hornlektion.spec): menysektionen ovan startar dussintals
+		kontroller i samma ögonblick och tömmer fjärranropens takt; utan nollställning
+		nekas kontrollerns egen sync och sidan visar "network". ]]
+	Skopa._nollstallForProv()
+	VC.avbryt(); VC.start(id, nil)
+	UgnetaController.satLektionsVal(VC.panel)
+	VC.valj("galopp")
+	-- Vid sidan av linjen: steg direkt, och `nuV` följer med.
+	local function sida(u, v) step(U + u, v); nuV = v end
+	tillGangart("trot")
+	request("start")
+	-- Före K (v 18 → 18,8; K är 27–33).
+	trav(10); trav(18)
+	aid("driv"); ga(18.8)
+	local b = image()
+	check("C1 canter: a canter before K gives canter_outside + fore", b.lage == "trot" and b.tips == "canter_outside"
+		and b.malSida == "fore")
+	check("C1 canter: the real panel shows the early advice", borjar(panelText(), T("canter_early")))
+	Sprak.satVal("en")
+	check("C1 canter: the locale changes the words", borjar(panelText(), T("canter_early"))
+		and not borjar(panelText(), Sprak.iSprak("sv", "galopplektion.canter_early")))
+	Sprak.satVal("sv")
+	tillGangart("trot"); trav(22)
+	check("C1 canter: trotting again removes the side", image().tips ~= "canter_outside" and image().malSida == nil
+		and not borjar(panelText(), T("canter_early")))
+	-- Efter K (v 34 → 34,8).
+	trav(34)
+	aid("driv"); ga(34.8)
+	b = image()
+	check("C1 canter: a canter past K gives efter", b.tips == "canter_outside" and b.malSida == "efter")
+	check("C1 canter: the real panel shows the late advice", borjar(panelText(), T("canter_late")))
+	-- Mot A: galopp vid v 38 → 37,2 har ännu inte nått K i färdriktningen.
+	tillGangart("trot"); trav(44); trav(38)
+	aid("driv"); ga(37.2)
+	b = image()
+	check("C1 canter: towards A, a canter not yet at K is fore", b.tips == "canter_outside" and b.malSida == "fore")
+	-- Vid sidan av linjen (u + 4) mot A, i v-läge "efter": ingen sida.
+	tillGangart("trot"); trav(22)
+	sida(1, 21.2); sida(2, 20.4); sida(3, 19.6); sida(4, 18.8)
+	aid("driv"); sida(4, 18)
+	b = image()
+	check("C1 canter: beside the line has NO side", b.tips == "canter_outside" and b.malSida == nil)
+	check("C1 canter: and the panel shows the generic text", borjar(panelText(), T("canter_outside")))
+	-- Tillbaka på linjen, sedan över kanten: 26,2 utanför K, 27,0 exakt på kanten (−ZON_R).
+	tillGangart("trot")
+	sida(3, 17.5); sida(2, 17); sida(1, 16.5); sida(0, 16)
+	trav(26.2)
+	aid("driv"); ga(27)
+	b = image()
+	check("C1 canter: a canter across the ring edge has NO side", b.tips == "canter_outside" and b.malSida == nil)
+	-- En annan miss (trot_first) bär ingen sida.
+	tillGangart("trot"); trav(28)
+	aid("driv"); ga(28.8)
+	b = image()
+	check("C1 canter: another failure (trot_first) has no side", b.tips == "trot_first" and b.malSida == nil)
+	request("finish")
+	check("C1 canter: finish carries no side", image().lage == "closed" and image().malSida == nil)
+	tillGangart("trot")
+	request("start")
+	check("C1 canter: a new attempt starts without a side", image().lage == "trot" and image().malSida == nil)
+	-- KONTROLL (deklarerad klientbild): en sida blir råd bara med nyckeln canter_outside.
+	do
+		local cur = image(); local fake = table.clone(cur)
+		fake.revision = cur.revision + 1000; fake.tips = "canter_at_k"; fake.malSida = "fore"
+		leverera(table.freeze(fake))
+		local t = VC.panel().text
+		check("C1 canter: the client never shows the advice outside canter_outside",
+			not borjar(t, T("canter_early")) and borjar(t, T("canter_at_k")))
+	end
+	request("finish")
+	VC.avbryt()
+	UgnetaController.satLektionsVal(nil)
+	for _, k in ipairs({ "canter_early", "canter_late" }) do
+		local n = "galopplektion." .. k
+		check("C1 canter: " .. n .. " exists in SV and EN", Sprak.iSprak("sv", n) ~= n and Sprak.iSprak("en", n) ~= n)
+	end
+end)()
+
 check("lesson never writes persistent data", (__datastore.forsok and __datastore.forsok.skriv or 0) == writes)
 if fails > 0 then error(tostring(fails) .. " FEL") end
 print(string.format("\nGALOPPLEKTION: %d prov, alla gröna", total))

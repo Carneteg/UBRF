@@ -1193,6 +1193,14 @@ Sprak.text = {
 		sv = "Galoppen kom utanför ringen. Trava igen och prova i ringen K.",
 		en = "The canter came outside the ring. Trot again and try in the ring K.",
 	},
+	["galopplektion.canter_early"] = {
+		sv = "Galoppen kom innan ni var framme vid ringen K. Trava igen och be om galopp först när ni är inne i ringen.",
+		en = "The canter came before you reached the ring K. Trot again and ask for canter only once you are inside the ring.",
+	},
+	["galopplektion.canter_late"] = {
+		sv = "Galoppen kom när ni redan hade passerat ringen K. Trava igen och be om galopp lite tidigare, när ni rider in i ringen.",
+		en = "The canter came when you had already passed the ring K. Trot again and ask for canter a little earlier, as you ride into the ring.",
+	},
 	["galopplektion.canter_on"] = {
 		sv = "Galopp! Rid vidare en bit i galopp.",
 		en = "Canter! Ride on for a while in canter.",

@@ -436,6 +436,8 @@ const SPRAK = {
   "galopplektion.trot_first": { sv: "Bra försök! Trava lite längre först, sedan galopp i ringen K.", en: "Good try! Trot a little longer first, then canter in the ring K." },
   "galopplektion.canter_at_k": { sv: "Fint! Be om galopp när du är inne i ringen K.", en: "Nice! Ask for canter when you are inside the ring K." },
   "galopplektion.canter_outside": { sv: "Galoppen kom utanför ringen. Trava igen och prova i ringen K.", en: "The canter came outside the ring. Trot again and try in the ring K." },
+  "galopplektion.canter_early": { sv: "Galoppen kom innan ni var framme vid ringen K. Trava igen och be om galopp först när ni är inne i ringen.", en: "The canter came before you reached the ring K. Trot again and ask for canter only once you are inside the ring." },
+  "galopplektion.canter_late": { sv: "Galoppen kom när ni redan hade passerat ringen K. Trava igen och be om galopp lite tidigare, när ni rider in i ringen.", en: "The canter came when you had already passed the ring K. Trot again and ask for canter a little earlier, as you ride into the ring." },
   "galopplektion.canter_on": { sv: "Galopp! Rid vidare en bit i galopp.", en: "Canter! Ride on for a while in canter." },
   "galopplektion.canter_longer": { sv: "Galoppera lite längre nästa gång. Trava igen så börjar vi om.", en: "Canter a little longer next time. Trot again and we start over." },
   "galopplektion.tired": { sv: "Hon blev trött och föll av sig själv. Vila en stund och börja om i trav.", en: "She got tired and dropped on her own. Rest a while and start again in trot." },
