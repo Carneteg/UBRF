@@ -103,15 +103,22 @@ local function utbrytningBla()
 	till(B.u + 1.65, B.v - 3); till(B.u + 1.65, B.v + 3)
 	till(B.u + 4, B.v + 3); till(B.u + 4, B.v - 3); till(B.u, B.v - 3)
 end
+-- D2b: anmälan → banskiss → startsignal (start gäller bara i banskissen).
+local function starta()
+	request("anmal"); request("ga_banan")
+	return request("start")
+end
 local function nyttForsok()
 	request("finish")
 	tillStart()
-	return request("start")
+	return starta()
 end
 
 print("\n── 1. Hela banan i ordning: inga observerade fel, förenklad, ingen rosett ──")
 tillStart()
-local ok, _, b = request("start")
+check("D2b: startsignal direkt ur «ready» nekas (anmälan först), inget försök", image().lage == "ready"
+	and request("start") == false and RidForsok.aktivt(id) == nil)
+local ok, _, b = starta()
 check("start (startsignalen) öppnar försök 1 mot startlinjen", ok and b.lage == "to_start" and b.forsokNr == 1
 	and HorseService.forsok(b.forsokId).ovning == "clearround", fmt(b))
 overStartlinjen()
@@ -215,7 +222,7 @@ id = mount(); nu = { u = 0, v = 4 }
 local bi = image()
 check("nästa gång clear round öppnas syns det avbrutna utfallet", bi.lage == "ready" and bi.forraAvbruten ~= nil
 	and bi.forraAvbruten.utfall == "avbruten")
-tillStart(); request("start")
+tillStart(); starta()
 check("en ny ritt tar bort det", image().forraAvbruten == nil and ClearRoundLektion._senasteForProv(p.UserId) == nil)
 -- En avsittning EFTER ett färdigt resultat ändrar ingenting.
 overStartlinjen(); hopp1(); hopp2(); hopp3(); hopp4(); malet()
@@ -228,7 +235,7 @@ id = mount(); nu = { u = 0, v = 4 }
 check("och nästa öppning visar inget avbrutet", image().forraAvbruten == nil)
 -- R2: ett rittslut som INTE är en avsittning (karaktären försvinner) ger samma
 -- slutliga utfall, med sitt riktiga skäl — aldrig framgång, omstart eller rosett.
-tillStart(); request("start"); overStartlinjen(); hopp1()
+tillStart(); starta(); overStartlinjen(); hopp1()
 local aktivt2 = RidForsok.aktivt(id)
 p.CharacterRemoving:Fire(p.Character)
 local avb2 = ClearRoundLektion._senasteForProv(p.UserId)
@@ -243,9 +250,53 @@ id = mount(); nu = { u = 0, v = 4 }
 local bk = image()
 check("nästa öppning bär skälet karaktar_borta", bk.forraAvbruten ~= nil and bk.forraAvbruten.orsak == "karaktar_borta")
 KARAKTAR_BORTA_BILD = bk
-tillStart(); request("start")
+tillStart(); starta()
+
+print("\n── 7b. D2b före ritten: anmälan, solo startlista, banskiss ──")
+;(function()
+	request("finish")
+	tillStart()
+	local okA, _, ba = request("anmal")
+	check("anmälan ger startlistan, inget försök öppnas", okA and ba.lage == "startlista"
+		and RidForsok.aktivt(id) == nil, fmt(ba))
+	check("anmälan: startnummer 1, 1 anmäld (solo), klassens höjd och hästen", type(ba.anmalan) == "table"
+		and ba.anmalan.startnummer == 1 and ba.anmalan.anmalda == 1 and ba.anmalan.hojdM == G.HOJD_M
+		and ba.anmalan.hastId ~= nil)
+	local h = ba.referens and ba.referens.hinder
+	check("banans geometri följer med: fyra hinder i ordning, färg och riktning ur servern", type(h) == "table"
+		and #h == 4 and h[1].farg == "bla" and h[1].mot == "C" and h[2].farg == "rod" and h[2].mot == "C"
+		and h[3].farg == "bla" and h[3].mot == "A" and h[4].farg == "rod" and h[4].mot == "C")
+	check("startsignal i startlistan nekas", request("start") == false and image().lage == "startlista")
+	check("en andra anmälan nekas", request("anmal") == false)
+	local okF, _, bf = request("finish")
+	check("avsluta i startlistan: stängd, anmälan borta, inget försök", okF and bf.lage == "closed"
+		and bf.anmalan == nil and RidForsok.aktivt(id) == nil)
+	check("startsignal från stängd nekas (anmälan först)", request("start") == false)
+	request("anmal")
+	local okG, _, bg = request("ga_banan")
+	check("gå banan ger banskissen", okG and bg.lage == "banskiss" and bg.delmal == 0 and bg.anmalan ~= nil)
+	check("gå banan en gång till nekas", request("ga_banan") == false)
+	local okF2, _, bf2 = request("finish")
+	check("avsluta i banskissen: stängd, anmälan borta, inget försök", okF2 and bf2.lage == "closed"
+		and bf2.anmalan == nil and RidForsok.aktivt(id) == nil)
+	-- Utanför banan: ingen anmälan.
+	till(B.u - 12, nu.v)
+	local okU, felU = request("anmal")
+	check("anmälan utanför banan nekas (place), inget registreras", okU == false and felU == "place"
+		and image().anmalan == nil and image().lage == "closed", tostring(felU))
+	tillStart()
+	-- Omstart efter fel behåller anmälan och går direkt mot startlinjen.
+	starta(); overStartlinjen()
+	till(R.u, B.v - 6); till(R.u, R.v - 5); till(R.u, R.v + 4) -- fel väg
+	tillStart()
+	local okR2, _, br = request("retry")
+	check("omstart efter fel: direkt mot startlinjen, anmälan kvar", okR2 and br.lage == "to_start"
+		and br.forsokNr == 2 and br.anmalan ~= nil and br.anmalan.startnummer == 1)
+	request("finish")
+end)()
+
 -- Avbruten igen, för klientprovet nedan.
-tillStart(); request("start"); overStartlinjen(); hopp1()
+tillStart(); starta(); overStartlinjen(); hopp1()
 HorseService.dismount(p)
 
 print("\n── 8. Klienten: menyn, sidans texter, guiden och resultatkortet ──")
@@ -274,8 +325,9 @@ print("\n── 8. Klienten: menyn, sidans texter, guiden och resultatkortet ─
 	check("menyn: Ridvägar bär «Clear round (träning)» och ryms i fyra rader", val ~= nil and #sida <= 4,
 		("%d rader"):format(#sida))
 	if val then val.skicka() end
-	check("valet öppnar clear round med Starta ritten", VC.lektion() and hitta(VC.panel().knappar,
-		Sprak.t("clearround.start")) ~= nil)
+	check("valet öppnar clear round med «Anmäl dig» (ingen startsignal ännu)", VC.lektion()
+		and hitta(VC.panel().knappar, Sprak.t("clearround.anmal")) ~= nil
+		and hitta(VC.panel().knappar, Sprak.t("clearround.start")) == nil)
 	sync0.OnClientEvent:Fire(image())
 	check("avsittning: sidan säger att förra ritten avbröts när ni satt av",
 		borjar(VC.panel().text, Sprak.t("clearround.forra_avbruten_avsittning")), VC.panel().text)
@@ -297,8 +349,25 @@ print("\n── 8. Klienten: menyn, sidans texter, guiden och resultatkortet ─
 		-- lägre revisioner tas emot igen för resten av provet.
 		VC.valj("halt"); VC.valj("clearround")
 	end
+	-- D2b: anmälan och banskiss i den riktiga panelen.
+	tillStart()
+	request("anmal"); leverera()
+	check("startlistan: «Anmäld … startnummer 1 · 1 anmäld» och knappen «Gå banan»",
+		borjar(VC.panel().text, Sprak.t("clearround.startlista", "0,68", 1, 1))
+		and hitta(VC.panel().knappar, Sprak.t("clearround.ga_banan")) ~= nil, VC.panel().text)
+	request("ga_banan"); leverera()
+	local sk = VC.panel().text
+	check("banskissen: 1–4 med färg och riktning, «förenkling», knappen «Starta ritten»",
+		string.find(sk, "1 blått mot C · 2 rött mot C · 3 blått mot A · 4 rött mot C", 1, true) ~= nil
+		and string.find(sk, "förenkling", 1, true) ~= nil
+		and hitta(VC.panel().knappar, Sprak.t("clearround.start")) ~= nil, sk)
+	check("banskissen visar start- och mållinjen i guiden", workspace:FindFirstChild("Voltguide") ~= nil)
+	Sprak.satVal("en")
+	check("banskissen på engelska", string.find(VC.panel().text, "1 blue towards C", 1, true) ~= nil
+		and string.find(VC.panel().text, "walk the course on foot", 1, true) ~= nil, VC.panel().text)
+	Sprak.satVal("sv")
 	-- Startsignalen och startlinjen.
-	tillStart(); request("start"); leverera()
+	request("start"); leverera()
 	check("sidan säger startsignal och startlinjen", borjar(VC.panel().text, Sprak.t("clearround.to_start")),
 		VC.panel().text)
 	local guide = workspace:FindFirstChild("Voltguide")

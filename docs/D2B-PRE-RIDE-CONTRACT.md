@@ -1,6 +1,6 @@
 # D2b: before the ride — entry, start list, course plan card (clear round, UBRF training)
 
-Status: contract written before code, 2026-09-28.
+Status: contract written before code, 2026-09-28. **BUILT, LOCAL SUITE GREEN, NOT PHYSICALLY VERIFIED** — READY_FOR_CHATGPT_REVIEW.
 Decision: [TOBIAS_DECISION_D2B_1A_2A_3C_20260928](https://github.com/Carneteg/UBRF/issues/266#issuecomment-5866670184)
 (1a solo start list · 2a course plan card · 3c no warm-up), after
 [CHATGPT_D2B_SOURCE_CORRECTION_WARMUP](https://github.com/Carneteg/UBRF/issues/266#issuecomment-5866662019).

@@ -74,8 +74,10 @@ function ClearRoundLektion.bild(s): any
 		tips = s.tips, resultat = s.resultat, referens = s.referens, forsokNr = s.forsokNr,
 		-- Förra rittens avbrutna utfall, bara innan en ny ritt startats.
 		forraAvbruten = if (s.lage == "ready" or s.lage == "closed") and forra then forra else nil,
-		nasta = nasta(s), delmal = if s.lage == "to_start" then 0 elseif s.lage == "course" then s.steg
-			elseif s.lage == "to_finish" then 5 else nil })
+		-- D2b: anmälan (solo startlista) och banans geometri för banskissen.
+		anmalan = s.anmalan,
+		nasta = nasta(s), delmal = if s.lage == "to_start" or s.lage == "banskiss" then 0
+			elseif s.lage == "course" then s.steg elseif s.lage == "to_finish" then 5 else nil })
 end
 
 local function andra(s, lage, tips)
@@ -302,7 +304,10 @@ function ClearRoundLektion.begar(s, op: any, seq: any, now: number): (boolean, s
 		ClearRoundLektion.steg(s, now)
 		return true, nil, ClearRoundLektion.bild(s)
 	end
-	if op ~= "start" and op ~= "retry" and op ~= "finish" then return false, "unknown", nil end
+	-- D2b (docs/D2B-PRE-RIDE-CONTRACT.md): anmälan och banskiss före startsignalen.
+	if op ~= "start" and op ~= "retry" and op ~= "finish" and op ~= "anmal" and op ~= "ga_banan" then
+		return false, "unknown", nil
+	end
 	if type(seq) ~= "number" or seq ~= seq or seq < 1 or seq > 2147483647 or seq % 1 ~= 0 then
 		return false, "request", nil
 	end
@@ -319,12 +324,25 @@ function ClearRoundLektion.begar(s, op: any, seq: any, now: number): (boolean, s
 		if aktiv(s) then
 			ok, fel = Forsok.avbryt(s.rittId, Forsok.nastaSekvens(s.rittId), s.forsokId, obsTid(s.rittId), nil)
 		else ok = true end
-		if ok then andra(s, "closed", "closed") end
+		if ok then
+			s.anmalan = nil -- anmälan dras tillbaka
+			andra(s, "closed", "closed")
+		end
 	elseif aktiv(s) or Forsok.aktivt(s.rittId) then fel = "active"
+	elseif op == "ga_banan" then
+		if s.lage == "startlista" then
+			ok = true
+			andra(s, "banskiss", "banskiss")
+		else
+			fel = "request"
+		end
 	-- TR 314.1.1: ETT försök till, och bara efter fel eller uteslutning i det första.
 	elseif op == "retry" and not (s.lage == "complete" and s.resultat and s.resultat.omstartMojlig) then
 		fel = "request"
-	elseif op == "start" and s.lage ~= "ready" and s.lage ~= "closed" then
+	-- D2b: startsignalen bara efter anmälan och banskiss; anmälan bara från början.
+	elseif op == "start" and s.lage ~= "banskiss" then
+		fel = "request"
+	elseif op == "anmal" and s.lage ~= "ready" and s.lage ~= "closed" then
 		fel = "request"
 	else
 		local o = Observation.ogonblick(s.rittId)
@@ -334,6 +352,18 @@ function ClearRoundLektion.begar(s, op: any, seq: any, now: number): (boolean, s
 			fel = "place"
 		elseif banGeometri(Plats.lektionsRam(s.rittId)) == nil then
 			fel = "course"
+		elseif op == "anmal" then
+			--[[ Anmälan: INGET försök öppnas. Solo startlista (Tobias 1a): startnummer
+				1, en anmäld — inga påhittade ryttare. Banans geometri till banskissen. ]]
+			ok = true
+			senaste[s.userId] = nil
+			s.resultat, s.forsokNr = nil, 0
+			nyBaslinje(s, o, p)
+			s.anmalan = table.freeze({ startnummer = 1, anmalda = 1, klass = "clearround_traning",
+				hojdM = HOJD_M, hastId = s.hastId })
+			s.progress = 0
+			s.revision += 1
+			andra(s, "startlista", "startlista")
 		else
 			local id
 			ok, fel, id = Forsok.starta(s.rittId, Forsok.nastaSekvens(s.rittId),

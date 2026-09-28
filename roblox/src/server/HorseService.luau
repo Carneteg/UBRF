@@ -1991,7 +1991,9 @@ function HorseService.voltLektionsBegaran(player: any, rittId: any, op: any, seq
 	if type(rittId) ~= "string" or #rittId > 128 then return false, "stale", nil end
 	local session = forsokRitt(player, rittId)
 	if not session then return false, "stale", nil end
-	if op ~= "sync" and op ~= "start" and op ~= "retry" and op ~= "finish" then
+	-- D2b: clear round-rittens anmälan och banskiss (andra lektioner svarar "unknown").
+	if op ~= "sync" and op ~= "start" and op ~= "retry" and op ~= "finish" and op ~= "anmal"
+		and op ~= "ga_banan" then
 		return false, "unknown", nil
 	end
 	--[[ Lektionstyp: utelämnad = volt (oförändrat beteende), "halt" =

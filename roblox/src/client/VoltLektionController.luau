@@ -489,7 +489,7 @@ local function mottag(b)
 		or b.lage=="walk1" or b.lage=="trot" or b.lage=="walk2"
 		or b.lage=="to_start" or b.lage=="route" or b.lage=="canter"
 		or b.lage=="approach" or b.lage=="crossing" or b.lage=="exit"
-		or b.lage=="course" or b.lage=="to_finish") then
+		or b.lage=="course" or b.lage=="to_finish" or b.lage=="banskiss") then
 		local delmal = if typ == "serpentin" or vagTyp(typ) or typ == "halvvolt" or typ == "hornet"
 			or typ == "clearround" then b.delmal
 			elseif typ == "markbom" then (if b.lage == "exit" then 2 elseif b.lage == "crossing" then 1 else 0)
@@ -614,6 +614,8 @@ end
 local function clearroundText(key): string?
 	if key=="choose_clearround" then return Sprak.t("clearround.choose") end
 	if typ ~= "clearround" then return nil end
+	if key=="anmal" then return Sprak.t("clearround.anmal") end
+	if key=="ga_banan" then return Sprak.t("clearround.ga_banan") end
 	if key=="start" then return Sprak.t("clearround.start") end
 	if key=="finish" then return Sprak.t("clearround.finish") end
 	if key=="retry" then return Sprak.t("clearround.retry") end
@@ -1030,6 +1032,24 @@ function V.panel()
 			then "clearround.forra_avbruten_avsittning" else "clearround.forra_avbruten"
 		txt = Sprak.t(nyckel) .. " " .. txt
 	end
+	--[[ D2b: startlistan (solo) och banskissen — ur serverns anmälan och banans
+		geometri (`referens.hinder`: ordning, färg, riktning). Klienten hittar på
+		ingenting; saknas datan står den vanliga texten kvar. ]]
+	if typ == "clearround" and key == "startlista" and type(b.anmalan) == "table"
+		and type(b.anmalan.startnummer) == "number" and type(b.anmalan.anmalda) == "number"
+		and type(b.anmalan.hojdM) == "number" then
+		local hojd = string.format("%.2f", b.anmalan.hojdM)
+		if Sprak.eget() == "sv" then hojd = string.gsub(hojd, "%.", ",") end
+		txt = Sprak.t("clearround.startlista", hojd, b.anmalan.startnummer, b.anmalan.anmalda)
+	elseif typ == "clearround" and key == "banskiss" and type(b.referens) == "table"
+		and type(b.referens.hinder) == "table" and #b.referens.hinder > 0 then
+		local delar = {}
+		for i, h in ipairs(b.referens.hinder) do
+			local farg = if h.farg == "rod" then Sprak.t("clearround.farg_rod") else Sprak.t("clearround.farg_bla")
+			table.insert(delar, Sprak.t("clearround.banskiss_hinder", i, farg, if h.mot == "A" then "A" else "C"))
+		end
+		txt = Sprak.t("clearround.banskiss", table.concat(delar, " · "), #b.referens.hinder)
+	end
 	--[[ D2a: nästa hopp med nummer, färg och riktning ur serverns bild. ]]
 	if typ == "clearround" and key == "jump" and type(b.nasta) == "table" and type(b.nasta.nr) == "number" then
 		local farg = if b.nasta.farg == "rod" then Sprak.t("clearround.farg_rod") else Sprak.t("clearround.farg_bla")
@@ -1092,6 +1112,14 @@ function V.panel()
 	local knappar = {}
 	if not pending then
 		if fel=="network" then table.insert(knappar,val("sync",function() skicka("sync") end))
+		--[[ D2b (docs/D2B-PRE-RIDE-CONTRACT.md): clear round börjar med anmälan och
+			banskissen; startsignalen finns först efter banskissen. ]]
+		elseif typ == "clearround" and (b.lage=="ready" or b.lage=="closed") then
+			table.insert(knappar,val("anmal",function() skicka("anmal") end))
+		elseif typ == "clearround" and b.lage=="startlista" then
+			table.insert(knappar,val("ga_banan",function() skicka("ga_banan") end))
+		elseif typ == "clearround" and b.lage=="banskiss" then
+			table.insert(knappar,val("start",function() skicka("start") end))
 		elseif b.lage=="ready" or b.lage=="closed" then
 			table.insert(knappar,val("start",function() skicka("start") end))
 		elseif (b.lage=="complete" or b.lage=="timeout")

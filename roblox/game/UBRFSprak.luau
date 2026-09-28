@@ -1902,8 +1902,8 @@ Sprak.text = {
 		en = "Restart",
 	},
 	["clearround.intro"] = {
-		sv = "Träningsbana i ridhuset: blått, rött, blått, rött. Förenklad bedömning – rivningar bedöms inte ännu.",
-		en = "Training course in the indoor arena: blue, red, blue, red. Simplified judging – knockdowns are not judged yet.",
+		sv = "Träningsbana i ridhuset: blått, rött, blått, rött. Förenklad bedömning – rivningar bedöms inte ännu. Anmäl dig för att börja.",
+		en = "Training course in the indoor arena: blue, red, blue, red. Simplified judging – knockdowns are not judged yet. Enter to begin.",
 	},
 	["clearround.to_start"] = {
 		sv = "Startsignal! Rid över startlinjen framför det blå hindret inom 45 sekunder.",
@@ -1936,6 +1936,26 @@ Sprak.text = {
 	["clearround.course_missing"] = {
 		sv = "Banans hinder står inte på sin plats just nu.",
 		en = "The course fences are not in place right now.",
+	},
+	["clearround.anmal"] = {
+		sv = "Anmäl dig",
+		en = "Enter",
+	},
+	["clearround.ga_banan"] = {
+		sv = "Gå banan",
+		en = "Walk the course",
+	},
+	["clearround.startlista"] = {
+		sv = "Anmäld: Clear round (UBRF-träning), %s m. Startlista: startnummer %s · %s anmäld.",
+		en = "Entered: Clear round (UBRF training), %s m. Start list: start number %s · %s entered.",
+	},
+	["clearround.banskiss"] = {
+		sv = "Banskiss (förenkling – i verkligheten går man banan till fots): %s. Startlinjen före hinder 1, mållinjen efter hinder %s.",
+		en = "Course plan (simplified – in reality you walk the course on foot): %s. Start line before fence 1, finish line after fence %s.",
+	},
+	["clearround.banskiss_hinder"] = {
+		sv = "%s %s mot %s",
+		en = "%s %s towards %s",
 	},
 	["clearround.forra_avbruten"] = {
 		sv = "Förra clear round-ritten avbröts mitt i banan – den räknas inte som genomförd.",
