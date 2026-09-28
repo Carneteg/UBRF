@@ -61,6 +61,12 @@ function sattAktivHast(id){
   G.skotselRes=null; G.sysslor={mockat:0,fodrat:0};
   G.tackePa=false; G.fangstForsok=false; G.lerig=false; G.spolad=0;
   if(typeof VD!=="undefined"&&VD.spår)VD.spår.length=0;
+  /* Paritetspasset: förberedelsen är Roblox regler (src/forberedelse.js),
+     född med hästen. Passet räknas som i Roblox: webbens SPAR.pass 0 är
+     Roblox pass 1 — och första passet är alltid utan fynd. */
+  if(typeof Forb!=="undefined")
+    G.forb=Forb.nyState(id,((typeof SPAR!=="undefined"&&SPAR)?SPAR.pass:0)+1);
+  if(typeof STEGKORT!=="undefined")STEGKORT.ridaNu=false;
   return true;
 }
 
@@ -121,23 +127,17 @@ function uppdragMal(){
         "Släpp in i boxen med E"],
       mal:(typeof hittaBox==="function"&&hittaBox(G.hastId))
         ?{scen:"stallinne", pos:hittaBox(G.hastId).dorr, var:"Boxen i stallet"}:null};
+  /* Paritetspasset 2026-09-28: kedjan är Roblox stegkort. Förberedelsen
+     sker VID hästen (src/stegkort.js) — målet är hästen tills hon leds,
+     sedan sargporten. Sadelkammaren är en sidoaktivitet och aldrig ett
+     steg här. Texterna är stegkortets, i spelarens språk. */
   if(!G.skotselRes){
-    if(!G.hastMott)
-      return {id:"hitta_hast", rubrik:`Hitta ${n}`,
-        punkter:["Boxen i stallet — namnskylten på dörren","Följ den gula vägvisaren"],
-        mal:hast, hastId:G.hastId};
-    if(!G.utrustning)
-      return {id:"utrustning", rubrik:"Hämta sadel + träns",
-        punkter:["Sadelkammaren, innanför uppehållsrummet",
-          `Ta ${hastPron(G.hastId,"poss")} egen bygel — namnskylten`],
-        mal:uppdragSadelkammare()};
-    return {id:"skotsel", rubrik:`Sköt om och sadla ${n}`,
-      punkter:["Tillbaka till boxen","Mocka, fodra, visitera, sadla (E)"],
+    return {id:"hitta_hast", rubrik:tSpr("guide.ga_till_rubrik",n),
+      punkter:[tSpr("guide.ga_till_text")],
       mal:hast, hastId:G.hastId};
   }
-  return {id:"sitt_upp", rubrik:`Sitt upp på ${n}`,
-    punkter:["Led hästen till sargporten i ridhuset",
-      "När “Sitt upp” visas: tryck E / Interagera"],
+  return {id:"sitt_upp", rubrik:tSpr("guide.leder_rubrik",n),
+    punkter:[tSpr("guide.leder_text",n)],
     mal:uppdragUppsittning()};
 }
 
@@ -314,8 +314,12 @@ function installeraTydligVagvisare(){
     rot.classList.toggle("nara",!!v.nara);
     const av=Math.max(0,Math.round(v.avstand));
     const namn=(u.hastId&&typeof HORSES!=="undefined"&&HORSES[u.hastId])?HORSES[u.hastId].namn:null;
-    etikett.textContent=v.nara
-      ? (namn?`HÄR · ${namn}`:`HÄR · ${u.rubrik}`)
+    /* Paritetspasset: hästens markör är Roblox DinHast — «DIN HÄST», namnet
+       och ▼ — och den försvinner när spelaren är framme, där stegkortet tar
+       över (DinHast döljer sig inom NARA). Andra mål behåller avståndet. */
+    if(namn&&v.nara){rot.style.display="none";requestAnimationFrame(tick);return;}
+    etikett.textContent=namn
+      ? `${tSpr("stall.din_hast")} · ${namn}`
       : `${u.rubrik} · ${av} m`;
 
     const p=skarmPos(v);

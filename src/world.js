@@ -883,9 +883,12 @@ function interaktioner(){
             saga(G.lerig
               ?`${hastNamn()} går in med leran kvar på benen. Ridläraren kommer att se den.`
               :`${hastNamn()} går in och drar en tugga hö. Nu: boxen, fodret och sadeln.`,3.5);}});
-      }else if(b&&G.hamtad){
-        L.push({pos:b.dorr, text:`Sköt om ${hastNamn()} vid boxen`,
-          gor(){visaBoxmeny();}});
+      }else if(b&&G.hamtad&&typeof stegkortPrimar==="function"){
+        /* Paritetspasset: vid hästen är E stegkortets primära handling —
+           samma sak som den prompt Roblox rankar först. Boxmenyn finns
+           kvar som sidoaktivitet under «Fler handlingar». */
+        const p=stegkortPrimar();
+        if(p)L.push({pos:b.dorr, text:p.text, gor(){p.gor();stegkortRita(true);}});
       }
     }
     L.push({pos:S.whiteboard.pos, text:"Dagens schema (whiteboarden)",
@@ -903,8 +906,7 @@ function interaktioner(){
         continue;
       }
       if(i.sadelkammare){
-        L.push({pos:i.pos, text:G.hastId&&!G.utrustning
-            ?`Hämta ${hastNamn()}s sadel och träns`:"Sadelkammaren",
+        L.push({pos:i.pos, text:"Sadelkammaren",
           gor(){visaSadelkammare();}});
         continue;
       }
@@ -1087,7 +1089,9 @@ function startaVandring(){
 }
 function hudLage(lage){
   const gang=lage==="gang";
-  for(const id of ["pyr","aids","gait"]){
+  /* "moment" är den gamla vänsterrutan. Till fots ersätts den av
+     stegkortet (paritetspasset, #264) och syns bara under ritten. */
+  for(const id of ["pyr","aids","gait","moment"]){
     const el=document.getElementById(id);
     if(el){const hud=el.closest(".hudh")||el; hud.style.display=gang?"none":"";}
   }
@@ -2486,6 +2490,7 @@ function ritaVandring(){
   /* 3D-vyn ritar vägvisaren här; kartan gör det inne i sin egen
      ritfunktion, där projektionen finns. */
   if(G.vy!=="2d")ritaVagvisare();
+  if(typeof stegkortRita==="function"){ stegkortKvitteraLedning(); stegkortRita(); }
   const ap=document.getElementById("approach");
   ap.textContent=VD.prompt&&!overlayUppe()?`Tryck E — ${VD.prompt.text}`:"";
   if(G.sagaT>0){G.sagaT-=1/60;if(G.sagaT<=0)document.getElementById("saga").classList.remove("on");}

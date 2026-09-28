@@ -214,7 +214,7 @@ function visaBoxmeny(){
     :v>0?`<span class="gold">${Math.round(v*100)} %</span>`:'<span class="dim">—</span>';
   overlay(true,`
   <span class="lbl">${h.namn}s box · ${foderRubrik}</span>
-  <h1 style="margin-top:8px">Boxen först, sadeln sen</h1>
+  <h1 style="margin-top:8px">Boxen</h1>
   <p class="dim" style="font-size:13.5px">Här övar du på stallrutinen: mocka, läs ett schema,
   väg rätt mängd och fyll vatten. När verklig UBRF-giva saknas är mängderna tydligt märkta som spelvärden.</p>
   <div style="display:grid;gap:10px;margin-top:14px">
@@ -224,9 +224,6 @@ function visaBoxmeny(){
       <span>1 · Mocka boxen</span><span>${bock(s.mockat)}</span></button>
     <button class="btn ghost" id="bFodra" style="justify-content:space-between;width:100%">
       <span>2 · Fodra och vattna</span><span>${bock(s.fodrat)}</span></button>
-    <button class="btn" id="bSkots" style="justify-content:space-between;width:100%">
-      <span>3 · Visitera, rykta, kratsa, sadla</span>
-      <span>${G.utrustning?"":'<span class="gold">sadeln saknas</span>'}</span></button>
   </div>
   <div class="btnrow"><button class="btn ghost" id="bStang">Stäng</button></div>`);
   const bT=document.getElementById("bTacke");
@@ -234,12 +231,6 @@ function visaBoxmeny(){
     saga(`Täcket av och upphängt över boxkanten. ${h.namn} skakar på sig.`,3);visaBoxmeny();};
   document.getElementById("bMocka").onclick=visaMockning;
   document.getElementById("bFodra").onclick=visaFodring;
-  document.getElementById("bSkots").onclick=()=>{
-    if(G.tackePa){saga("Täcket hänger i vägen — ta av det först.",3);return;}
-    if(!G.utrustning){overlay(false);
-      saga(`Du har varken sadel eller träns här. ${h.namn}s hänger på sin egen bygel i sadelkammaren, innanför uppehållsrummet.`,4.5);
-      return;}
-    visaSkotsel();};
   document.getElementById("bStang").onclick=()=>overlay(false);
 }
 

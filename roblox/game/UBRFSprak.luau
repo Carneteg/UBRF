@@ -493,6 +493,10 @@ Sprak.text = {
 		sv = "Hälsa på %s",
 		en = "Greet %s",
 	},
+	["guide.fler_boxen"] = {
+		sv = "Boxen — mocka och fodra",
+		en = "The stall — muck out and feed",
+	},
 	["guide.visitera_rubrik"] = {
 		sv = "Kolla %s",
 		en = "Check %s over",

@@ -230,6 +230,10 @@ const SPRAK = {
   "guide.val_rida_nu": { sv: "Rida nu — %s", en: "Ride now — %s" },
   "guide.val_sjalv": { sv: "Gör i ordning %s själv", en: "Get %s ready myself" },
   "guide.halsa_rubrik": { sv: "Hälsa på %s", en: "Greet %s" },
+  /* Webbens sidoaktivitet vid boxen (TOBIAS_DECISION_WEB_EXTRAS_VISIBLE_20260928):
+     mockning och fodring finns kvar, men under «Fler handlingar» — aldrig
+     som ett steg i förberedelsen. */
+  "guide.fler_boxen": { sv: "Boxen — mocka och fodra", en: "The stall — muck out and feed" },
   "guide.visitera_rubrik": { sv: "Kolla %s", en: "Check %s over" },
   "guide.rykta_rubrik": { sv: "Rykta %s", en: "Groom %s" },
   "guide.hovar_rubrik": { sv: "Kratsa hovarna", en: "Pick out the hooves" },
