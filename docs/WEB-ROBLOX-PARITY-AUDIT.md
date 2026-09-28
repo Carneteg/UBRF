@@ -36,7 +36,7 @@ This is **not a UI patch**. It means rebuilding the web's stable and riding flow
 ## Web features Roblox does not have — **Tobias decides**
 Character creator, mucking out, feeding schedule, rug, saddle-room tack matching, hose-down stall and mud, whiteboard, theory room, club room and rosette wall, competitions (Påskhoppet, Dressyr LC), forest trail and outdoor arena, the group ladder with promotion, skills, horse memory and rehab, weather, training book, cloud sync.
 
-"Do not leave older web flows in place" versus `CLAUDE.md` ("the pause is not permission to delete, wind down or degrade the web"). **Proposal:** the parity flow never leads to them; they are **not deleted**, but put behind a flag (`WEBB_EXTRA=false` by default), so that a user moving between the platforms sees the same product. **Needs Tobias's yes.**
+"Do not leave older web flows in place" versus `CLAUDE.md` ("the pause is not permission to delete, wind down or degrade the web"). **TOBIAS DECISION 2026-09-28: "Keep them visible".** The Roblox flow is the web's **main path** (onboarding, the step card, Rida nu, lesson, aftercare). The extras are **kept visible as side activities**. They must never stand in the way of, or replace, a step in the main path: for example, mucking out is not a requirement before saddling, and the saddle room is not the way to get the tack. There is no flag and nothing is deleted.
 
 ## True platform differences (cannot be identical)
 - **Input:** Roblox uses ProximityPrompts with a hold; the web uses E/click and touch buttons. The hierarchy and texts are the same.
