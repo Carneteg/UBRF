@@ -1,130 +1,75 @@
-# Active work
+# Active gate
 
-Read [WORKING-AGREEMENT](WORKING-AGREEMENT.md) for current roles, permissions
-and test policy. This index is dated 2026-09-26; it is not product acceptance.
+Read [WORKING-AGREEMENT](WORKING-AGREEMENT.md) for roles, permissions and test policy.
 
-## Current state
+Status date: 2026-09-28. This document records the current delivery gate. It is **not** product acceptance.
 
-- PR #264 is merged (2026-09-26 15:44:31 UTC), merge
-  7922d70090f3b968af23a9e080c0e5df1cfcb59a. Handover is confirmed.
-  Do not resume its old implementation, closeout or human-QA order.
-- Delivery-tools candidate c9be9c44276de3aaaabe0720fef0b4b5ed6472a5 on
-  codex/delivery-checks-20260926 has independent code review and all 42
-  shared checks passing locally in isolation. No new remote PR or Linux CI
-  is implied; the tools branch remains frozen.
-- Documentation cleanup is reviewed on24eae8df2eb5477f01d22c728d8b3b68037d3ade:
-  [independent PASS](https://github.com/Carneteg/UBRF/pull/264#issuecomment-5848620485).
-  Its branch remains preserved; nonblocking rest items are in
-  [CLEANUP-20260926](CLEANUP-20260926.md).
-- Current bounded work: the newly approved end-to-end circle lesson, using existing
-  VOLT1/FORSOK1. Freeze new infrastructure, including INFRA-3. Define the
-  lesson contract, feedback and visible outcome before code; Claude reviews.
-  See the latest decision in [WORKING-AGREEMENT](WORKING-AGREEMENT.md).
-  Branch codex/circle-lesson-20260926; the
-  [lesson contract](CIRCLE-LESSON-CONTRACT.md) received conditional design PASS
-  on00ec03a ([result](https://github.com/Carneteg/UBRF/pull/264#issuecomment-5848762860)).
-  Circle candidate e2a800b received independent BANK_ONLY code PASS
-  ([result](https://github.com/Carneteg/UBRF/pull/264#issuecomment-5852847754))
-  and all 42 shared checks passed locally. Codex now performs the authorized
-  bounded unpublished Studio check, not Tobias. Startup and door interaction
-  were observed; the lesson itself is not yet engine-verified.
-  The test found an opaque static interior door face hiding the opened entrance.
-  Current correction is limited to [DOOR-VISUAL-CONTRACT](DOOR-VISUAL-CONTRACT.md):
-  attach moving visual details to the existing leaf, preserve the fixed frame.
-  Exact-candidate review and a new local visual check are required. No publication
-  or product acceptance.
-- 2026-09-27 10:40 UTC: build now, test last (WORKING-AGREEMENT). Circle finish
-  cbd6499 is BUILT_NOT_VERIFIED. Start/Halt ([contract](HALT-LESSON-CONTRACT.md),
-  halt at X) is built on it, BUILT_NOT_VERIFIED; its spec is written, not run.
-  Start/Halt R1 (b6177ce) passed Codex source review only. Transitions
-  ([contract](TRANSITION-LESSON-CONTRACT.md), trot at T1 and walk at T2 on the
-  centre line) is built on it, BUILT_NOT_VERIFIED; its spec is written, not run.
-  Transitions e31eb1f passed Codex source review only. The training serpentine
-  ([contract](SERPENTINE-LESSON-CONTRACT.md), three loops A → C with ordered
-  centre-line crossings) is built on it, BUILT_NOT_VERIFIED; spec written, not run.
-  Serpentine R1 49788ea passed Codex source review only. Steady walk
-  ([contract](TEMPO-LESSON-CONTRACT.md), steady observed speed in walk, not hoof
-  rhythm) is built on it, BUILT_NOT_VERIFIED; spec written, not run.
-  Tempo 96da81b passed Codex source review only. Riding paths
-  ([contract](RIDING-PATH-LESSON-CONTRACT.md), centre line and diagonal) are built
-  on it, with the lesson menu grouped to at most four choices per page;
-  BUILT_NOT_VERIFIED, spec written, not run. Riding-paths R1 b6dbbad passed
-  Codex source review only. The half-circle back to the track
-  ([contract](HALF-CIRCLE-LESSON-CONTRACT.md)) is built on it, with a
-  "Centre line and diagonal" subgroup under Riding paths; BUILT_NOT_VERIFIED,
-  spec written, not run. Half-circle R2 8c500cf passed Codex source review
-  only. Canter departure at K ([contract](CANTER-DEPARTURE-LESSON-CONTRACT.md),
-  partial: no lead recognition) is built on it, with a "Transitions" subgroup
-  under Gaits and pace; BUILT_NOT_VERIFIED, spec written, not run. Canter
-  267ab77 passed Codex source review only. Ground pole in walk, jumping stage 1
-  ([contract](GROUND-POLE-LESSON-CONTRACT.md), the existing pole rod_50, root-plane
-  passage only) is built on it, with additive `generation`/`flyttad` fields in
-  HinderObservation.register(); BUILT_NOT_VERIFIED, spec written, not run.
-  Ground-pole R1 9dff4d5 passed Codex source review only. Leading to the arena on
-  foot ([contract](LEADING-LESSON-CONTRACT.md), its own session-local attempt and
-  a narrow LedLektion remote) is built on it; BUILT_NOT_VERIFIED, spec written, not run.
-  Leading R2 586323d passed Codex source review only. Wrong-equipment guidance with a
-  real return ([contract](EQUIPMENT-GUIDANCE-CONTRACT.md)) is built on it;
-  BUILT_NOT_VERIFIED, spec written, not run.
-  Equipment R2 c13add1 passed Codex source review only. End-of-exercise feedback
-  (C1 concrete advice, [contract](LESSON-FEEDBACK-CONTRACT.md): a summary of the
-  attempt's frozen result plus one next step, bound to the attempt) is built on it;
-  BUILT_NOT_VERIFIED, spec written, not run.
-  Feedback R1 58dd56a passed Codex source review only. Instructor text controls
-  (C2 written commentary, [contract](INSTRUCTOR-TEXT-CONTROLS-CONTRACT.md): fewer/no
-  optional live comments, concise/detailed end-of-exercise text, session-local) are
-  built on it; BUILT_NOT_VERIFIED, spec written, not run.
-  Text controls b6ea134 passed Codex source review only. Ugneta turning toward the
-  bound mounted rider ([contract](INSTRUCTOR-GAZE-CONTRACT.md), local yaw-only, bounded)
-  is built on it, with the hint-line owner fix; BUILT_NOT_VERIFIED, spec written, not run.
-  Gaze fd3f592 passed Codex source review only. Lesson memory (C4 first slice,
-  [contract](LESSON-MEMORY-CONTRACT.md): first completion per mounted lesson, saved/
-  pending/unknown kept apart, one optional next practice) is built on it;
-  BUILT_NOT_VERIFIED, spec written, not run.
-  Memory R1 a03dcf2 passed Codex source review only. The written start greeting
-  ([contract](INSTRUCTOR-START-CONTRACT.md): only a server-accepted fresh Start/Retry,
-  bound to that attempt, in the lesson page text) is built on it; BUILT_NOT_VERIFIED,
-  spec written, not run.
-  Start greeting R1 ff17d40 passed Codex source review only. Care memory (the
-  player's own first completion of greeting, visitation, grooming and hooves,
-  [contract](CARE-MEMORY-CONTRACT.md)) is built on it; BUILT_NOT_VERIFIED, spec
-  written, not run.
-  Care memory 6f9cc5e passed Codex source review only. Leading memory (first
-  genuine completion of the on-foot leading lesson, [contract](LEADING-MEMORY-CONTRACT.md))
-  and the care follow-ups are built on it; BUILT_NOT_VERIFIED, spec written, not run.
-  Leading memory 97a936a passed Codex source review only. Tempo coaching (one
-  optional written cue at a time in steady walk and a factual repeat comparison,
-  [contract](TEMPO-COACHING-CONTRACT.md)) is built on it; BUILT_NOT_VERIFIED, spec
-  written, not run.
-  Tempo coaching R1 a9c129d passed Codex source review only. Through the corner
-  (an oriented training corner as the selectable mounted type `hornet`,
-  [contract](CORNER-LESSON-CONTRACT.md)) is built on it; BUILT_NOT_VERIFIED, spec
-  written, not run.
-  Deferred before Tobias' playtest: full42, runtime smoke in engine, both lesson
-  flows, guides, entrance door, SV/EN and touch.
-- 2026-09-27: the entrance correction 93e16f5 received BANK_ONLY code PASS and a
-  bounded Studio entrance check. The circle-lesson finish package on that base is
-  Claude-written and Codex-reviewed (WORKING-AGREEMENT, package exception). The
-  lesson is still not observed in-engine: in an unpublished copy DataStore is
-  denied by design, so First Ride stays off and reaching the lesson needs the
-  whole care chain. The package adds the lesson to the existing engine runtime
-  smoke (`qa/runtime/smoke.luau`, section `voltlektion`, synthetic route) instead
-  of another manual walk; it has not run in the engine yet.
+## Current active work
 
-## Approved sequence and limits
+- Active issue: **#266** — riding quality, constructive teaching and competition-day progression.
+- Active branch: **`codex/circle-lesson-20260926`**.
+- PR #264 is merged at `7922d70090f3b968af23a9e080c0e5df1cfcb59a` and is historical. Do not resume its old implementation or closing gate.
+- Current review model remains: **CLAUDE BUILDS → CHATGPT REVIEWS → TOBIAS ACCEPTS**.
+- Current standing delivery rule: **BUILD NOW / PHYSICAL TEST LAST**.
 
-The earlier catalogue order was infrastructure, instructor, competition,
-house, buildings/grounds, equipment, horse, then final full playtest. The
-18:01 UTC amendment prioritizes one playable circle lesson before more
-infrastructure. All #266 work remains recorded; merge264 did not complete it.
+## Locked physical-test candidate
 
-Keep final journey, R5 interactions/layout/dismount/leading, Ugneta visual,
-engine/sampling/performance gaps and physical devices separately tracked.
-INFRA-4B remains blocked on the selected asset's original/provenance/offline
-tools; do not repeat asset searches or substitute a model without new evidence.
-FORSOK1 is reviewed server infrastructure, not completed lessons/progression.
+A2 is locked for the final physical playtest.
 
-The earlier First Playable gate record is preserved in
-[history/ACTIVE-GATE-20260926](history/ACTIVE-GATE-20260926.md).
-Its dated observations are not evidence for a newer candidate and its old
-role, push, immediate gameplay and workload instructions are no longer active.
+- Last runtime-mapped code commit in the candidate: **`19df5e69102866a67f3ea09936dcdd30915230ec`**.
+- Candidate checklist: [FINAL-PLAYTEST-CHECKLIST.md](FINAL-PLAYTEST-CHECKLIST.md).
+- Roblox build identity `kallhash`: **`e23198df4614fbfdec56d2a7a5047c2a69e20fbcbc10563c5300faf49469a13e`**.
+- The in-game diagnostic must show prefix **`e23198df4614`**. A different value is not this candidate.
+- The branch may receive documentation-only commits without invalidating the runtime lock. Any change to a mapped Roblox source requires a new build identity and a new lock.
+
+The candidate includes the reviewed #266 lesson/teaching work through the ground-pole less-guidance package. Local source/bench testing is green; the physical checklist remains **NOT_TESTED** until Tobias runs it.
+
+## Physical gate A3
+
+A3 is intentionally deferred until Tobias starts the final playtest.
+
+Use only [FINAL-PLAYTEST-CHECKLIST.md](FINAL-PLAYTEST-CHECKLIST.md) as the physical acceptance list. It covers PC, physical iPad and physical iPhone separately, including:
+
+- spawn, stable and doors;
+- care, equipment and leading;
+- mounting and free practice;
+- Ugneta and lesson navigation;
+- every currently built lesson and the less-guidance variants;
+- dismount, layout, respawn/reconnect;
+- riding feel, clarity, learning and fun.
+
+No checklist row is considered PASS from local tests, emulator evidence or source review alone.
+
+## Current #266 package status
+
+### A — first pass
+- Source/build preparation: current.
+- A2 candidate lock: **BUILT / CHATGPT review pending on the docs-only lock package**.
+- A3 physical PC/iPad/iPhone test: **NOT_TESTED / LAST**.
+
+### B — riding feel and measurement
+- Existing riding core and multiple observed lesson facts are built.
+- Remaining rhythm, canter-lead and fuller fence measurement require new observation/model work.
+- Physical riding feel remains Tobias' acceptance call.
+
+### C — teaching and learning
+- Concrete feedback, selected improvement comparisons, event-bound advice, free-practice framing and multiple task lessons are built.
+- Less-guidance is built for centre line/diagonal, corner, half-circle and ground pole.
+- Serpentine/volt/halt/transitions/canter were intentionally not forced into a reduction where removing guidance would make the task ambiguous.
+- Remaining C gaps require a product decision, persistence/schema work, or new measurement.
+
+### D — competition day
+- **Not started.**
+- D1 is the next major delivery stage after the current candidate lock.
+- Before D1 code, Tobias must choose the first competition class/rule profile. #266 currently recommends a clear-round training class before a judged class.
+
+## Limits
+
+- No merge, publication or product acceptance is implied by source review.
+- Do not use physical Studio/iPad/manual play as an ad-hoc substitute for the locked A3 checklist.
+- Do not invent measurements for rhythm, canter lead, rider body position or similar unobserved facts.
+- Do not mechanically expand the less-guidance pattern where the remaining guide would become ambiguous.
+- New web feature work remains paused unless a product decision changes that.
+- Competition results must be deterministic, versioned and based on verified rule profiles before they can be accepted.
+
+Historical gate material from #264 is preserved in [history/ACTIVE-GATE-20260926](history/ACTIVE-GATE-20260926.md).
