@@ -214,6 +214,8 @@ print("\n── 4. Katalogen nekar: anmälan och ritten går ändå, egna kläde
 	local b = image()
 	check("«misslyckades», avataren orörd", b.klader and b.klader.lage == "misslyckades" and egna(p),
 		b.klader and b.klader.lage)
+	check("anmälan står kvar: startlistan, startnummer 1", b.lage == "startlista" and b.anmalan ~= nil
+		and b.anmalan.startnummer == 1, b.lage)
 	request("ga_banan")
 	local okS, _, bs = request("start")
 	check("startsignal och bana fungerar", okS and bs.lage == "to_start")
