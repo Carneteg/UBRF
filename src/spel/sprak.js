@@ -643,6 +643,7 @@ const SPRAK = {
   "aterkoppling.clearround.omstart": { sv: "Du får en omstart direkt.", en: "You may restart straight away." },
   "aterkoppling.clearround.forenklad": { sv: "Förenklad bedömning: rivningar bedöms inte ännu – clear round-rosetten delas ut när de kan bedömas. Träningsbana, inte en standardklass.", en: "Simplified judging: knockdowns are not judged yet – the clear round rosette is given once they can be. Training course, not a standard class." },
   "aterkoppling.clearround.nasta": { sv: "Nästa gång: rid banan igen – blått, rött, blått, rött.", en: "Next time: ride the course again – blue, red, blue, red." },
+  "aterkoppling.clearround.eftervard": { sv: "När ni är klara: sitt av – eftervården väntar: %s.", en: "When you are done: dismount – the aftercare is waiting: %s." },
   "aterkoppling.clearround.kort": { sv: "Ritten är bedömd (förenklat).", en: "The round is judged (simplified)." },
   "aterkoppling.clearround.igen": { sv: "Rid över startlinjen och ta hindren i ordning.", en: "Ride over the start line and take the fences in order." },
   "hornlektion.mindre_stod": { sv: "Rid med bara bågen och ringarna", en: "Ride with only the curve and rings" },

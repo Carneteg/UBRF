@@ -1,6 +1,6 @@
 # D2c: after the ride — from the clear round result into the existing aftercare
 
-Status: contract written before code, 2026-09-28.
+Status: contract written before code, 2026-09-28. **BUILT, LOCAL SUITE GREEN, NOT PHYSICALLY VERIFIED** — READY_FOR_CHATGPT_REVIEW.
 Order: [CHATGPT_REVIEW_D2B_ACCEPTED_20260928](https://github.com/Carneteg/UBRF/issues/266#issuecomment-5867354110), which asks for "the smallest source-testable package, D2c or D5".
 Base `94a643c`, branch `codex/circle-lesson-20260926`. Build now; physical test last.
 
@@ -17,7 +17,7 @@ The aftercare already exists and applies to **every** ride.
 
 | Part | Owner | Content |
 |---|---|---|
-| Snapshot | server (`ClearRoundLektion`) | In `complete` and in `closed` after a result (including `avbruten`): `eftervard = {names in canon order}`, taken from `Pass.moment()`. **Never** in `ready`/`startlista`/`banskiss`/`to_start`/`course`/`to_finish`. |
+| Snapshot | server (`ClearRoundLektion`) | In `complete` (with a result): `eftervard = {id, namn, namnEn}` in canon order, taken from `Pass.EFTERVARD` (the same canon `Pass.moment()` guards). **Never** in any other state. *Narrowed during the build:* `avbruten` happens at the dismount itself — the lesson panel is gone and `Pass.vidAvsittning` already puts the session into aftercare — so a line in `closed` would only show after mounting again, when it is no longer true. |
 | Result card | client (`LektionsAterkoppling`) | One line, only when the snapshot carries `eftervard`: "När ni är klara: sitt av – eftervården väntar: gjord · sadel · träns · ben · vatten." The names come from the snapshot. There is no hard-coded list. |
 | Texts | `sprak.js` | The line in SV and EN. It does **not** say where the aftercare happens (no "i stallet"), because the aftercare's presence requirement is the one the care code already has. |
 

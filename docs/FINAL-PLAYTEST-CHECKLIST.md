@@ -1,6 +1,6 @@
 # Slutspeltest — samlad checklista (#266 A2)
 
-Status: LÅST KANDIDAT för Tobias fysiska slutprov, 2026-09-28 — **omlåst efter D2b** (clear round: anmälan, startlista, banskiss), samma dag. Ingenting här är
+Status: LÅST KANDIDAT för Tobias fysiska slutprov, 2026-09-28 — **omlåst efter D2c** (clear round: anmälan, startlista, banskiss; eftervården efter resultatet), samma dag. Ingenting här är
 godkänt; varje rad står som NOT_TESTED tills Tobias fyller i den.
 Beslut: Tobias «Do A» på [NEXT_PACKAGE_RECOMMENDATION_20260928](https://github.com/Carneteg/UBRF/issues/266#issuecomment-5865193035).
 
@@ -9,9 +9,9 @@ Beslut: Tobias «Do A» på [NEXT_PACKAGE_RECOMMENDATION_20260928](https://githu
 | | |
 |---|---|
 | Gren | `codex/circle-lesson-20260926` |
-| Kodhuvud vid låsning | D2b-commiten på grenen (se leveransrapporten i #266); första låsningen var `19df5e6` |
-| Byggidentitet (`kallhash`) | `b22335d27996dd18feb11e09d36b3797f840291412a02cabc287fcadc2addb40` ur 106 mappade filer (105 skript, 1 modell), beräknad med `tools/bygg-identitet.py` (tidigare låsningar: `5a7d81b05827…` D2a R2, `e23198df4614…`) |
-| Kontroll i spelet | byggidentiteten i spelets diagnostik ska visa **`b22335d27996`**. Visar den något annat är det inte den här kandidaten — avbryt och säg till. |
+| Kodhuvud vid låsning | D2c-commiten på grenen (se leveransrapporten i #266); första låsningen var `19df5e6` |
+| Byggidentitet (`kallhash`) | `93f07144a1b5d1de55f3dc0da75876374a0629dd2cfd111ab1def9c208be88c7` ur 106 mappade filer (105 skript, 1 modell), beräknad med `tools/bygg-identitet.py` (tidigare låsningar: `b22335d27996…` D2b, `5a7d81b05827…` D2a R2, `e23198df4614…`) |
+| Kontroll i spelet | byggidentiteten i spelets diagnostik ska visa **`93f07144a1b5`**. Visar den något annat är det inte den här kandidaten — avbryt och säg till. |
 | Bas | `main` `7922d70` (#264) |
 
 Varje ändring av en mappad Roblox-källa efter låsningen ger en ny `kallhash`
@@ -38,7 +38,7 @@ anteckning vid FAIL/NOTE. Raderna står i den ordning du möter dem i spelet.
 
 | # | Kontroll | PC | iPad | iPhone |
 |---|---|---|---|---|
-| 0.1 | Byggidentiteten visar `b22335d27996` | | | |
+| 0.1 | Byggidentiteten visar `93f07144a1b5` | | | |
 | 0.2 | Språk: spela en gång på svenska; byt till engelska minst i en lektion och vid ett slutkort | | | |
 
 ## 1. Spawn, stall och port
@@ -122,6 +122,8 @@ Avsluta. Därtill de särskilda raderna.
 | 6.26 | Clear round — öppna: bara «Anmäl dig» (ingen «Starta ritten»); anmäl: «Anmäld: Clear round (UBRF-träning), 0,68 m. Startlista: startnummer 1 · 1 anmäld.» och knappen «Gå banan» (D2b) | | | |
 | 6.27 | Clear round — «Gå banan»: banskissen «1 blått mot C · 2 rött mot C · 3 blått mot A · 4 rött mot C», ordet «förenkling», start- och mållinjen syns i banan, knappen «Starta ritten»; läsbar på telefon (D2b) | | | |
 | 6.28 | Clear round — Avsluta i startlistan eller banskissen: stängd, ingen ritt räknad, nästa gång börjar med «Anmäl dig»; efter fel ger omstart direkt startsignal utan ny anmälan (D2b) | | | |
+| 6.29 | Clear round — efter resultatet säger kortet «När ni är klara: sitt av – eftervården väntar: Lossa gjorden · Ta av sadeln · Ta av tränset · Känn igenom benen · Vatten och hö.»; sitt av: eftervården öppnas som efter vilken ritt som helst, och när alla fem är gjorda räknas passet en gång (D2c) | | | |
+| 6.30 | Clear round — sitt av mitt i banan: hästen får ändå sin eftervård (passet går till eftervården), och kortet med raden visas inte (D2c) | | | |
 
 ## 7. Avsittning, layout och återkomst
 
@@ -177,7 +179,7 @@ Avsluta. Därtill de särskilda raderna.
 | TEMPO-LESSON | 6.7 |
 | TRANSITION-LESSON | 6.8 |
 | TRANSITION-TIMING-ADVICE | 6.9 |
-| D2-CLEAR-ROUND-DAY | 6.21–6.28 |
+| D2-CLEAR-ROUND-DAY | 6.21–6.30 |
 | Närområdet, alternativ 3 (#266 R1) | 1.3 |
 | R4/R5 (`ecb2f2e`) | 1.1, 3.3, 4.1, 7.1, 7.2 |
 | INFRA-1 | 5.6, 7.4 |

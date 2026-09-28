@@ -792,6 +792,10 @@ def valjBunt(spec_rel: str):
     #[[ Start/halt-lektionen: samma bank som voltlektionen. ]]
     elif "markbomlektion" in spec_rel:
         moduler, stubbar = KOHERENS, "tests/stubs.luau"
+    #[[ D2c: kedjan clear round -> eftervard behover ridhuset OCH
+    #   tjanstestacken (GameplayService finns i KOHERENS). ]]
+    elif "clearround-eftervard" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
     elif "clearroundlektion" in spec_rel:
         moduler, stubbar = KOHERENS, "tests/stubs.luau"
     elif "galopplektion" in spec_rel:

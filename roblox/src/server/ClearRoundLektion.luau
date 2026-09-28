@@ -18,6 +18,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Ridhusplats = require(ReplicatedStorage.HorseCore.Ridhusplats)
 local Klassprofil = require(ReplicatedStorage.HorseCore.Klassprofil)
+local Pass = require(ReplicatedStorage.HorseCore.Pass)
 local Forsok = require(script.Parent.RidForsok)
 local Observation = require(script.Parent.RidObservation)
 local Plats = require(script.Parent.RidPlatsObservation)
@@ -67,6 +68,17 @@ local function nasta(s): any
 	return b and table.freeze({ nr = s.steg, farg = b.farg, mot = b.mot }) or nil
 end
 
+--[[ D2c (docs/D2C-AFTERCARE-CONTRACT.md): eftervårdens moment i KANONENS
+	ordning, ur `Pass` (`UBRFSkotsel.eftervard`) — samma lista som passet
+	vaktar. Klienten visar dem på resultatkortet; den hittar inte på någon. ]]
+local EFTERVARD_BILD = (function()
+	local ut = {}
+	for _, e in ipairs(Pass.EFTERVARD) do
+		table.insert(ut, table.freeze({ id = e.id, namn = e.namn, namnEn = e.namnEn }))
+	end
+	return table.freeze(ut)
+end)()
+
 function ClearRoundLektion.bild(s): any
 	local forra = senaste[s.userId]
 	return table.freeze({ typ = "clearround", rittId = s.rittId, forsokId = s.forsokId,
@@ -76,6 +88,8 @@ function ClearRoundLektion.bild(s): any
 		forraAvbruten = if (s.lage == "ready" or s.lage == "closed") and forra then forra else nil,
 		-- D2b: anmälan (solo startlista) och banans geometri för banskissen.
 		anmalan = s.anmalan,
+		-- D2c: eftervården, bara när ett resultat står.
+		eftervard = if s.lage == "complete" and s.resultat ~= nil then EFTERVARD_BILD else nil,
 		nasta = nasta(s), delmal = if s.lage == "to_start" or s.lage == "banskiss" then 0
 			elseif s.lage == "course" then s.steg elseif s.lage == "to_finish" then 5 else nil })
 end

@@ -2021,6 +2021,10 @@ Sprak.text = {
 		sv = "Nästa gång: rid banan igen – blått, rött, blått, rött.",
 		en = "Next time: ride the course again – blue, red, blue, red.",
 	},
+	["aterkoppling.clearround.eftervard"] = {
+		sv = "När ni är klara: sitt av – eftervården väntar: %s.",
+		en = "When you are done: dismount – the aftercare is waiting: %s.",
+	},
 	["aterkoppling.clearround.kort"] = {
 		sv = "Ritten är bedömd (förenklat).",
 		en = "The round is judged (simplified).",
