@@ -1877,6 +1877,10 @@ Sprak.text = {
 		sv = "Rid in på dressyrbanan innan du startar.",
 		en = "Enter the dressage arena before you start.",
 	},
+	["hornlektion.mindre_stod"] = {
+		sv = "Rid med bara bågen och ringarna",
+		en = "Ride with only the curve and rings",
+	},
 	["aterkoppling.hornet.klar"] = {
 		sv = "Snyggt! %s m av vägen (%s m), genom hörnet i en följd.",
 		en = "Nice! %s m of the route (%s m), through the corner in one go.",

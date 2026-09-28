@@ -395,5 +395,122 @@ do
 	VC.avbryt()
 end
 
+print("\n── C3. Mindre vägvisning: bara bågen och ringarna (docs/CORNER-LESS-GUIDANCE-CONTRACT.md) ──")
+;(function()
+	Skopa._nollstallForProv()
+	avslutaNu()
+	local VC = VoltLektionController
+	local remote = Networking.get("VoltLektion")
+	local syncC = Networking.get("VoltLektionSync")
+	local minneSync = Networking.get("LektionsMinneSync")
+	--[[ PÅHITTAT/KONTROLL: ett "inte klarad"-läge går inte att återskapa efter H1:s riktiga
+		markör, så minnet levereras genom klientens riktiga kanal med en hög session. ]]
+	local rev = 0
+	local function minne(lektioner)
+		rev += 1
+		minneSync.OnClientEvent:Fire({ historik = "betrodd", lektioner = lektioner, session = 1000000, rev = rev })
+	end
+	local function knapp(nyckel)
+		local sida = VC.panel()
+		if not sida then return nil end
+		for _, k in ipairs(sida.knappar) do if k.text == Sprak.t(nyckel) then return k end end
+		return nil
+	end
+	local function leverera() syncC.OnClientEvent:Fire(image()) end
+	--[[ Guidens delar: ring 0,3·spm och pil 0,4·spm efter bredd (× 0,65); bågens och de
+		raka delarnas streck har samma bredd (0,45·spm), så bågens känns igen på
+		sina exakta lägen — samma formel som hornGuide. ]]
+	local function delar()
+		local g = workspace:FindFirstChild("Voltguide")
+		local r = image().referens
+		if not g or not r then return nil end
+		local spm = r.plats.studsPerMeter
+		local bage = {}
+		for i = 0, 9 do
+			local th = (math.pi / 2) * (i + 0.5) / 10
+			table.insert(bage, Ridhusplats.tillVarld(r.plats, Vector3.new(r.cu + r.r * math.cos(th), 0.035,
+				r.cv + r.r * math.sin(th))))
+		end
+		local ut = { ring = 0, pil = 0, bage = 0, rak = 0 }
+		for _, d in ipairs(g:GetChildren()) do
+			local x = d.Size.X
+			if math.abs(x - 0.3 * spm * 0.65) < 1e-3 then ut.ring += 1
+			elseif math.abs(x - 0.4 * spm * 0.65) < 1e-3 then ut.pil += 1
+			else
+				local paBage = false
+				for _, b in ipairs(bage) do if (d.Position - b).Magnitude < 0.05 then paBage = true end end
+				if paBage then ut.bage += 1 else ut.rak += 1 end
+			end
+		end
+		return ut
+	end
+	local function txt(u)
+		return if u then ("ring %d, pil %d, båge %d, rak %d"):format(u.ring, u.pil, u.bage, u.rak) else "ingen guide"
+	end
+	Sprak.satVal("sv")
+	VC.avbryt(); VC.start(id, nil)
+	UgnetaController.satLektionsVal(VC.panel)
+	VC.valj("hornet")
+	minne({ hornet = "okand", halt = "sparad" })
+	check("C3 hörn: inte klarad ger inget val", knapp("hornlektion.mindre_stod") == nil
+		and knapp("vaglektion.visa_vagen") == nil)
+	aid("driv")
+	knapp("hornlektion.start").skicka(); leverera()
+	local full = delar()
+	check("C3 hörn: hela guiden har raka delar, pilar, bågen och ringar", full ~= nil and full.rak > 0
+		and full.pil > 0 and full.bage == 10 and full.ring > 0)
+	minne({ hornet = "sparad", halt = "sparad" })
+	check("C3 hörn: klarad ger hörnets egen etikett, inte ridvägarnas", knapp("hornlektion.mindre_stod") ~= nil
+		and knapp("vaglektion.utan_streck") == nil)
+	local n = #remote._skickat
+	knapp("hornlektion.mindre_stod").skicka()
+	local mindre = delar()
+	check("C3 hörn: valet skickar ingenting till servern", #remote._skickat == n)
+	check("C3 hörn: bara bågen och ringarna — inga raka streck och inga pilar", mindre ~= nil
+		and mindre.rak == 0 and mindre.pil == 0 and mindre.bage == full.bage and mindre.ring == full.ring)
+	check("C3 hörn: knappen är nu Visa vägen", knapp("vaglektion.visa_vagen") ~= nil
+		and knapp("hornlektion.mindre_stod") == nil)
+	Sprak.satVal("en")
+	check("C3 hörn: engelska", Sprak.t("hornlektion.mindre_stod") == "Ride with only the curve and rings")
+	Sprak.satVal("sv")
+	-- Samma uppgift: en ordnad genomridning slutförs som förut.
+	hamta(); tillHornStart(); langs(-3, -1.5); leverera()
+	local under = delar()
+	check("C3 hörn: under vägen fortfarande bara bågen och ringarna", under ~= nil and under.rak == 0
+		and under.pil == 0)
+	langs(-1.5, ref.langd)
+	local klar = image()
+	check("C3 hörn: uppgiften slutförs som förut med mindre vägvisning", klar.lage == "complete"
+		and klar.resultat ~= nil and klar.resultat.figur == "hornet" and klar.resultat.mitt == true)
+	leverera()
+	knapp("vaglektion.visa_vagen").skicka()
+	knapp("voltlektion.retry").skicka(); leverera()
+	local igen = delar()
+	check("C3 hörn: Visa vägen ger hela guiden igen", igen ~= nil and igen.rak == full.rak and igen.pil == full.pil
+		and igen.bage == full.bage and igen.ring == full.ring)
+	-- Nollställning: typbyte, avbrott med återkoppling, ny ritt.
+	knapp("hornlektion.mindre_stod").skicka()
+	knapp("hornlektion.finish").skicka(); leverera()
+	VC.valj("halt")
+	check("C3 hörn: en annan typ visar inget val (räknat: Starta + Avsluta)", #VC.panel().knappar == 2)
+	VC.valj("hornet")
+	check("C3 hörn: typbyte ger hela guiden igen", knapp("hornlektion.mindre_stod") ~= nil)
+	knapp("hornlektion.mindre_stod").skicka()
+	VC.avbryt(); VC.start(id, nil); UgnetaController.satLektionsVal(VC.panel)
+	check("C3 hörn: avbrott och återkoppling ger hela guiden igen", knapp("hornlektion.mindre_stod") ~= nil)
+	knapp("hornlektion.mindre_stod").skicka()
+	HorseService.dismount(p)
+	id = mount(); nu = { u = 0, v = 4 }
+	VC.avbryt(); VC.start(id, nil); UgnetaController.satLektionsVal(VC.panel)
+	VC.valj("hornet")
+	check("C3 hörn: ny ritt ger hela guiden igen", knapp("hornlektion.mindre_stod") ~= nil
+		and knapp("vaglektion.visa_vagen") == nil)
+	UgnetaController.satLektionsVal(nil)
+	VC.avbryt()
+	check("C3 hörn: nyckeln finns på SV och EN", Sprak.iSprak("sv", "hornlektion.mindre_stod") ~= "hornlektion.mindre_stod"
+		and Sprak.iSprak("en", "hornlektion.mindre_stod") ~= "hornlektion.mindre_stod")
+	print("   delar full: " .. txt(full) .. " · mindre: " .. txt(mindre))
+end)()
+
 if fails > 0 then error(tostring(fails) .. " FEL") end
 print(string.format("\nHORNLEKTION: %d prov, alla gröna", total))

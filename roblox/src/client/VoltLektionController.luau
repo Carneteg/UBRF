@@ -325,7 +325,7 @@ end
 --[[ GENOM HÖRNET: inridning, kvartsvolt och utridning ur SAMMA `referens`
 	som servern projicerar mot (uT, cu, cv, r, p0, p3, ring). Pilar visar
 	riktningen; delmålet (1 inridning, 2 bågen, 3 utridning) lyses starkare. ]]
-local function hornGuide(m, ref, delmal)
+local function hornGuide(m, ref, delmal, utan: boolean?)
 	local p = ref.plats
 	local function lokalt(u, v) return Plats.tillVarld(p, Vector3.new(u, 0.035, v)) end
 	local function rak(au, av, bu, bv, stark)
@@ -349,7 +349,9 @@ local function hornGuide(m, ref, delmal)
 			t += 4
 		end
 	end
-	rak(ref.p0u, ref.p0v, ref.uT, ref.cv, delmal == 1)
+	--[[ C3 (docs/CORNER-LESS-GUIDANCE-CONTRACT.md): med mindre vägvisning ritas inte
+		inridningens och utridningens raka delar — bågen och ringarna står kvar. ]]
+	if not utan then rak(ref.p0u, ref.p0v, ref.uT, ref.cv, delmal == 1) end
 	local antal = 10
 	for i = 0, antal - 1 do
 		local th = (math.pi / 2) * (i + 0.5) / antal
@@ -357,7 +359,7 @@ local function hornGuide(m, ref, delmal)
 		local fram = lokalt(ref.cu + ref.r * math.cos(th + 0.05), ref.cv + ref.r * math.sin(th + 0.05))
 		streck(m, p, pos, fram - pos, 0.45 * p.studsPerMeter, delmal == 2)
 	end
-	rak(ref.cu, ref.cv + ref.r, ref.p3u, ref.p3v, delmal == 3)
+	if not utan then rak(ref.cu, ref.cv + ref.r, ref.p3u, ref.p3v, delmal == 3) end
 	for j, c in ipairs({ { ref.p0u, ref.p0v }, { ref.p3u, ref.p3v } }) do
 		local n = 12
 		for i = 0, n - 1 do
@@ -376,14 +378,14 @@ end
 
 local function visaGuide(ref, delmal)
 	if not ref or not ref.plats then rivGuide(); return end
-	local utan = utanStreck and vagTyp(typ)
+	local utan = utanStreck and (vagTyp(typ) or typ == "hornet")
 	if guideRef and guideRef.ramId == ref.ramId and guideRef.nyckel == ref.nyckel and guideTyp == typ
 		and guideDel == delmal and guideUtan == utan then return end
 	rivGuide()
 	local m = Instance.new("Model"); m.Name = "Voltguide"
 	if typ == "serpentin" or vagTyp(typ) or typ == "halvvolt" or typ == "markbom" or typ == "hornet" then
 		if typ == "serpentin" then serpentinGuide(m, ref, delmal)
-		elseif typ == "hornet" then hornGuide(m, ref, delmal)
+		elseif typ == "hornet" then hornGuide(m, ref, delmal, utan)
 		elseif typ == "halvvolt" then halvvoltGuide(m, ref, delmal)
 		elseif typ == "markbom" then markbomGuide(m, ref, delmal)
 		else vagGuide(m, ref, delmal, utan) end
@@ -601,6 +603,8 @@ local function hornText(key): string?
 	if key=="timeout" then return Sprak.t("hornlektion.timeout") end
 	if key=="closed" then return Sprak.t("hornlektion.closed") end
 	if key=="place" then return Sprak.t("hornlektion.place") end
+	if key=="mindre_stod" then return Sprak.t("hornlektion.mindre_stod") end
+	if key=="visa_vagen" then return Sprak.t("vaglektion.visa_vagen") end
 	return nil
 end
 
@@ -1033,8 +1037,11 @@ function V.panel()
 	--[[ C3 (docs/ROUTE-LESS-GUIDANCE-CONTRACT.md): ridvägarnas egna val. "Rid utan
 		streck" bara när lektionen är klarad enligt minnet; "Visa vägen" alltid när
 		mindre vägvisning är på. Lokalt — inget skickas till servern. ]]
-	if vagTyp(typ) and (utanStreck or klarad(typ)) then
-		table.insert(knappar, val(if utanStreck then "visa_vagen" else "utan_streck", function()
+	--[[ Hörnet (docs/CORNER-LESS-GUIDANCE-CONTRACT.md): samma val med egen etikett —
+		bågens streck står kvar, så "utan streck" vore osant där. ]]
+	if (vagTyp(typ) or typ == "hornet") and (utanStreck or klarad(typ)) then
+		local nyckel = if utanStreck then "visa_vagen" elseif typ == "hornet" then "mindre_stod" else "utan_streck"
+		table.insert(knappar, val(nyckel, function()
 			utanStreck = not utanStreck
 			local visad = guide ~= nil
 			rivGuide()

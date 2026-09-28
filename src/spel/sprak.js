@@ -607,6 +607,7 @@ const SPRAK = {
   "hornlektion.timeout": { sv: "Vi hann inte genom hela hörnet. Ta en paus eller prova igen.", en: "We did not get through the whole corner. Take a break or try again." },
   "hornlektion.closed": { sv: "Hörnet är avslutat.", en: "The corner has ended." },
   "hornlektion.place": { sv: "Rid in på dressyrbanan innan du startar.", en: "Enter the dressage arena before you start." },
+  "hornlektion.mindre_stod": { sv: "Rid med bara bågen och ringarna", en: "Ride with only the curve and rings" },
   "aterkoppling.hornet.klar": { sv: "Snyggt! %s m av vägen (%s m), genom hörnet i en följd.", en: "Nice! %s m of the route (%s m), through the corner in one go." },
   "aterkoppling.hornet.kort": { sv: "Snyggt – genom hela hörnet!", en: "Nice – all the way through the corner!" },
   "aterkoppling.hornet.nasta": { sv: "Nästa gång: rid samma hörn i trav.", en: "Next time: ride the same corner in trot." },
