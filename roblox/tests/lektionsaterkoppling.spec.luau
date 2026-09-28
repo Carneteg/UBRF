@@ -235,13 +235,13 @@ do
 	local NARMARE, FORRA = "Närmare linjen än förra volten", "Förra volten"
 	local utan = A.text(ridBild("volt", "complete", voltRes(0.5)), ridKontext("volt"))
 	local t = medJ(0.5, 1.0)
-	check("närmare: bekräftas med båda talen", har(t, NARMARE) and har(t, "1,0") and har(t, "0,5"), t)
+	check("närmare: bekräftas med båda talen, förra först", har(t, NARMARE) and har(t, "i snitt 1,0 m, nu 0,5 m"), t)
 	check("närmare: sammanfattningen och nästa steg står kvar",
 		har(t, "radie 10") and har(t, Sprak.t("aterkoppling.volt.nasta")), t)
 	t = medJ(0.8, 0.8)
 	check("lika: neutralt, inget «närmare»", har(t, FORRA) and not har(t, NARMARE), t)
 	t = medJ(1.2, 0.6)
-	check("längre bort: neutralt, ingen kritik", har(t, FORRA) and har(t, "0,6") and har(t, "1,2")
+	check("längre bort: neutralt, ingen kritik", har(t, FORRA) and har(t, "i snitt 0,6 m från linjen, nu 1,2 m")
 		and not har(t, NARMARE), t)
 	check("avrundning: 0,54 → 0,46 visar 0,5 → 0,5 och är INTE närmare",
 		not har(medJ(0.46, 0.54), NARMARE) and har(medJ(0.46, 0.54), FORRA), medJ(0.46, 0.54))
