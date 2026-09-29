@@ -692,9 +692,13 @@ do
 	local harFel = false
 	for _, v in ipairs(NR._val()) do if v.fel then harFel = true end end
 	local l1, n1 = lyfta()
-	prova("HÄLSNINGEN: inget alternativ lyft före svaret",
-		harFel and n1 >= 2 and #l1 == 0,
-		("%d alternativ, lyfta: %s"):format(n1, table.concat(l1, " | ")))
+	--[[ UI-2: hälsningen är ingen fråga längre utan handlingar i ordning —
+	     där ska just NÄSTA handling lyftas (Ugneta säger den). R2:s regel
+	     gäller frågor, och fyndet nedan är fortfarande en. ]]
+	local forsta = Preparation.nastaMoment(state, "halsa")
+	prova("HÄLSNINGEN: inga felaktiga svar, bara nästa handling lyft",
+		not harFel and n1 == 3 and #l1 == 1 and forsta ~= nil and l1[1] == forsta.namn,
+		("%d handlingar, lyfta: %s"):format(n1, table.concat(l1, " | ")))
 
 	local vy = Preparation.vy(state, Preparation.STATUS.FORBEREDER, rev + 1, "Trixie")
 	rev += 1

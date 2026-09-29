@@ -99,9 +99,19 @@ do
 		k ~= nil and k.Size.X.Offset >= 44 and k.Size.Y.Offset >= 44 and k.Selectable == true,
 		k and ("%dx%d"):format(k.Size.X.Offset, k.Size.Y.Offset) or "saknas")
 	local r = y.ram
-	prova("ytan är ankrad uppe till höger, radie högst 8",
-		r ~= nil and r.AnchorPoint.X == 1 and r.AnchorPoint.Y == 0
+	--[[ UI-2 (docs/P2-UGNETA-INSTRUCTION-CONTRACT.md § 3): med panelen som
+	     värd är ytan panelens FÖRSTA block, i full bredd; utan värd står
+	     den uppe till höger som förut. Båda lägena provas. ]]
+	local pn = r and r.Parent
+	prova("dockad: panelens första block i full bredd",
+		r ~= nil and y.dockad and pn ~= nil and pn.Name == "Panel" and r.LayoutOrder == 0
+			and r.AnchorPoint.X == 0 and r.Size.X.Scale == 1, pn and pn.Name or "ingen förälder")
+	UC.dockaLarare(nil)
+	prova("utan värd: ankrad uppe till höger, 260–300 bred",
+		r.AnchorPoint.X == 1 and r.AnchorPoint.Y == 0 and r.Parent ~= pn
 			and r.Size.X.Offset >= 260 and r.Size.X.Offset <= 300)
+	UC.dockaLarare(pn, 0)
+	prova("och tillbaka i panelen", r.Parent == pn and UC._larare().dockad)
 
 	UC._vaxlaSprak()
 	local e = UC._larare()

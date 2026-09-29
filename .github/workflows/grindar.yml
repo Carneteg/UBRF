@@ -395,6 +395,12 @@ jobs:
           test -f tools/sprakgrind.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/sprakgrind.mjs (steget 'Lokalisering — webben läser samma katalog som Roblox')" >&2; exit 1; }
           node tools/sprakgrind.mjs
 
+      - name: Lokalisering — ett språk i taget i stegkortet (UI-3)
+        run: |
+          set -euo pipefail
+          test -f tools/sprakblandningtest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/sprakblandningtest.mjs (steget 'Lokalisering — ett språk i taget i stegkortet (UI-3)')" >&2; exit 1; }
+          node tools/sprakblandningtest.mjs
+
       - name: Ridkärnan — Gate 01-värden, telemetri, live-koppling och volten
         run: |
           set -euo pipefail

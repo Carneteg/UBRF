@@ -378,7 +378,7 @@ const korten = [];
 for (let i = 0; i < 40; i++) {
   k = await kortet();
   korten.push(k.id);
-  if (k.id === "halsa") { await kortKlick("halsa1"); continue; }
+  // Hälsningen är handlingar i ordning (UI-2): den primära är nästa, som överallt.
   if (k.primar) { await kortKlick(k.primar); continue; }
   const rad = k.rader.find(r => r !== "rad:rida_nu");
   if (!rad) break;

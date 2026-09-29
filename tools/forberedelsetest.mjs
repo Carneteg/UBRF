@@ -89,14 +89,18 @@ const helaKedjan = (s, utforare) => {
   const s = F.nyState("troy", 1);
   prova("första passet har inget fynd", s.fynd === null);
   prova("uppsittning nekas innan något är gjort", F.provaUppsittning(s, "troy")[1] === "pass.aterstar");
-  const fel3 = F.utforMoment(s, "halsa", "halsa3", "troy");
-  prova("felaktigt alternativ (rakt bakifrån) flyttar ingenting",
-    !fel3[0] && fel3[1] === "kanon" && !s.gjorda.halsa?.halsa3 && !s.klara.halsa,
-    `svar ${fel3[1]}`);
+  /* UI-2: hälsningen är handlingar i ordning, inte en fråga. */
+  prova("hälsningen har inget felaktigt alternativ", F.moment("halsa").length === 3 && !F.moment("halsa").some(m => m.fel));
+  const fore = F.utforMoment(s, "halsa", "halsa3", "troy");
+  prova("handen före namnet nekas med «fel tur» och flyttar ingenting",
+    !fore[0] && fore[1] === "forb.fel_tur" && !s.gjorda.halsa?.halsa3 && !s.klara.halsa, `svar ${fore[1]}`);
   prova("fel tur: visitera före hälsning nekas", F.utforMoment(s, "visitera", "vis:ogon", "troy")[1] === "forb.fel_tur");
   prova("fel häst nekas före turordningen", F.utforMoment(s, "visitera", "vis:ogon", "lydia")[1] === "forb.fel_hast");
   F.utforMoment(s, "halsa", "halsa1", "troy");
-  prova("ett rätt val klarar hälsningen", s.klara.halsa === true);
+  prova("en handling klarar inte hälsningen", !s.klara.halsa);
+  F.utforMoment(s, "halsa", "halsa2", "troy");
+  F.utforMoment(s, "halsa", "halsa3", "troy");
+  prova("alla tre i ordning klarar hälsningen", s.klara.halsa === true);
   prova("visitation i ordning: mun före ögon nekas", F.utforMoment(s, "visitera", "vis:mun", "troy")[1] === "forb.fel_tur");
 }
 {
@@ -108,7 +112,7 @@ const helaKedjan = (s, utforare) => {
 }
 {
   const s = F.nyState("troy", 1);
-  F.utforMoment(s, "halsa", "halsa1", "troy");
+  for (const id of ["halsa1", "halsa2", "halsa3"]) F.utforMoment(s, "halsa", id, "troy");
   F.utforMoment(s, "visitera", "vis:ogon", "troy");
   F.utforMoment(s, "visitera", "vis:mun", "troy");
   F.utforMoment(s, "visitera", "vis:sadel", "troy");
@@ -121,11 +125,11 @@ const helaKedjan = (s, utforare) => {
 }
 {
   const s = F.nyState("troy", 1);
-  F.utforMoment(s, "halsa", "halsa2", "troy");
+  F.utforMoment(s, "halsa", "halsa1", "troy");
   const r = F.autoForbered(s);
   prova("autoForbered klarar allt utom leda", r[0] && !s.klara.leda && F.nasta(s).id === "leda", JSON.stringify(r));
-  prova("autoForbered markerar aldrig ett felaktigt alternativ", !s.gjorda.halsa.halsa3);
-  prova("ett manuellt moment nedgraderas aldrig", s.gjorda.halsa.halsa2 === true);
+  prova("stallet gör resten av hälsningen, som stallets", s.gjorda.halsa.halsa2 === "auto" && s.gjorda.halsa.halsa3 === "auto");
+  prova("ett manuellt moment nedgraderas aldrig", s.gjorda.halsa.halsa1 === true);
   prova("stallets hand räknas inte som spelarens", F.egenAndel(s) > 0 && F.egenAndel(s) < 0.2, String(F.egenAndel(s)));
   const t = F.nyState("troy", 1); F.autoForbered(t);
   prova("allt stallets: andel 0, dagsform = START.DAGSFORM", F.egenAndel(t) === 0 && F.dagsform(t) === START.DAGSFORM);

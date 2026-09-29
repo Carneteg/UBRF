@@ -37,6 +37,9 @@ LOKALISERADE = [
     "roblox/src/client/InteractionController.luau",
     "roblox/src/client/TouchControls.luau",
     "roblox/src/client/Prompttext.luau",
+    #[[ UI-3 (docs/P2-UGNETA-INSTRUCTION-CONTRACT.md § 5): narpanelen ritar
+    #   stegkortet och bar Ugnetas dockade yta. ]]
+    "roblox/src/client/Naromrade.luau",
     "roblox/src/server/DorrService.luau",
     "roblox/src/server/StallService.luau",
     #[[ Tjansterna och regelmodulerna bar spelarens NEJ sedan reviewen
@@ -208,7 +211,17 @@ def main() -> int:
                 traffar = (list(NYCKEL_ANROP.finditer(rad)) + list(NYCKEL_ANROP2.finditer(rad))
                            + list(NYCKEL_ANROP3.finditer(rad)) + list(NYCKEL_ATTR.finditer(rad)))
                 for m in traffar:
-                    if m.group(1) not in nycklar:
+                    #[[ SAMMANSATT NYCKEL (P2/UI-3). `Sprak.t("aterkoppling." .. x)`
+                    #   ar en nyckelFAMILJ, inte en nyckel: litteralen ar ett
+                    #   prefix. Forut lastes prefixet som en hel nyckel och
+                    #   grinden foll pa tretton ratta anrop — sa att en riktig
+                    #   okand nyckel drunknade bland dem. Nu: en familj maste
+                    #   finnas (minst en katalognyckel borjar sa), annars FEL.
+                    #   Vilka varden som faktiskt blir ar runtime-specens sak. ]]
+                    if re.match(r"\s*\.\.", rad[m.end():]):
+                        if not any(n.startswith(m.group(1)) for n in nycklar):
+                            fel.append(f"{rel}:{i}  okänd nyckelfamilj \"{m.group(1)}…\"")
+                    elif m.group(1) not in nycklar:
                         fel.append(f"{rel}:{i}  okänd språknyckel \"{m.group(1)}\"")
 
     # 2. Ingen kvarlämnad svensk spelartext i de lokaliserade filerna.

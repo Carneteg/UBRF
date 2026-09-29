@@ -129,7 +129,8 @@ async function gorSjalv(page, stopp = "leda", texter = []) {
     const k = await kort(page);
     texter.push(k.text);
     if (k.id === stopp || !k.synlig) return k;
-    const val = k.id === "halsa" ? k.knappar.find(b => b.id === "halsa1") : k.knappar.find(b => b.primar);
+    // Hälsningen är handlingar i ordning (UI-2): den primära är nästa, som överallt.
+    const val = k.knappar.find(b => b.primar);
     if (val) { await klicka(page, val.id); continue; }
     /* Kort utan momentknapp (hämta sadel/träns): kortets egen prompt. */
     const rad = k.rader.find(r => r.id !== "rad:rida_nu");
@@ -161,16 +162,17 @@ console.log("\n── A. Startvalet vid hästen ──");
   console.log("\n── B. «Gör i ordning … själv» ──");
   await klicka(page, "start:sjalv");
   k = await kort(page);
-  prova("själv → «Hälsa på …» med tre val", k.id === "halsa" && k.rubrik === `Hälsa på ${h.namn}` && k.knappar.length === 3,
+  prova("själv → «Hälsa på …» med tre handlingar, den första primär (UI-2)", k.id === "halsa"
+    && k.rubrik === `Hälsa på ${h.namn}` && k.knappar.length === 3 && k.knappar[0].primar && !k.knappar[2].primar,
     `${k.rubrik} · ${k.knappar.length}`);
   prova("boxen finns under «Fler handlingar»", k.fler);
   prova("R1: «Rida nu» står som prompt med «[Håll inne R]», som i Roblox",
     k.rader.some(r => r.id === "rad:rida_nu" && r.text.includes("[Håll inne R]")), k.rader.map(r => r.text).join(" / "));
   await klicka(page, "halsa3");
   k = await kort(page);
-  prova("rakt bakifrån: kanonens svar, hälsningen står kvar",
-    k.id === "halsa" && k.aterkoppling === "Hon skräms. Gå aldrig rakt bakifrån.", k.aterkoppling);
-  await klicka(page, "halsa1");
+  prova("handen före namnet: «fel tur», hälsningen står kvar (UI-2)",
+    k.id === "halsa" && k.aterkoppling.startsWith("fel tur"), k.aterkoppling);
+  for (const id of ["halsa1", "halsa2", "halsa3"]) await klicka(page, id);
   const foreE = await kort(page);
   await tangent(page, "KeyE", 550);
   const efterE = await kort(page);

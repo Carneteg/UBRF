@@ -92,11 +92,10 @@ local function gorFas(sp, fas, stoppVid)
 		if not ok then return false, fas .. "/" .. m.id .. ": " .. tostring(skal) end
 	end
 end
-local function korrektHalsning()
-	for _, m in ipairs(Preparation.moment("halsa")) do if not m.fel then return m.id end end
-end
-local function felHalsning()
-	for _, m in ipairs(Preparation.moment("halsa")) do if m.fel then return m.id end end
+--[[ UI-2: hälsningen är tre handlingar i ordning (docs/P2-UGNETA-INSTRUCTION-CONTRACT.md § 2). ]]
+local function sistaHalsning()
+	local h = Preparation.moment("halsa")
+	return h[#h].id
 end
 
 print("\n── 0. Definitionerna ur kanon ──")
@@ -104,18 +103,22 @@ check("nycklarna är versionerade och i en egen namnrymd", LM.nyckel("skotsel:ry
 	and string.sub(LM.nyckel("skotsel:rykta"), 1, 8) == "skotsel:" and LM.nyckel("skotsel:okand") == nil
 	and LM.nyckel("halt") ~= LM.nyckel("skotsel:halsa"))
 check("hovarna är fyra, bara hov:-momenten", #LM._skotselMoment("hovar") == 4)
-check("hälsningens kvalificerande moment är bara de riktiga alternativen",
-	#LM._skotselMoment("halsa") == #Preparation.moment("halsa") - 1)
+check("hälsningens kvalificerande moment är alla tre handlingarna, nyckeln v2",
+	#LM._skotselMoment("halsa") == #Preparation.moment("halsa") and #Preparation.moment("halsa") == 3
+		and string.find(LM.nyckel("skotsel:halsa"), ":v2:", 1, true) ~= nil, LM.nyckel("skotsel:halsa"))
 
-print("\n── 1. Hälsningen: fel val inget, rätt val med egen hand = gjort (SYNKRONT) ──")
+print("\n── 1. Hälsningen: fel ordning inget, alla tre med egen hand = gjort (SYNKRONT) ──")
 local A, A_hast = nySession("Egen")
 do
 	check("KONTROLL: laddad, betrodd, häst tilldelad", A_hast ~= nil and SparService.betroddLasning(A))
 	check("allt ej klarat från början", proj(A).skotsel.halsa == "ej_klarad" and proj(A).skotsel.hovar == "ej_klarad")
-	local okFel = gor(A, "halsa", felHalsning())
-	check("fel alternativ: nej, och ingen markör", okFel == false and proj(A).skotsel.halsa == "ej_klarad")
-	local okRatt = gor(A, "halsa", korrektHalsning())
-	check("rätt alternativ med egen hand: sparad", okRatt == true and proj(A).skotsel.halsa == "sparad")
+	local sista = sistaHalsning()
+	local okFore = gor(A, "halsa", sista)
+	check("handen före namnet: nej, och ingen markör", okFore == false and proj(A).skotsel.halsa == "ej_klarad")
+	check("KONTROLL: hälsningen utan den sista", gorFas(A, "halsa", function(id) return id == sista end))
+	check("före sista handlingen: inte gjort", proj(A).skotsel.halsa == "ej_klarad")
+	local okRatt = gor(A, "halsa", sista)
+	check("alla tre med egen hand: sparad", okRatt == true and proj(A).skotsel.halsa == "sparad")
 	local f = radMarkor(A, "halsa")
 	check("lagret: en boolesk markör 1/1, ingen tid", f ~= nil and f.forsok == 1 and f.klarade == 1 and f.senast == 0)
 end
@@ -159,7 +162,7 @@ do
 end
 local C, C_hast = nySession("Blandat")
 do
-	gor(C, "halsa", korrektHalsning())
+	gorFas(C, "halsa")
 	gorFas(C, "visitera")
 	local rykt = Preparation.moment("rykta")
 	gor(C, "rykta", rykt[1].id) -- ett eget
@@ -194,8 +197,9 @@ do
 	end
 	check("KONTROLL: ett pass med fynd för hästen", st ~= nil)
 	if st then
+		-- Hälsningen, alla tre handlingar i ordning (UI-2).
 		for _, m in ipairs(Preparation.moment("halsa")) do
-			if not m.fel then Preparation.utforMoment(st, "halsa", m.id, D_hast); break end
+			Preparation.utforMoment(st, "halsa", m.id, D_hast)
 		end
 		for _, m in ipairs(Preparation.moment("visitera")) do
 			local ok = Preparation.utforMoment(st, "visitera", m.id, D_hast)
@@ -217,7 +221,7 @@ print("\n── 7. Lagring: fel och återhämtning, fullt, okänd historik (SYNK
 do
 	local E = nySession("Lagring")
 	__datastore.felSkriv = true
-	gor(E, "halsa", korrektHalsning())
+	gorFas(E, "halsa")
 	check("skrivfel: 'gjort nu – inte sparat än'", proj(E).skotsel.halsa == "vantar")
 	__datastore.felSkriv = false
 	LM._forsokSparaForProv(E)
@@ -288,7 +292,7 @@ do
 	local G, G_hast = nySession("Luft")
 	-- A-markör (hälsning) står som väntande (skrivfel), sedan skrivs den på schemat och väntar efter landning.
 	__datastore.felSkriv = true
-	gor(G, "halsa", korrektHalsning())
+	gorFas(G, "halsa")
 	__datastore.felSkriv = false
 	check("KONTROLL: hälsningen väntar", proj(G).skotsel.halsa == "vantar")
 	__schemaPa(true)
@@ -333,7 +337,7 @@ print("\n── 11. VERKLIGT FÖRDRÖJT: en passkrivning i luften och en skötse
 	DIREKT — inte hela avslutaPass-flödet. ]]
 do
 	local H = nySession("Passkrivning")
-	gor(H, "halsa", korrektHalsning())
+	gorFas(H, "halsa")
 	gorFas(H, "visitera")
 	__schemaPa(true)
 	__datastore.efterSkriv = function() __datastore.efterSkriv = nil; task.wait() end
@@ -383,7 +387,7 @@ do
 	end
 	local PC, NR = PreparationController, Naromrade
 	check("KONTROLL: den lokala skötselvyn finns", PC.panel() ~= nil)
-	gor(lp, "halsa", korrektHalsning()) -- riktig hälsning: markören pushas till klienten
+	gorFas(lp, "halsa") -- riktig hälsning: markören pushas till klienten
 	check("KONTROLL: klienten fick historiken", PC._skotselHistorik() ~= nil)
 	local sync = Networking.get("PreparationSync")
 	local rev = 10 ^ 6

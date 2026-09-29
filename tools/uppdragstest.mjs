@@ -427,7 +427,7 @@ sektion = "D: hela produktionsvägen";
     const k = await ev(() => ({ id: document.getElementById("stegkort").dataset.kort,
       primar: ([...document.querySelectorAll("#stegkort .skV button.primar")][0] || {}).dataset,
       rader: [...document.querySelectorAll("#stegkort .skRader button")].map(b => b.dataset.id) }));
-    if (k.id === "halsa") { await klickaKort("halsa1"); continue; }
+    // Hälsningen är handlingar i ordning (UI-2): den primära är nästa, som överallt.
     if (k.primar && k.primar.id) { await klickaKort(k.primar.id); await page.waitForTimeout(60); continue; }
     const rad = k.rader.find(r => r !== "rad:rida_nu");
     if (!rad) break;

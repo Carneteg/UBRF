@@ -104,6 +104,7 @@ INVENTARIE = [
     ('ridning', 'tools/ridtest.mjs', ['npm install --no-save --no-package-lock playwright@1.49.1', 'npx playwright install --with-deps chromium']),
     ('ridning', 'tools/build.py', ['python3 tools/build.py']),
     ('ridning', 'tools/sprakgrind.mjs', ['node tools/sprakgrind.mjs']),
+    ('ridning', 'tools/sprakblandningtest.mjs', ['node tools/sprakblandningtest.mjs']),
     ('ridning', 'tools/ridtest.mjs', ['node tools/ridtest.mjs']),
     ('ridning', 'tools/gardtest.mjs', ['node tools/gardtest.mjs']),
     ('ridning', 'tools/uppdragstest.mjs', ['node tools/uppdragstest.mjs']),
