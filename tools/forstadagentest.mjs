@@ -71,10 +71,12 @@ const browser = await chromium.launch({ headless: true,
    pekknappen ANVÄND (src/mobil.js), som är spelarens enda väg att
    interagera utan tangentbord. */
 const MOBIL = process.env.MOBIL === "1";
+/* Språket låses: provet läser svenska texter, och utan locale följer
+   webbläsaren maskinens språk (engelsk Windows gav engelska och rött). */
 const page = await browser.newPage(MOBIL
-  ? { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true,
+  ? { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, locale: "sv-SE",
       userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1" }
-  : { viewport: { width: 1280, height: 720 } });
+  : { viewport: { width: 1280, height: 720 }, locale: "sv-SE" });
 const sidfel = [];
 page.on("pageerror", e => sidfel.push(e.message));
 await page.goto(`http://localhost:${PORT}/`, { waitUntil: "load" });
