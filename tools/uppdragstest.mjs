@@ -33,6 +33,9 @@ page.on("pageerror", e => console.log("PAGEERROR", e.message));
 await page.goto(`http://localhost:${PORT}/ridskolan.html`, { waitUntil: "load" });
 await page.waitForTimeout(1500);
 const ev = (f, a) => page.evaluate(f, a);
+/* Uppdragskedjan gäller en ÅTERVÄNDANDE spelare: på pass 0 tar First Ride
+   över (paritetspasset P1b) och spelaren sitter redan upp. */
+await ev(() => { SPAR.pass = 1; });
 const resultat = [];
 const HORSES_NAMN = b => b.nyNamn;
 function prova(namn, ok, detalj) { resultat.push({ namn, ok });
@@ -223,8 +226,7 @@ sektion = "F: kort text";
     const lagen = [];
     const las = () => { const u = uppdragText();
       lagen.push({ id: u.id, rubrik: u.rubrik, punkter: u.punkter }); };
-    startaVandring(); las();                                  // ridläraren
-    visaTilldelning(); overlay(false);
+    startaVandring();          // P1b: hästen tilldelas automatiskt — inget ridlärarläge
     const b = hittaBox(G.hastId);
     gaTill("stallinne", { x: b.dorr[0], y: b.dorr[1] - 8, rikt: 0 }); las();
     G.skotselRes = { dagsform: 0.7 }; G.hastPlats = "leds"; las();
@@ -406,11 +408,10 @@ sektion = "D: hela produktionsvägen";
   await page.waitForTimeout(400);
 
   const steg = [];
-  await gaHit(await ev(() => STALLINNE.ridlarare.pos), "ridläraren");
-  steg.push(["ridläraren", await prompt()]);
-  await tryckE();
-  await ev(() => { const b = document.getElementById("bGroom"); if (b) b.click(); });
-  await page.waitForTimeout(300);
+  /* P1b: hästen är tilldelad när dagen börjar — inget steg hos
+     ridläraren. Ett pass utan fynd väljs, annars stannar förberedelsen
+     helt riktigt vid välfärdsfrågan. */
+  await ev(() => { let p = 1; while (Forb.fyndFor(G.hastId, p + 1)) p++; SPAR.pass = p; sattAktivHast(G.hastId); });
 
   const box = await ev(() => hittaBox(G.hastId).dorr);
   await gaHit(box, "boxen");

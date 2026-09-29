@@ -278,9 +278,30 @@ prova("en ren gäst möts av karaktärsskaparen", await knappFinns("bSkapHoppa")
 await klicka("bSkapHoppa");
 prova("och kommer till menyn", await knappFinns("bStart"), "bStart");
 await klicka("bStart");
+/* Paritetspasset P1b (docs/WEB-P1B-ASSIGNMENT-FIRST-RIDE-CONTRACT.md):
+   en ny gäst får First Ride som i Roblox — uppsutten på Blackrock Jack i
+   ridhuset, förberedelsen orörd. */
+let fr = await vantaPa(() => ({ scen: G.scen, hastId: G.hastId,
+  forbOrord: !!G.forb && Object.keys(G.forb.gjorda).length === 0,
+  forstaRitten: !!(G.skotselRes && G.skotselRes.forstaRitten) }),
+  null, v => v.scen === "lektion", 15000);
+prova("Rid nu: First Ride — den nya gästen sitter upp på Blackrock Jack i ridhuset",
+  fr.scen === "lektion" && fr.hastId === "blackrock_jack" && fr.forstaRitten, `scen ${fr.scen} · häst ${fr.hastId}`);
+prova("First Ride markerar ingen skötsel", fr.forbOrord === true, String(fr.forbOrord));
+
+/* Stallvägen gäller en ÅTERVÄNDANDE spelare (pass ≥ 1): samma sida,
+   nästa dag. Passnumret är ett sparläge en spelare når på riktigt. */
+await ev(() => {
+  SPAR.pass = 1; startaVandring();
+  /* Ett pass utan fynd för den tilldelade hästen: med ett fynd stannar
+     förberedelsen helt riktigt vid välfärdsfrågan, och det flödet provas
+     i tools/stegkorttest.mjs. */
+  let p = 1; while (Forb.fyndFor(G.hastId, p + 1)) p++;
+  if (p !== 1) { SPAR.pass = p; sattAktivHast(G.hastId); }
+});
 let s = await vantaPa(() => ({ scen: G.scen, ov: !document.getElementById("ov").classList.contains("hide") }),
   null, v => v.scen === "gard" && !v.ov, 15000);
-prova("Rid nu släpper ut spelaren på gården", s.scen === "gard" && !s.ov,
+prova("nästa dag släpps spelaren ut på gården", s.scen === "gard" && !s.ov,
   `scen ${s.scen} · overlay ${s.ov}`);
 
 /* Bildrutetakten i GÅ-SCENEN, mätt i samma körning som lektionens
@@ -299,12 +320,13 @@ s = await station("in i stallet", "stalldörren", v => v.scen === "stallinne") |
 prova("E tar spelaren in i stallet", s.scen === "stallinne", `scen ${s.scen}`);
 
 /* ══ 3. RIDLÄRAREN ══════════════════════════════════════════════════ */
-s = await station("ridläraren", "ridläraren", v => v.ov === true) || s;
-prova("tilldelningspanelen öppnas", s.ov === true && await knappFinns("bGroom"), `overlay ${s.ov}`);
-await klicka("bGroom");
+/* P1b: hästen är redan tilldelad när dagen börjar — ingen panel hos
+   ridläraren. Rotationen är Roblox (Stallet.tilldelaLedig). */
 s = await las();
-prova("spelaren får Blackrock Jack på sin första dag",
-  s.hastId === "blackrock_jack", `hastId ${s.hastId}`);
+const vantat = await ev(() => { const vil = {}; for (const id of Object.keys(HORSES)) if (hastVilarForSkada(id)) vil[id] = true;
+  return tilldelaLedig(SPAR.spelarId, {}, vil, null); });
+prova("hästen är tilldelad automatiskt, utan ridläraren", !!s.hastId && s.hastId === vantat && !s.ov,
+  `hastId ${s.hastId} · rotationen ger ${vantat}`);
 prova("och hästen står i sin box", s.plats === "box", `plats ${s.plats}`);
 
 /* ══ 4. SADELKAMMAREN — ett pussel, inte en knapp ═══════════════════ */

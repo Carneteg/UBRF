@@ -104,8 +104,11 @@ async function firstDay(){
  // riktiga gästgenväg, utan att förskriva localStorage eller profilen.
  if(await button('#bSkapHoppa')){s=await snap('00b-guest');record('Karaktärsskaparens gästgenväg','PASS',{scene:s.scene});}
  if(!await button('#bStart'))throw Error(`Rid nu-knappen saknas efter gäststart: ${JSON.stringify((await state()).buttons)}`);
- s=await snap('01-start');record('Gäststart via Rid nu',s.scene==='gard'?'PASS':'FAIL',{scene:s.scene});
- if(s.scene!=='gard')throw Error('Rid nu öppnade inte gården');
+ s=await snap('01-start');
+ /* Paritetspasset P1b: en ny gäst får First Ride som i Roblox — uppsutten
+    i ridhuset. Det är spelets egen väg, inget kringgående. */
+ record('Gäststart via Rid nu',(s.scene==='gard'||s.scene==='lektion')?'PASS':'FAIL',{scene:s.scene});
+ if(s.scene!=='gard'&&s.scene!=='lektion')throw Error('Rid nu öppnade varken gården eller First Ride');
  if(mode==='touch'){
   const b=page.locator('#pekGang [data-tap="KeyE"]');record('Touch ANVÄND är synlig och fingerstor',await b.count()&&await b.isVisible()&&await b.evaluate(e=>e.getBoundingClientRect().height>=44)?'PASS':'FAIL');
  }

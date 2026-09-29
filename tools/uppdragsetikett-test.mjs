@@ -59,6 +59,9 @@ for (const vy of vyer) {
   if (await page.evaluate(() => !!document.getElementById("bSkapHoppa"))) {
     await page.click("#bSkapHoppa"); await page.waitForTimeout(300);
   }
+  /* Vägvisaren mäts TILL FOTS: en återvändande spelare. På pass 0 tar
+     First Ride över och spelaren sitter redan upp (paritetspasset P1b). */
+  await page.evaluate(() => { SPAR.pass = 1; });
   await page.click("#bStart");
   await page.waitForTimeout(2500);
 

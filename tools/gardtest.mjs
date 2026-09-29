@@ -157,6 +157,8 @@ function prova(namn, ok, detalj) {
    Vägen ut till hagen var hela onboardingen innan man fick rida. */
 {
   const s = await page.evaluate(() => {
+    /* En återvändande spelare: på pass 0 tar First Ride över (P1b). */
+    SPAR.pass = 1;
     startaVandring();
     return { plats: G.hastPlats, leder: G.leder, hamtad: G.hamtad };
   });

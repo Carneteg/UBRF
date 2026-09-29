@@ -1098,6 +1098,12 @@ function gaTill(scen,spawn){
 function startaVandring(){
   InputImpulse.clear("KeyE");
   if(typeof ridSittAv==="function")ridSittAv();   // G02-A: avsutten när ritten lämnas
+  /* Ridreglagen hör till sadeln. De öppnas av sig själva vid första
+     uppsittningen — som numera är First Ride — och låg kvar till fots över
+     stegkortet, så att dess övre knappar inte gick att trycka på (fångat
+     av tools/forstadagentest.mjs). Ny dag, avsuten: stäng dem. H öppnar
+     dem igen. */
+  if(typeof doljKontrollHjalp==="function")doljKontrollHjalp();
   overlay(false);
   G.scen="gard"; G.hastId=null; G.skotselRes=null;
   /* DAGEN BÖRJAR MED HÄSTEN I BOXEN (Tobias produkttest 2026-09-06,

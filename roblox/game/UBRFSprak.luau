@@ -266,8 +266,8 @@ Sprak.text = {
 		en = "That was too quick — wait a moment",
 	},
 	["spel.redan_redo"] = {
-		sv = "Hon står redan färdig",
-		en = "She is already ready",
+		sv = "Hästen står redan färdig",
+		en = "The horse is already ready",
 	},
 	["spel.redan_ridit"] = {
 		sv = "Du har redan ridit idag",
@@ -390,8 +390,8 @@ Sprak.text = {
 		en = "Something is not right.",
 	},
 	["forb.lararen_tar_over"] = {
-		sv = "%s Ridläraren tar över — hon ska inte arbeta idag. Du har gjort precis rätt.",
-		en = "%s The instructor takes over — she is not to work today. You did exactly the right thing.",
+		sv = "%s Ridläraren tar över — hästen ska inte arbeta i dag. Du har gjort precis rätt.",
+		en = "%s The instructor takes over — the horse is not to work today. You did exactly the right thing.",
 	},
 	["forb.inte_din_hast"] = {
 		sv = "det är inte din häst",
@@ -474,16 +474,16 @@ Sprak.text = {
 		en = "Go to %s",
 	},
 	["guide.ga_till_text"] = {
-		sv = "Följ den gyllene pilen till hennes box.",
-		en = "Follow the gold arrow to her box.",
+		sv = "Följ den gyllene pilen till boxen.",
+		en = "Follow the gold arrow to the box.",
 	},
 	["guide.valj_rubrik"] = {
 		sv = "Välj hur du börjar",
 		en = "Choose how to start",
 	},
 	["guide.valj_kort"] = {
-		sv = "Rida nu: stallet gör i ordning %s rätt och leder henne till ridhuset. Eller gör i ordning henne själv — steg för steg.",
-		en = "Ride now: the stable gets %s ready properly and leads her to the arena. Or get her ready yourself — step by step.",
+		sv = "Rida nu: stallet gör i ordning %s rätt och leder hästen till ridhuset. Eller gör i ordning allt själv — steg för steg.",
+		en = "Ride now: the stable gets %s ready properly and leads the horse to the arena. Or do it all yourself — step by step.",
 	},
 	["guide.val_rida_nu"] = {
 		sv = "Rida nu — %s",
@@ -542,8 +542,8 @@ Sprak.text = {
 		en = "Lead %s to the arena",
 	},
 	["guide.leda_text"] = {
-		sv = "Välj «Led till ridhuset» i listan. Hon följer dig.",
-		en = "Choose «Lead to the arena» in the list. She follows you.",
+		sv = "Välj «Led» i listan. Hästen följer dig.",
+		en = "Choose «Lead» in the list. The horse follows you.",
 	},
 	["guide.leder_rubrik"] = {
 		sv = "Led %s till ridhuset",
