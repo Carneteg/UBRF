@@ -1673,11 +1673,17 @@ function v3dStall(lagg,opp){
       .toString(16).padStart(2,"0")).join("");
   const BF_RAM=BF.ram;
   const front=new Bygge(), galler=new Bygge();
+  /* Ryggen mellan mittraderna, samma regel som Anlaggningen.luau: raderna
+     med yttervagg:false möts på en gemensam gräns och saknade vägg. En
+     vägg, inte två — den nycklas på sitt läge. */
+  const ryggByggd=new Set();
   for(const rad2 of S.rader){
     const rad=S.boxar[rad2.id]||[], fx=boxFrontX(rad2), sida=rad2.vetter>0?"W":"E";
+    let ry0=null, ry1=null;
     for(let i=0;i<antalFack(rad2.id);i++){
       const my=boxY(i, rad2.id), y0=my-S.boxB/2, y1=my+S.boxB/2;
       if(y1>S.klubbY)break;
+      if(ry0===null)ry0=y0; ry1=y1;
       front.lada(0.12,BF.heldelH,S.boxB-0.04,BF_HELDEL,
         M4.translation(fx,BF.heldelH/2,my));
       front.lada(0.16,0.10,S.boxB,BF_RAM,M4.translation(fx,BF.ramZ,my));
@@ -1701,6 +1707,14 @@ function v3dStall(lagg,opp){
       v3dTextPanel(b,0.85,0.22,
         M4.mul(M4.translation(fx+ut*0.09,1.62,my),M4.rotY(ut>0?-Math.PI/2:Math.PI/2)));
       S3.statiskt.push({nat:GL.nat(b), tex:v3dNamnTex(h?h.namn.toUpperCase():"—")});
+    }
+    if(!rad2.yttervagg && ry0!==null){
+      const ryggX=rad2.x0+(rad2.vetter>0?0:rad2.djup), k=ryggX.toFixed(3);
+      if(!ryggByggd.has(k)){
+        ryggByggd.add(k);
+        front.lada(0.10,BF.heldelH,ry1-ry0,BF_HELDEL,
+          M4.translation(ryggX,BF.heldelH/2,(ry0+ry1)/2));
+      }
     }
   }
   lagg(front,null); lagg(galler,null);

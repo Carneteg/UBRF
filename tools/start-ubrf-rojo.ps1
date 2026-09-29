@@ -47,7 +47,7 @@ try {
 }
 
 if ($data.name -ne 'UBRF-Horse') {
-    Write-Error ("Projektfilen heter '{0}', inte 'UBRF-Horse'. Startar inte — det har ar inte UBRF:s projekt." -f $data.name)
+    Write-Error ("Projektfilen heter '{0}', inte 'UBRF-Horse'. Startar inte - det har ar inte UBRF:s projekt." -f $data.name)
     exit 1
 }
 
@@ -64,7 +64,7 @@ if ($upptagen) {
     $pid_ = $upptagen.OwningProcess
     $namn = (Get-Process -Id $pid_ -ErrorAction SilentlyContinue).ProcessName
     if (-not $namn) { $namn = 'okand process' }
-    Write-Error ("Porten {0} ar redan upptagen av PID {1} ({2}). Stang den processen sjalv och kor om — jag dodar den inte at dig." -f $Port, $pid_, $namn)
+    Write-Error ("Porten {0} ar redan upptagen av PID {1} ({2}). Stang den processen sjalv och kor om - jag dodar den inte at dig." -f $Port, $pid_, $namn)
     exit 1
 }
 
@@ -74,9 +74,9 @@ if (-not (Get-Command rojo -ErrorAction SilentlyContinue)) {
 }
 
 Write-Host ''
-Write-Host '════════════════════════════════════════════════'
+Write-Host '================================================'
 Write-Host ("  UBRF-Horse Rojo -> localhost:{0}" -f $Port)
-Write-Host '════════════════════════════════════════════════'
+Write-Host '================================================'
 Write-Host ("  projekt : {0}" -f $projekt)
 Write-Host ''
 Write-Host '  I Studio: Rojo-pluginen -> Connect, och kontrollera'
