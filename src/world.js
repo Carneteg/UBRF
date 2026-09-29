@@ -1120,6 +1120,15 @@ function startaVandring(){
     mulet:"Mulet och stilla över Bro.",
     regn:"Regnet trummar på plåttaken."}[G.vader.typ];
   saga(`Du är framme på Husbyvägen 1A. ${vtext} Ridläraren väntar i stallgången.`,4.5);
+  /* Paritetspasset P1b: hästen delas ut AUTOMATISKT, som i Roblox
+     (Stallet.tilldelaLedig). Tävlingsdagen är en sidoaktivitet och
+     fördelas av ridläraren som förut. */
+  if(!G.tavling&&typeof tilldelaDagensHast==="function"){
+    const id=tilldelaDagensHast();
+    if(id)sattAktivHast(id);
+    else saga(tSpr("spel.ingen_hast"),5);
+    if(id&&typeof forstaRittenGaller==="function"&&forstaRittenGaller())forstaRitten();
+  }
 }
 function hudLage(lage){
   const gang=lage==="gang";

@@ -119,6 +119,33 @@ function stegkortRidaNu() {
   skAterkoppla("");
 }
 
+/* ── FIRST RIDE — port av Roblox ForstaRitten ─────────────────────
+   Gäller bara en betrodd läsning, första passet (webbens 0 = Roblox 1),
+   en vanlig dag och en tilldelad häst. Hästen och spelaren ställs vid
+   sargporten, utrustningen sitter på och spelaren sätts upp.
+
+   FÖRBEREDELSEN RÖRS INTE: inget moment blir gjort, inte ens som "auto"
+   — exakt Roblox «skötselchecklistan står kvar ogjord» (ForstaRitten
+   bokför ingenting; LedService.stallFram kvitterar inte ledningen).
+   Dagsformen är därför 0,70: egen andel 0. */
+function forstaRittenGaller() {
+  return typeof SPAR !== "undefined" && !!SPAR && SPAR.pass === 0
+    && typeof SPAR_BETRODD !== "undefined" && SPAR_BETRODD === true
+    && !G.tavling && !!G.hastId && !!G.forb;
+}
+function forstaRitten() {
+  if (!forstaRittenGaller()) return false;
+  const [x, y] = skSargport();
+  STEGKORT.ridaNu = false;
+  G.hastPlats = "leds";
+  gaTill("ridhusinne", { x, y: y + 1.2, rikt: -Math.PI / 2 });
+  VD.hastX = x + 1.1; VD.hastY = y + 1.6; VD.spår.length = 0;
+  stegkortForberedd();
+  G.skotselRes.forstaRitten = true;
+  sittUppDirekt("ridhus");
+  return true;
+}
+
 /* Den manuella ledningen kvitteras när hästen FYSISKT är framme i
    ridhuset (GameplayService.kvitteraLedning) — aldrig av en knapp. */
 function stegkortKvitteraLedning() {

@@ -27,6 +27,21 @@ const ctx = vm.createContext({ console });
 for (const f of ["src/spel/skotsel.js", "src/riding/svar.js", "src/forberedelse.js"])
   vm.runInContext(fs.readFileSync(path.join(ROT, f), "utf8"), ctx, { filename: f });
 const F = vm.runInContext("Forb", ctx);
+
+/* P1b: tilldelningen och boxarna. hastar.js, data.js och site.js laddas
+   i ett eget sammanhang; ur uppdrag.js tas bara tilldelningsregeln (filen
+   bygger annars DOM vid laddning). */
+const vctx = vm.createContext({ console, clamp: (x, a, b) => Math.max(a, Math.min(b, x)) });
+for (const f of ["src/spel/hastar.js", "src/data.js", "src/site.js"])
+  vm.runInContext(fs.readFileSync(path.join(ROT, f), "utf8"), vctx, { filename: f });
+{
+  const u = fs.readFileSync(path.join(ROT, "src/uppdrag.js"), "utf8");
+  const a = u.indexOf("const FORSTA_DAGEN_HAST_ID"), b = u.indexOf("/* Dagens häst för den här spelaren.");
+  if (a < 0 || b < a) throw new Error("tilldelningsregeln saknas i src/uppdrag.js");
+  vm.runInContext(u.slice(a, b) + ";this.tilldelaLedig=tilldelaLedig;", vctx, { filename: "uppdrag.js (utdrag)" });
+}
+const W = { tilldela: vctx.tilldelaLedig, S: vm.runInContext("STALLINNE", vctx) };
+const VILANDE = { inga: {}, jack: { blackrock_jack: true }, tre: { air: true, allan: true, troy: true } };
 const START = vm.runInContext("SVAR_START", ctx);
 
 /* ── A. Reglerna ─────────────────────────────────────────────────── */
@@ -127,6 +142,20 @@ if (luau) {
       const webb = String(F.fyndFor(d[1], Number(d[2])) ?? "nil");
       jamforda++;
       if (webb !== d[3]) prova(`fynd ${d[1]} pass ${d[2]}`, false, `webb ${webb} · roblox ${d[3]}`);
+    } else if (d[0] === "TILLDELA") {
+      const webb = String(W.tilldela(Number(d[1]), {}, VILANDE[d[2]], d[3] === "nil" ? null : d[3]) ?? "nil");
+      jamforda++;
+      if (webb !== d[4]) prova(`tilldelning uid ${d[1]} vilande ${d[2]} önskan ${d[3]}`, false, `webb ${webb} · roblox ${d[4]}`);
+    } else if (d[0] === "BOX") {
+      let rad = "nil", plats = 0, y = 0;
+      for (const r of W.S.rader) {
+        const i = (W.S.boxar[r.id] || []).indexOf(d[1]);
+        if (i >= 0) { rad = r.id; plats = i + 1; const f = W.S.fack[r.id][i]; y = (f.y0 + f.y1) / 2; }
+      }
+      jamforda++;
+      const sammaY = d[2] === "nil" || Math.abs(y - Number(d[4])) < 0.01;
+      if (rad !== d[2] || plats !== Number(d[3]) || !sammaY)
+        prova(`box ${d[1]}`, false, `webb ${rad} ${plats} y ${y.toFixed(3)} · roblox ${d[2]} ${d[3]} y ${d[4]}`);
     } else if (d[0] === "ANDEL") {
       let s = F.nyState("troy", 1);
       if (d[1] === "blandad") {
@@ -139,8 +168,10 @@ if (luau) {
     }
   }
   const fynd = rader.filter(r => r.startsWith("FYND") && !r.endsWith("nil")).length;
-  prova("alla Roblox-rader har samma svar på webben", fel === 0 && jamforda >= 100,
-    `${jamforda} rader jämförda, varav ${fynd} fynddagar`);
+  const tilldelningar = rader.filter(r => r.startsWith("TILLDELA")).length;
+  const boxar = rader.filter(r => r.startsWith("BOX")).length;
+  prova("alla Roblox-rader har samma svar på webben", fel === 0 && jamforda >= 100 && tilldelningar >= 100 && boxar === 33,
+    `${jamforda} rader jämförda: ${fynd} fynddagar, ${tilldelningar} tilldelningar, ${boxar} boxar`);
 }
 
 console.log(fel ? `\n${fel} fel.` : "\nalla gröna");

@@ -97,6 +97,13 @@ function sittUpp(plats){
     const r=Forb.provaUppsittning(G.forb,G.hastId);
     if(!r[0]){ saga(typeof skAvslag==="function"?skAvslag(r):r[1],4); return; }
   }
+  sittUppDirekt(plats);
+}
+/* Själva uppsittningen, efter grinden. First Ride (src/stegkort.js) går
+   hit direkt — som Roblox ForstaRitten, där stallets fysiska utrustning
+   och `tryMount` sätter upp spelaren medan skötselchecklistan står kvar
+   ogjord. Ingen annan väg får gå förbi grinden. */
+function sittUppDirekt(plats){
   if(G.tavling){
     const ratt=G.tavling.typ==="hoppning"?"ridhus":"utebana";
     if(plats!==ratt){

@@ -70,6 +70,41 @@ function sattAktivHast(id){
   return true;
 }
 
+/* ── TILLDELNINGEN — port av Roblox Stallet.tilldelaLedig ─────────
+   Paritetspasset P1b (docs/WEB-P1B-ASSIGNMENT-FIRST-RIDE-CONTRACT.md).
+   Roblox delar ut hästen AUTOMATISKT: önskan (Blackrock Jack första dagen)
+   om hon varken är upptagen eller vilar; vilar hon blir svaret nil — ingen
+   ersättare bakom välfärdsregelns rygg; annars rotationen
+   `ordning[(uid % n + steg) % n]` förbi upptagna och vilande. Ordningen är
+   `Object.keys(HORSES)`, samma lista som exporten ger Roblox. */
+const FORSTA_DAGEN_HAST_ID="blackrock_jack";   // Stallet.FORSTA_DAGEN_HAST
+function tilldelaLedig(uid, upptagna, vilande, onskad){
+  const ordning=(typeof HORSES!=="undefined")?Object.keys(HORSES):[];
+  const n=ordning.length;
+  if(!n)return null;
+  const taget=upptagna||{}, vilar=vilande||{};
+  if(onskad!=null){
+    if(HORSES[onskad]&&!taget[onskad]&&!vilar[onskad])return onskad;
+    if(!HORSES[onskad]||vilar[onskad])return null;
+  }
+  const start=((uid%n)+n)%n;
+  for(let steg=0;steg<n;steg++){
+    const id=ordning[(start+steg)%n];
+    if(!taget[id]&&!vilar[id])return id;
+  }
+  return null;
+}
+/* Dagens häst för den här spelaren. Webben har en spelare, så ingen häst
+   är upptagen av någon annan; vilande är webbens välfärdsspärr. */
+function tilldelaDagensHast(){
+  const vilande={};
+  for(const id of Object.keys(HORSES))
+    if(typeof hastVilarForSkada==="function"&&hastVilarForSkada(id))vilande[id]=true;
+  const forsta=typeof SPAR!=="undefined"&&SPAR&&SPAR.pass===0;
+  const uid=(typeof SPAR!=="undefined"&&SPAR&&Number.isInteger(SPAR.spelarId))?SPAR.spelarId:0;
+  return tilldelaLedig(uid, {}, vilande, forsta?FORSTA_DAGEN_HAST_ID:null);
+}
+
 /* Hästar som går att välja: de som FAKTISKT står uppstallade i en box.
    Utan box finns ingen punkt att peka på, och då kan vägledningen inte
    svara på "var är det". Ingen häst hittas på. */
@@ -111,6 +146,11 @@ function uppdragMal(){
   if(G.scen!=="gard"&&G.scen!=="stallinne"&&G.scen!=="ridhusinne")return null;
   const n=hastNamn();
   if(!G.hastId){
+    /* En vanlig dag delas hästen ut automatiskt (P1b). Finns ingen — alla
+       vilar — väntar spelaren, som i Roblox; inget mål att gå till.
+       Tävlingsdagen är en sidoaktivitet och fördelas fortfarande av
+       ridläraren. */
+    if(!G.tavling)return null;
     const p=(typeof STALLINNE!=="undefined")&&STALLINNE.ridlarare;
     return {id:"ridlarare", rubrik:"Prata med ridläraren",
       punkter:["Stallgången, rakt in genom entrén"],

@@ -55,13 +55,18 @@ async function oppna(vp = { width: 1600, height: 900 }) {
   return page;
 }
 
-/* En ny dag vid hästens box: passnummer, språk, tilldelning, position. */
-async function vidBoxen(page, { pass = 0, sprak = "sv" } = {}) {
+/* En ny dag vid hästens box: passnummer, språk, tilldelning, position.
+   Stallflödet (P1a) gäller en ÅTERVÄNDANDE spelare — på pass 0 tar First
+   Ride (P1b) över. Utan angivet pass väljs därför det första passet ≥ 1
+   där hästen inte har något fynd, ur samma regel som Roblox. */
+async function vidBoxen(page, { pass = null, sprak = "sv" } = {}) {
   return page.evaluate(({ pass, sprak }) => {
     window.SPRAKET = sprak;
-    SPAR.pass = pass;
-    startaVandring();
     const id = valbaraHastar().includes("troy") ? "troy" : valbaraHastar()[0];
+    let p = pass;
+    if (p === null) { p = 1; while (Forb.fyndFor(id, p + 1)) p++; }
+    SPAR.pass = p;
+    startaVandring();
     sattAktivHast(id);
     const b = hittaBox(id);
     gaTill("stallinne", { x: b.dorr[0], y: b.dorr[1], rikt: 0 });
@@ -269,6 +274,71 @@ console.log("\n── E. Engelska ──");
   prova("ingen svenska i panelen genom hela kedjan", blandat.length === 0,
     blandat.length ? blandat[0].replace(/\n/g, " ¦ ").slice(0, 140) : `${texter.length} kort`);
   await page.close();
+}
+
+/* ── G. P1b: automatisk tilldelning och First Ride ─────────────────
+   Varje fall startar i en EGEN webbläsarkontext med ett förinställt
+   sparläge — en förutsättning en spelare når på riktigt — och går sedan
+   genom menyns egen knapp. Provet skriver aldrig i spelets tillstånd. */
+console.log("\n── G. Tilldelning och First Ride (P1b) ──");
+async function medProfil(profil) {
+  const ctx = await browser.newContext({ viewport: { width: 1600, height: 900 } });
+  if (profil !== undefined)
+    await ctx.addInitScript(v => { try { localStorage.setItem("ubrf-ridskolan-v1", v); } catch (_) {} },
+      typeof profil === "string" ? profil : JSON.stringify(profil));
+  const page = await ctx.newPage();
+  page.on("pageerror", e => { console.error("PAGEERROR", e.message); fel++; });
+  await page.goto(`http://localhost:${PORT}/`, { waitUntil: "load" });
+  await page.waitForTimeout(600);
+  await page.evaluate(() => { const b = document.getElementById("bSkapHoppa"); if (b) b.click(); });
+  await page.waitForTimeout(400);
+  const knapp = await page.evaluate(() => { const b = document.getElementById("bStart"); const t = b && b.textContent.trim(); if (b) b.click(); return t; });
+  await page.waitForTimeout(900);
+  const l = await page.evaluate(() => ({
+    scen: G.scen, hastId: G.hastId, dagsform: G.dagsform, betrodd: SPAR_BETRODD, pass: SPAR.pass, spelarId: SPAR.spelarId,
+    forbOrord: G.forb ? Object.keys(G.forb.gjorda).length === 0 && Object.keys(G.forb.klara).length === 0 : null,
+    forstaRitten: !!(G.skotselRes && G.skotselRes.forstaRitten),
+    modal: !document.getElementById("ov").classList.contains("hide"),
+    kort: (document.getElementById("stegkort") || {}).dataset ? document.getElementById("stegkort").dataset.kort : null,
+    saga: (document.getElementById("saga") || {}).textContent || "",
+    vantat: (() => { const vil = {}; for (const id of Object.keys(HORSES)) if (hastVilarForSkada(id)) vil[id] = true;
+      return tilldelaLedig(SPAR.spelarId, {}, vil, SPAR.pass === 0 ? "blackrock_jack" : null); })(),
+  }));
+  return { ctx, page, knapp, l };
+}
+{
+  const { ctx, knapp, l } = await medProfil();
+  prova("ny spelare: «Rid nu» → First Ride, uppsutten i ridhuset", knapp === "Rid nu" && l.scen === "lektion" && l.forstaRitten,
+    `«${knapp}» → ${l.scen}`);
+  prova("First Ride på Blackrock Jack (första dagens häst i Roblox)", l.hastId === "blackrock_jack", l.hastId);
+  prova("First Ride markerar ingen skötsel — inte ens som stallets", l.forbOrord === true, String(l.forbOrord));
+  prova("First Ride: dagsform 0,70 (egen andel 0)", l.dagsform === 0.7, String(l.dagsform));
+  prova("ingen tilldelningsmodal på vägen", !l.modal);
+  await ctx.close();
+}
+{
+  const profil = { grupp: "ledlektion", pass: 3, spelarId: 12345, fortroende: {}, historik: [], rosetter: [], jag: { namn: "Prov" } };
+  const { ctx, knapp, l } = await medProfil(profil);
+  prova("återvändande spelare: ingen First Ride — gården", l.scen === "gard" && !l.forstaRitten, `«${knapp}» → ${l.scen}`);
+  prova("hästen delas ut automatiskt, utan ridläraren", !!l.hastId && !l.modal, `${l.hastId} · modal ${l.modal}`);
+  prova("samma häst som Roblox rotation ger för spelarens nummer", l.hastId === l.vantat && l.spelarId === 12345,
+    `${l.hastId} · väntat ${l.vantat} · spelarId ${l.spelarId}`);
+  prova("stegkortet säger «Gå till …»", l.kort === "ga_till", String(l.kort));
+  await ctx.close();
+}
+{
+  const { ctx, l } = await medProfil("{trasig sparning");
+  prova("otillförlitlig läsning: ingen First Ride (fail closed, som Roblox)", l.betrodd === false && l.scen !== "lektion" && !l.forstaRitten,
+    `betrodd ${l.betrodd} · ${l.scen}`);
+  await ctx.close();
+}
+{
+  const profil = { grupp: "ledlektion", pass: 0, spelarId: 7, historik: [], rosetter: [],
+    fortroende: { blackrock_jack: { rang: 0.5, pass: 1, skada: { namn: "sten i hoven", passKvar: 2 } } } };
+  const { ctx, l } = await medProfil(profil);
+  prova("Jack vilar dag 1: ingen häst — ingen ersättare bakom välfärdsregeln", l.hastId === null && l.scen === "gard", `${l.hastId} · ${l.scen}`);
+  prova("och spelaren får Roblox besked, ingen modal", l.saga.includes("Du har ingen tilldelad häst") && !l.modal, l.saga.slice(0, 80));
+  await ctx.close();
 }
 
 /* ── F ───────────────────────────────────────────────────────────── */
