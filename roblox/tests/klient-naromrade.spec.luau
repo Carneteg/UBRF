@@ -2570,6 +2570,12 @@ do
 	end
 	for _, t in ipairs({ steg, ater, hjalp }) do t.AbsoluteSize = Vector3.new(280, 14, 0) end
 	local KORT = "Walk up from the side. Say her name before you touch her."
+	--[[ UI-2: till fots står instruktionen i Ugnetas dockade yta. R5 mäter
+	     PANELENS egen rad — den som bär ridningens rader och instruktionen
+	     när ytan inte är dockad — så blocket körs med ytan odockad. ]]
+	local ugDock = UgnetaController._larare()
+	local ugForalder = ugDock.ram and ugDock.ram.Parent
+	UgnetaController.dockaLarare(nil)
 	local langaSteg = {}
 	for i = 1, 30 do
 		table.insert(langaSteg, { namn = ("Steg %d: en lång rad om vad som ska göras, och varför"):format(i),
@@ -2629,6 +2635,7 @@ do
 			tostring(steg.Size.Y.Offset), tostring(ater.Size.Y.Offset)))
 
 	PreparationController.panel, PreparationController.hastId = gamlaPanel, gamlaHast
+	if ugDock.dockad and ugForalder then UgnetaController.dockaLarare(ugForalder, 0) end
 	yta.AbsoluteSize = foreStorlek
 	N.satRider(false)
 end

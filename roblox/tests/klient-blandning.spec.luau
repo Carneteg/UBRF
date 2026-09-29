@@ -214,6 +214,17 @@ do
 		tostring(l.ram and l.ram.Parent and l.ram.Parent.Name))
 	prova("den ligger FÖRST (LayoutOrder 0, före rubrikraden)", l.ram and l.ram.LayoutOrder == 0)
 	prova("titeln är «Ugneta · Ridinstruktör»", l.titel == Sprak.t("ugneta.titel"), l.titel)
+	-- Värden rivs och startas om (respawn, lägesbyte): samma yta, dockad igen, inte riven med panelen.
+	local fore = l.ram
+	N.stopp()
+	prova("värden släpper: ytan lever och står utanför den rivna panelen",
+		fore.Parent ~= nil and not U._larare().dockad, tostring(fore.Parent))
+	N.start()
+	state = Preparation.nyState(HAST_ID, 1)
+	visa("preparing")
+	local efter = U._larare()
+	prova("ny värd: samma yta dockad igen", efter.ram == fore and efter.dockad and fore.Parent == N._panel().ram,
+		tostring(fore.Parent and fore.Parent.Name))
 end
 
 print("\n── 2. Hälsningen: Ugneta instruerar, handlingarna i ordning ──")

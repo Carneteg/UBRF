@@ -1586,6 +1586,10 @@ end
 	(`satVard`) är den egna ytan släckt; elementens eget tillstånd, och alltså
 	varje prov som läser det, är orört. ]]
 function UgnetaController.satVard(fn: (() -> ())?)
+	--[[ UI-2: en värd som släpper (Naromrade.stopp) river sin panel strax
+	     efter. Ytan är dockad i den panelen och skulle rivas med — ta
+	     tillbaka den INNAN, så att nästa värd kan docka samma yta. ]]
+	if fn == nil and dockMal ~= nil then UgnetaController.dockaLarare(nil) end
 	vard = fn
 	vardLage()
 end
