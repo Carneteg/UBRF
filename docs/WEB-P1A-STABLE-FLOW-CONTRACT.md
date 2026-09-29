@@ -98,7 +98,9 @@ The whiteboard's list is updated to show the new chain.
 
 **Report:** `HANDOFF_READY_FOR_CHATGPT` with the exact web files, the tests, the falsification, the SHA, and screenshots (desktop + iPad landscape). **Tobias deploys; Vercel is not triggered.**
 
-## R1: the prompts are held, as in Roblox (TOBIAS_DECISION_WEB_P1A_PLATFORM_EXCEPTIONS_20260928, #264 5874393103)
+## R1: the prompts are held, as in Roblox
+
+Status: **BUILT, WEB SUITE GREEN (29/29 incl. MOBIL=1), FALSIFIED (13/13), kor.sh GREEN, build identity `74b7546ecd57`** — READY_FOR_CHATGPT_REVIEW. (TOBIAS_DECISION_WEB_P1A_PLATFORM_EXCEPTIONS_20260928, #264 5874393103)
 Tobias approved **only** "+ Fler handlingar" folding out. The other two differences are removed.
 
 **1. The web's world prompts are held, with Roblox's keys and times** (`InteractionController.luau`):
