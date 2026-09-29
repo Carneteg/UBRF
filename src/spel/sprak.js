@@ -129,6 +129,14 @@ const SPRAK = {
   /* ── Loopen (GameplayService) ──────────────────────────────────────── */
   "spel.ingen_hast": { sv: "Du har ingen tilldelad häst",
     en: "You have not been given a horse" },
+  /* Ankomsten på webben (P2, L4): ridläraren tilldelar inte längre hästen,
+     så meningen om henne i stallgången är borta. Vädret är ett eget
+     argument, på samma språk. */
+  "spel.framme": { sv: "Du är framme på Husbyvägen 1A. %s", en: "You have arrived at Husbyvägen 1A. %s" },
+  "vader.sol": { sv: "Kvällssolen ligger över åkrarna.", en: "The evening sun lies over the fields." },
+  "vader.mulet": { sv: "Mulet och stilla över Bro.", en: "Overcast and still over Bro." },
+  "vader.regn": { sv: "Regnet trummar på plåttaken.", en: "Rain drums on the tin roofs." },
+  "ugneta.nasta_steg": { sv: "Nästa steg", en: "Next step" },
   "spel.hast_saknas": { sv: "Din häst finns inte i världen än",
     en: "Your horse is not in the world yet" },
   "spel.for_langt": { sv: "Du står för långt bort", en: "You are standing too far away" },

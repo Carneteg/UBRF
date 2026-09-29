@@ -222,6 +222,15 @@ local lektionSteg = -math.huge
 
 local LARARE_BREDD = 280
 local LARARE_TOPP = 8
+--[[ UI-2 (docs/P2-UGNETA-INSTRUCTION-CONTRACT.md § 3): med en värd bor
+     ytan ÖVERST I VÄRDENS PANEL — Ugneta instruerar, handlingarna står
+     under. Ägarskapet stannar här (titel, flagga, Text, meddelande); bara
+     platsen flyttar. `dockMal` minns värden även om ytan byggs senare. ]]
+local dockMal: Instance? = nil
+local dockOrdning = 0
+--[[ Ugnetas instruktion till fots, från värden. Sist i meddelandets
+     ordning: lektion, kommentar och coachning går före. ]]
+local instruktion: string? = nil
 --[[ Spelarlistan i Roblox högra hörn: ytan lägger sig till vänster om den
      när den är på, i stället för att täcka den. ]]
 local SPELARLISTA_B = 190
@@ -705,7 +714,10 @@ local function byggLarare(g: ScreenGui)
 
 	l.Parent = g
 	larare = l
+	if dockMal then UgnetaController.dockaLarare(dockMal, dockOrdning) end
 end
+
+
 
 --[[ Framåtdeklarerade: bygget kopplar dem, de definieras nedanför. ]]
 local sprakBytt: () -> ()
@@ -1321,6 +1333,9 @@ local function lararMeddelande(): string?
 	if radNyckel and os.clock() - radTid < RAD_FARSK then
 		return Sprak.t(radNyckel, table.unpack(radArgs))
 	end
+	--[[ UI-2: till fots står värdens instruktion för steget här — sist,
+	     så att en lektion, en kommentar eller coachningen alltid går före. ]]
+	if instruktion and dockMal then return instruktion end
 	return nil
 end
 
@@ -1353,7 +1368,8 @@ local function ritaLarare()
 		local inset = game:GetService("GuiService"):GetGuiInset()
 		topp = inset.Y + LARARE_TOPP
 	end)
-	l.Position = UDim2.new(1, -hoger, 0, topp)
+	--[[ Dockad (UI-2) äger panelen placeringen. ]]
+	if not dockMal then l.Position = UDim2.new(1, -hoger, 0, topp) end
 	local m = lararText
 	if m then
 		local txt = lararMeddelande()
@@ -1379,6 +1395,51 @@ vardLage = function()
 	local l = larare
 	if l then l.Visible = vard ~= nil end
 	ritaLarare()
+end
+
+--[[ UI-2: lägg Ugnetas yta överst i värdens panel (`forälder` med en
+     UIListLayout), eller — med nil — tillbaka uppe till höger. Dockad tar
+     panelen hela bredden och placeringen; `ritaLarare` rör då inte
+     positionen. ]]
+function UgnetaController.dockaLarare(foralder: Instance?, ordning: number?)
+	dockMal = foralder
+	dockOrdning = ordning or 0
+	local l = larare
+	if not l then return end
+	if foralder then
+		l.AnchorPoint = Vector2.new(0, 0)
+		l.Position = UDim2.new(0, 0, 0, 0)
+		l.Size = UDim2.new(1, 0, 0, 0)
+		l.LayoutOrder = dockOrdning
+		l.BackgroundTransparency = 0.15
+		l.Parent = foralder
+	else
+		l.AnchorPoint = Vector2.new(1, 0)
+		l.Size = UDim2.fromOffset(LARARE_BREDD, 0)
+		l.BackgroundTransparency = 0.3
+		if gui then l.Parent = gui end
+	end
+	ritaLarare()
+end
+
+--[[ UI-2: ytan själv, för värdens platsbudget (nil innan den byggts). ]]
+function UgnetaController.lararRam(): Frame?
+	return larare
+end
+
+--[[ UI-2: värdens instruktion för steget till fots (nil släcker). ]]
+function UgnetaController.satInstruktion(text: string?)
+	instruktion = if text ~= nil and text ~= "" then text else nil
+	ritaLarare()
+end
+
+--[[ Står värdens instruktion i Ugnetas yta just nu? Då ska värden inte
+     visa den en gång till. Falskt när ytan inte är byggd eller synlig, när
+     den inte är dockad, och när något högre i ordningen talar. ]]
+function UgnetaController.visarInstruktion(): boolean
+	local l, m = larare, lararText
+	return instruktion ~= nil and l ~= nil and l.Visible and dockMal ~= nil
+		and m ~= nil and m.Visible and m.Text == instruktion
 end
 
 --[[ SPRÅKET BYTTES: skriv om det som står, på plats.
@@ -1453,6 +1514,8 @@ function UgnetaController._larare(): { [string]: any }
 		en = flaggEn ~= nil and flaggEn.Visible,
 		knapp = flaggKnapp,
 		ram = l,
+		dockad = dockMal ~= nil,
+		instruktion = instruktion,
 	}
 end
 

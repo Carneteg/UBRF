@@ -43,8 +43,12 @@ const Forb = (() => {
     if (!f) return [];
     let ut;
     if (fasId === "halsa") {
+      /* UI-2: handlingar i ordning. `text` = Ugnetas instruktion för
+         handlingen, `kvittens` = det som sägs när den är gjord — som
+         Preparation.halsMoment i Roblox. */
       ut = HALSNING.map((h, i) => ({ id: "halsa" + (i + 1), namn: h.t, namnEn: h.tEn,
-        text: h.svar, textEn: h.svarEn, steg: 1, fel: !h.ratt }));
+        text: h.text || h.svar, textEn: h.textEn || h.svarEn,
+        kvittens: h.svar, kvittensEn: h.svarEn, steg: i + 1, fel: !h.ratt }));
     } else if (fasId === "visitera") {
       ut = VISITPUNKT.map((p, i) => ({ id: "vis:" + p.id, namn: p.namn, namnEn: p.namnEn,
         text: p.ok, textEn: p.okEn, steg: i + 1, punkt: p.id }));

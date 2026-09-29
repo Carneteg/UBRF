@@ -1122,10 +1122,9 @@ function startaVandring(){
   const s=ANL.spawn; VD.px=s.x;VD.py=s.y;VD.rikt=s.rikt;VD.spår.length=0;
   VD.fart=0; kameraNollstall();
   hudLage("gang");
-  const vtext={sol:"Kvällssolen ligger över åkrarna.",
-    mulet:"Mulet och stilla över Bro.",
-    regn:"Regnet trummar på plåttaken."}[G.vader.typ];
-  saga(`Du är framme på Husbyvägen 1A. ${vtext} Ridläraren väntar i stallgången.`,4.5);
+  /* P2 (L4): på spelarens språk, och utan «ridläraren väntar» — hästen
+     delas ut automatiskt sedan P1b. */
+  saga(tSpr("spel.framme", tSpr("vader."+G.vader.typ)),4.5);
   /* Paritetspasset P1b: hästen delas ut AUTOMATISKT, som i Roblox
      (Stallet.tilldelaLedig). Tävlingsdagen är en sidoaktivitet och
      fördelas av ridläraren som förut. */

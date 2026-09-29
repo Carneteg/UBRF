@@ -2236,6 +2236,13 @@ local function kvittens(lista: any, momentId: string): string
 				En CHECKLISTA bär i stället nästa instruktion som text, och
 				att upprepa den man just följt vore ingen kvittens alls.
 				Där räcker det korta ordet. ]]
+			--[[ UI-2: ett moment med egen `kvittens` (hälsningens
+			     handlingar) säger den — kanonens ord, inte det korta. ]]
+			if type(m.kvittens) == "string" and m.kvittens ~= "" then
+				local k = Preparation.momentPaSprak(m, Sprak.eget(),
+					senasteVy and senasteVy.hastnamn).kvittens
+				if type(k) == "string" and k ~= "" then return "\u{2713}  " .. k end
+			end
 			if m.fel == true or arValNu then
 				local t = Preparation.momentPaSprak(m, Sprak.eget(),
 					senasteVy and senasteVy.hastnamn).text

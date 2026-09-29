@@ -122,7 +122,11 @@ LektionsMinne.SKOTSEL = table.freeze({ "halsa", "visitera", "rykta", "hovar" })
 	momentens INNEBÖRD (ordning, ersatta moment, nya regler) KRÄVER att
 	versionen här höjs. Ändras bara ANTALET moment byts nyckeln ändå (antalet
 	ingår). En oförändrad definition behåller sin nyckel. ]]
-local SKOTSEL_VERSION: { [string]: string } = { halsa = "v1", visitera = "v1", rykta = "v1", hovar = "v1" }
+--[[ halsa v2 (UI-2, docs/P2-UGNETA-INSTRUCTION-CONTRACT.md § 2): hälsningen
+     gick från ett VAL (ett av två rätta svar räckte) till tre HANDLINGAR i
+     ordning där alla krävs. Innebörden ändrades, alltså ny version. Gamla
+     markörer under v1-nyckeln rörs inte; de räknas bara inte mot v2. ]]
+local SKOTSEL_VERSION: { [string]: string } = { halsa = "v2", visitera = "v1", rykta = "v1", hovar = "v1" }
 local function skotselMoment(sid: string): { string }
 	local ut = {}
 	local fas = if sid == "hovar" then "iordning" else sid
@@ -367,7 +371,9 @@ function LektionsMinne.skotselMoment(player: any, state: any, fasId: string, mom
 	elseif fasId == "iordning" and string.sub(momentId, 1, 4) == "hov:" then sid = "hovar" end
 	if not sid then return end
 	local ids = skotselMoment(sid)
-	if sid == "halsa" then
+	--[[ Val eller checklista HÄRLEDS ur kanon (`Preparation.arVal`), inte ur
+	     fasens namn: hälsningen var ett val och är sedan UI-2 en checklista. ]]
+	if Preparation.arVal(if sid == "hovar" then "iordning" else sid) then
 		-- Ett val: det riktiga alternativet spelaren just valde med egen hand.
 		if table.find(ids, momentId) == nil then return end
 	else

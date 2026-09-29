@@ -76,8 +76,13 @@ It does NOT cover, and does not change:
 ## Storage (the existing v2 `framsteg`, no schema change)
 
 - **Key:** `skotsel:<id>:<version>:<n>`, where the version comes from an
-  explicit table (`SKOTSEL_VERSION`, all `v1`) and `n` is the number of
+  explicit table (`SKOTSEL_VERSION`; `halsa` is `v2` since UI-2, the rest `v1`) and `n` is the number of
   qualifying moments in the current canon.
+  - UI-2 (docs/P2-UGNETA-INSTRUCTION-CONTRACT.md): the greeting changed from a
+    choice (one of two right answers) to three ordered actions that are all
+    required, so `halsa` was bumped to `v2`. Choice vs checklist is derived
+    from `Preparation.arVal`, not the phase name. Old `v1` markers are kept
+    untouched and simply do not count toward `v2`.
   - Correction (leading package): the earlier claim that ANY changed canon
     changes the key was wrong. A change in the number of moments changes
     the key automatically. A change in the qualifying MEANING (reordering,

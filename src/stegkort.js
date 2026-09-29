@@ -72,7 +72,10 @@ function skUtfor(fasId, m) {
   const r = Forb.utforMoment(s, fasId, m.id, G.hastId);
   if (!r[0]) { skAterkoppla(skAvslag(r)); return; }
   if (r[2] === "fynd") { skAterkoppla(""); return; }
-  if (fasId === "halsa" || fasId === "visitera") skAterkoppla(skKanon(m, "text"));
+  /* Ett moment med egen kvittens (hälsningens handlingar, UI-2) säger
+     den, som PreparationController.kvittens i Roblox. */
+  if (m.kvittens) skAterkoppla("✓  " + skKanon(m, "kvittens"));
+  else if (fasId === "visitera") skAterkoppla(skKanon(m, "text"));
   else skAterkoppla("✓  " + tSpr("hud.bra"));
 }
 
@@ -242,12 +245,16 @@ function stegkortKort(antaNara) {
   const kort = (id, rubrik, text, val, egna) => ({ id, rubrik, text, val: val || [], fler,
     rader: [...(egna || []), ridaNuRad].slice(0, 3) });
 
-  if (fas.id === "halsa")
-    return kort("halsa", tSpr("guide.halsa_rubrik", n), skKanon(fas, "text"),
-      Forb.moment("halsa").map(m => ({ id: m.id, text: skKanon(m, "namn"), primar: false,
-        gor() { skUtfor("halsa", m); } })));
-
   const m = Forb.nastaMoment(s, fas.id);
+  /* UI-2: hälsningen är handlingar i ordning, inte en fråga. Ugneta säger
+     nästa handling (momentets `text`); de ogjorda står kvar som val och
+     bara den som står på tur är primär — som Roblox, där panelen visar
+     de aktiva momenten med `paTur` markerat. */
+  if (fas.id === "halsa")
+    return kort("halsa", tSpr("guide.halsa_rubrik", n), skKanon(m, "text"),
+      Forb.moment("halsa").filter(x => !x.fel && !s.gjorda.halsa?.[x.id]).map(x => ({ id: x.id,
+        text: skKanon(x, "namn"), primar: x.id === m.id, gor() { skUtfor("halsa", x); } })));
+
   if (fas.id === "visitera")
     return kort("visitera", tSpr("guide.visitera_rubrik", n) + raknare("visitera"),
       skKanon(fas, "text"), [knapp(m, "visitera")]);
@@ -315,6 +322,21 @@ function stegkortInstallera() {
     background:rgba(24,27,33,.88);color:#EDEAE3;border-radius:8px;padding:12px 12px 10px;
     font:14px/1.35 system-ui,-apple-system,"Segoe UI",sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.35)}
   #stegkort[hidden]{display:none!important}
+  #stegkort .skU{margin:-4px -4px 10px;padding:6px 8px 8px;border-radius:6px;background:rgba(255,255,255,.06);
+    border-left:3px solid rgb(236,196,92)}
+  #stegkort .skUh{display:flex;align-items:center;gap:8px;min-height:32px}
+  #stegkort .skUt{flex:1;font-weight:650;font-size:13px;color:rgb(236,196,92);letter-spacing:.01em}
+  #stegkort button.skSprak{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:6px;cursor:pointer;
+    min-height:32px;padding:4px 8px;border-radius:6px;background:rgba(255,255,255,.07);font-size:12.5px;color:#EDEAE3;width:auto}
+  #stegkort button.skSprak:hover,#stegkort button.skSprak:focus-visible{background:rgba(255,255,255,.14)}
+  #stegkort .skFl{display:inline-block;width:20px;height:13px;border-radius:2px;flex:none}
+  #stegkort .skFl.sv{background:linear-gradient(90deg,transparent 6px,#FECC02 6px,#FECC02 9px,transparent 9px),
+    linear-gradient(0deg,transparent 5px,#FECC02 5px,#FECC02 8px,transparent 8px),#006AA7}
+  #stegkort .skFl.en{background:linear-gradient(90deg,transparent 8px,#C8102E 8px,#C8102E 12px,transparent 12px),
+    linear-gradient(0deg,transparent 5px,#C8102E 5px,#C8102E 8px,transparent 8px),
+    linear-gradient(90deg,transparent 7px,#fff 7px,#fff 13px,transparent 13px),
+    linear-gradient(0deg,transparent 4px,#fff 4px,#fff 9px,transparent 9px),#012169}
+  #stegkort .skUi{margin-top:4px;color:#EDEAE3}
   #stegkort .skR{font-weight:650;font-size:15px;margin:0 0 4px}
   #stegkort .skT{margin:0 0 8px;color:#D6D2C8}
   #stegkort .skV{display:grid;gap:6px}
@@ -358,8 +380,16 @@ function stegkortRita(tvinga) {
   const val = (k.val || []).slice(0, 4);
   const rader = (k.rader || []).slice(0, 3);
   el.dataset.kort = k.id;
-  el.innerHTML = `<div class="skR">${esc(k.rubrik)}</div>`
-    + (k.text ? `<div class="skT">${esc(k.text)}</div>` : "")
+  /* UI-2 (docs/P2-UGNETA-INSTRUCTION-CONTRACT.md § 4): Ugneta överst —
+     hennes titel, språkflaggan och hennes instruktion. Handlingarna under.
+     Samma ordning som Roblox, där hennes yta dockas som panelens första
+     block. Kortets instruktion står EN gång, i hennes ruta. */
+  const sv = typeof SPRAKET === "undefined" || SPRAKET !== "en";
+  el.innerHTML = `<div class="skU"><div class="skUh"><span class="skUt">${esc(tSpr("ugneta.titel"))}</span>`
+    + `<button class="skSprak" data-sprak="1" aria-label="${esc(tSpr("sprak.byt"))}" title="${esc(tSpr("sprak.byt"))}">`
+    + `<span class="skFl ${sv ? "sv" : "en"}"></span>${esc(tSpr("sprak.nuvarande"))}</button></div>`
+    + (k.text ? `<div class="skUi">${esc(k.text)}</div>` : "") + `</div>`
+    + `<div class="skR">${esc(k.rubrik)}</div>`
     + (val.length ? `<div class="skV">${val.map((v, i) =>
         `<button data-i="${i}" data-id="${esc(v.id)}" class="${v.primar ? "primar" : ""}">${esc(v.text)}</button>`).join("")}</div>` : "")
     + (rader.length ? `<div class="skRader">${rader.map((r, i) =>
@@ -398,10 +428,25 @@ function stegkortRita(tvinga) {
   }
   const fb = el.querySelector("button[data-fler]");
   if (fb) fb.onclick = () => { STEGKORT.fler = !STEGKORT.fler; stegkortRita(true); };
+  const sb = el.querySelector("button[data-sprak]");
+  if (sb) sb.onclick = () => stegkortVaxlaSprak();
+}
+
+/* Språkflaggan (UI-2/P2): samma som Roblox `vaxlaSprak` — sv ↔ en, för
+   den här sessionen (Roblox sparar inte heller valet; attributet
+   UBRFSprak lever tills spelaren går). Utgångsläget är fortfarande
+   webbläsarens språk. Allt som ritas med tSpr följer med vid nästa
+   ritning; kortet ritas om direkt. */
+function stegkortVaxlaSprak() {
+  if (typeof window === "undefined") return;
+  window.SPRAKET = window.SPRAKET === "en" ? "sv" : "en";
+  STEGKORT.aterkoppling = "";
+  stegkortRita(true);
 }
 
 if (typeof window !== "undefined") {
   window.STEGKORT = STEGKORT;
   window.stegkortKort = stegkortKort;
+  window.stegkortVaxlaSprak = stegkortVaxlaSprak;
 }
 stegkortInstallera();

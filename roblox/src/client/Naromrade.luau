@@ -1154,6 +1154,10 @@ local function bygg()
 	tak.Name = "Tak"
 	tak.Parent = pn
 	panelRam = pn
+	--[[ UI-2 (docs/P2-UGNETA-INSTRUCTION-CONTRACT.md § 3): Ugneta överst —
+	     hennes yta (titel, Text, flagga, instruktion) är panelens första
+	     block, handlingarna står under. Ytan ägs av UgnetaController. ]]
+	UgnetaController.dockaLarare(pn, 0)
 
 	local function etikettYta(namn: string, ordning: number, storlek: number,
 		fet: boolean): TextLabel
@@ -1682,7 +1686,9 @@ local function placera(pn: Frame)
 	end
 	local tak = math.max(0, math.min(math.max(0, ovanfor) - KANT, hojd * 0.4))
 	local rr = rubrikEtikett and rubrikEtikett.Parent
-	local fast = 20 + h(rr) + h(ram)
+	--[[ UI-2: Ugnetas dockade yta står fast överst, som rubriken. ]]
+	local ug = UgnetaController.lararRam()
+	local fast = 20 + h(rr) + h(ram) + (if ug and ug.Parent == pn then h(ug) else 0)
 	local vl = valYta
 	local fragaBehov, fragaGolv = 0, 0
 	if vl and vl.Visible then
@@ -1784,6 +1790,27 @@ local function arStartskarm(g: any, minHast: string?, lage: string?): boolean
 		and PreparationController.kontext() ~= "ledning"
 end
 
+--[[ UI-3: VARJE KORTRUBRIK ÄR EN LITERAL NYCKEL. Förut sattes nyckeln
+     ihop (`"guide." .. nyckel .. "_rubrik"`) och språkgrinden kunde inte
+     se den; nu står varje nyckel utskriven, och ett okänt kort felar högt
+     i stället för att visa en rå nyckel. ]]
+local GUIDE_RUBRIK: { [string]: (string) -> string } = {
+	leder = function(n) return Sprak.t("guide.leder_rubrik", n) end,
+	dorr = function(n) return Sprak.t("guide.dorr_rubrik", n) end,
+	ga_till = function(n) return Sprak.t("guide.ga_till_rubrik", n) end,
+	sittupp = function(n) return Sprak.t("guide.sittupp_rubrik", n) end,
+	valj = function(n) return Sprak.t("guide.valj_rubrik", n) end,
+	halsa = function(n) return Sprak.t("guide.halsa_rubrik", n) end,
+	visitera = function(n) return Sprak.t("guide.visitera_rubrik", n) end,
+	rykta = function(n) return Sprak.t("guide.rykta_rubrik", n) end,
+	hovar = function(n) return Sprak.t("guide.hovar_rubrik", n) end,
+	hamta_sadel = function(n) return Sprak.t("guide.hamta_sadel_rubrik", n) end,
+	hamta_trans = function(n) return Sprak.t("guide.hamta_trans_rubrik", n) end,
+	sadla = function(n) return Sprak.t("guide.sadla_rubrik", n) end,
+	transa = function(n) return Sprak.t("guide.transa_rubrik", n) end,
+	leda = function(n) return Sprak.t("guide.leda_rubrik", n) end,
+}
+
 local function guideSteg(g: any, lage: string?, text: string?, hastnamn: string?, stangdDorr: boolean,
 	valtSjalv: boolean?): any
 	if type(g) ~= "table" then return nil end
@@ -1793,7 +1820,7 @@ local function guideSteg(g: any, lage: string?, text: string?, hastnamn: string?
 	if lage == "eftervard" or lage == "raknat" or lage == "fynd" then return nil end
 	local namn = if hastnamn and hastnamn ~= "" then hastnamn else Sprak.t("guide.din_hast")
 	local function kort(nyckel: string, instr: string?, raknare: boolean?)
-		return { rubrik = Sprak.t("guide." .. nyckel .. "_rubrik", namn), text = instr or "", raknare = raknare == true }
+		return { rubrik = GUIDE_RUBRIK[nyckel](namn), text = instr or "", raknare = raknare == true }
 	end
 	if PreparationController.kontext() == "ledning" then
 		return kort("leder", Sprak.t("guide.leder_text", namn))
@@ -1851,6 +1878,19 @@ end
 	Ur skötselns adapter (`PreparationController.panel`). En kvittens eller
 	ett nej står i återkopplingsfältet; nästa steg står kvar ovanför i
 	stället för att skrivas över. Utan tilldelning: ett ärligt besked. ]]
+--[[ UI-2: instruktionen till fots är UGNETAS. Den skrivs till hennes yta;
+     panelens egen rad bär den bara när ytan inte visar den (ej byggd, en
+     lektion talar, bänken) — så att den aldrig står två gånger och aldrig
+     försvinner. ]]
+local function visaInstruktion(text: string)
+	UgnetaController.satInstruktion(if text ~= "" then text else nil)
+	local hosUgneta = text ~= "" and UgnetaController.visarInstruktion()
+	if stegEtikett then
+		stegEtikett.Text = text
+		stegEtikett.Visible = text ~= "" and not hosUgneta
+	end
+end
+
 local function fyllText(data: any, minHast: string?, hastnamn: string?)
 	local lage: string
 	local steg = ""
@@ -1890,10 +1930,7 @@ local function fyllText(data: any, minHast: string?, hastnamn: string?)
 				steg = gs.text
 				sistaInstruktion = steg
 			end
-			if stegEtikett then
-				stegEtikett.Text = steg
-				stegEtikett.Visible = steg ~= ""
-			end
+			visaInstruktion(steg)
 			visaAterkoppling(ater)
 			local hjalpG = stegLista(data.steg or {})
 			if type(data.historik) == "string" and data.historik ~= "" then
@@ -1904,10 +1941,7 @@ local function fyllText(data: any, minHast: string?, hastnamn: string?)
 		end
 	end
 	if rubrikEtikett then rubrikEtikett.Text = rubrikFor(hastnamn, lage) end
-	if stegEtikett then
-		stegEtikett.Text = steg
-		stegEtikett.Visible = steg ~= ""
-	end
+	visaInstruktion(steg)
 	visaAterkoppling(ater)
 	--[[ C: skötselminnets avsnitt EFTER dagens steg, åtskilt — samma
 		valfria hjälplista, ingen rad och ingen fråga. ]]
@@ -1937,6 +1971,7 @@ rita = function()
 		panelen säger bara vilka. Motorns bubblor får tillbaka sin bild, men
 		ridningens prompter är av när man sitter upp. ]]
 	if rider then
+		UgnetaController.satInstruktion(nil)
 		slappHall()
 		senaste = {}
 		table.clear(valRader)
@@ -2362,7 +2397,14 @@ function Naromrade._panel(): { [string]: any }
 	return {
 		synlig = pn ~= nil and pn.Visible,
 		rubrik = if rubrikEtikett then rubrikEtikett.Text else "",
-		steg = if stegEtikett and stegEtikett.Visible then stegEtikett.Text else "",
+		--[[ UI-2: `steg` är instruktionen SOM SPELAREN SER DEN — i Ugnetas
+		     dockade yta eller på panelens egen rad. `stegHos` säger var, så
+		     att ett prov kan kräva att den står på exakt ett ställe. ]]
+		steg = if stegEtikett and stegEtikett.Visible then stegEtikett.Text
+			elseif UgnetaController.visarInstruktion() then (UgnetaController._larare().text or "")
+			else "",
+		stegHos = if stegEtikett and stegEtikett.Visible and stegEtikett.Text ~= "" then "panel"
+			elseif UgnetaController.visarInstruktion() then "ugneta" else nil,
 		ater = if aterEtikett and aterEtikett.Visible then aterEtikett.Text else "",
 		hjalp = if hjalpText and hjalpText.Visible then hjalpText.Text else "",
 		hjalpKnapp = hjalpKnapp,
