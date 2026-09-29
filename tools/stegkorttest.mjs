@@ -70,7 +70,12 @@ async function vidBoxen(page, { pass = null, sprak = "sv" } = {}) {
     sattAktivHast(id);
     const b = hittaBox(id);
     gaTill("stallinne", { x: b.dorr[0], y: b.dorr[1], rikt: 0 });
-    return { id, namn: HORSES[id].namn };
+    /* Vänta på två riktiga bildrutor: stegkortet ritas i spelloopen, och
+       första rutan i en ny scen bygger 3D-världen — med mjukvarurendering
+       över en sekund. En fast väntan läste kortet innan det fanns
+       (avsnitt A rött 3 av 4 på 39d8919). */
+    return new Promise(klar => requestAnimationFrame(() => requestAnimationFrame(
+      () => klar({ id, namn: HORSES[id].namn }))));
   }, { pass, sprak });
 }
 const vanta = page => page.waitForTimeout(250);
@@ -281,11 +286,20 @@ console.log("\n── E. Engelska ──");
    sparläge — en förutsättning en spelare når på riktigt — och går sedan
    genom menyns egen knapp. Provet skriver aldrig i spelets tillstånd. */
 console.log("\n── G. Tilldelning och First Ride (P1b) ──");
-async function medProfil(profil) {
-  const ctx = await browser.newContext({ viewport: { width: 1600, height: 900 } });
+async function medProfil(profil, konto) {
+  /* Språket låses: utan locale följer webbläsaren maskinens språk, och på
+     en engelsk Windows blev beskeden engelska och provet rött. */
+  const ctx = await browser.newContext({ viewport: { width: 1600, height: 900 }, locale: "sv-SE" });
+  /* Provet pratar aldrig med den riktiga molnlagringen: en inloggning här
+     är en sparad session i localStorage, och varje anrop mot Supabase
+     avbryts innan det lämnar maskinen. */
+  await ctx.route(/supabase\.co/, r => r.abort());
   if (profil !== undefined)
     await ctx.addInitScript(v => { try { localStorage.setItem("ubrf-ridskolan-v1", v); } catch (_) {} },
       typeof profil === "string" ? profil : JSON.stringify(profil));
+  if (konto)
+    await ctx.addInitScript(id => { try { localStorage.setItem("ubrf-synk-session-v1",
+      JSON.stringify({ access_token: "prov", refresh_token: "prov", user: { id } })); } catch (_) {} }, konto);
   const page = await ctx.newPage();
   page.on("pageerror", e => { console.error("PAGEERROR", e.message); fel++; });
   await page.goto(`http://localhost:${PORT}/`, { waitUntil: "load" });
@@ -301,8 +315,9 @@ async function medProfil(profil) {
     modal: !document.getElementById("ov").classList.contains("hide"),
     kort: (document.getElementById("stegkort") || {}).dataset ? document.getElementById("stegkort").dataset.kort : null,
     saga: (document.getElementById("saga") || {}).textContent || "",
+    tid: tilldelningsId(),
     vantat: (() => { const vil = {}; for (const id of Object.keys(HORSES)) if (hastVilarForSkada(id)) vil[id] = true;
-      return tilldelaLedig(SPAR.spelarId, {}, vil, SPAR.pass === 0 ? "blackrock_jack" : null); })(),
+      return tilldelaLedig(tilldelningsId(), {}, vil, SPAR.pass === 0 ? "blackrock_jack" : null); })(),
   }));
   return { ctx, page, knapp, l };
 }
@@ -338,6 +353,45 @@ async function medProfil(profil) {
   const { ctx, l } = await medProfil(profil);
   prova("Jack vilar dag 1: ingen häst — ingen ersättare bakom välfärdsregeln", l.hastId === null && l.scen === "gard", `${l.hastId} · ${l.scen}`);
   prova("och spelaren får Roblox besked, ingen modal", l.saga.includes("Du har ingen tilldelad häst") && !l.modal, l.saga.slice(0, 80));
+  await ctx.close();
+}
+
+/* ── G2. P1b R1: kontot styr rotationen (M1), First Ride-grinden (L1) ── */
+console.log("\n── G2. Kontot och First Ride-grinden (P1b R1) ──");
+{
+  /* Samma konto, två «enheter» med var sin profil och var sitt spelarId —
+     precis läget där hästen förut skilde sig mellan iPad och dator. */
+  const konto = "3f1c2a9e-6b1d-4c7a-9f0e-2d5b8a1c4e77";
+  const bas = { grupp: "ledlektion", pass: 3, fortroende: {}, historik: [], rosetter: [], jag: { namn: "Prov" } };
+  const a = await medProfil({ ...bas, spelarId: 11 }, konto);
+  const b = await medProfil({ ...bas, spelarId: 4000000000 }, konto);
+  prova("M1: samma konto på två enheter får samma häst", !!a.l.hastId && a.l.hastId === b.l.hastId && a.l.tid === b.l.tid,
+    `${a.l.hastId} · ${b.l.hastId}`);
+  prova("M1: hästen är rotationens för kontots nummer, inte enhetens", a.l.hastId === a.l.vantat && a.l.tid !== 11,
+    `${a.l.hastId} · väntat ${a.l.vantat} · nummer ${a.l.tid}`);
+  await a.ctx.close(); await b.ctx.close();
+  const c = await medProfil({ ...bas, spelarId: 11 });
+  prova("M1: utloggad spelare behåller profilens nummer", c.l.tid === 11 && c.l.hastId === c.l.vantat, `${c.l.tid} · ${c.l.hastId}`);
+  await c.ctx.close();
+}
+{
+  /* L1: grinden själv, på ett riktigt First Ride-läge. Varje fall ändrar
+     ETT villkor på en kopia och frågar grinden — ingen uppsittning sker. */
+  const { ctx, page } = await medProfil();
+  const r = await page.evaluate(() => {
+    const spara = { forb: G.forb, hastId: G.hastId, utr: G.utrustning };
+    const fraga = () => forstaRittenKanSittaUpp()[0];
+    const ut = { redo: fraga() };
+    G.forb = { ...spara.forb, stoppad: "halta" }; ut.stoppad = fraga(); G.forb = spara.forb;
+    G.forb = { ...spara.forb, hastId: "troy" }; ut.fel = fraga(); G.forb = spara.forb;
+    G.utrustning = false; ut.utanUtr = fraga(); G.utrustning = spara.utr;
+    ut.checklista = Object.keys(G.forb.klara).length === 0;
+    return ut;
+  });
+  prova("L1: First Ride-läget går igenom grinden trots ogjord checklista", r.redo && r.checklista);
+  prova("L1: välfärdsstopp stoppar First Ride", r.stoppad === false);
+  prova("L1: fel häst stoppar First Ride", r.fel === false);
+  prova("L1: utan utrustning ingen First Ride", r.utanUtr === false);
   await ctx.close();
 }
 

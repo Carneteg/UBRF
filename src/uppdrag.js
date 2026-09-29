@@ -94,6 +94,28 @@ function tilldelaLedig(uid, upptagna, vilande, onskad){
   }
   return null;
 }
+/* SPELARENS NUMMER FÖR ROTATIONEN — webbens Roblox UserId.
+
+   Roblox UserId följer KONTOT: samma häst på datorn och på iPaden. En
+   inloggad spelare får därför sitt nummer ur Supabase-kontots id (P1b R1,
+   #266 M1), inte ur den här enhetens profil — annars fick samma konto en
+   häst per enhet. Talet räknas fram, det sparas inte: ingen ny kolumn,
+   och två enheter kan aldrig komma i otakt. FNV-1a över id-strängen ger
+   ett stabilt 32-bitars heltal ≥ 0, samma på varje enhet.
+
+   Utan inloggning gäller profilens `SPAR.spelarId` (src/ryttare.js), som
+   förut: stabil på den här enheten. */
+function kontoTilldelningsId(kontoId){
+  let h=0x811c9dc5;
+  for(let i=0;i<kontoId.length;i++){ h^=kontoId.charCodeAt(i); h=Math.imul(h,0x01000193); }
+  return h>>>0;
+}
+function tilldelningsId(){
+  const konto=(typeof SYNK!=="undefined"&&SYNK&&SYNK.session&&SYNK.session.user)
+    ?SYNK.session.user.id:null;
+  if(typeof konto==="string"&&konto)return kontoTilldelningsId(konto);
+  return (typeof SPAR!=="undefined"&&SPAR&&Number.isInteger(SPAR.spelarId))?SPAR.spelarId:0;
+}
 /* Dagens häst för den här spelaren. Webben har en spelare, så ingen häst
    är upptagen av någon annan; vilande är webbens välfärdsspärr. */
 function tilldelaDagensHast(){
@@ -101,8 +123,7 @@ function tilldelaDagensHast(){
   for(const id of Object.keys(HORSES))
     if(typeof hastVilarForSkada==="function"&&hastVilarForSkada(id))vilande[id]=true;
   const forsta=typeof SPAR!=="undefined"&&SPAR&&SPAR.pass===0;
-  const uid=(typeof SPAR!=="undefined"&&SPAR&&Number.isInteger(SPAR.spelarId))?SPAR.spelarId:0;
-  return tilldelaLedig(uid, {}, vilande, forsta?FORSTA_DAGEN_HAST_ID:null);
+  return tilldelaLedig(tilldelningsId(), {}, vilande, forsta?FORSTA_DAGEN_HAST_ID:null);
 }
 
 /* Hästar som går att välja: de som FAKTISKT står uppstallade i en box.

@@ -38,9 +38,35 @@ for (const f of ["src/spel/hastar.js", "src/data.js", "src/site.js"])
   const u = fs.readFileSync(path.join(ROT, "src/uppdrag.js"), "utf8");
   const a = u.indexOf("const FORSTA_DAGEN_HAST_ID"), b = u.indexOf("/* Dagens häst för den här spelaren.");
   if (a < 0 || b < a) throw new Error("tilldelningsregeln saknas i src/uppdrag.js");
-  vm.runInContext(u.slice(a, b) + ";this.tilldelaLedig=tilldelaLedig;", vctx, { filename: "uppdrag.js (utdrag)" });
+  vm.runInContext(u.slice(a, b) + ";this.tilldelaLedig=tilldelaLedig;this.kontoTilldelningsId=kontoTilldelningsId;"
+    + "this.tilldelningsId=tilldelningsId;", vctx, { filename: "uppdrag.js (utdrag)" });
 }
-const W = { tilldela: vctx.tilldelaLedig, S: vm.runInContext("STALLINNE", vctx) };
+const W = { tilldela: vctx.tilldelaLedig, S: vm.runInContext("STALLINNE", vctx),
+  antal: vm.runInContext("Object.keys(HORSES).length", vctx) };
+
+/* ── M1 (P1b R1): rotationens nummer följer KONTOT, som Roblox UserId ── */
+{
+  const konto = "3f1c2a9e-6b1d-4c7a-9f0e-2d5b8a1c4e77";
+  const enhet = (spelarId, inloggad) => {           // en enhet = ett eget sammanhang
+    const c = vm.createContext({});
+    const u = fs.readFileSync(path.join(ROT, "src/uppdrag.js"), "utf8");
+    const a = u.indexOf("function kontoTilldelningsId"), b = u.indexOf("/* Dagens häst för den här spelaren.");
+    if (a < 0 || b < a) throw new Error("tilldelningsId saknas i src/uppdrag.js");
+    vm.runInContext(u.slice(a, b) + ";this.tilldelningsId=tilldelningsId;", c);
+    c.SPAR = { spelarId };
+    c.SYNK = inloggad ? { session: { access_token: "x", user: { id: konto } } } : { session: null };
+    vm.runInContext("var SPAR=this.SPAR, SYNK=this.SYNK;", c);
+    return c.tilldelningsId();
+  };
+  const ipad = enhet(111, true), dator = enhet(987654321, true);
+  prova("M1: samma konto på två enheter ger samma nummer", ipad === dator, `${ipad} · ${dator}`);
+  prova("M1: numret är ett heltal ≥ 0 under 2^32", Number.isInteger(ipad) && ipad >= 0 && ipad < 2 ** 32, String(ipad));
+  prova("M1: samma konto ger samma häst på båda enheterna",
+    W.tilldela(ipad, {}, {}, null) === W.tilldela(dator, {}, {}, null), W.tilldela(ipad, {}, {}, null));
+  prova("M1: utloggad spelare behåller profilens nummer", enhet(111, false) === 111 && enhet(987654321, false) === 987654321);
+  prova("M1: ett annat konto ger (i regel) ett annat nummer",
+    vctx.kontoTilldelningsId(konto) !== vctx.kontoTilldelningsId(konto.replace(/7$/, "8")));
+}
 const VILANDE = { inga: {}, jack: { blackrock_jack: true }, tre: { air: true, allan: true, troy: true } };
 const START = vm.runInContext("SVAR_START", ctx);
 
@@ -156,6 +182,9 @@ if (luau) {
       const sammaY = d[2] === "nil" || Math.abs(y - Number(d[4])) < 0.01;
       if (rad !== d[2] || plats !== Number(d[3]) || !sammaY)
         prova(`box ${d[1]}`, false, `webb ${rad} ${plats} y ${y.toFixed(3)} · roblox ${d[2]} ${d[3]} y ${d[4]}`);
+    } else if (d[0] === "ANTAL") {
+      jamforda++;
+      if (Number(d[1]) !== W.antal) prova("hästordningens längd", false, `webb ${W.antal} · roblox ${d[1]}`);
     } else if (d[0] === "ANDEL") {
       let s = F.nyState("troy", 1);
       if (d[1] === "blandad") {
@@ -170,7 +199,15 @@ if (luau) {
   const fynd = rader.filter(r => r.startsWith("FYND") && !r.endsWith("nil")).length;
   const tilldelningar = rader.filter(r => r.startsWith("TILLDELA")).length;
   const boxar = rader.filter(r => r.startsWith("BOX")).length;
-  prova("alla Roblox-rader har samma svar på webben", fel === 0 && jamforda >= 100 && tilldelningar >= 100 && boxar === 33,
+  /* L2/L3 (P1b R1): varje startrest ska ha jämförts, och boxarna ska vara
+     lika många som kanonens hästar — inte ett avskrivet tal. */
+  const rester = new Set(rader.filter(r => r.startsWith("TILLDELA"))
+    .map(r => ((Number(r.split(" ")[1]) % W.antal) + W.antal) % W.antal));
+  const negativa = rader.some(r => r.startsWith("TILLDELA -"));
+  prova("tilldelningen jämförd för VARJE startrest och för negativa uid", rester.size === W.antal && negativa,
+    `${rester.size}/${W.antal} rester · negativa ${negativa}`);
+  prova("alla Roblox-rader har samma svar på webben",
+    fel === 0 && jamforda >= 100 && tilldelningar >= 100 && boxar === W.antal && rader.some(r => r.startsWith("ANTAL")),
     `${jamforda} rader jämförda: ${fynd} fynddagar, ${tilldelningar} tilldelningar, ${boxar} boxar`);
 }
 

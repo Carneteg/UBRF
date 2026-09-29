@@ -9,7 +9,8 @@
 	  FYND <häst> <pass> <punkt|nil>
 	  ANDEL <scenario> <värde med 6 decimaler>
 	  TILLDELA <uid> <vilande> <önskan> <häst|nil>
-	  BOX <häst> <rad> <plats> <lokal y> ]]
+	  BOX <häst> <rad> <plats> <lokal y>
+	  ANTAL <antal hästar i Spel.ordning> ]]
 
 for _, f in ipairs(Preparation.stegFaser()) do
 	local ids = {}
@@ -45,15 +46,21 @@ local VILANDE = {
 }
 for _, v in ipairs(VILANDE) do
 	for _, onskad in ipairs({ "nil", "blackrock_jack" }) do
-		for uid = 0, 70, 3 do
+		--[[ Varje uid från −2 till 2n+1: alla n startrester, mer än två hela
+			varv, och negativa uid (Play Solo, se `Stallet.tilldela`). Steget
+			var 3 förut — med 33 hästar täckte det bara var tredje rest
+			(P1b-granskningen, #266 L2). ]]
+		for uid = -2, 2 * #UBRFSpel.ordning + 1 do
 			local svar = Stallet.tilldelaLedig(uid, {}, v.set, if onskad == "nil" then nil else onskad)
 			print(string.format("TILLDELA %d %s %s %s", uid, v.namn, onskad, tostring(svar)))
 		end
 	end
 end
 -- Boxarna (P1b, Tobias 2026-09-29): vilken rad och plats varje häst står i.
-local ORDNING = {"air","allan","berra","bing","conor","cosmo","crokino","curiretto","fay","hjartat","hamilton","kay_z","larry","lothar","oska","puma","sune","tess","blackrock_jack","lydia","dante","dexter","garnit","jessy","kennedy","lady","mac_kenzie","marabou","replay","toblerone","trixie","troy","westside"}
-for _, id in ipairs(ORDNING) do
+-- Ur kanonens egen ordning, inte en avskriven lista (#266 L3): en ny häst
+-- ska inte kunna slinka förbi paritetsprovet. ANTAL bär kanonens längd.
+print(string.format("ANTAL %d", #UBRFSpel.ordning))
+for _, id in ipairs(UBRFSpel.ordning) do
 	local b = Stallet.boxFor(id)
 	if b then
 		print(string.format("BOX %s %s %d %.3f", id, b.rad, b.plats, b.lokal.y))

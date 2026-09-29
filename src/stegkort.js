@@ -133,6 +133,19 @@ function forstaRittenGaller() {
     && typeof SPAR_BETRODD !== "undefined" && SPAR_BETRODD === true
     && !G.tavling && !!G.hastId && !!G.forb;
 }
+/* Grinden före First Rides uppsittning (P1b R1, #266 L1). First Ride
+   hoppar över EN sak: att skötselchecklistan inte är gjord. Allt annat i
+   `Forb.provaUppsittning` gäller fortfarande — rätt häst och inget
+   välfärdsstopp — och utrustningen ska sitta på, webbens motsvarighet
+   till Roblox `TackService.ridklar` som läser modellen. Välfärden håller
+   alltså av konstruktion, inte för att pass 1 råkar sakna fynd. */
+function forstaRittenKanSittaUpp() {
+  const s = G.forb;
+  if (!s || s.hastId !== G.hastId) return [false, "forb.inte_din_hast"];
+  if (s.stoppad) return [false, "forb.lararen_tar_over", s.stoppad];
+  if (G.utrustning !== true) return [false, "guide.sadla_rubrik"];
+  return [true];
+}
 function forstaRitten() {
   if (!forstaRittenGaller()) return false;
   const [x, y] = skSargport();
@@ -142,6 +155,8 @@ function forstaRitten() {
   VD.hastX = x + 1.1; VD.hastY = y + 1.6; VD.spår.length = 0;
   stegkortForberedd();
   G.skotselRes.forstaRitten = true;
+  const r = forstaRittenKanSittaUpp();
+  if (!r[0]) { saga(typeof skAvslag === "function" ? skAvslag(r) : tSpr(r[1]), 4); return false; }
   sittUppDirekt("ridhus");
   return true;
 }
