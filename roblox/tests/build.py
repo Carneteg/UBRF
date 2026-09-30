@@ -298,6 +298,15 @@ PARITET = [
     ("LektionController", "src/client/LektionController.luau"),
 ]
 
+#[[ JEV-POC-2 (#270, A'): skuggan provas ovanpa PARITET — samma Ugneta,
+#   Lektion och LektionController som klienten kor — plus regeln och
+#   serverns skugga. Klientkroken i LektionController mats darfor i samma
+#   korning som servern den speglar till. ]]
+JEVSKUGGA = PARITET + [
+    ("JevShadowPolicy", "src/shared/HorseCore/JevShadowPolicy.luau"),
+    ("JevShadow",       "src/server/JevShadow.luau"),
+]
+
 # Ugnetas GESTALT provas ovanpa det FARDIGBYGGDA huset: hon placeras genom att
 # mata mellan "Ridbanan" och "Sarg syd", alltsa mot delar som faktiskt star i
 # workspace. Ett prov mot handskrivna koordinater hade mott en andra modell av
@@ -697,7 +706,11 @@ def valjBunt(spec_rel: str):
     #   och den behover darfor bade modulen och GameplayService. Grenen
     #   star FORST sa att den inte kan falla igenom till MODULER, dar
     #   varken Preparation eller Sprak finns. ]]
-    if "ridanu" in spec_rel:
+    #[[ JEV-POC-2: forst, sa att namnet aldrig kan falla igenom till en
+    #   annan bunt. Namnen undviker "ugneta", som leder till PARITET. ]]
+    if "jevskugga" in spec_rel:
+        moduler, stubbar = JEVSKUGGA, "tests/stubs.luau"
+    elif "ridanu" in spec_rel:
         #[[ KOHERENS: varlden PLUS tjansterna. QA-sekvensen i #246 borjar
         #   med att spelaren TAR sadeln ur boxfronten, och fronterna hangs
         #   av `TackForradService` pa den BYGGDA varlden. Utan hus svarar

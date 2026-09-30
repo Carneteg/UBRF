@@ -166,6 +166,22 @@ local function startaInspelning(p: Lektion.Pass, tm: { [string]: any }?)
 end
 
 --[[ Finns det en ritt att visa för den övning som just bedömdes? ]]
+--[[ JEV-POC-2 (#270, A'): spegla försöksunderlaget till serverns skugga.
+	EFTER att Ugnetas kort redan visats, utan att vänta och i pcall — ett
+	fel här får inte kunna märkas. Bara när servern satt `Aktiv`; utan det
+	fyras ingenting. Fjärrobjektet hämtas med FindFirstChild och aldrig
+	WaitForChild, så lektionen aldrig kan stå och vänta på experimentet.
+	Ugnetas eget val skickas INTE — servern räknar om det själv. ]]
+local function skuggaForsok(h: Lektion.Handelse)
+	pcall(function()
+		local mapp = game:GetService("ReplicatedStorage"):FindFirstChild("HorseRemotes")
+		local r = mapp and mapp:FindFirstChild("JevSkugga")
+		if not r or r:GetAttribute("Aktiv") ~= true then return end
+		r:FireServer({ ovningId = h.ovningId, forsokNr = h.forsokNr,
+			nu = h.nu, fore = h.fore })
+	end)
+end
+
 local function harRitt(): boolean
 	local id = senasteOvning
 	if not id then return false end
@@ -497,6 +513,7 @@ function LektionController.steg(dt: number, tm: { [string]: any }?,
 	local h = Lektion.avslutaForsok(p)
 	if h then
 		UgnetaController.efterForsok(h.ovningId, h.nu, h.fore, h.forsokNr, harRitt())
+		skuggaForsok(h)
 		lage = "efter"
 	else
 		--[[ INGET UNDERLAG → INGET OMDÖME, men spelaren får veta varför.

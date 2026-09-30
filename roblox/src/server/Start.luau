@@ -30,6 +30,7 @@ local Belysning = require(script.Parent.Belysning)
 local Markkontakt = require(script.Parent.Markkontakt)
 local HastRigg = require(script.Parent.HastRigg)
 local Preflight = require(script.Parent.Preflight)
+local JevShadow = require(script.Parent.JevShadow)
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -190,6 +191,10 @@ function Start.kor(): boolean
 	kritisk("GameplayService", GameplayService.start)
 	kritisk("DorrService", DorrService.start)
 	kritisk("LedService", LedService.start)
+	--[[ JEV-POC-2 (#270): experimentet, av som standard. Inte `kritisk` —
+		 en skugga som inte startar får aldrig hindra spelaren, och med
+		 flaggan av gör den ingenting alls. ]]
+	fas("JevShadow", function() JevShadow.start(HorseService.horseOf) end)
 	--[[ Utrustningen hängs upp EFTER GameplayService: prompten lämnar sitt val
 	     dit, och tjänsten tar emot anroparen som argument i stället för att
 	     requira tillbaka. Ordningen är alltså ett beroende, inte en smaksak. ]]

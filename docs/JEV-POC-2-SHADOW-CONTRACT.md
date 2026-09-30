@@ -61,7 +61,7 @@ the dimension she tells the rider to work on:
 - `ingen` if there is no such item (she only praises, or has nothing to say).
 
 This is a projection of her output, not a new rule. Jev gets the same
-question, and its allowed answers are `RidKanon.UGNETA.OVNING[ovningId]` ∪ `{ingen}`.
+question, and its allowed answers are the **measurable** dimensions of `RidKanon.UGNETA.OVNING[ovningId]` (minus `Lektion.SAKNAS`, i.e. without `rytm`) ∪ `{ingen}`. That is the same set Ugneta can answer from: `rytm` is never in `nu`, so she can never pick it. (Clarified during implementation, relative to `bf2a54f`.)
 The allowed answers are built per sample. The full list (`dim`, `sort` × 2) is also stored in the sample, so a
 disagreement can be read against what she actually said.
 
@@ -128,7 +128,7 @@ The sample is recorded as `hard_gate` with **no request** if any of these holds:
 - `id`: a per-server counter (`s1`, `s2`, …), not linked to the player.
 - `t`: seconds since the server started (`os.clock`), not wall-clock time.
 - `kalla ∈ jev | timeout | api_error | invalid_input | hard_gate`.
-  - `timeout`: `RequestAsync` threw with a timeout message, or took ≥ the timeout.
+  - `timeout`: `RequestAsync` **threw**, either with a timeout message (`HttpError: Timedout`, "timed out", "timeout") or after ≥ the timeout. A call that actually returned a response is never `timeout`.
   - `api_error`: a non-2xx response, a decode error, or a bad answer. Only the HTTP status code is kept.
 - The buffer is in-memory, with at most 200 entries (FIFO).
   - `JevShadow.prov()` returns a copy.
