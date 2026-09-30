@@ -17,6 +17,16 @@ contract before code. No new reward/persistence promises bypass D4-RATT.
 
 Small playable deliveries, reduced acknowledgement ritual and bounded engine
 checks replace more foundational work as the immediate next priority.
+
+**Tobias 2026-09-30 (P3):** continue P3 from `36d832e` with Claude as writer;
+the pre-existing `src/lektioner/` work is reviewed against Roblox before use;
+Q4 is reproduced before any fix; push only a coherent, tested P3 delivery; no
+production promotion without Tobias' approval; `src/varld3d.js` is not edited
+in P3. **P3 § 11.1 APPROVED:** the web's clear round offers «Egna kläder»
+only (the web avatar has no competition-clothing assets) — a declared
+platform difference; the rest of the clear-round flow follows Roblox.
+§ 11.2 (web aid input wording) and § 11.3 (where the group ladder is offered)
+remain open; the P3 defaults apply until decided.
 Recurring player sessions, a machine-readable coordination channel and an
 HRAG deadline/alternative need concrete proposals; they are not permission
 for costs, replacement assets, publication or unscheduled data-bearing tests.

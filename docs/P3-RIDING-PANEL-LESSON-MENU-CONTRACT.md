@@ -147,9 +147,9 @@ Roblox has no top-down camera path (read: `CameraController.luau` writes CameraT
 
 ## 11. Needs Tobias (platform exceptions / decisions)
 
-1. **Clear round clothes**: web offers «Egna kläder» only (no web avatar clothing assets). Same player outcome otherwise. *Exception requested.*
-2. **Web riding input**: the four aids stay (declared audit difference). Core line 1–2 therefore say «skänkel» instead of «ett steg upp / ned i gångarterna». *Exception requested (restating the audit's difference for the new panel).*
-3. **The group ladder** (web-only side activity): not reachable from the main riding path after P3. *Decision: where to offer it, if at all.* Default until decided: code and save kept, not offered.
+1. **Clear round clothes**: web offers «Egna kläder» only (no web avatar clothing assets). Same player outcome otherwise. **APPROVED by Tobias 2026-09-30** («P3 §11 clear-round clothes exception APPROVED. På webben används endast `Egna kläder`, eftersom webbavataren saknar Roblox-versionens tävlingsklädassets. Dokumentera detta som en uttrycklig plattformsskillnad. Övrigt clear-round-flöde ska fortsätta följa Roblox.»). Declared platform difference; recorded in `docs/WORKING-AGREEMENT.md`.
+2. **Web riding input**: the four aids stay (declared audit difference). Core line 1–2 therefore say «skänkel» instead of «ett steg upp / ned i gångarterna». *Exception requested (restating the audit's difference for the new panel).* Not yet decided — the implementation follows the default in § 3.
+3. **The group ladder** (web-only side activity): not reachable from the main riding path after P3. *Decision: where to offer it, if at all.* Default until decided: code and save kept, not offered. Not yet decided — the implementation follows the default (`G.stege`, never set by the main path).
 
 ## 12. Verification plan
 
@@ -159,3 +159,22 @@ Roblox has no top-down camera path (read: `CameraController.luau` writes CameraT
 - Runtime: a Playwright ride on the built `dist/` through mount → menu → one lesson of each family → dismount, with screenshots at 1180×820 and 1366×768, sv and en.
 - Studio: no Roblox gameplay changes → no engine check planned; `NOT_TESTED` with that reason unless a mapped source changes.
 - Push, then Vercel Preview on the exact final SHA; production only after Tobias approves.
+
+## 13. Implementation record (writer: Claude, 2026-09-30)
+
+Tobias 2026-09-30: continue P3 from `36d832e`; treat the existing `src/lektioner/` WIP as code to review against Roblox before use; reproduce Q4 before any fix; no production promotion without Tobias; `src/varld3d.js` not edited.
+
+**Review of the 14 pre-existing lesson modules** (`src/lektioner/`) against `roblox/src/server/*.luau`: every module is a faithful port — same constants, states, tips, resets and end conditions. `tools/lektionsparitet.mjs` now proves the constants, identities, menu, text keys and frame mechanically. Accepted, documented differences: (a) `LektionMotor.andra` bumps `revision` only on a real change (Roblox VoltLektion bumps unconditionally) — client redraw only; (b) clear round's end-of-ride outcome runs after the motor closes the attempt instead of checking `aktiv` first — same outcome «avbruten»; (c) `hinder.js` ports the part of HinderObservation the lessons read (passage, beside, no passage, direction, stop/back evidence); knockdown/landing are not ported because the web poles cannot fall — `nedslag` is always «okänd», exactly as Roblox's lessons treat it today.
+
+**New web files**: `src/lektioner/aterkoppling.js` (LektionsAterkoppling), `src/lektioner/koppling.js` (the web's HorseService feed: observations per ride at the server cadence, gait events from the rider's own aid), `src/lektioner/guide.js` (the guide dashes, drawn in 3D and on the 2D plan), `src/lektionsmeny.js` (VoltLektionController), `src/fripass.js` (LektionController + HorseCore/Lektion), `src/lararinstallning.js` (LararInstallning), `src/ridpanel.js` (Naromrade's mounted branch + UgnetaRad).
+
+**Declared platform differences** (rendering/input/storage — same player outcome):
+- Clear round clothes: «Egna kläder» only on the web (§ 11.1, APPROVED).
+- Web input is the four aids (§ 3, § 11.2 pending): the core lines name the aids; E = sitt av, F = halvhalt, G = spö, ↑/↓ = W/S in the saddle only. A card is answered by an aid impulse (leg forward/back past half, a half-halt, or a new gait request), like Roblox `intent.gaitUp/gaitDown/parad`.
+- Lesson memory lives in the web save (`SPAR.lektionsminne`, keys `lektion:<typ>:<VERSION>`); the web save is synchronous, so the «vantar» state never occurs. Untrusted save → unknown history, no suggestion.
+- No NPC riders in the main path: Roblox rides alone with Ugneta, and a rider on the track would push the player out of the lessons' corridors. NPCs stay in competitions and the ladder.
+- The controls list (H) moves beside the riding panel while riding (it would otherwise cover the panel's buttons); Roblox places it left-centre. Placement only.
+- Jumping over the arena's standing fences is a visual hop (`G.luft`); judging is HinderObs, as in Roblox.
+- Replay: the web replay view is now localized (`replay.*`). Roblox `ReplayController` still has Swedish literals — a pre-existing Roblox language gap outside this web-parity package, reported, not changed here.
+
+**Kimi Q4, reproduced before the fix** (one-off `tools/_q4repro.mjs` on HEAD `36d832e`, removed once the regression existed): H1 reproduced (typing «Vera» in the name field switched to the map), H2 reproduced (the map survived teleport and mount), and the view toggle started with the map marked while the view was 3D. H3 (walking camera tilt indoors, `src/varld3d.js`) did not reproduce in the chain and is untouched. Fix: keys typed in a text field are text (`tangentIText`); V and the view buttons are ignored under a panel; a move to another scene restores 3D unless the map was chosen in that scene (`vyEfterFlytt`); the toggle marks `G.vy`. Regression: `tools/kameratest.mjs`.
