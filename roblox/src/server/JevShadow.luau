@@ -167,9 +167,20 @@ function JevShadow._mottag(spelare: any, payload: any): string
 		spara(post)
 		return "invalid_input"
 	end
-	local fokus, kort = JevShadowPolicy.ugneta(rent)
+	--[[ Båda sidor får det PROJICERADE underlaget: jämförelsen räknas på
+	     det, kroppen byggs av det, och provet sparar exakt det som gick
+	     till Jev. Namnen på det som klipptes bort sparas för granskningen. ]]
+	local proj, projSkal, bort = JevShadowPolicy.projicera(rent)
 	local post = nyPost(d, "hard_gate")
 	post.ovningId, post.forsokNr = rent.ovningId, rent.forsokNr
+	post.utanforOvning = bort
+	if not proj then
+		post.reason = projSkal
+		spara(post)
+		return "hard_gate"
+	end
+	rent = proj
+	local fokus, kort = JevShadowPolicy.ugneta(rent)
 	post.nu, post.fore = rent.nu, rent.fore
 	post.ugneta = { fokus = fokus, obs = kort }
 

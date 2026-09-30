@@ -156,6 +156,16 @@ do
 	prova("kroppen bär ingen identitet", string.find(d.req.Body, "900001", 1, true) == nil
 		and string.find(d.req.Body, "Name", 1, true) == nil)
 	prova("klientens tabell är orörd", json(payload) == fore)
+	-- giltigt() är en storvolt med tempo, som ligger UTANFÖR övningen.
+	prova("tempo (utanför storvolten) når inte kroppen", string.find(d.req.Body, "tempo", 1, true) == nil
+		and string.find(d.req.Body, "0.9", 1, true) == nil)
+	prova("provet sparar det projicerade underlaget", p.nu.tempo == nil and p.nu.linje == 0.62
+		and p.nu.balans == 0.41)
+	prova("och namnet på det bortklippta", #p.utanforOvning == 1 and p.utanforOvning[1] == "tempo")
+	local dT = starta()
+	local kT = JevShadow._mottag(spelare("P", true), { ovningId = "storvolt", forsokNr = 1, nu = { tempo = 0.5 } })
+	prova("inget övningsunderlag → hard_gate tom_projektion, noll förfrågningar",
+		kT == "hard_gate" and sista().reason == "tom_projektion" and dT.http == 0 and dT.hemlighet == 0)
 end
 
 print("\n── Hård grind: inte uppsuten, ingen hemlighet ──")

@@ -20,10 +20,11 @@ client  LektionController, after UgnetaController.efterForsok (unchanged)
    ▼
 server  JevShadow
    1. strict validation (§4)  — failure → invalid_input, no request
-   2. hard gate (§5)          — failure → hard_gate, no request
-   3. comparator = HorseCore/Ugneta.observationer(ovningId, nu, fore)   (existing rule)
-   4. task.spawn: RequestAsync → TypeSafe systemone (timeout, no retry)
-   5. ring buffer: sanitized sample (§7)
+   2. projection (§4.1)       — nu/fore clipped to the exercise's measurable dims; empty → hard_gate
+   3. hard gate (§5)          — failure → hard_gate, no request
+   4. comparator = HorseCore/Ugneta.observationer(ovningId, nu', fore')  (existing rule, projected evidence)
+   5. task.spawn: RequestAsync → TypeSafe systemone with the same nu', fore' (timeout, no retry)
+   6. ring buffer: sanitized sample with exactly nu', fore' (§7)
 ```
 
 - The client sends only the **attempt evidence that `Ugneta.observationer`
@@ -100,6 +101,20 @@ gives a second attempt with `fore = nil` (`Lektion.avslutaForsok`). The X09 patt
 from POC-1 is rejected three times over: an unknown key (`line_error`,
 `rein_pressure`), a string value (`"???"`) and 42 > 1.
 
+### 4.1 Projection: the same evidence to both sides (CHATGPT_REVIEW @ `a601430`)
+
+`Lektion.medel` returns **every** measured dimension of the attempt. In practice, 18 of 18 real attempts in the spec carry dimensions outside the exercise. `Ugneta.observationer` only reads `Ugneta.dimensionerFor(ovningId)`. At `a601430`, Jev got the whole table, so a disagreement could have come from unequal evidence rather than a different decision.
+
+Therefore, after validation and **before anything else**, `JevShadowPolicy.projicera` clips `nu` and `fore`:
+
+- Both are reduced to the exercise's **measurable** dimensions (`dimensionerFor(ovningId)` minus `Lektion.SAKNAS`), giving `nu'` and `fore'`.
+- The comparator is computed on `nu'`/`fore'`. The spec checks that the rule gives exactly the same answer on the unclipped input, for all real attempts, so no information the rule uses is lost.
+- `JevShadowPolicy.kropp` projects **itself**, so an unclipped argument can never reach Jev.
+- The sample stores exactly `nu'`/`fore'` (what was sent). The names of the clipped-away dimensions go in `utanforOvning`, as names only.
+- If `nu'` is empty, there is no exercise evidence: `hard_gate`/`reason=tom_projektion`, no request. If `fore'` is empty, it becomes `nil`.
+
+**So Jev and the rule receive literally the same numbers: `ovningId`, `forsokNr`, `nu'` and `fore'`.**
+
 ## 5. Hard gate (after validation, before the network)
 
 The sample is recorded as `hard_gate` with **no request** if any of these holds:
@@ -108,13 +123,14 @@ The sample is recorded as `hard_gate` with **no request** if any of these holds:
 - The same player sent a sample less than 10 s ago (per-player cooldown). An attempt is 22 s, so 10 s never blocks a real attempt.
 - A request is already in flight for the player.
 - The global cap of 20 requests in the last 60 s is reached.
-- The secret can't be read (not configured) — `hard_gate`/`reason=no_secret`.
+- There is no exercise evidence after the projection (§4.1): `hard_gate`/`reason=tom_projektion`.
+- The secret can't be read (not configured) — `hard_gate`/`reason=ingen_hemlighet`.
 
 ## 6. The request to Jev
 
 - `state` contains exactly:
-  - `ovning`, `forsok`, `nu`, `fore`: the validated copy, with keys re-sorted
-  - `dimensioner`: the exercise's dimensions
+  - `ovning`, `forsok`, `nu'`, `fore'`: the **projected** validated copy (§4.1). This is the same evidence the comparator is computed on.
+  - `dimensioner`: the exercise's measurable dimensions
   - `saknas`: an explicit list of absent fields: `rytm`, `rein_pressure`, `rider_body`, `free_text`
 - There is no `userId`, name, `DisplayName`, `hastId`, text or GUID. Keys are allow-listed, and the body is built only from the validated copy.
 - `questions.focus.criteria`: one entry per dimension of the exercise, plus `ingen`. Descriptions are fixed Swedish constants in the code.
@@ -123,7 +139,9 @@ The sample is recorded as `hard_gate` with **no request** if any of these holds:
 
 ## 7. Sample (sanitized evidence)
 
-`{ id, t, ovningId, forsokNr, nu, fore, ugneta = {fokus, obs}, jev = {fokus, confidence, model}?, agree?, latensMs?, kalla, reason? }`
+`{ id, t, ovningId, forsokNr, nu', fore', utanforOvning, ugneta = {fokus, obs}, jev = {fokus, confidence, model}?, agree?, latensMs?, kalla, reason? }`
+
+`nu'`/`fore'` are exactly the evidence sent to Jev and used by the comparator. `utanforOvning` holds only the names of the clipped-away dimensions.
 
 - `id`: a per-server counter (`s1`, `s2`, …), not linked to the player.
 - `t`: seconds since the server started (`os.clock`), not wall-clock time.
@@ -178,6 +196,7 @@ Automated, in `kor.sh`/CI:
 2. Validator: each rule in §4 has its own red case, plus X09. Each gives `invalid_input` and **0 HTTP calls** (counting stub).
 3. Allow-list: an unknown label, the wrong case, a dimension from another exercise, and confidence that is NaN, missing, negative, > 1 or a string are all rejected.
 4. The comparator equals `Ugneta.observationer` on the same input, as a golden table across all 6 exercises × first/second attempt. The policy may not have its own ranking; this is checked by comparing against a direct call.
+   **4b (review @ a601430):** valid dimensions from another exercise never reach the Jev body or the sample. The comparator gives the same answer on the projected evidence as on the unclipped evidence, for all real attempts. Only off-exercise evidence gives tom_projektion and no request.
 5. `RequestAsync` that throws, a timeout, 4xx/5xx, and an undecodable body each give `timeout`/`api_error` only, and **no error propagates** to the caller.
 6. Isolation:
    - With the flag on vs. off, `UgnetaController.efterForsok`'s return value and the lesson pass (`pass` deep copy) are identical, including when the stub throws.
@@ -209,4 +228,4 @@ Runtime (Studio, needs §12):
 - `ASSUMPTION`: a Studio local secret works with `AddPrefix` in `RequestAsync` the same way a published secret does. This is verified at runtime; otherwise it is marked NOT_TESTED.
 - `ASSUMPTION`: `jev-latest` is stable during the measurement. `model` is logged per sample.
 - **Limitation:** the evidence is client-derived and not tamper-proof. Spoofing can only affect a shadow sample.
-- **Limitation:** Jev gets the same numbers as the rule. The PoC measures whether Jev reproduces or improves on a threshold rule given **current** telemetry. It does not measure richer signals.
+- **Limitation:** Jev gets the same numbers as the rule — literally, after the review fix: the projected `nu'`/`fore'` (§4.1). The PoC measures whether Jev reproduces or improves on a threshold rule given **current** telemetry. It does not measure richer signals.

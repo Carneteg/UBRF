@@ -144,6 +144,51 @@ function JevShadowPolicy.validera(p: any): (Rent?, string?)
 	return { ovningId = id, forsokNr = nr, nu = nu, fore = fore }, nil
 end
 
+--[[ ── Projektionen: samma underlag till båda sidor (CHATGPT_REVIEW @a601430)
+
+	`Lektion.medel` lämnar VARJE mätt dimension i försöket, men
+	`Ugneta.observationer` läser bara övningens egna. Fick Jev hela tabellen
+	kunde en oenighet bero på att Jev såg något regeln aldrig tittar på —
+	och då mäter skuggan olika underlag, inte olika beslut.
+
+	Därför klipps `nu` och `fore` till övningens MÄTBARA dimensioner INNAN
+	någon av sidorna ser dem. Jämförelsen räknas på det klippta, kroppen
+	byggs av det klippta och provet sparar det klippta. Det som skars bort
+	redovisas bara med namn.
+
+	Blir `nu` tomt efter klippningen finns inget övningsunderlag alls, och
+	då frågas ingen — skälet `tom_projektion`. `fore` som blir tomt blir
+	`nil`: det fanns inget jämförbart förra försök. ]]
+local function ovningsDim(ovningId: string): { [string]: boolean }
+	local ut = {}
+	for _, k in Ugneta.dimensionerFor(ovningId) do
+		if MATTBAR[k] then ut[k] = true end
+	end
+	return ut
+end
+
+local function klipp(t: { [string]: number }?, till: { [string]: boolean }, bort: { [string]: boolean })
+	: { [string]: number }?
+	if t == nil then return nil end
+	local ut, n = {}, 0
+	for k, v in t do
+		if till[k] then ut[k] = v; n += 1 else bort[k] = true end
+	end
+	return if n > 0 then ut else nil
+end
+
+function JevShadowPolicy.projicera(rent: Rent): (Rent?, string?, { string })
+	local till = ovningsDim(rent.ovningId)
+	local bortSet: { [string]: boolean } = {}
+	local nu = klipp(rent.nu, till, bortSet)
+	local fore = klipp(rent.fore, till, bortSet)
+	local bort = {}
+	for k in bortSet do table.insert(bort, k) end
+	table.sort(bort)
+	if nu == nil then return nil, "tom_projektion", bort end
+	return { ovningId = rent.ovningId, forsokNr = rent.forsokNr, nu = nu, fore = fore }, nil, bort
+end
+
 --[[ ── Jämförelsen: den befintliga regeln ──────────────────────────
 
 	Ugnetas FOKUS är den dimension hon säger åt ryttaren att arbeta på:
@@ -186,7 +231,14 @@ local function kopia(t: { [string]: number }?): { [string]: number }?
 	return ut
 end
 
+--[[ Kroppen projicerar SJÄLV, oavsett vad anroparen gjort. Ett anrop med
+     oklippt underlag kan alltså aldrig föra en dimension utanför övningen
+     till Jev — skyddet sitter där datan lämnar modulen, inte bara hos den
+     som råkar anropa rätt. ]]
 function JevShadowPolicy.kropp(rent: Rent): { [string]: any }
+	local proj = JevShadowPolicy.projicera(rent)
+	local nu = if proj then proj.nu else {}
+	local fore = if proj then proj.fore else nil
 	local kriterier = {}
 	for _, e in JevShadowPolicy.etiketter(rent.ovningId) do
 		kriterier[e] = JevShadowPolicy.BESKRIVNING[e]
@@ -199,8 +251,8 @@ function JevShadowPolicy.kropp(rent: Rent): { [string]: any }
 		state = {
 			ovning = rent.ovningId,
 			forsok = rent.forsokNr,
-			nu = kopia(rent.nu),
-			fore = kopia(rent.fore),
+			nu = kopia(nu),
+			fore = kopia(fore),
 			dimensioner = dims,
 			saknas = table.clone(JevShadowPolicy.SAKNAS_FALT),
 		},

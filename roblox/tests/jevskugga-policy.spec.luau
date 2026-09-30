@@ -175,6 +175,63 @@ for _, fall in fulaSvar do
 	prova(("avvisas: %s"):format(fall[1]), ok == nil and skal ~= nil, skal)
 end
 
+print("\n── 4b. Samma underlag till Jev som till regeln (review @a601430) ──")
+do
+	-- De riktiga försöken bär dimensioner utanför övningen: annars mäter provet inget.
+	local medExtra = 0
+	for _, payload in riktiga do
+		local rent = P.validera(payload)
+		local tillatna = {}
+		for _, e in P.etiketter(payload.ovningId) do tillatna[e] = true end
+		local extra = false
+		for k in rent.nu do if not tillatna[k] then extra = true end end
+		if extra then medExtra += 1 end
+		local proj, skal, bort = P.projicera(rent)
+		local helF, helK = P.ugneta(rent)
+		local projF, projK = P.ugneta(proj)
+		prova(("%s försök %d: regeln ger samma svar på det projicerade"):format(payload.ovningId, payload.forsokNr),
+			proj ~= nil and helF == projF and #helK == #projK, skal)
+		local ren = true
+		for k in proj.nu do if not tillatna[k] then ren = false end end
+		for k in proj.fore or {} do if not tillatna[k] then ren = false end end
+		prova(("%s försök %d: projektionen bär bara övningens dimensioner"):format(payload.ovningId, payload.forsokNr),
+			ren and (extra == (#bort > 0)))
+	end
+	prova("riktiga försök ur Lektion.medel BÄR dimensioner utanför övningen", medExtra > 0,
+		("%d av %d"):format(medExtra, #riktiga))
+
+	-- Regressionen: giltiga dimensioner från en annan övning når aldrig kroppen.
+	local full = { linje = 0.61, balans = 0.42, timing = 0.11, mjukhet = 0.12, respons = 0.13, tempo = 0.14 }
+	local rent = P.validera({ ovningId = "storvolt", forsokNr = 2, nu = full, fore = table.clone(full) })
+	prova("underlaget med sex giltiga dimensioner godkänns av validatorn", rent ~= nil)
+	local k = P.kropp(rent)
+	local function nycklar(t)
+		local ut = {}
+		for n in t or {} do table.insert(ut, n) end
+		table.sort(ut)
+		return table.concat(ut, ",")
+	end
+	prova("kroppens nu bär bara storvoltens mätbara dimensioner", nycklar(k.state.nu) == "balans,linje",
+		nycklar(k.state.nu))
+	prova("kroppens fore likaså", nycklar(k.state.fore) == "balans,linje", nycklar(k.state.fore))
+	local st = ""
+	for _, del in { k.state.nu, k.state.fore } do
+		for n, v in del do st ..= n .. "=" .. tostring(v) .. ";" end
+	end
+	for _, v in { "0.11", "0.12", "0.13", "0.14" } do
+		prova(("värdet %s från en annan övning finns inte i kroppens underlag"):format(v),
+			string.find(st, v, 1, true) == nil)
+	end
+	local _, _, bort = P.projicera(rent)
+	prova("det bortklippta redovisas med namn", table.concat(bort, ",") == "mjukhet,respons,tempo,timing",
+		table.concat(bort, ","))
+	local tom, skal = P.projicera(P.validera({ ovningId = "storvolt", forsokNr = 1, nu = { timing = 0.5 } }))
+	prova("bara dimensioner utanför övningen → tom_projektion, ingen fråga", tom == nil and skal == "tom_projektion", skal)
+	local enbartFore = P.projicera(P.validera({ ovningId = "storvolt", forsokNr = 2,
+		nu = { linje = 0.5 }, fore = { tempo = 0.4 } }))
+	prova("fore som blir tomt blir nil", enbartFore ~= nil and enbartFore.fore == nil)
+end
+
 print("\n── 5. Förfrågan bär bara det validerade ──")
 local function json(v, ut)
 	ut = ut or {}
