@@ -25,6 +25,24 @@ Jules ligger i en frivillig sidokanal. Leveransen får aldrig stå och vänta p�
 - Webben får inte förfalla till en icke-spelbar demo.
 - När logik delas mellan plattformarna ska avsikt, regler, parametrar och acceptance criteria hållas i paritet; rendering, UI och inputadapter får vara plattformsspecifika.
 
+## Jev / TypeSafe — beslutslager, inte beslutsägare
+
+Jev följer den bindande policyn i `docs/JEV-USAGE-POLICY.md`.
+
+Kortversion:
+
+- deterministisk kod äger regler, säkerhet, poäng, progression, fysik, persistence och tävlingsresultat;
+- Jev används bara när ett begränsat val mellan säkra alternativ är kontextberoende eller tvetydigt;
+- input valideras deterministiskt **före** nätverksanrop;
+- runtime har alltid deterministisk fallback och får inte blockera på Jev;
+- secrets hålls server-/tool-side och exponeras aldrig i klient eller logg;
+- player data/PII och fri spelartext skickas inte utan uttryckligt separat beslut;
+- ny runtime-användning går `offline PoC → shadow → eventuell pilot → player-visible`, aldrig direkt till spelaren;
+- player-visible Jev kräver Tobias uttryckliga produktbeslut och hanterad Roblox/webb-paritet;
+- shadow-/instrumentationsexperiment får vara plattformsspecifika endast när de är avstängda som standard, osynliga för spelaren och uttryckligen godkända.
+
+UBRF:s primära kandidat är Ugneta: Jev kan prioritera ett coaching focus ur en allow-list efter validerad telemetri. Jev får inte hitta på observationer som spelet inte mäter och får inte avgöra om en lektion är godkänd.
+
 ## Roll: ChatGPT
 
 ChatGPT ansvarar främst för **vad som bör byggas, varför, i vilken ordning och hur vi vet att det blev bra**.
