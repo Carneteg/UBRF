@@ -1,37 +1,48 @@
-/* KONTROLLERNA, KORT — webbens svar på "vad gör jag för att rida?"
+/* KONTROLLERNA — webbens svar på "vad gör jag för att rida?"
 
-   Tobias frågade hur man sitter upp, byter gångart och hoppar. Reglagen
-   fanns bara i koden. Den här filen svarar med de reglage som FAKTISKT är
-   bundna, läst ur src/game.js keydown/keyup och ur src/mobil.js
-   pekknappar. Ingenting här är påhittat, och ingenting här ÄNDRAR en
-   bindning: ridfysik, hjälpsemantik och hoppmodell rörs inte.
+   EN TABELL, TVÅ YTOR. Samma rader används av kontrollistan (H) och av
+   ridpanelens kärna (P3 § 3), precis som Roblox KontrollHjalp.rader() och
+   KontrollHjalp.ridrader() läser samma RADER. Ingen andra sanning.
 
-   REGLAGEN FÖLJER INMATNINGEN, inte plattformen. En ren pekenhet ska
-   aldrig få en bokstav hon inte kan trycka på; en iPad med tangentbord
-   ska få den. Samma regel som Roblox-sidans KontrollHjalp.luau.
+   Reglagen är de som FAKTISKT är bundna: tangenterna i src/game.js
+   keydown/keyup och pekknapparnas etiketter i src/mobil.js. Ingenting här
+   ändrar en bindning, och ridfysik, hjälpsemantik och hoppmodell rörs inte.
 
-   DE TVÅ RADERNA UTAN REGLAGE ÄR MENINGEN MED HELA FILEN. Webben har
-   ingen gångartsknapp och inget hoppreglage — gångarten följer av skänkel
-   och tygel, och avsprånget kommer ur anridningen. Att uppfinna en
-   tangent för dem, eller att skriva Roblox tangenter här, vore att påstå
-   en paritet som inte finns. Raderna säger i stället vad som styr dem. */
+   WEBBEN RIDER MED HJÄLPERNA. Roblox stegar gångarterna med W/S; webben
+   rider med skänkel, tygel och sits (src/riding/hjalper.js, svar.js) — den
+   deklarerade plattformsskillnaden i paritetsrevisionen. Därför säger
+   kärnraderna 1–2 «Driv på — skänkel» och «Bromsa — skänkel bak och tygel»
+   i stället för Roblox «Ett steg upp/ned i gångarterna». Hierarkin är
+   densamma: fyra kärnrader, `?` för resten. Ingen rad nämner en tangent
+   webben inte har.
+
+   REGLAGEN FÖLJER INMATNINGEN. En ren pekenhet får knapparnas egna
+   etiketter; en rad utan reglage på den inmatningen hoppas över (Roblox
+   regel — tystnad är ärligare än en tom kolumn).
+
+   Allt spelaren läser går genom tSpr. `tgb` är tangentnamn och
+   översätts inte — utom ordet för mellanslagstangenten, som är ett ord
+   (`hjalp.webb.mellanslag`). `pek` är en språknyckel till knappens etikett. */
 
 const KONTROLL_RADER = [
-  /* `tgb` = tangentbord (src/game.js), `pek` = pekknapparnas EGNA
-     etiketter (src/mobil.js). Tom `pek` betyder att pekgränssnittet
-     saknar just det reglaget — då står `via` kvar och förklarar. */
-  { vad: "Sitt upp / använd",  tgb: "E",          pek: "ANVÄND" },
-  { vad: "Skänkel fram / bak", tgb: "W / S",      pek: "Spaken" },
-  { vad: "Styr",               tgb: "A / D",      pek: "Spaken" },
-  { vad: "Tygel (kontakt)",    tgb: "Mellanslag", pek: "TYGEL" },
-  { vad: "Sits lätt / djup",   tgb: "Shift / Ctrl", pek: "LÄTT / DJUP" },
-  { vad: "Halvhalt",           tgb: "E",          pek: "HALVHALT" },
-  { vad: "Lättridning",        tgb: "R",          pek: "LÄTTR." },
-  { vad: "Byt vy",             tgb: "V",          pek: "VY" },
-  /* Utan reglage — med flit. */
-  { vad: "Gångart",  tgb: "", pek: "", via: "följer skänkeln och tygeln" },
-  { vad: "Hoppa",    tgb: "", pek: "", via: "avsprånget kommer ur anridningen" },
+  { nyckel: "hjalp.sitt_upp_av",       tgb: "E",                      pek: "touch.sitt_av" },
+  { nyckel: "hjalp.webb.driv",         tgb: "W / ↑",                  pek: "hjalp.webb.spak_fram" },
+  { nyckel: "hjalp.webb.bromsa",       tgb: "S / ↓ + %MELLANSLAG%",   pek: "hjalp.webb.spak_bak_tygel" },
+  { nyckel: "hjalp.styr",              tgb: "A / D",                  pek: "hjalp.spaken" },
+  { nyckel: "hjalp.tygel",             tgb: "%MELLANSLAG%",           pek: "touch.webb.tygel" },
+  { nyckel: "hjalp.halvhalt",          tgb: "F",                      pek: "touch.webb.halvhalt" },
+  { nyckel: "hjalp.webb.sits",         tgb: "Shift / Ctrl",           pek: "touch.webb.latt_djup" },
+  { nyckel: "hjalp.webb.lattridning",  tgb: "R",                      pek: "touch.webb.lattr" },
+  { nyckel: "hjalp.webb.diagonal",     tgb: "Q",                      pek: "touch.webb.diag" },
+  { nyckel: "hjalp.webb.spo",          tgb: "G",                      pek: "" },
+  { nyckel: "hjalp.webb.vy",           tgb: "V",                      pek: "touch.webb.vy" },
+  { nyckel: "hjalp.denna_hjalp",       tgb: "H",                      pek: "?" },
 ];
+/* Ridpanelens fyra kärnrader, i Roblox RIDKARNA-ordning: upp, ned, styr,
+   sitt upp/av. */
+const KONTROLL_KARNA = ["hjalp.webb.driv", "hjalp.webb.bromsa", "hjalp.styr", "hjalp.sitt_upp_av"];
+
+const khT = (k, ...a) => (typeof tSpr === "function" ? tSpr(k, ...a) : k);
 
 /* Vilken sorts inmatning talar vi om? Tangentbord vinner: en iPad med
    tangentbord ska få bokstäverna. */
@@ -39,22 +50,40 @@ function kontrollInmatning(){
   if (typeof navigator === "undefined") return "tangentbord";
   const pek = (navigator.maxTouchPoints || 0) > 0
     || (typeof window !== "undefined" && "ontouchstart" in window);
-  /* En ren pekenhet har inget fint sätt att säga "jag har tangentbord".
-     Vi läser samma signal som src/mobil.js använder för att bygga
-     pekgränssnittet — då kan hjälpen inte säga en sak och knapparna en
-     annan. */
+  /* Samma signal som src/mobil.js bygger pekgränssnittet på — då kan
+     hjälpen inte säga en sak och knapparna en annan. */
   const baraPek = pek && !(typeof matchMedia === "function"
     && matchMedia("(hover: hover) and (pointer: fine)").matches);
   return baraPek ? "touch" : "tangentbord";
 }
 
+function kontrollReglage(r, sort){
+  if (sort === "touch") {
+    if (!r.pek) return "";
+    return r.pek === "?" ? "?" : khT(r.pek);
+  }
+  return String(r.tgb || "").replace("%MELLANSLAG%", khT("hjalp.webb.mellanslag"));
+}
+
 /* Raderna som text. Ren avläsning — inget tillstånd, inget DOM. */
-function kontrollRader(){
-  const sort = kontrollInmatning();
-  return KONTROLL_RADER.map(r => {
-    const reglage = sort === "touch" ? r.pek : r.tgb;
-    return { vad: r.vad, reglage: reglage || "", via: r.via || "" };
-  });
+function kontrollRader(sort){
+  const s = sort || kontrollInmatning();
+  const ut = [];
+  for (const r of KONTROLL_RADER) {
+    const reglage = kontrollReglage(r, s);
+    if (reglage) ut.push({ nyckel: r.nyckel, vad: khT(r.nyckel), reglage });
+  }
+  return ut;
+}
+/* Kärnan, för ridpanelen — ur samma rader. */
+function kontrollRidrader(sort){
+  const alla = kontrollRader(sort);
+  return KONTROLL_KARNA.map(k => alla.find(r => r.nyckel === k)).filter(Boolean);
+}
+/* Reglaget för EN handling på spelarens inmatning (Roblox reglageFor). */
+function kontrollReglageFor(nyckel, sort){
+  const r = kontrollRader(sort).find(x => x.nyckel === nyckel);
+  return r ? r.reglage : null;
 }
 
 let kontrollVisadEnGang = false;
@@ -76,25 +105,26 @@ function ritaKontrollHjalp(){
   const rader = kontrollRader();
   const tgb = kontrollInmatning() !== "touch";
   el.innerHTML =
-    `<div class="khRubrik">Kontroller</div>`
-    + `<div class="khRader">` + rader.map(r =>
+    `<div class="khRubrik"></div>`
+    + `<div class="khRader">` + rader.map(() =>
         `<div class="khRad"><span class="khVad"></span>`
         + `<span class="khReglage"></span></div>`).join("")
     + `</div>`
     /* Stängknappen finns även utan tangentbord: en panel som bara går att
        stänga med H vore omöjlig att bli av med på en telefon. */
     + `<button type="button" id="khStang" class="khStang"></button>`;
+  el.querySelector(".khRubrik").textContent = khT("hjalp.rubrik");
   const vadEl = el.querySelectorAll(".khVad");
   const regEl = el.querySelectorAll(".khReglage");
   rader.forEach((r, i) => {
-    /* textContent, inte innerHTML: etiketterna kommer ur den här filen,
-       men regeln gäller ändå — ingen sträng ska kunna bli markup. */
+    /* textContent, inte innerHTML: ingen sträng ska kunna bli markup. */
     vadEl[i].textContent = r.vad;
-    regEl[i].textContent = r.reglage || (r.via ? "— " + r.via : "—");
+    regEl[i].textContent = r.reglage;
   });
   const kn = el.querySelector("#khStang");
-  kn.textContent = tgb ? "Stäng  (H)" : "Stäng";
+  kn.textContent = tgb ? khT("hjalp.stang_tangent", "H") : khT("hjalp.stang");
   kn.addEventListener("click", () => doljKontrollHjalp());
+  el.dataset.sprak = typeof SPRAKET !== "undefined" ? SPRAKET : "sv";
   return el;
 }
 
@@ -122,9 +152,14 @@ function vaxlaKontrollHjalp(){
   return kontrollHjalpSynlig() ? doljKontrollHjalp() : visaKontrollHjalp();
 }
 
-/* Första uppsittningen: visa reglagen en gång, av sig själv. Då är frågan
-   "vad gör jag nu?" som mest aktuell. Vid varje uppsittning hade det
-   blivit en ruta att stänga bort, inte en hjälp. */
+/* Ett språkbyte medan listan står uppe skriver om den på plats. */
+function kontrollHjalpSprak(){
+  const el = typeof document !== "undefined" ? document.getElementById("kontrollhjalp") : null;
+  if (el && !el.hidden && el.dataset.sprak !== (typeof SPRAKET !== "undefined" ? SPRAKET : "sv")) ritaKontrollHjalp();
+}
+
+/* Första uppsittningen i sessionen: visa reglagen en gång, av sig själv
+   (Roblox KontrollHjalp.vidUppsittning, P3 § 1.7). */
 function kontrollHjalpVidUppsittning(){
   if (kontrollVisadEnGang) return false;
   kontrollVisadEnGang = true;
@@ -133,11 +168,15 @@ function kontrollHjalpVidUppsittning(){
 
 if (typeof window !== "undefined") {
   window.KONTROLL_RADER = KONTROLL_RADER;
+  window.KONTROLL_KARNA = KONTROLL_KARNA;
   window.kontrollRader = kontrollRader;
+  window.kontrollRidrader = kontrollRidrader;
+  window.kontrollReglageFor = kontrollReglageFor;
   window.kontrollInmatning = kontrollInmatning;
   window.visaKontrollHjalp = visaKontrollHjalp;
   window.doljKontrollHjalp = doljKontrollHjalp;
   window.vaxlaKontrollHjalp = vaxlaKontrollHjalp;
   window.kontrollHjalpSynlig = kontrollHjalpSynlig;
+  window.kontrollHjalpSprak = kontrollHjalpSprak;
   window.kontrollHjalpVidUppsittning = kontrollHjalpVidUppsittning;
 }

@@ -89,26 +89,30 @@ const PEKSKARM = matchMedia("(pointer:coarse)").matches || "ontouchstart" in win
     <div id="joy"><div id="joyKnopp"></div></div>
     <div class="pekKnappar" id="pekGang">
       <div class="pekSmaRad">
-        <button class="pekKnapp liten" data-tap="KeyV">VY</button>
-        <button class="pekKnapp liten" data-tap="KeyT">BOK</button>
-        <button class="pekKnapp liten" data-tap="KeyM">LJUD</button>
+        <button class="pekKnapp liten" data-tap="KeyV" data-etikett="touch.webb.vy">VY</button>
+        <button class="pekKnapp liten" data-tap="KeyT" data-etikett="touch.webb.bok">BOK</button>
+        <button class="pekKnapp liten" data-tap="KeyM" data-etikett="touch.webb.ljud">LJUD</button>
       </div>
-      <button class="pekKnapp liten" data-hall="ShiftLeft">JOGGA</button>
-      <button class="pekKnapp stor" data-tap="KeyE">ANVÄND</button>
+      <button class="pekKnapp liten" data-hall="ShiftLeft" data-etikett="touch.webb.jogga">JOGGA</button>
+      <button class="pekKnapp stor" data-tap="KeyE" data-etikett="touch.webb.anvand">ANVÄND</button>
     </div>
+    <!-- P3 § 3: E är SITT AV i sadeln och F halvhalten (Roblox bindningar).
+         Hjälpknapparna står kvar — de ÄR webbens inmatning. NÄSTA hör till
+         momentserien och visas bara där den finns (tävlingen). -->
     <div class="pekKnappar" id="pekRitt" style="display:none">
       <div class="pekSmaRad">
-        <button class="pekKnapp liten" data-tap="KeyV">VY</button>
-        <button class="pekKnapp liten" data-tap="KeyR">LÄTTR.</button>
-        <button class="pekKnapp liten" data-tap="KeyQ">DIAG</button>
-        <button class="pekKnapp liten" data-tap="KeyN">NÄSTA</button>
+        <button class="pekKnapp liten" data-tap="KeyV" data-etikett="touch.webb.vy">VY</button>
+        <button class="pekKnapp liten" data-tap="KeyR" data-etikett="touch.webb.lattr">LÄTTR.</button>
+        <button class="pekKnapp liten" data-tap="KeyQ" data-etikett="touch.webb.diag">DIAG</button>
+        <button class="pekKnapp liten" data-tap="KeyN" data-etikett="touch.webb.nasta" id="pekNasta">NÄSTA</button>
+        <button class="pekKnapp liten" data-tap="KeyE" data-etikett="touch.sitt_av" id="pekSittAv">SITT AV</button>
       </div>
       <div class="pekSmaRad">
-        <button class="pekKnapp" data-hall="ShiftLeft">LÄTT</button>
-        <button class="pekKnapp" data-hall="ControlLeft">DJUP</button>
+        <button class="pekKnapp" data-hall="ShiftLeft" data-etikett="touch.webb.latt">LÄTT</button>
+        <button class="pekKnapp" data-hall="ControlLeft" data-etikett="touch.webb.djup">DJUP</button>
       </div>
-      <button class="pekKnapp" data-tap="KeyE">HALVHALT</button>
-      <button class="pekKnapp stor" data-hall="Space">TYGEL</button>
+      <button class="pekKnapp" data-tap="KeyF" data-etikett="touch.webb.halvhalt">HALVHALT</button>
+      <button class="pekKnapp stor" data-hall="Space" data-etikett="touch.webb.tygel">TYGEL</button>
     </div>`;
   document.body.appendChild(ui);
 
@@ -209,5 +213,19 @@ const PEKSKARM = matchMedia("(pointer:coarse)").matches || "ontouchstart" in win
     ui.style.display=overlayUppe||(!rider&&!gar)?"none":"";
     gang.style.display=gar?"":"none";
     ritt.style.display=rider?"":"none";
+    const nasta=document.getElementById("pekNasta"), sittAv=document.getElementById("pekSittAv");
+    if(nasta)nasta.style.display=G.p3?"none":"";
+    if(sittAv)sittAv.style.display=G.p3?"":"none";
+    pekEtiketter();
   },250);
 })();
+/* Knapparnas etiketter på spelarens språk (P3 § 3: «relabelled through
+   tSpr»). Körs vid start och i samma takt som knappuppsättningen, så att
+   ett språkbyte slår igenom inom en kvarts sekund. */
+function pekEtiketter(){
+  if(typeof document==="undefined"||typeof tSpr!=="function")return;
+  for(const b of document.querySelectorAll("#pekUI [data-etikett]")){
+    const txt=tSpr(b.dataset.etikett);
+    if(b.textContent!==txt)b.textContent=txt;
+  }
+}

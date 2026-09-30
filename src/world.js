@@ -1086,6 +1086,9 @@ function kameraNollstall(){
 }
 function gaTill(scen,spawn){
   InputImpulse.clear("KeyE");
+  /* Kimi Q4 H2: en dörr eller teleport till en annan scen ger 3D-vyn
+     igen, om inte spelaren valt kartan i just den scenen. */
+  if(typeof vyEfterFlytt==="function")vyEfterFlytt(scen);
   G.scen=scen;
   if(spawn){VD.px=spawn.x;VD.py=spawn.y;VD.rikt=spawn.rikt;VD.spår.length=0;VD.fart=0;VD.pz=nivaHojd(VD.px,VD.py,spawn.z||0);}
   slutaGa();                       // ett mål i förra scenen betyder inget här
@@ -1105,6 +1108,7 @@ function startaVandring(){
      dem igen. */
   if(typeof doljKontrollHjalp==="function")doljKontrollHjalp();
   overlay(false);
+  if(typeof vyEfterFlytt==="function")vyEfterFlytt("gard");
   G.scen="gard"; G.hastId=null; G.skotselRes=null;
   /* DAGEN BÖRJAR MED HÄSTEN I BOXEN (Tobias produkttest 2026-09-06,
      blocker 2). Vägen från grusplanen ut till hagen och tillbaka var
@@ -1138,15 +1142,30 @@ function startaVandring(){
 function hudLage(lage){
   const gang=lage==="gang";
   /* "moment" är den gamla vänsterrutan. Till fots ersätts den av
-     stegkortet (paritetspasset, #264) och syns bara under ritten. */
+     stegkortet (paritetspasset, #264) och syns bara under ritten.
+     P3: i huvudvägens ritt ersätts HELA fyrahörns-HUD:en (Moment,
+     Gångart, Utbildningsskalan, Hjälper) av ridpanelen. Ingenting raderas:
+     tävlingen (en sidoaktivitet) behåller sin HUD, utbildningsskalan finns
+     i träningsboken och hjälpmätarna under panelens `?`. */
+  const p3=lage==="ritt"&&!G.tavling&&!G.stege;
   for(const id of ["pyr","aids","gait","moment"]){
     const el=document.getElementById(id);
-    if(el){const hud=el.closest(".hudh")||el; hud.style.display=gang?"none":"";}
+    if(el){const hud=el.closest(".hudh")||el; hud.style.display=gang||p3?"none":"";}
   }
   const vt=document.getElementById("viewToggle");
   vt.hidden=false;
-  vt.querySelector('[data-v="2d"]').textContent=gang?"Karta":"Bana";
-  vt.querySelector('[data-v="3d"]').textContent=gang?"Bakom dig":"Sidovy";
+  G.hudLage=lage;
+  sprakEtiketter();
+}
+/* Växlarens etiketter på spelarens språk — skrivs om vid språkbyte. */
+function sprakEtiketter(){
+  if(typeof document==="undefined")return;
+  const vt=document.getElementById("viewToggle");
+  if(!vt)return;
+  const gang=G.hudLage!=="ritt";
+  const t=(k)=>typeof tSpr==="function"?tSpr(k):k;
+  vt.querySelector('[data-v="2d"]').textContent=t(gang?"vy.karta":"vy.bana");
+  vt.querySelector('[data-v="3d"]').textContent=t(gang?"vy.bakom_dig":"vy.sidovy");
 }
 /* Rubrik + punkter. PO 2026-09-06: gameplay-text ska vara kort och
    skannbar — en rubrik och 1–3 punkter, inte ett stycke. Texten tas

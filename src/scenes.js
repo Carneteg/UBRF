@@ -564,11 +564,16 @@ function visaResultat(dom){
     : dom.totalfel===0?`Felfritt! Men ridningen mellan hindren var stökigare än resultatet. Vi jobbar vidare där.`
     : snitt>=forv?`${dom.totalfel} fel, men ridningen håller. Felen försvinner när distanserna sätter sig.`
     : `${dom.totalfel} fel. Titta mindre på hindret och mer på vägen dit.`;
+  /* P3: ritten i huvudvägen bedömer inga moment. Då visas inget snitt,
+     ingen momenttabell och ingen uppflyttningsrad — bara att passet är
+     klart. Sammanfattningen, eftervården i ordning och «Passet är klart»
+     är P4 (docs/P3-RIDING-PANEL-LESSON-MENU-CONTRACT.md § 9). */
+  const p3=!!dom.p3;
   overlay(true,`
-  <span class="lbl">Efter lektionen</span>
-  <h1 style="margin-top:8px">”${omdome}”</h1>
+  <span class="lbl">${p3?tSpr("hud.passet_sparat"):"Efter lektionen"}</span>
+  <h1 style="margin-top:8px">”${p3?tSpr("hud.bra_jobbat"):omdome}”</h1>
   ${typeof efterPassHTML==="function"?efterPassHTML():""}
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:10px">
+  <div style="display:${p3?"none":"grid"};grid-template-columns:1fr 1fr;gap:22px;margin-top:10px">
     <div>
       ${G.hadeBana?`<div class="lbl" style="margin-bottom:6px">Protokoll — bedömning A, låg klass</div>
       <ul style="font-size:13px;font-family:'IBM Plex Mono',monospace;line-height:1.7">${domRows||"<li>—</li>"}</ul>

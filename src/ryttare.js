@@ -257,8 +257,10 @@ function registreraPass(dom){
   /* Dagens tema följer med. Nästa pass läser det: satt det går hon
      vidare, satt det inte tar hon om det och SÄGER att hon gör det.
      Det är hela skillnaden mellan en lärare och en främling. */
+  /* P3: en ritt i huvudvägen bedömer inga moment — snittet finns inte,
+     det är inte noll (P3 § 9). Gruppstegens poäng rörs inte av den. */
   SPAR.historik.unshift({hast:G.hastId, grupp:G.grupp,
-    snitt:Math.round(snitt*100)/100, fel:dom.totalfel, utesluten:dom.utesluten,
+    snitt:dom.p3?null:Math.round(snitt*100)/100, fel:dom.totalfel, utesluten:dom.utesluten, p3:!!dom.p3,
     fokus:(typeof lararDagensId==="function")?lararDagensId():null,
     fokusAndel:(typeof lararAndel==="function")?Math.round(lararAndel()*100)/100:null});
   if(SPAR.historik.length>20)SPAR.historik.length=20;
@@ -286,7 +288,7 @@ function registreraPass(dom){
 function profilHTML(){
   const m=SPAR.historik[0];
   const senast=m?`Senast: ${HORSES[m.hast]?HORSES[m.hast].namn:m.hast} — ${
-    m.utesluten?"uteslutning":m.fel+" fel"}, snitt ${String(m.snitt).replace(".",",")}`
+    m.utesluten?"uteslutning":m.fel+" fel"}${m.snitt==null?"":", snitt "+String(m.snitt).replace(".",",")}`
     :"Första passet väntar.";
   const kanda=Object.entries(SPAR.fortroende).filter(([,v])=>v.pass>0).length;
   return `<div class="note" style="display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:baseline">

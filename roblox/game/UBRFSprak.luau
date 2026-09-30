@@ -2833,6 +2833,258 @@ Sprak.text = {
 		sv = "Boxdörren är stängd — öppna hennes boxdörr först, så kan hon gå ut",
 		en = "Her stall door is shut — open her stall door first so she can walk out",
 	},
+	["hjalp.webb.driv"] = {
+		sv = "Driv på — skänkel",
+		en = "Ride forward — leg",
+	},
+	["hjalp.webb.bromsa"] = {
+		sv = "Bromsa — mindre skänkel, mer tygel",
+		en = "Slow down — less leg, more rein",
+	},
+	["hjalp.webb.sits"] = {
+		sv = "Sits lätt / djup",
+		en = "Seat light / deep",
+	},
+	["hjalp.webb.lattridning"] = {
+		sv = "Lättridning / nedsittning",
+		en = "Rising / sitting trot",
+	},
+	["hjalp.webb.diagonal"] = {
+		sv = "Byt diagonal",
+		en = "Change diagonal",
+	},
+	["hjalp.webb.spo"] = {
+		sv = "Spö",
+		en = "Whip",
+	},
+	["hjalp.webb.vy"] = {
+		sv = "Byt vy",
+		en = "Change view",
+	},
+	["hjalp.webb.mellanslag"] = {
+		sv = "Mellanslag",
+		en = "Space",
+	},
+	["hjalp.webb.spak_fram"] = {
+		sv = "Spaken fram",
+		en = "Stick forward",
+	},
+	["hjalp.webb.spak_bak_tygel"] = {
+		sv = "Spaken bak + TYGEL",
+		en = "Stick back + REIN",
+	},
+	["hjalp.webb.m_skankel"] = {
+		sv = "Skänkel",
+		en = "Leg",
+	},
+	["hjalp.webb.m_tygel"] = {
+		sv = "Tygel",
+		en = "Rein",
+	},
+	["hjalp.webb.m_sits"] = {
+		sv = "Sits",
+		en = "Seat",
+	},
+	["touch.webb.tygel"] = {
+		sv = "TYGEL",
+		en = "REIN",
+	},
+	["touch.webb.halvhalt"] = {
+		sv = "HALVHALT",
+		en = "HALF-HALT",
+	},
+	["touch.webb.latt_djup"] = {
+		sv = "LÄTT / DJUP",
+		en = "LIGHT / DEEP",
+	},
+	["touch.webb.latt"] = {
+		sv = "LÄTT",
+		en = "LIGHT",
+	},
+	["touch.webb.djup"] = {
+		sv = "DJUP",
+		en = "DEEP",
+	},
+	["touch.webb.lattr"] = {
+		sv = "LÄTTR.",
+		en = "RISING",
+	},
+	["touch.webb.diag"] = {
+		sv = "DIAG",
+		en = "DIAGONAL",
+	},
+	["touch.webb.vy"] = {
+		sv = "VY",
+		en = "VIEW",
+	},
+	["touch.webb.nasta"] = {
+		sv = "NÄSTA",
+		en = "NEXT",
+	},
+	["touch.webb.bok"] = {
+		sv = "BOK",
+		en = "BOOK",
+	},
+	["touch.webb.ljud"] = {
+		sv = "LJUD",
+		en = "SOUND",
+	},
+	["touch.webb.jogga"] = {
+		sv = "JOGGA",
+		en = "JOG",
+	},
+	["touch.webb.anvand"] = {
+		sv = "ANVÄND",
+		en = "USE",
+	},
+	["vy.karta"] = {
+		sv = "Karta",
+		en = "Map",
+	},
+	["vy.bakom_dig"] = {
+		sv = "Bakom dig",
+		en = "Behind you",
+	},
+	["vy.bana"] = {
+		sv = "Bana",
+		en = "Arena",
+	},
+	["vy.sidovy"] = {
+		sv = "Sidovy",
+		en = "Side view",
+	},
+	["replay.din_ritt"] = {
+		sv = "Din ritt",
+		en = "Your ride",
+	},
+	["replay.se_igen"] = {
+		sv = "Se ritten igen",
+		en = "Watch the ride again",
+	},
+	["replay.canvas"] = {
+		sv = "Din ridna väg, uppspelad",
+		en = "Your ridden path, played back",
+	},
+	["replay.spela"] = {
+		sv = "Spela",
+		en = "Play",
+	},
+	["replay.pausa"] = {
+		sv = "Pausa",
+		en = "Pause",
+	},
+	["replay.halv_fart"] = {
+		sv = "Halv fart",
+		en = "Half speed",
+	},
+	["replay.normal_fart"] = {
+		sv = "Normal fart",
+		en = "Normal speed",
+	},
+	["replay.dolj_forra"] = {
+		sv = "Dölj förra försöket",
+		en = "Hide the previous attempt",
+	},
+	["replay.visa_forra"] = {
+		sv = "Visa förra försöket",
+		en = "Show the previous attempt",
+	},
+	["replay.spola"] = {
+		sv = "Spola i uppspelningen",
+		en = "Scrub through the playback",
+	},
+	["replay.matte"] = {
+		sv = "Det här mätte vi",
+		en = "What we measured",
+	},
+	["replay.streckad"] = {
+		sv = "Streckad linje är ditt förra försök.",
+		en = "The dashed line is your previous attempt.",
+	},
+	["replay.mindre_rorelse"] = {
+		sv = "Uppspelningen startar inte av sig själv eftersom du bett om mindre rörelse.",
+		en = "The playback does not start by itself because you asked for reduced motion.",
+	},
+	["replay.voltens_radie"] = {
+		sv = "Voltens radie",
+		en = "Circle radius",
+	},
+	["replay.ovningens_mal"] = {
+		sv = "Övningens mål",
+		en = "Exercise target",
+	},
+	["replay.spridning"] = {
+		sv = "Formens spridning",
+		en = "Spread of the shape",
+	},
+	["replay.stracka"] = {
+		sv = "Ridd sträcka",
+		en = "Distance ridden",
+	},
+	["replay.varv"] = {
+		sv = "Varv",
+		en = "Laps",
+	},
+	["replay.radie_forra"] = {
+		sv = "Radie mot förra försöket",
+		en = "Radius against the previous attempt",
+	},
+	["replay.ej_volt"] = {
+		sv = "Den här ritten gick inte att mäta som en volt",
+		en = "This ride could not be measured as a circle",
+	},
+	["replay.ingen_overgang"] = {
+		sv = "Ingen gångartsändring finns i den här inspelningen",
+		en = "There is no change of gait in this recording",
+	},
+	["replay.overgang"] = {
+		sv = "Övergång",
+		en = "Transition",
+	},
+	["replay.skedde_efter"] = {
+		sv = "Skedde efter",
+		en = "Happened after",
+	},
+	["replay.fart_fore_efter"] = {
+		sv = "Fart före → efter",
+		en = "Speed before → after",
+	},
+	["replay.byten_totalt"] = {
+		sv = "Gångartsbyten totalt",
+		en = "Gait changes in total",
+	},
+	["replay.skal.fa_punkter"] = {
+		sv = "för få punkter",
+		en = "too few points",
+	},
+	["replay.skal.rak"] = {
+		sv = "ingen cirkel går att anpassa — vägen är rak",
+		en = "no circle fits — the path is straight",
+	},
+	["replay.skal.ingen_andring"] = {
+		sv = "ingen gångartsändring",
+		en = "no change of gait",
+	},
+	["replay.ord_radie"] = {
+		sv = "Din volt blev %s m i radie",
+		en = "Your circle had a radius of %s m",
+	},
+	["replay.ord_storre"] = {
+		sv = "— större än de %s m övningen ber om",
+		en = "— larger than the %s m the exercise asks for",
+	},
+	["replay.ord_mindre"] = {
+		sv = "— mindre än de %s m övningen ber om",
+		en = "— smaller than the %s m the exercise asks for",
+	},
+	["replay.ord_nara"] = {
+		sv = "— nära de %s m övningen ber om",
+		en = "— close to the %s m the exercise asks for",
+	},
+	["replay.ord_form"] = {
+		sv = "Formen höll sig inom %s m från cirkeln.",
+		en = "The shape stayed within %s m of the circle.",
+	},
 }
 
 --[[ Redovisad översättningsskuld: innehåll som är svenskt idag och
