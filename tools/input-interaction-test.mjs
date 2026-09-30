@@ -73,9 +73,13 @@ test('scenbyte och hållen E skapar ingen ny handling förrän nytt tryck',()=>{
   const c=mount();c.key('keydown');c.sample();c.go('stallinne');c.sample();c.go('gard');c.sample();assert.equal(c.calls(),1);
   c.key('keyup');c.key('keydown');c.key('keyup');c.sample();assert.equal(c.calls(),2);
 });
+/* P3 § 3: i sadeln är F halvhalten (Roblox F) och E sitter av. Paraden är
+   samma kanal och samma nivåsemantik som förut — bara tangenten har bytts.
+   E i sadeln ger ingen parad och ingen gå-lägets interaktion. */
 test('ridningens parad och kontinuerliga nivå förblir oförändrade',()=>{
-  const c=mount();c.G.scen='lektion';c.key('keydown');assert.equal(c.RIDIN.parad,1);assert.equal(c.IN.ned.KeyE,true);
-  c.key('keyup');assert.equal(c.RIDIN.parad,0);assert.equal(c.IN.ned.KeyE,false);
+  const c=mount();c.G.scen='lektion';c.key('keydown','KeyF');assert.equal(c.RIDIN.parad,1);assert.equal(c.IN.ned.KeyF,true);
+  c.key('keyup','KeyF');assert.equal(c.RIDIN.parad,0);assert.equal(c.IN.ned.KeyF,false);
+  c.key('keydown');assert.equal(c.RIDIN.parad,0);c.key('keyup');
   c.G.scen='gard';c.sample();assert.equal(c.calls(),0);
 });
 /* ── Hållprompterna (paritetspasset P1a R1, Roblox HoldDuration) ── */

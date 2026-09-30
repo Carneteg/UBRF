@@ -134,7 +134,8 @@ async function firstDay(){
 async function riding(){
  const s=await firstDay();if(s.scene!=='lektion'||!s.ride)throw Error('Ridtest BLOCKED: ingen uppsittning');stage='riding';
  const before=await state();await hold('KeyW',1000);await hold('Space',800);
- await hold('KeyA',650);await hold('KeyD',650);await hold('KeyS',500);await key('KeyE');
+ /* P3 § 3: halvhalten är F i sadeln (E sitter av, som i Roblox). */
+ await hold('KeyA',650);await hold('KeyD',650);await hold('KeyS',500);await key('KeyF');
  const r=await snap('riding-input');record('Ridinput och aktiv ridloop',r.ride?'PASS':'FAIL',{scene:r.scene,horse:r.horse,before:before.riding,after:r.riding});
  await key('KeyT');await snap('riding-training-book');record('Träningsboken öppnas från sadeln',(await state()).overlay?'PASS':'FAIL');
 }

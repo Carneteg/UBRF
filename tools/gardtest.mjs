@@ -49,7 +49,12 @@ const TANGENT = { N: "w", S: "s", O: "d", V: "a" };
    still mot en solid linje? Därför hålls tangenten tills målet är
    nått eller tills figuren har stått stilla i 0,6 s. */
 async function ga(scen, x, y, hall, framme, maxMs = 20000) {
-  await page.evaluate(({ scen, x, y }) => gaTill(scen, { x, y, rikt: 0 }), { scen, x, y });
+  /* P3 / Kimi Q4: en flytt till en annan scen ger 3D-vyn igen, om inte
+     kartan valts I DEN scenen. Provet väljer kartan där det går — samma
+     val en spelare gör med V efter dörren — så att tangenterna är
+     absoluta som provet förutsätter. */
+  await page.evaluate(({ scen, x, y }) => { gaTill(scen, { x, y, rikt: 0 });
+    if (G.vy !== "2d") vaxlaVy(); }, { scen, x, y });
   await page.waitForTimeout(250);
   for (const h of hall) await page.keyboard.down(TANGENT[h]);
   const las = () => page.evaluate(() => ({ x: +VD.px.toFixed(2), y: +VD.py.toFixed(2) }));

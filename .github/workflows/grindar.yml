@@ -401,6 +401,33 @@ jobs:
           test -f tools/sprakblandningtest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/sprakblandningtest.mjs (steget 'Lokalisering — ett språk i taget i stegkortet (UI-3)')" >&2; exit 1; }
           node tools/sprakblandningtest.mjs
 
+      # P3 (docs/P3-RIDING-PANEL-LESSON-MENU-CONTRACT.md § 8): Roblox är facit.
+      # Paritetsgrinden läser Luau-källan direkt; proven rider genom den byggda
+      # sidan. Fail closed som grannarna.
+      - name: P3 — lektionsparitet mot Roblox-källan (konstanter, meny, textnycklar, ram)
+        run: |
+          set -euo pipefail
+          test -f tools/lektionsparitet.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/lektionsparitet.mjs (steget 'P3 — lektionsparitet mot Roblox-källan (konstanter, meny, textnycklar, ram)')" >&2; exit 1; }
+          node tools/lektionsparitet.mjs
+
+      - name: P3 — de tolv lektionerna ridna syntetiskt genom produktionsvägen
+        run: |
+          set -euo pipefail
+          test -f tools/lektionstest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/lektionstest.mjs (steget 'P3 — de tolv lektionerna ridna syntetiskt genom produktionsvägen')" >&2; exit 1; }
+          node tools/lektionstest.mjs
+
+      - name: P3 — ridpanelen (hierarki, meny, Text, tangenter, layout)
+        run: |
+          set -euo pipefail
+          test -f tools/ridpaneltest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/ridpaneltest.mjs (steget 'P3 — ridpanelen (hierarki, meny, Text, tangenter, layout)')" >&2; exit 1; }
+          node tools/ridpaneltest.mjs
+
+      - name: P3 — kameran efter en flytt (Kimi Q4)
+        run: |
+          set -euo pipefail
+          test -f tools/kameratest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/kameratest.mjs (steget 'P3 — kameran efter en flytt (Kimi Q4)')" >&2; exit 1; }
+          node tools/kameratest.mjs
+
       - name: Ridkärnan — Gate 01-värden, telemetri, live-koppling och volten
         run: |
           set -euo pipefail

@@ -63,32 +63,36 @@ for (const vy of vyer) {
   await page.goto(`http://localhost:${PORT}/`, { waitUntil: "load" });
   await page.waitForTimeout(800);
 
-  /* Rid ett riktigt pass — samma uppsättning som replaytest.mjs. */
+  /* Rid ett riktigt pass — P3: huvudvägens fri träning (src/fripass.js).
+     Ugnetas sex övningar i kanonens ordning; övningarna utan definition
+     hoppas över med «Gå vidare», och 20 m-volten rids en hel runda
+     (22 s) med hjälperna genom inputlagret. Kortet besvaras av en hjälp,
+     precis som spelaren gör. */
   const kord = await page.evaluate(() => {
     if (typeof SPAR !== "undefined" && SPAR) SPAR.pass = Math.max(1, SPAR.pass || 0);
     G.hastId = G.hastId || Object.keys(HORSES)[0];
     G.hastPlats = "box"; G.npcs = []; G.dagsform = 0.72; G.sadellage = 0.8;
     G.ride = nyState(G.dagsform, hastminne(G.hastId).rang, G.sadellage);
-    G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0;
+    G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0; G.tavling = null;
     if (typeof ridNollstallHjalp === "function") ridNollstallHjalp();
-    lararNollstall(); startaLektion();
-    const ix = G.lektion.findIndex(m => {
-      const o = ugnetaOvningFor(m);
-      return o && typeof ovningsDef === "function" && ovningsDef(o.id);
-    });
-    if (ix < 0) return { fel: "ingen definierad övning" };
-    G.momentIx = ix; G.moment = G.lektion[ix]; G.momentForsok = 1;
-    G.momentT = 0; G.momentHall = 0; G.momentKlart = false;
+    G.plats = "ridhus"; startaLektion();
+    if (!G.p3 || typeof FriPass === "undefined") return { fel: "ingen fri träning i huvudvägen" };
     const dt = 1 / 30;
-    for (let i = 0; i < 5200; i++) {
-      if (G.paus) { const igen = document.getElementById("valIgen");
-        if (igen) igen.click(); else break; continue; }
+    for (let i = 0; i < 9000; i++) {
+      const id = FriPass.ovningId();
+      if (FriPass.lage() === "efter") {
+        if (id === "storvolt" && replayFinns("storvolt")) return { ok: true };
+        if (!FriPass.gaVidare()) FriPass.fortsatt();
+        continue;
+      }
+      if (FriPass.lage() === "ingen") break;
       IN.ned.KeyW = true; if (i % 90 < 45) IN.ned.KeyD = true; else delete IN.ned.KeyD;
+      RIDIN.skankel = i % 120 < 20 ? 1 : 0; RIDIN.styr = i % 90 < 45 ? 0.6 : 0;
       if (typeof stegaRitt === "function") stegaRitt(dt);
-      if (typeof stegaLektion === "function") stegaLektion(dt);
+      if (typeof stegaP3 === "function") stegaP3(dt);
     }
-    delete IN.ned.KeyW; delete IN.ned.KeyD;
-    return { ok: true };
+    delete IN.ned.KeyW; delete IN.ned.KeyD; RIDIN.skankel = 0; RIDIN.styr = 0;
+    return replayFinns("storvolt") ? { ok: true } : { fel: "ingen inspelad volt efter passet" };
   });
   if (kord.fel) { prova(`${vy.namn}: kunde rida ett pass`, false, kord.fel); await page.close(); continue; }
 

@@ -422,12 +422,22 @@ prova("uppsittningen startar lektionen — spelaren sitter upp",
    för hand har inget `G.ride` — den byggs av skötseln — och sittUpp()
    sprack då på `null.gangart`. Det hade sagt något om mitt
    konstruerade tillstånd, inte om spelet. */
-const eft1 = await ev(() => ({ scen: G.scen, ix: G.momentIx, forsok: G.momentForsok }));
+/* P3 § 3: i sadeln är E «sitt av» (Roblox binder E till avsittningen,
+   utan spärr). Ett andra, NYTT tryck efter uppsittningen startar därför
+   aldrig om ritten eller hoppar ett försök — det avslutar ritten, och
+   ingen ny ritt (nytt rittId) börjar av sig själv. */
+const eft1 = await ev(() => ({ scen: G.scen, ritt: typeof RittLektion !== "undefined" ? RittLektion.rittId() : null }));
 await tryckE(null);
-const eft2 = await ev(() => ({ scen: G.scen, ix: G.momentIx, forsok: G.momentForsok }));
-prova("ett andra tryck startar inte om lektionen",
-  eft2.scen === "lektion" && eft2.ix === eft1.ix && eft2.forsok === eft1.forsok,
-  `moment ${eft1.ix}/${eft1.forsok} → ${eft2.ix}/${eft2.forsok}`);
+const eft2 = await ev(() => ({ scen: G.scen, ritt: typeof RittLektion !== "undefined" ? RittLektion.rittId() : null,
+  p3: G.p3 }));
+prova("ett andra tryck startar inte om lektionen — det sitter av (Roblox E)",
+  eft1.scen === "lektion" && !!eft1.ritt && eft2.scen === "resultat" && eft2.ritt === null && eft2.p3 === false,
+  `${eft1.scen} ${eft1.ritt} → ${eft2.scen} ${eft2.ritt}`);
+/* Den valfria ritten nedan (RITT=1) mäter momentseriens livscykel (N,
+   moment, Ugnetas försök). Den serien är inte längre huvudvägen (P3 § 9)
+   men finns kvar; provet sitter upp igen i den, uttryckligen. */
+if (process.env.RITT === "1")
+  await ev(() => { overlay(false); G.stege = true; G.scen = "ridhusinne"; sittUppDirekt("ridhus"); G.stege = false; });
 
 /* ══ 10. RITTEN (RITT=1) ══════════════════════════════════════════
    Sista delen av P0-ordern: styrning, gångarter och Ugneta — genom

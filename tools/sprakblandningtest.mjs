@@ -213,6 +213,106 @@ for (const lage of ["sv", "en"]) {
   await page.close();
 }
 
+/* ── D. P3: I SADELN ───────────────────────────────────────────────────
+   docs/P3-RIDING-PANEL-LESSON-MENU-CONTRACT.md § 1.6: varje synlig sträng
+   i ridpanelen, menyn, lektionerna, återkopplingen, återspelningen och
+   reglagelistan går genom tSpr. Svenska valt → ingen engelska; engelska
+   valt (via ridpanelens EGEN flagga) → ingen svenska. Samma detektor. */
+console.log("\n── D. P3: ridpanelen, menyn, lektionerna, återkopplingen, reglagen, återspelningen ──");
+for (const lage of ["sv", "en"]) {
+  const page = await browser.newPage({ viewport: { width: 1600, height: 900 }, locale: "sv-SE" });
+  page.on("pageerror", e => { console.error("PAGEERROR", e.message); fel++; });
+  await page.goto(`http://localhost:${PORT}/`, { waitUntil: "load" });
+  await page.waitForTimeout(600);
+  const h = await page.evaluate(() => { overlay(false); window.SPRAKET = "sv"; SPAR.pass = 0; SPAR_BETRODD = true;
+    startaVandring();
+    return { katalog: Object.values(SPRAK).map(p => ({ sv: p.sv, en: p.en })), namn2: Object.values(HORSES).map(x => x.namn) }; });
+  await page.waitForTimeout(600);
+  const arBlandat = detektor(h.katalog, h.namn2);
+  const blandat = [], ytor = new Set();
+  let sedda = 0;
+  const las = async (yta, sel) => {
+    /* Synlig = ritad (getClientRects), inte offsetParent — panelerna är
+       position:fixed och har ingen offsetParent. */
+    const rader = await page.evaluate(s => { const el = document.querySelector(s);
+      return el && !el.hidden && el.getClientRects().length && getComputedStyle(el).display !== "none"
+        ? el.innerText.split("\n").map(x => x.trim()).filter(Boolean) : []; }, sel);
+    for (const rad of rader) {
+      sedda++; ytor.add(yta);
+      const varfor = arBlandat(rad, lage);
+      if (varfor) blandat.push(`${yta}: «${rad}» (${varfor})`);
+    }
+  };
+  const knapp = async borjar => page.evaluate(t => { const b = [...document.querySelectorAll("#ridpanel .skV button")]
+    .find(x => x.textContent.startsWith(t)); if (b) b.click(); return !!b; }, borjar);
+  if (lage === "en") { await page.click("#ridpanel button[data-sprak]"); await vanta(page); }
+  prova(`${lage}: språket är valt`, await page.evaluate(() => SPRAKET) === lage);
+  await las("reglagelistan", "#kontrollhjalp");
+  await page.evaluate(() => doljKontrollHjalp());
+  await las("ridpanelen", "#ridpanel");
+  await page.click("#ridpanel button[data-hjalp]"); await vanta(page); await las("ridpanelen ?", "#ridpanel");
+  await page.click("#ridpanel button[data-hjalp]");
+  await page.click("#ridpanel button[data-text]"); await vanta(page); await las("Text", "#ridpanel");
+  await page.click("#ridpanel button[data-text]");
+  await page.keyboard.down("KeyW"); await page.waitForTimeout(350); await page.keyboard.up("KeyW"); await page.waitForTimeout(500);
+  await las("fri träning", "#ridpanel");
+  /* Menyns alla sidor, med panelens egna knappar. */
+  const grupper = lage === "sv" ? ["Gångarter", "Övergångar", "Tillbaka", "Tillbaka", "Ridvägar", "Böjda", "Tillbaka", "Raka", "Tillbaka", "Tillbaka"]
+    : ["Gaits", "Transitions", "Back", "Back", "Riding paths", "Curved", "Back", "Straight", "Back", "Back"];
+  for (const g of grupper) { await knapp(g); await vanta(page); await las("menyn", "#ridpanel"); }
+  /* Varje lektion: sidan, Start, den levande sidan, Avsluta. */
+  for (const typ of ["volt", "halt", "tempo", "overgang", "galopp", "serpentin", "vag_mitt", "vag_diag", "halvvolt", "hornet", "markbom", "clearround"]) {
+    await page.evaluate(t => Lektionsmeny.valj(t), typ); await vanta(page); await las(`lektion ${typ}`, "#ridpanel");
+    const start = typ === "clearround" ? ["anmal", "ga_banan", "start"] : ["start"];
+    for (const op of start) { await page.evaluate(o => Lektionsmeny.skicka(o), op); await vanta(page); await las(`lektion ${typ}`, "#ridpanel"); }
+    await page.evaluate(() => { const b = Lektionsmeny.panel().knappar; b[b.length - 1].gor(); }); await vanta(page);
+    await las(`lektion ${typ} avslutad`, "#ridpanel");
+  }
+  /* Återkopplingen: varje typs slut-, kort- och tidsgränstext ur en fryst bild. */
+  const at = await page.evaluate(() => {
+    const R = { volt: { avsnitt: { varv: 1, referens: { radie: 10 }, medelAvvikelse: 0.8, tid: 21 } },
+      halt: { mal: "X", skrittMeter: 4.4, haltSekunder: 2.1 }, overgang: { mal: "T1->T2", travMeter: 6.5, skrittMeter: 2.2 },
+      serpentin: { rutt: "serpentin-3", meter: 75, korsningar: [1, 2] },
+      tempo: { ovning: "jamn_skritt", enhet: "m/s", meter: 12, sekunder: 8, medelFart: 1.5, spridning: 0.12 },
+      vag_mitt: { figur: "vag_mitt", meter: 48, langd: 48 }, vag_diag: { figur: "vag_diag", meter: 46, langd: 46.2 },
+      halvvolt: { figur: "halvvolt", meter: 45, skarvar: [1, 2], skuld: 0.3 },
+      galopp: { ovning: "galoppfattning", galoppsida: "ej_bedomd", travMeter: 9, galoppMeter: 6.2 },
+      markbom: { ovning: "markbom", passage: "rotplan", inridningM: 4, utridningM: 1.2 },
+      hornet: { figur: "hornet", mitt: true, meter: 23.5, langd: 23.9 },
+      clearround: { ovning: "clearround", bedomning: "forenklad", forsokNr: 1, utfall: "observerade_fel", olydnader: 1, fel: 4, tid: 95, omstartMojlig: true } };
+    const ut = [];
+    for (const typ in R) for (const detalj of ["detaljerad", "kort"]) {
+      LararInstallning.satDetalj(detalj);
+      const b = { typ, rittId: "p", forsokId: "p:1", lage: "complete", resultat: { ...R[typ], forsokId: "p:1", rittId: "p" },
+        eftervard: typ === "clearround" ? EFTERVARD.map(e => ({ namn: e.namn, namnEn: e.namnEn })) : null };
+      ut.push(LektionAterkoppling.text(b, { typ, ritt: "p" }));
+      ut.push(LektionAterkoppling.text({ typ, rittId: "p", forsokId: "p:1", lage: "timeout", progress: 40 }, { typ, ritt: "p" }));
+    }
+    LararInstallning.satDetalj("detaljerad");
+    return ut;
+  });
+  for (const rad of at) { sedda++; const v = arBlandat(rad, lage); if (v) blandat.push(`återkopplingen: «${rad}» (${v})`); }
+  ytor.add("återkopplingen");
+  /* Återspelningen: en runda på 20 m-volten i fri träning, sedan «Se ritten». */
+  const replay = await page.evaluate(() => {
+    Lektionsmeny._S.valt = false; Lektionsmeny._S.fri = false; FriPass.nyttPass();
+    const dt = 1 / 30;
+    for (let i = 0; i < 9000; i++) {
+      if (FriPass.lage() === "efter") { if (FriPass.ovningId() === "storvolt") return FriPass.seRitten(); if (!FriPass.gaVidare()) FriPass.fortsatt(); continue; }
+      RIDIN.skankel = i % 120 < 20 ? 1 : 0; RIDIN.styr = i % 90 < 45 ? 0.6 : 0;
+      stegaRitt(dt); stegaP3(dt);
+    }
+    return false;
+  });
+  prova(`${lage}: återspelningen gick att öppna ur fri träning`, replay === true);
+  await las("återspelningen", "#ov");
+  prova(`${lage}: ytorna prövades`, ["reglagelistan", "ridpanelen", "ridpanelen ?", "Text", "fri träning", "menyn",
+    "lektion clearround", "återkopplingen", "återspelningen"].every(y => ytor.has(y)), [...ytor].join(", "));
+  prova(`${lage}: inget av andra språket i ${sedda} synliga rader i sadeln`, blandat.length === 0 && sedda > 150,
+    blandat.slice(0, 8).join(" ‖ "));
+  await page.close();
+}
+
 console.log("\n── C. Detektorn själv ──");
 {
   const d = detektor([{ sv: "Gå fram från sidan vid bogen", en: "Walk up from the side, at her shoulder" }], ["Troy"]);
