@@ -78,6 +78,11 @@ local DEFINITIONS = {
 		 bara spelarens eget attribut, så att serverns egna texter till
 		 henne följer valet. Inget annat tillstånd går att nå härifrån. ]]
 	SprakVal = "RemoteFunction",           -- klient -> server: mitt sprak i spelet
+	--[[ JEV-POC-2 (#270, A'): försöksunderlaget speglas till serverns
+		 Jev-skugga. Finns alltid men är tyst: servern ansluter och sätter
+		 attributet `Aktiv` bara när `ServerStorage.JevShadowEnabled` är på.
+		 Underlaget är obetrott skugg-indata och når aldrig spelet. ]]
+	JevSkugga = "RemoteEvent",             -- klient -> server: skuggunderlag, av som standard
 }
 
 local cache: { [string]: Instance } = {}
