@@ -186,6 +186,14 @@ function JevShadowPolicy.projicera(rent: Rent): (Rent?, string?, { string })
 	for k in bortSet do table.insert(bort, k) end
 	table.sort(bort)
 	if nu == nil then return nil, "tom_projektion", bort end
+	--[[ `fore` klipps också till det som mäts I DETTA försök. Regeln läser
+	     `fore[k]` bara tillsammans med `nu[k]`, så en dimension som bara
+	     finns i förra försöket är underlag regeln aldrig tittar på. ]]
+	if fore then
+		local ft = {}
+		for k in nu do ft[k] = true end
+		fore = klipp(fore, ft, {})
+	end
 	return { ovningId = rent.ovningId, forsokNr = rent.forsokNr, nu = nu, fore = fore }, nil, bort
 end
 
@@ -208,14 +216,26 @@ function JevShadowPolicy.ugneta(rent: Rent): (string, { { dim: string, sort: str
 	return fokus, kort
 end
 
---[[ Jevs tillåtna svar: övningens MÄTBARA dimensioner, plus `ingen`.
-     Samma mängd som Ugneta kan svara ur — `rytm` i en volt är ett svar
-     hon aldrig kan ge, eftersom den aldrig mäts. ]]
-function JevShadowPolicy.etiketter(ovningId: string): { string }
+--[[ Jevs tillåtna svar PER PROV (CHATGPT_RE-REVIEW @d27ca94): de
+     dimensioner som faktiskt MÄTTES i detta försök — nycklarna i det
+     projicerade `nu` — plus `ingen`. Samma mängd som Ugneta kan svara ur:
+     hon väljer bara bland `nu[k] ~= nil`, så en övningsdimension som
+     saknas i försöket (`balans` i en volt utan balansvärde) kan hon aldrig
+     säga, och då får Jev inte heller erbjudas den. Ordningen är
+     kanonens, så att samma prov alltid ger samma lista. ]]
+function JevShadowPolicy.matta(rent: Rent): { string }
+	local proj = JevShadowPolicy.projicera(rent)
 	local ut = {}
-	for _, k in Ugneta.dimensionerFor(ovningId) do
-		if MATTBAR[k] then table.insert(ut, k) end
+	if proj then
+		for _, k in Ugneta.dimensionerFor(rent.ovningId) do
+			if proj.nu[k] ~= nil then table.insert(ut, k) end
+		end
 	end
+	return ut
+end
+
+function JevShadowPolicy.etiketter(rent: Rent): { string }
+	local ut = JevShadowPolicy.matta(rent)
 	table.insert(ut, JevShadowPolicy.INGEN)
 	return ut
 end
@@ -240,13 +260,10 @@ function JevShadowPolicy.kropp(rent: Rent): { [string]: any }
 	local nu = if proj then proj.nu else {}
 	local fore = if proj then proj.fore else nil
 	local kriterier = {}
-	for _, e in JevShadowPolicy.etiketter(rent.ovningId) do
+	for _, e in JevShadowPolicy.etiketter(rent) do
 		kriterier[e] = JevShadowPolicy.BESKRIVNING[e]
 	end
-	local dims = {}
-	for _, k in Ugneta.dimensionerFor(rent.ovningId) do
-		if MATTBAR[k] then table.insert(dims, k) end
-	end
+	local dims = JevShadowPolicy.matta(rent)
 	return {
 		state = {
 			ovning = rent.ovningId,
@@ -274,7 +291,7 @@ end
 	svar, inte ett svar att räkna med. ]]
 export type Tolkat = { fokus: string, confidence: number, model: string? }
 
-function JevShadowPolicy.tolka(svar: any, ovningId: string): (Tolkat?, string?)
+function JevShadowPolicy.tolka(svar: any, rent: Rent): (Tolkat?, string?)
 	if type(svar) ~= "table" then return nil, "svar_inte_tabell" end
 	local answers = svar.answers
 	if type(answers) ~= "table" then return nil, "saknar_answers" end
@@ -283,7 +300,7 @@ function JevShadowPolicy.tolka(svar: any, ovningId: string): (Tolkat?, string?)
 	local val = f.choice
 	if type(val) ~= "string" then return nil, "choice_typ" end
 	local tillaten = false
-	for _, e in JevShadowPolicy.etiketter(ovningId) do
+	for _, e in JevShadowPolicy.etiketter(rent) do
 		if e == val then tillaten = true break end
 	end
 	if not tillaten then return nil, "okand_etikett" end

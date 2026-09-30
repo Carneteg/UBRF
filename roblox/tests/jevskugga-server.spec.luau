@@ -166,6 +166,15 @@ do
 	local kT = JevShadow._mottag(spelare("P", true), { ovningId = "storvolt", forsokNr = 1, nu = { tempo = 0.5 } })
 	prova("inget övningsunderlag → hard_gate tom_projektion, noll förfrågningar",
 		kT == "hard_gate" and sista().reason == "tom_projektion" and dT.http == 0 and dT.hemlighet == 0)
+	-- Re-review @d27ca94: bara linjen mätt → balans är inget giltigt Jev-svar.
+	local dB = starta()
+	dB.svar = function() return svarMed("balans", 0.95) end
+	JevShadow._mottag(spelare("Q", true), { ovningId = "storvolt", forsokNr = 1, nu = { linje = 0.5 } })
+	prova("storvolt + nu={linje}: förfrågan erbjuder inte balans",
+		string.find(dB.req.Body, "balans", 1, true) == nil, dB.req.Body and #dB.req.Body)
+	prova("och Jevs svar balans avvisas som api_error okand_etikett",
+		sista().kalla == "api_error" and sista().reason == "okand_etikett" and sista().jev == nil,
+		("%s/%s"):format(tostring(sista().kalla), tostring(sista().reason)))
 end
 
 print("\n── Hård grind: inte uppsuten, ingen hemlighet ──")

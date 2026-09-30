@@ -62,7 +62,10 @@ the dimension she tells the rider to work on:
 - `ingen` if there is no such item (she only praises, or has nothing to say).
 
 This is a projection of her output, not a new rule. Jev gets the same
-question, and its allowed answers are the **measurable** dimensions of `RidKanon.UGNETA.OVNING[ovningId]` (minus `Lektion.SAKNAS`, i.e. without `rytm`) ∪ `{ingen}`. That is the same set Ugneta can answer from: `rytm` is never in `nu`, so she can never pick it. (Clarified during implementation, relative to `bf2a54f`.)
+question. **Its allowed answers are the keys that exist in this attempt's projected `nu'` (§4.1), in the canon's order, ∪ `{ingen}`** (`JevShadowPolicy.etiketter(rent)`). That is exactly the set Ugneta can answer from:
+- `observationer` only picks among `nu[k] ~= nil`, so an exercise dimension that wasn't measured in the attempt can never be her focus. For example, `balans` in a volt with no balance value, or `rytm`, which is never measured.
+- Therefore Jev isn't offered it either, and an answer outside the set is rejected.
+- (CHATGPT_RE-REVIEW @ `d27ca94`. Earlier versions: all measurable dimensions of the exercise.)
 The allowed answers are built per sample. The full list (`dim`, `sort` × 2) is also stored in the sample, so a
 disagreement can be read against what she actually said.
 
@@ -111,7 +114,8 @@ Therefore, after validation and **before anything else**, `JevShadowPolicy.proji
 - The comparator is computed on `nu'`/`fore'`. The spec checks that the rule gives exactly the same answer on the unclipped input, for all real attempts, so no information the rule uses is lost.
 - `JevShadowPolicy.kropp` projects **itself**, so an unclipped argument can never reach Jev.
 - The sample stores exactly `nu'`/`fore'` (what was sent). The names of the clipped-away dimensions go in `utanforOvning`, as names only.
-- If `nu'` is empty, there is no exercise evidence: `hard_gate`/`reason=tom_projektion`, no request. If `fore'` is empty, it becomes `nil`.
+- If `nu'` is empty, there is no exercise evidence: `hard_gate`/`reason=tom_projektion`, no request.
+- `fore'` is also clipped to the keys in `nu'`. The rule only reads `fore[k]` together with `nu[k]`, so a dimension that exists only in the previous attempt is evidence the rule never looks at. The spec shows the rule's answer is identical with and without this clipping. If `fore'` is empty, it becomes `nil`.
 
 **So Jev and the rule receive literally the same numbers: `ovningId`, `forsokNr`, `nu'` and `fore'`.**
 
@@ -130,10 +134,11 @@ The sample is recorded as `hard_gate` with **no request** if any of these holds:
 
 - `state` contains exactly:
   - `ovning`, `forsok`, `nu'`, `fore'`: the **projected** validated copy (§4.1). This is the same evidence the comparator is computed on.
-  - `dimensioner`: the exercise's measurable dimensions
+  - `dimensioner`: the dimensions **measured in this attempt** (the keys of `nu'`, in the canon's order). This is the same list as the answer options, minus `ingen`.
   - `saknas`: an explicit list of absent fields: `rytm`, `rein_pressure`, `rider_body`, `free_text`
 - There is no `userId`, name, `DisplayName`, `hastId`, text or GUID. Keys are allow-listed, and the body is built only from the validated copy.
-- `questions.focus.criteria`: one entry per dimension of the exercise, plus `ingen`. Descriptions are fixed Swedish constants in the code.
+- `questions.focus.criteria`: exactly `etiketter(rent)`, i.e. one entry per **measured** dimension in `nu'` plus `ingen`. Descriptions are fixed Swedish constants in the code.
+- The answer is validated against **the same** per-sample set (`tolka(svar, rent)`). Offered = allowed, always.
 - `task.spawn` + `pcall(RequestAsync)`, `Timeout = 4` s, **0 retries**.
 - Answer: `choice` must be on the per-sample allow-list, and `confidence` must be a finite number in [0, 1]. Anything else gives `api_error` / `reason=bad_answer`.
 
@@ -196,6 +201,10 @@ Automated, in `kor.sh`/CI:
 2. Validator: each rule in §4 has its own red case, plus X09. Each gives `invalid_input` and **0 HTTP calls** (counting stub).
 3. Allow-list: an unknown label, the wrong case, a dimension from another exercise, and confidence that is NaN, missing, negative, > 1 or a string are all rejected.
 4. The comparator equals `Ugneta.observationer` on the same input, as a golden table across all 6 exercises × first/second attempt. The policy may not have its own ranking; this is checked by comparing against a direct call.
+   **4c (re-review @ d27ca94):**
+   - With `storvolt` + `nu={linje=0.5}`, the criteria are exactly `ingen, linje`; `balans` is not included. `dimensioner` = `linje`. Jev's answer `balans` is rejected as `okand_etikett`, both in the policy module and through the server path.
+   - For all real attempts, the answer set is exactly the measured dimensions + `ingen`, and Ugneta's focus is in it.
+   - `fore` is clipped to what was measured now, and the rule's answer is unchanged.
    **4b (review @ a601430):** valid dimensions from another exercise never reach the Jev body or the sample. The comparator gives the same answer on the projected evidence as on the unclipped evidence, for all real attempts. Only off-exercise evidence gives tom_projektion and no request.
 5. `RequestAsync` that throws, a timeout, 4xx/5xx, and an undecodable body each give `timeout`/`api_error` only, and **no error propagates** to the caller.
 6. Isolation:

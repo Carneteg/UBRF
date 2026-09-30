@@ -142,7 +142,7 @@ local function fraga(d: Deps, spelare: any, post: { [string]: any }, rent: JevSh
 		spara(post)
 		return
 	end
-	local tolkat, skal = JevShadowPolicy.tolka(tabell, rent.ovningId)
+	local tolkat, skal = JevShadowPolicy.tolka(tabell, rent)
 	if not tolkat then
 		post.kalla, post.reason = "api_error", skal
 		spara(post)

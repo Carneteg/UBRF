@@ -144,18 +144,21 @@ do
 end
 
 print("\n── 4. Jevs tillåtna svar ──")
-local et = P.etiketter("storvolt")
-prova("storvolt: linje, balans, ingen — inte rytm",
+local volt = P.validera({ ovningId = "storvolt", forsokNr = 1, nu = { linje = 0.5, balans = 0.6 } })
+local halt = P.validera({ ovningId = "halt_skritt", forsokNr = 1,
+	nu = { timing = 0.5, mjukhet = 0.6, respons = 0.7 } })
+local et = P.etiketter(volt)
+prova("storvolt med linje och balans mätta: linje, balans, ingen — inte rytm",
 	table.concat(et, ",") == "linje,balans,ingen", table.concat(et, ","))
-prova("halt_skritt: timing, mjukhet, respons, ingen",
-	table.concat(P.etiketter("halt_skritt"), ",") == "timing,mjukhet,respons,ingen")
+prova("halt_skritt med alla tre mätta: timing, mjukhet, respons, ingen",
+	table.concat(P.etiketter(halt), ",") == "timing,mjukhet,respons,ingen")
 local function svar(choice, conf)
 	return { model = "jev-1.13.0", answers = { focus = { type = "choice", choice = choice, confidence = conf } } }
 end
-local t, s = P.tolka(svar("linje", 0.8), "storvolt")
+local t, s = P.tolka(svar("linje", 0.8), volt)
 prova("ett tillåtet svar läses", t ~= nil and t.fokus == "linje" and t.confidence == 0.8
 	and t.model == "jev-1.13.0", s)
-prova("ingen är tillåtet", P.tolka(svar("ingen", 0.5), "storvolt") ~= nil)
+prova("ingen är tillåtet", P.tolka(svar("ingen", 0.5), volt) ~= nil)
 local fulaSvar = {
 	{ "okänd etikett", svar("line", 0.9) },
 	{ "fel skiftläge", svar("Linje", 0.9) },
@@ -171,8 +174,58 @@ local fulaSvar = {
 	{ "inte en tabell", "linje" },
 }
 for _, fall in fulaSvar do
-	local ok, skal = P.tolka(fall[2], "storvolt")
+	local ok, skal = P.tolka(fall[2], volt)
 	prova(("avvisas: %s"):format(fall[1]), ok == nil and skal ~= nil, skal)
+end
+
+print("\n── 4c. Jevs val = det som MÄTTES i försöket (re-review @d27ca94) ──")
+do
+	-- Regressionen ur granskningen: en volt där bara linjen mättes.
+	local bara = P.validera({ ovningId = "storvolt", forsokNr = 1, nu = { linje = 0.5 } })
+	local k = P.kropp(bara)
+	local krit = {}
+	for n in k.questions.focus.criteria do table.insert(krit, n) end
+	table.sort(krit)
+	prova("storvolt + nu={linje}: kriterierna är exakt ingen, linje", table.concat(krit, ",") == "ingen,linje",
+		table.concat(krit, ","))
+	prova("kriterierna innehåller inte balans", k.questions.focus.criteria.balans == nil)
+	prova("state.dimensioner är exakt linje", table.concat(k.state.dimensioner, ",") == "linje",
+		table.concat(k.state.dimensioner, ","))
+	local ok, skal = P.tolka(svar("balans", 0.95), bara)
+	prova("Jevs svar balans avvisas", ok == nil and skal == "okand_etikett", skal)
+	prova("Jevs svar linje godtas", P.tolka(svar("linje", 0.6), bara) ~= nil)
+	prova("Jevs svar ingen godtas", P.tolka(svar("ingen", 0.6), bara) ~= nil)
+	-- Ugneta kan inte heller välja balans här: regelns fokus ligger i samma mängd.
+	local fokus = P.ugneta(P.projicera(bara))
+	local iMangd = false
+	for _, e in P.etiketter(bara) do if e == fokus then iMangd = true end end
+	prova("Ugnetas fokus ligger i samma mängd som Jevs", iMangd, fokus)
+
+	-- Samma sak för alla riktiga försök: Ugnetas fokus ∈ Jevs mängd, och
+	-- mängden är exakt nu-nycklarna inom övningen plus ingen.
+	for _, payload in riktiga do
+		local rent = P.validera(payload)
+		local proj = P.projicera(rent)
+		local mangd = {}
+		for _, e in P.etiketter(rent) do mangd[e] = true end
+		local f = P.ugneta(proj)
+		local exakt = mangd[P.INGEN] == true
+		local n = 0
+		for e in mangd do if e ~= P.INGEN then n += 1; if proj.nu[e] == nil then exakt = false end end end
+		for k2 in proj.nu do if not mangd[k2] then exakt = false end end
+		prova(("%s försök %d: valmängden = mätta dimensioner + ingen, och Ugnetas fokus ligger i den")
+			:format(payload.ovningId, payload.forsokNr), exakt and mangd[f] == true, f)
+	end
+
+	-- fore klipps till det som mättes nu: regeln läser aldrig en fore-nyckel utan nu-värde.
+	local medFore = P.validera({ ovningId = "storvolt", forsokNr = 2,
+		nu = { linje = 0.5 }, fore = { linje = 0.4, balans = 0.3 } })
+	local kf = P.kropp(medFore)
+	prova("fore bär bara dimensioner som mättes i detta försök", kf.state.fore.linje == 0.4
+		and kf.state.fore.balans == nil)
+	local helF = P.ugneta(medFore)
+	local projF = P.ugneta(P.projicera(medFore))
+	prova("och regeln ger samma svar med och utan den klippningen", helF == projF, projF)
 end
 
 print("\n── 4b. Samma underlag till Jev som till regeln (review @a601430) ──")
@@ -182,7 +235,7 @@ do
 	for _, payload in riktiga do
 		local rent = P.validera(payload)
 		local tillatna = {}
-		for _, e in P.etiketter(payload.ovningId) do tillatna[e] = true end
+		for _, e in Ugneta.dimensionerFor(payload.ovningId) do if e ~= "rytm" then tillatna[e] = true end end
 		local extra = false
 		for k in rent.nu do if not tillatna[k] then extra = true end end
 		if extra then medExtra += 1 end
@@ -267,8 +320,9 @@ do
 	prova("state är exakt dimensioner, forsok, nu, ovning, saknas (fore saknas här)",
 		table.concat(st, ",") == "dimensioner,forsok,nu,ovning,saknas", table.concat(st, ","))
 	prova("saknas-listan är uttrycklig", table.concat(k.state.saknas, ",") == "rytm,rein_pressure,rider_body,free_text")
+	-- Bara linjen mättes: balans (omätt i försöket) och rytm (aldrig mätt) är inte val.
 	prova("frågan har exakt de tillåtna etiketterna som kriterier",
-		k.questions.focus.criteria.linje ~= nil and k.questions.focus.criteria.balans ~= nil
+		k.questions.focus.criteria.linje ~= nil and k.questions.focus.criteria.balans == nil
 			and k.questions.focus.criteria.ingen ~= nil and k.questions.focus.criteria.rytm == nil)
 	prova("nu är en kopia, inte klientens tabell", k.state.nu ~= smutsig.nu and k.state.nu.linje == 0.6)
 	-- Ett underlag som bär identitet når aldrig kroppen: det avvisas redan.
