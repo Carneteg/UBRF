@@ -1,0 +1,962 @@
+[
+  {
+    "id": "S01",
+    "rep": 0,
+    "choice": "praise",
+    "confidence": 0.98,
+    "probabilities": {
+      "rein_pressure": 0,
+      "praise": 0.99,
+      "line": 0,
+      "no_comment": 0.01,
+      "transition_timing": 0,
+      "tempo": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 370
+  },
+  {
+    "id": "S01",
+    "rep": 1,
+    "choice": "praise",
+    "confidence": 0.97,
+    "probabilities": {
+      "no_comment": 0.01,
+      "line": 0,
+      "tempo": 0.01,
+      "praise": 0.98,
+      "transition_timing": 0,
+      "rein_pressure": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 243
+  },
+  {
+    "id": "S02",
+    "rep": 0,
+    "choice": "praise",
+    "confidence": 0.99,
+    "probabilities": {
+      "transition_timing": 0,
+      "rein_pressure": 0,
+      "no_comment": 0.01,
+      "praise": 0.99,
+      "line": 0,
+      "tempo": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 270
+  },
+  {
+    "id": "S02",
+    "rep": 1,
+    "choice": "praise",
+    "confidence": 0.99,
+    "probabilities": {
+      "no_comment": 0.01,
+      "transition_timing": 0,
+      "praise": 0.99,
+      "rein_pressure": 0,
+      "tempo": 0,
+      "line": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 254
+  },
+  {
+    "id": "S03",
+    "rep": 0,
+    "choice": "praise",
+    "confidence": 0.99,
+    "probabilities": {
+      "no_comment": 0.01,
+      "line": 0,
+      "rein_pressure": 0,
+      "praise": 0.99,
+      "tempo": 0,
+      "transition_timing": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 266
+  },
+  {
+    "id": "S03",
+    "rep": 1,
+    "choice": "praise",
+    "confidence": 0.99,
+    "probabilities": {
+      "praise": 1,
+      "transition_timing": 0,
+      "line": 0,
+      "rein_pressure": 0,
+      "no_comment": 0,
+      "tempo": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 262
+  },
+  {
+    "id": "S04",
+    "rep": 0,
+    "choice": "tempo",
+    "confidence": 1,
+    "probabilities": {
+      "transition_timing": 0,
+      "line": 0,
+      "rein_pressure": 0,
+      "no_comment": 0,
+      "tempo": 1,
+      "praise": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 361
+  },
+  {
+    "id": "S04",
+    "rep": 1,
+    "choice": "tempo",
+    "confidence": 1,
+    "probabilities": {
+      "no_comment": 0,
+      "transition_timing": 0,
+      "rein_pressure": 0,
+      "praise": 0,
+      "tempo": 1,
+      "line": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 306
+  },
+  {
+    "id": "S05",
+    "rep": 0,
+    "choice": "tempo",
+    "confidence": 0.99,
+    "probabilities": {
+      "line": 0,
+      "no_comment": 0,
+      "transition_timing": 0,
+      "praise": 0.01,
+      "tempo": 0.99,
+      "rein_pressure": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 237
+  },
+  {
+    "id": "S05",
+    "rep": 1,
+    "choice": "tempo",
+    "confidence": 0.99,
+    "probabilities": {
+      "no_comment": 0,
+      "transition_timing": 0,
+      "line": 0,
+      "rein_pressure": 0,
+      "tempo": 0.99,
+      "praise": 0.01
+    },
+    "model": "jev-1.13.0",
+    "ms": 280
+  },
+  {
+    "id": "S06",
+    "rep": 0,
+    "choice": "tempo",
+    "confidence": 0.49,
+    "probabilities": {
+      "praise": 0.42,
+      "transition_timing": 0,
+      "tempo": 0.58,
+      "rein_pressure": 0,
+      "line": 0,
+      "no_comment": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 241
+  },
+  {
+    "id": "S06",
+    "rep": 1,
+    "choice": "tempo",
+    "confidence": 0.53,
+    "probabilities": {
+      "line": 0,
+      "rein_pressure": 0,
+      "no_comment": 0.01,
+      "praise": 0.38,
+      "transition_timing": 0,
+      "tempo": 0.61
+    },
+    "model": "jev-1.13.0",
+    "ms": 235
+  },
+  {
+    "id": "S07",
+    "rep": 0,
+    "choice": "line",
+    "confidence": 0.99,
+    "probabilities": {
+      "no_comment": 0,
+      "line": 1,
+      "transition_timing": 0,
+      "praise": 0,
+      "tempo": 0,
+      "rein_pressure": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 211
+  },
+  {
+    "id": "S07",
+    "rep": 1,
+    "choice": "line",
+    "confidence": 0.99,
+    "probabilities": {
+      "no_comment": 0,
+      "tempo": 0,
+      "transition_timing": 0,
+      "rein_pressure": 0,
+      "praise": 0,
+      "line": 1
+    },
+    "model": "jev-1.13.0",
+    "ms": 241
+  },
+  {
+    "id": "S08",
+    "rep": 0,
+    "choice": "line",
+    "confidence": 1,
+    "probabilities": {
+      "transition_timing": 0,
+      "rein_pressure": 0,
+      "no_comment": 0,
+      "praise": 0,
+      "tempo": 0,
+      "line": 1
+    },
+    "model": "jev-1.13.0",
+    "ms": 318
+  },
+  {
+    "id": "S08",
+    "rep": 1,
+    "choice": "line",
+    "confidence": 1,
+    "probabilities": {
+      "no_comment": 0,
+      "transition_timing": 0,
+      "rein_pressure": 0,
+      "tempo": 0,
+      "line": 1,
+      "praise": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 208
+  },
+  {
+    "id": "S09",
+    "rep": 0,
+    "choice": "line",
+    "confidence": 1,
+    "probabilities": {
+      "praise": 0,
+      "transition_timing": 0,
+      "line": 1,
+      "no_comment": 0,
+      "rein_pressure": 0,
+      "tempo": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 205
+  },
+  {
+    "id": "S09",
+    "rep": 1,
+    "choice": "line",
+    "confidence": 1,
+    "probabilities": {
+      "transition_timing": 0,
+      "praise": 0,
+      "tempo": 0,
+      "rein_pressure": 0,
+      "line": 1,
+      "no_comment": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 269
+  },
+  {
+    "id": "S10",
+    "rep": 0,
+    "choice": "transition_timing",
+    "confidence": 1,
+    "probabilities": {
+      "tempo": 0,
+      "transition_timing": 1,
+      "praise": 0,
+      "line": 0,
+      "no_comment": 0,
+      "rein_pressure": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 267
+  },
+  {
+    "id": "S10",
+    "rep": 1,
+    "choice": "transition_timing",
+    "confidence": 1,
+    "probabilities": {
+      "tempo": 0,
+      "line": 0,
+      "rein_pressure": 0,
+      "transition_timing": 1,
+      "no_comment": 0,
+      "praise": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 248
+  },
+  {
+    "id": "S11",
+    "rep": 0,
+    "choice": "transition_timing",
+    "confidence": 0.99,
+    "probabilities": {
+      "tempo": 0,
+      "praise": 0.01,
+      "rein_pressure": 0,
+      "transition_timing": 0.99,
+      "no_comment": 0,
+      "line": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 263
+  },
+  {
+    "id": "S11",
+    "rep": 1,
+    "choice": "transition_timing",
+    "confidence": 0.98,
+    "probabilities": {
+      "rein_pressure": 0,
+      "line": 0,
+      "no_comment": 0,
+      "praise": 0.01,
+      "transition_timing": 0.99,
+      "tempo": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 265
+  },
+  {
+    "id": "S12",
+    "rep": 0,
+    "choice": "transition_timing",
+    "confidence": 1,
+    "probabilities": {
+      "transition_timing": 1,
+      "tempo": 0,
+      "line": 0,
+      "rein_pressure": 0,
+      "praise": 0,
+      "no_comment": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 234
+  },
+  {
+    "id": "S12",
+    "rep": 1,
+    "choice": "transition_timing",
+    "confidence": 1,
+    "probabilities": {
+      "transition_timing": 1,
+      "no_comment": 0,
+      "rein_pressure": 0,
+      "line": 0,
+      "tempo": 0,
+      "praise": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 245
+  },
+  {
+    "id": "S13",
+    "rep": 0,
+    "choice": "tempo",
+    "confidence": 0.53,
+    "probabilities": {
+      "line": 0.38,
+      "tempo": 0.62,
+      "praise": 0,
+      "rein_pressure": 0,
+      "no_comment": 0,
+      "transition_timing": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 233
+  },
+  {
+    "id": "S13",
+    "rep": 1,
+    "choice": "tempo",
+    "confidence": 0.51,
+    "probabilities": {
+      "tempo": 0.6,
+      "transition_timing": 0,
+      "rein_pressure": 0,
+      "no_comment": 0,
+      "praise": 0,
+      "line": 0.4
+    },
+    "model": "jev-1.13.0",
+    "ms": 215
+  },
+  {
+    "id": "S14",
+    "rep": 0,
+    "choice": "transition_timing",
+    "confidence": 0.92,
+    "probabilities": {
+      "praise": 0,
+      "transition_timing": 0.94,
+      "rein_pressure": 0.06,
+      "no_comment": 0,
+      "tempo": 0,
+      "line": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 234
+  },
+  {
+    "id": "S14",
+    "rep": 1,
+    "choice": "transition_timing",
+    "confidence": 0.93,
+    "probabilities": {
+      "transition_timing": 0.94,
+      "praise": 0,
+      "no_comment": 0,
+      "rein_pressure": 0.06,
+      "tempo": 0,
+      "line": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 233
+  },
+  {
+    "id": "S15",
+    "rep": 0,
+    "choice": "rein_pressure",
+    "confidence": 0.35,
+    "probabilities": {
+      "no_comment": 0,
+      "line": 0.33,
+      "transition_timing": 0.1,
+      "praise": 0,
+      "tempo": 0.11,
+      "rein_pressure": 0.46
+    },
+    "model": "jev-1.13.0",
+    "ms": 253
+  },
+  {
+    "id": "S15",
+    "rep": 1,
+    "choice": "line",
+    "confidence": 0.3,
+    "probabilities": {
+      "line": 0.43,
+      "tempo": 0.09,
+      "transition_timing": 0.11,
+      "no_comment": 0,
+      "rein_pressure": 0.37,
+      "praise": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 210
+  },
+  {
+    "id": "S16",
+    "rep": 0,
+    "choice": "praise",
+    "confidence": 0.99,
+    "probabilities": {
+      "rein_pressure": 0,
+      "no_comment": 0.01,
+      "transition_timing": 0,
+      "line": 0,
+      "tempo": 0.01,
+      "praise": 0.98
+    },
+    "model": "jev-1.13.0",
+    "ms": 224
+  },
+  {
+    "id": "S16",
+    "rep": 1,
+    "choice": "praise",
+    "confidence": 0.99,
+    "probabilities": {
+      "praise": 0.99,
+      "transition_timing": 0,
+      "no_comment": 0.01,
+      "rein_pressure": 0,
+      "line": 0,
+      "tempo": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 263
+  },
+  {
+    "id": "S17",
+    "rep": 0,
+    "choice": "praise",
+    "confidence": 0.84,
+    "probabilities": {
+      "rein_pressure": 0,
+      "transition_timing": 0,
+      "line": 0,
+      "praise": 0.87,
+      "tempo": 0.12,
+      "no_comment": 0.01
+    },
+    "model": "jev-1.13.0",
+    "ms": 260
+  },
+  {
+    "id": "S17",
+    "rep": 1,
+    "choice": "praise",
+    "confidence": 0.85,
+    "probabilities": {
+      "no_comment": 0.01,
+      "transition_timing": 0,
+      "praise": 0.87,
+      "line": 0,
+      "rein_pressure": 0,
+      "tempo": 0.12
+    },
+    "model": "jev-1.13.0",
+    "ms": 238
+  },
+  {
+    "id": "S18",
+    "rep": 0,
+    "choice": "tempo",
+    "confidence": 0.91,
+    "probabilities": {
+      "transition_timing": 0,
+      "line": 0,
+      "no_comment": 0,
+      "praise": 0.07,
+      "tempo": 0.93,
+      "rein_pressure": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 276
+  },
+  {
+    "id": "S18",
+    "rep": 1,
+    "choice": "tempo",
+    "confidence": 0.9,
+    "probabilities": {
+      "transition_timing": 0,
+      "rein_pressure": 0,
+      "line": 0,
+      "praise": 0.08,
+      "tempo": 0.92,
+      "no_comment": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 254
+  },
+  {
+    "id": "S19",
+    "rep": 0,
+    "choice": "line",
+    "confidence": 0.6,
+    "probabilities": {
+      "transition_timing": 0,
+      "tempo": 0.26,
+      "rein_pressure": 0.02,
+      "praise": 0,
+      "line": 0.67,
+      "no_comment": 0.05
+    },
+    "model": "jev-1.13.0",
+    "ms": 241
+  },
+  {
+    "id": "S19",
+    "rep": 1,
+    "choice": "line",
+    "confidence": 0.69,
+    "probabilities": {
+      "no_comment": 0.05,
+      "rein_pressure": 0.02,
+      "line": 0.74,
+      "tempo": 0.19,
+      "transition_timing": 0,
+      "praise": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 232
+  },
+  {
+    "id": "S20",
+    "rep": 0,
+    "choice": "rein_pressure",
+    "confidence": 0.87,
+    "probabilities": {
+      "line": 0,
+      "no_comment": 0.01,
+      "praise": 0,
+      "rein_pressure": 0.89,
+      "transition_timing": 0,
+      "tempo": 0.1
+    },
+    "model": "jev-1.13.0",
+    "ms": 255
+  },
+  {
+    "id": "S20",
+    "rep": 1,
+    "choice": "rein_pressure",
+    "confidence": 0.81,
+    "probabilities": {
+      "rein_pressure": 0.84,
+      "tempo": 0.15,
+      "line": 0,
+      "praise": 0,
+      "transition_timing": 0,
+      "no_comment": 0.01
+    },
+    "model": "jev-1.13.0",
+    "ms": 212
+  },
+  {
+    "id": "S21",
+    "rep": 0,
+    "choice": "line",
+    "confidence": 0.59,
+    "probabilities": {
+      "no_comment": 0.01,
+      "tempo": 0.33,
+      "line": 0.65,
+      "rein_pressure": 0,
+      "transition_timing": 0,
+      "praise": 0.01
+    },
+    "model": "jev-1.13.0",
+    "ms": 233
+  },
+  {
+    "id": "S21",
+    "rep": 1,
+    "choice": "line",
+    "confidence": 0.7,
+    "probabilities": {
+      "rein_pressure": 0,
+      "transition_timing": 0,
+      "line": 0.74,
+      "no_comment": 0.01,
+      "praise": 0.01,
+      "tempo": 0.24
+    },
+    "model": "jev-1.13.0",
+    "ms": 214
+  },
+  {
+    "id": "S22",
+    "rep": 0,
+    "choice": "transition_timing",
+    "confidence": 0.99,
+    "probabilities": {
+      "tempo": 0,
+      "transition_timing": 0.99,
+      "no_comment": 0,
+      "praise": 0.01,
+      "line": 0,
+      "rein_pressure": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 231
+  },
+  {
+    "id": "S22",
+    "rep": 1,
+    "choice": "transition_timing",
+    "confidence": 0.99,
+    "probabilities": {
+      "line": 0,
+      "rein_pressure": 0,
+      "no_comment": 0,
+      "praise": 0.01,
+      "transition_timing": 0.99,
+      "tempo": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 217
+  },
+  {
+    "id": "S23",
+    "rep": 0,
+    "choice": "tempo",
+    "confidence": 0.99,
+    "probabilities": {
+      "no_comment": 0,
+      "praise": 0.01,
+      "transition_timing": 0,
+      "tempo": 0.99,
+      "rein_pressure": 0,
+      "line": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 243
+  },
+  {
+    "id": "S23",
+    "rep": 1,
+    "choice": "tempo",
+    "confidence": 0.99,
+    "probabilities": {
+      "rein_pressure": 0,
+      "transition_timing": 0,
+      "praise": 0,
+      "line": 0,
+      "no_comment": 0,
+      "tempo": 1
+    },
+    "model": "jev-1.13.0",
+    "ms": 223
+  },
+  {
+    "id": "S24",
+    "rep": 0,
+    "choice": "no_comment",
+    "confidence": 1,
+    "probabilities": {
+      "line": 0,
+      "no_comment": 1,
+      "rein_pressure": 0,
+      "praise": 0,
+      "transition_timing": 0,
+      "tempo": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 229
+  },
+  {
+    "id": "S24",
+    "rep": 1,
+    "choice": "no_comment",
+    "confidence": 1,
+    "probabilities": {
+      "rein_pressure": 0,
+      "transition_timing": 0,
+      "praise": 0,
+      "line": 0,
+      "no_comment": 1,
+      "tempo": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 283
+  },
+  {
+    "id": "S25",
+    "rep": 0,
+    "choice": "no_comment",
+    "confidence": 0.94,
+    "probabilities": {
+      "tempo": 0,
+      "line": 0,
+      "transition_timing": 0.02,
+      "praise": 0.03,
+      "rein_pressure": 0,
+      "no_comment": 0.95
+    },
+    "model": "jev-1.13.0",
+    "ms": 227
+  },
+  {
+    "id": "S25",
+    "rep": 1,
+    "choice": "no_comment",
+    "confidence": 0.96,
+    "probabilities": {
+      "rein_pressure": 0,
+      "line": 0,
+      "praise": 0.02,
+      "transition_timing": 0.01,
+      "tempo": 0,
+      "no_comment": 0.97
+    },
+    "model": "jev-1.13.0",
+    "ms": 235
+  },
+  {
+    "id": "S26",
+    "rep": 0,
+    "choice": "no_comment",
+    "confidence": 0.7,
+    "probabilities": {
+      "no_comment": 0.74,
+      "praise": 0.17,
+      "line": 0.05,
+      "transition_timing": 0,
+      "rein_pressure": 0,
+      "tempo": 0.04
+    },
+    "model": "jev-1.13.0",
+    "ms": 240
+  },
+  {
+    "id": "S26",
+    "rep": 1,
+    "choice": "no_comment",
+    "confidence": 0.65,
+    "probabilities": {
+      "transition_timing": 0,
+      "line": 0.05,
+      "no_comment": 0.72,
+      "praise": 0.18,
+      "tempo": 0.05,
+      "rein_pressure": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 210
+  },
+  {
+    "id": "S27",
+    "rep": 0,
+    "choice": "no_comment",
+    "confidence": 0.99,
+    "probabilities": {
+      "no_comment": 0.99,
+      "rein_pressure": 0,
+      "praise": 0,
+      "transition_timing": 0,
+      "line": 0,
+      "tempo": 0.01
+    },
+    "model": "jev-1.13.0",
+    "ms": 235
+  },
+  {
+    "id": "S27",
+    "rep": 1,
+    "choice": "no_comment",
+    "confidence": 0.99,
+    "probabilities": {
+      "transition_timing": 0,
+      "no_comment": 1,
+      "rein_pressure": 0,
+      "line": 0,
+      "tempo": 0,
+      "praise": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 310
+  },
+  {
+    "id": "S28",
+    "rep": 0,
+    "choice": "no_comment",
+    "confidence": 0.95,
+    "probabilities": {
+      "transition_timing": 0,
+      "praise": 0.03,
+      "tempo": 0,
+      "rein_pressure": 0.01,
+      "line": 0,
+      "no_comment": 0.96
+    },
+    "model": "jev-1.13.0",
+    "ms": 216
+  },
+  {
+    "id": "S28",
+    "rep": 1,
+    "choice": "no_comment",
+    "confidence": 0.96,
+    "probabilities": {
+      "no_comment": 0.97,
+      "line": 0,
+      "transition_timing": 0,
+      "praise": 0.03,
+      "tempo": 0,
+      "rein_pressure": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 281
+  },
+  {
+    "id": "S29",
+    "rep": 0,
+    "choice": "no_comment",
+    "confidence": 0.81,
+    "probabilities": {
+      "tempo": 0.14,
+      "line": 0.02,
+      "transition_timing": 0,
+      "praise": 0,
+      "rein_pressure": 0,
+      "no_comment": 0.84
+    },
+    "model": "jev-1.13.0",
+    "ms": 226
+  },
+  {
+    "id": "S29",
+    "rep": 1,
+    "choice": "no_comment",
+    "confidence": 0.81,
+    "probabilities": {
+      "no_comment": 0.84,
+      "praise": 0,
+      "tempo": 0.14,
+      "rein_pressure": 0,
+      "line": 0.02,
+      "transition_timing": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 226
+  },
+  {
+    "id": "S30",
+    "rep": 0,
+    "choice": "rein_pressure",
+    "confidence": 0.98,
+    "probabilities": {
+      "no_comment": 0,
+      "tempo": 0,
+      "praise": 0.02,
+      "transition_timing": 0,
+      "line": 0,
+      "rein_pressure": 0.98
+    },
+    "model": "jev-1.13.0",
+    "ms": 204
+  },
+  {
+    "id": "S30",
+    "rep": 1,
+    "choice": "rein_pressure",
+    "confidence": 0.98,
+    "probabilities": {
+      "rein_pressure": 0.99,
+      "tempo": 0,
+      "line": 0,
+      "praise": 0.01,
+      "transition_timing": 0,
+      "no_comment": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 247
+  }
+]

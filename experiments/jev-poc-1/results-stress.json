@@ -1,0 +1,386 @@
+[
+  {
+    "id": "X01",
+    "rep": 0,
+    "choice": "tempo",
+    "confidence": 0.99,
+    "probabilities": {
+      "tempo": 0.99,
+      "transition_timing": 0,
+      "no_comment": 0,
+      "line": 0.01,
+      "rein_pressure": 0,
+      "praise": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 297
+  },
+  {
+    "id": "X01",
+    "rep": 1,
+    "choice": "tempo",
+    "confidence": 0.98,
+    "probabilities": {
+      "rein_pressure": 0,
+      "transition_timing": 0,
+      "praise": 0,
+      "no_comment": 0,
+      "tempo": 0.99,
+      "line": 0.01
+    },
+    "model": "jev-1.13.0",
+    "ms": 247
+  },
+  {
+    "id": "X02",
+    "rep": 0,
+    "choice": "line",
+    "confidence": 0.99,
+    "probabilities": {
+      "no_comment": 0,
+      "transition_timing": 0,
+      "line": 1,
+      "rein_pressure": 0,
+      "tempo": 0,
+      "praise": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 284
+  },
+  {
+    "id": "X02",
+    "rep": 1,
+    "choice": "line",
+    "confidence": 0.99,
+    "probabilities": {
+      "transition_timing": 0,
+      "tempo": 0,
+      "line": 1,
+      "rein_pressure": 0,
+      "praise": 0,
+      "no_comment": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 257
+  },
+  {
+    "id": "X03",
+    "rep": 0,
+    "choice": "praise",
+    "confidence": 0.69,
+    "probabilities": {
+      "line": 0,
+      "rein_pressure": 0.01,
+      "no_comment": 0.24,
+      "transition_timing": 0,
+      "praise": 0.75,
+      "tempo": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 276
+  },
+  {
+    "id": "X03",
+    "rep": 1,
+    "choice": "praise",
+    "confidence": 0.71,
+    "probabilities": {
+      "no_comment": 0.23,
+      "rein_pressure": 0,
+      "line": 0,
+      "tempo": 0.01,
+      "praise": 0.76,
+      "transition_timing": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 236
+  },
+  {
+    "id": "X04",
+    "rep": 0,
+    "choice": "line",
+    "confidence": 0.99,
+    "probabilities": {
+      "transition_timing": 0,
+      "line": 1,
+      "no_comment": 0,
+      "rein_pressure": 0,
+      "tempo": 0,
+      "praise": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 302
+  },
+  {
+    "id": "X04",
+    "rep": 1,
+    "choice": "line",
+    "confidence": 0.99,
+    "probabilities": {
+      "rein_pressure": 0,
+      "praise": 0,
+      "line": 1,
+      "no_comment": 0,
+      "transition_timing": 0,
+      "tempo": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 221
+  },
+  {
+    "id": "X05",
+    "rep": 0,
+    "choice": "rein_pressure",
+    "confidence": 0.94,
+    "probabilities": {
+      "tempo": 0,
+      "no_comment": 0,
+      "line": 0,
+      "transition_timing": 0.05,
+      "rein_pressure": 0.95,
+      "praise": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 256
+  },
+  {
+    "id": "X05",
+    "rep": 1,
+    "choice": "rein_pressure",
+    "confidence": 0.94,
+    "probabilities": {
+      "transition_timing": 0.05,
+      "tempo": 0,
+      "no_comment": 0,
+      "praise": 0,
+      "rein_pressure": 0.95,
+      "line": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 335
+  },
+  {
+    "id": "X06",
+    "rep": 0,
+    "choice": "praise",
+    "confidence": 0.95,
+    "probabilities": {
+      "rein_pressure": 0,
+      "tempo": 0.02,
+      "line": 0,
+      "praise": 0.96,
+      "transition_timing": 0,
+      "no_comment": 0.02
+    },
+    "model": "jev-1.13.0",
+    "ms": 231
+  },
+  {
+    "id": "X06",
+    "rep": 1,
+    "choice": "praise",
+    "confidence": 0.93,
+    "probabilities": {
+      "rein_pressure": 0,
+      "tempo": 0.03,
+      "line": 0,
+      "praise": 0.94,
+      "transition_timing": 0,
+      "no_comment": 0.03
+    },
+    "model": "jev-1.13.0",
+    "ms": 244
+  },
+  {
+    "id": "X07",
+    "rep": 0,
+    "choice": "line",
+    "confidence": 0.47,
+    "probabilities": {
+      "line": 0.55,
+      "tempo": 0.01,
+      "praise": 0.02,
+      "rein_pressure": 0,
+      "transition_timing": 0,
+      "no_comment": 0.42
+    },
+    "model": "jev-1.13.0",
+    "ms": 274
+  },
+  {
+    "id": "X07",
+    "rep": 1,
+    "choice": "no_comment",
+    "confidence": 0.41,
+    "probabilities": {
+      "praise": 0.02,
+      "transition_timing": 0,
+      "line": 0.46,
+      "no_comment": 0.51,
+      "rein_pressure": 0,
+      "tempo": 0.01
+    },
+    "model": "jev-1.13.0",
+    "ms": 258
+  },
+  {
+    "id": "X08",
+    "rep": 0,
+    "choice": "line",
+    "confidence": 0.92,
+    "probabilities": {
+      "tempo": 0.02,
+      "no_comment": 0.04,
+      "line": 0.93,
+      "praise": 0,
+      "transition_timing": 0,
+      "rein_pressure": 0.01
+    },
+    "model": "jev-1.13.0",
+    "ms": 247
+  },
+  {
+    "id": "X08",
+    "rep": 1,
+    "choice": "line",
+    "confidence": 0.92,
+    "probabilities": {
+      "line": 0.93,
+      "tempo": 0.02,
+      "transition_timing": 0,
+      "no_comment": 0.03,
+      "rein_pressure": 0.01,
+      "praise": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 234
+  },
+  {
+    "id": "X09",
+    "rep": 0,
+    "choice": "line",
+    "confidence": 0.95,
+    "probabilities": {
+      "no_comment": 0.03,
+      "line": 0.97,
+      "transition_timing": 0,
+      "rein_pressure": 0,
+      "tempo": 0,
+      "praise": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 222
+  },
+  {
+    "id": "X09",
+    "rep": 1,
+    "choice": "line",
+    "confidence": 0.95,
+    "probabilities": {
+      "tempo": 0.01,
+      "no_comment": 0.04,
+      "transition_timing": 0,
+      "line": 0.95,
+      "rein_pressure": 0,
+      "praise": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 234
+  },
+  {
+    "id": "X10",
+    "rep": 0,
+    "choice": "no_comment",
+    "confidence": 0.36,
+    "probabilities": {
+      "tempo": 0.29,
+      "praise": 0.23,
+      "transition_timing": 0,
+      "rein_pressure": 0,
+      "line": 0.01,
+      "no_comment": 0.47
+    },
+    "model": "jev-1.13.0",
+    "ms": 244
+  },
+  {
+    "id": "X10",
+    "rep": 1,
+    "choice": "no_comment",
+    "confidence": 0.36,
+    "probabilities": {
+      "tempo": 0.29,
+      "no_comment": 0.46,
+      "line": 0.01,
+      "praise": 0.23,
+      "rein_pressure": 0.01,
+      "transition_timing": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 254
+  },
+  {
+    "id": "X11",
+    "rep": 0,
+    "choice": "line",
+    "confidence": 0.71,
+    "probabilities": {
+      "line": 0.76,
+      "tempo": 0.17,
+      "praise": 0,
+      "rein_pressure": 0,
+      "no_comment": 0.07,
+      "transition_timing": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 232
+  },
+  {
+    "id": "X11",
+    "rep": 1,
+    "choice": "line",
+    "confidence": 0.67,
+    "probabilities": {
+      "no_comment": 0.06,
+      "line": 0.73,
+      "rein_pressure": 0,
+      "praise": 0,
+      "tempo": 0.21,
+      "transition_timing": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 212
+  },
+  {
+    "id": "X12",
+    "rep": 0,
+    "choice": "praise",
+    "confidence": 0.66,
+    "probabilities": {
+      "rein_pressure": 0,
+      "line": 0.01,
+      "no_comment": 0.07,
+      "tempo": 0,
+      "transition_timing": 0.2,
+      "praise": 0.72
+    },
+    "model": "jev-1.13.0",
+    "ms": 212
+  },
+  {
+    "id": "X12",
+    "rep": 1,
+    "choice": "praise",
+    "confidence": 0.66,
+    "probabilities": {
+      "no_comment": 0.06,
+      "transition_timing": 0.21,
+      "praise": 0.72,
+      "line": 0.01,
+      "rein_pressure": 0,
+      "tempo": 0
+    },
+    "model": "jev-1.13.0",
+    "ms": 247
+  }
+]

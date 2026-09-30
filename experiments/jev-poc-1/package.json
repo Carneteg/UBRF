@@ -1,0 +1,14 @@
+{
+  "name": "ubrf-jev-poc-1",
+  "private": true,
+  "type": "module",
+  "description": "JEV-POC-1 — utvärdering av Jev som beslutslager för Ugnetas coaching. Inte produktionskod.",
+  "scripts": {
+    "policy": "node policy-test.mjs",
+    "eval": "node run.mjs && node analyze.mjs",
+    "eval:stress": "SET=stress node run.mjs && SET=stress node analyze.mjs"
+  },
+  "dependencies": {
+    "@typesafe-ai/sdk": "0.6.0"
+  }
+}
