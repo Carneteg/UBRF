@@ -1,126 +1,212 @@
-# JEV-POC-2 — Roblox server-side shadow for Ugneta — Acceptance Contract
+# JEV-POC-2 — Roblox shadow for Ugneta (A') — Acceptance Contract
 
 Issue #270 · base `origin/main` 7922d70 · branch `claude/jev-ugneta-shadow-poc`
-Builder: Claude · Reviewer: ChatGPT · Product acceptance: Tobias
-Status: **CONTRACT — BLOCKED ON ONE DECISION (§2.1). No implementation before it is resolved.**
+Builder: Claude (sole writer) · Reviewer: ChatGPT · Product acceptance: Tobias
+Decisions: ChatGPT A' #5916461758 · TOBIAS_DECISION A' #5916479865 (2026-09-30 17:38Z)
+Status: **CONTRACT A'. Implementation starts after this commit is pushed.**
 
 ## 1. Goal
 
-A server-side experiment that is off by default. For each eligible Ugneta
-coaching moment, it records Jev's coaching-focus choice alongside Ugneta's
-deterministic choice, using real Roblox runtime data. It must have zero effect
-on what the player sees or on game state. It is an experiment, not an
-activation.
+An experiment that is off by default. For each completed Ugneta lesson attempt on Roblox, the
+server records Jev's coaching-focus choice beside the focus the **existing
+shared Ugneta rule** gives for the same attempt. It has zero effect on what the player sees or on game
+state. It is an experiment, not an activation.
 
-## 2. Observed state on `main` 7922d70 (verified)
+## 2. Architecture A' (binding)
 
-| Fact | Evidence |
+```
+client  LektionController, after UgnetaController.efterForsok (unchanged)
+   │  flag active → JevSkugga:FireServer({ ovningId, forsokNr, nu, fore })  (fire-and-forget)
+   ▼
+server  JevShadow
+   1. strict validation (§4)  — failure → invalid_input, no request
+   2. hard gate (§5)          — failure → hard_gate, no request
+   3. comparator = HorseCore/Ugneta.observationer(ovningId, nu, fore)   (existing rule)
+   4. task.spawn: RequestAsync → TypeSafe systemone (timeout, no retry)
+   5. ring buffer: sanitized sample (§7)
+```
+
+- The client sends only the **attempt evidence that `Ugneta.observationer`
+  already takes as input**, i.e. the output of `Lektion.avslutaForsok`:
+  `ovningId`, `forsokNr`, `nu`, `fore`. It **never sends Ugneta's choice**.
+- The server recomputes the comparator itself.
+- All client evidence is **untrusted shadow input**. It never reaches gameplay,
+  visible coaching, score, physics, progression, persistence or competition.
+- **The client-derived evidence is an explicit A' amendment** to the
+  "server-derived only" line in #270. It holds only for this PoC.
+
+### 2.1 Server-side reuse of Ugneta — semantic check (PASS, verified at 3407f96)
+
+| Question | Answer |
 |---|---|
-| Ugneta's live focus is chosen **on the client** | `client/LektionController.luau:466` calls `UgnetaTema.steg`. There is no server caller; the server files only mention it in comments (`HorseService.luau:507`, `VoltObservation.luau:7`). |
-| Ugneta's attempt card and after-ride summary are also client-side | `client/UgnetaController.luau:909` `Ugneta.observationer`, `client/LektionController.luau:551` `Ugneta.efterrittFor` |
-| No remote carries the exercise, phase, attempt or chosen focus to the server | `shared/HorseCore/Networking.luau:23–80`. The riding remotes are only `StateSync`, `RidingIntent`, `Mount*` and `RidaNu`. |
-| Ugneta's inputs are client telemetry | `Lektion.kvalitet(tm)` reads `svarstid, etableringstid, paradKvalitet, fokus, spanning, fart, onskadFart, balans, mjukhet, svangradie` from `Telemetri.las` (client) |
-| What the server does own | Gait ladder (`halt/walk/trot/canter`, back-up), `energi` 0–1, `Dagsform`, `RidObservation` (distance, speeds, turning, tempo `{gangart, n, medelFart, stdFart, variation}`, validity), `RidPlatsObservation` (arena position/status), `VoltObservation` (deviation vs. 10 m radius, laps, return), `RidLogg` (gait changes) |
-| Exercises on Roblox | 6: `halt_skritt, skritt_trav, storvolt, horn, trav_skritt, galoppfattning` (`RidKanon.UGNETA.ORDNING`); 2 attempts of 22 s each |
-| Ugneta's decision space | Dimensions `linje, rytm, balans, timing, mjukhet, respons, tempo` → cues `vagen, framat, sits, hand, lugn, timing` (`RidKanon` l.692–709), plus `hast` (the horse's own tension) and silence. `rytm` is never measured on Roblox. |
-| HttpService | Not used anywhere in `roblox/` today |
-| PII near the data | `userId` is inside every observation snapshot; `player.Name` appears in `ForstaRitten` prints. The shadow must never forward snapshots as-is. |
+| Is the rule pure? | Yes. `Ugneta.observationer` (`shared/HorseCore/Ugneta.luau:40`) reads only its arguments and `RidKanon.UGNETA`. It has no services, `RunService`, clock, randomness or state. |
+| Are its dependencies reachable on the server? | Yes. `RidKanon.luau` has no `require` and is a pure table. Both are in `ReplicatedStorage.HorseCore`, which the server already requires (`HorseService`, etc.). |
+| Is it the same input as on the client? | Yes. On the client, `efterForsok(h.ovningId, h.nu, h.fore, …)` → `Ugneta.observationer(ovningId, nu, fore)` (`UgnetaController.luau:909`). The mirror carries exactly `h.ovningId, h.nu, h.fore` (plus `forsokNr` for the sample label). |
+| Does anything change in Ugneta? | No. It is called as-is, and no line in `Ugneta.luau`, `UgnetaTema.luau` or `Lektion.luau` changes. |
 
-### 2.1 BLOCKER — what to compare against does not exist on the server
+**Conclusion: no semantic drift, so the stop condition in A' is not triggered.**
 
-#270 asks the server to compare Jev against "Ugneta's existing deterministic
-choice using real server telemetry" and "only server-derived signals". On
-`main` the server has neither Ugneta's choice nor the exercise or phase it
-belongs to, and Ugneta decides from client telemetry that the server never
-receives. This can't be built literally without one of these:
+Limitation (stated, not hidden): the comparator is the **after-attempt card**
+(`observationer`), which is the only Ugneta decision computed from a closed
+attempt. The **live cues** (`UgnetaTema.steg`, per frame, stateful across the
+pass) are **not** compared. Reproducing them would mean mirroring frame-level
+telemetry, which is outside A's "minimum lesson-attempt evidence".
 
-| Option | What it means | Trade-off |
-|---|---|---|
-| **A (recommended)** Label mirror | Behind the dev flag, the client sends the server a small **enum-only** copy of the decision it already made (`ovningId`, `forsok` 1/2, `kalla`, `dim`, `cue`, `sort`). No text, no numbers, no player data. The server validates it against allow-lists. **Jev receives only server-derived telemetry** plus the exercise id. | Compares against the *real* player-visible Ugneta. The label is client-reported, but it is only used for shadow comparison, is validated, and can't affect anything. This needs one new remote and a small client hook, but player output doesn't change. Jev and Ugneta see different evidence; that gap *is* evaluation question 4. |
-| B Server re-derives a "Ugneta" | The server computes its own deterministic focus from server telemetry. | Not the existing Ugneta; it invents a new baseline. **Not recommended.** |
-| C Send client quality scores to Jev as well | Jev sees the same inputs as Ugneta. | Breaks the "server-derived only" constraint. **Not recommended** without an explicit override. |
+### 2.2 The compared quantity: "focus"
 
-**Decision needed from Tobias (ChatGPT review welcome): A, B or C.**
-Everything below assumes **A**.
+`observationer` returns at most 2 items `{dim, sort}`. Ugneta's **focus** is
+the dimension she tells the rider to work on:
+
+- `dim` of the item with `sort ∈ {forbattra, kvar}`, or
+- `ingen` if there is no such item (she only praises, or has nothing to say).
+
+This is a projection of her output, not a new rule. Jev gets the same
+question, and its allowed answers are `RidKanon.UGNETA.OVNING[ovningId]` ∪ `{ingen}`.
+The allowed answers are built per sample. The full list (`dim`, `sort` × 2) is also stored in the sample, so a
+disagreement can be read against what she actually said.
 
 ## 3. Source of truth
 
-- #270 body plus the Tobias decision comment (2026-09-30 17:31Z); ChatGPT review #269 comment 5916342511
-- TypeSafe SDK `@typesafe-ai/sdk@0.6.0`, `dist/index.mjs` (verified in `UBRF-jev-poc/experiments/jev-poc-1/node_modules`):
+- TypeSafe (verified in SDK `@typesafe-ai/sdk@0.6.0` `dist/index.mjs`):
   - `POST https://api.typesafe.ai/v1/systemone`
   - Headers: `Authorization: Bearer <key>`, `Content-Type: application/json`, `Accept: application/json`
-  - Body `{ state: <JSON|string>, questions: { focus: { type: "choice", instructions, criteria: {label: description} } }, model }` (the SDK default model is `jev-latest`; POC-1 got `jev-1.13.0`)
-  - Response body is returned unchanged: `{ model, answers: { focus: { type: "choice", choice, confidence, probabilities: {label: p} } }, usage }`
-  - Errors: 400/401/403/404/422/429/5xx; request id in `x-typesafe-request-id`. The SDK retries by default; **this adapter will not retry.**
+  - Body: `{ state, questions: { focus: { type: "choice", instructions, criteria: {label: description} } }, model: "jev-latest" }`
+  - Response: `{ model, answers: { focus: { type: "choice", choice, confidence, probabilities } }, usage }`
+  - Errors: 400/401/403/404/422/429/5xx. **This adapter does not retry.**
 - Roblox Creator docs (read 2026-09-30):
-  - `HttpService:GetSecret(key)` returns a `Secret`, and `Secret:AddPrefix("Bearer ")` is the documented pattern for an auth header.
-  - `RequestAsync` accepts a `Secret` in `Headers` and a `Timeout` in seconds.
-  - The limit is 500 external requests per minute.
-  - Secrets are server-only and not available locally unless added as Studio local secrets.
-  - **Direct Roblox → TypeSafe is therefore supported and safe. No proxy is needed.**
+  - `HttpService:GetSecret(k)` → `Secret:AddPrefix("Bearer ")` in the `Headers` of `RequestAsync`
+  - `RequestAsync` takes a `Timeout` in seconds
+  - The limit is 500 req/min
+  - Secrets are server-only; in Studio they are local secrets
+  - HTTP must be enabled
 
-## 4. Required change (under option A)
+## 4. Validation (server, before anything else)
 
-All new code is Luau, under the dev flag. The flag defaults to off, so every
-path is inert.
+The payload is rejected with `invalid_input` and **no request** if any of these
+is true:
 
-1. **Flag** — `ServerStorage` attribute `JevShadowEnabled == true` (server-only; clients can't read ServerStorage). A missing or non-true value means off: no remote listener, no HTTP call, no secret read.
-2. **`shared/HorseCore/JevShadowPolicy.luau`** (pure, no services):
-   - `validera(evidens)` checks known enums, types, finite numbers and allowed ranges, and reports missing required fields. It returns `ok` or `invalid_input` plus a reason.
-   - `hardGate`: the attempt isn't closed, a welfare stop is active, or it's inside the cooldown.
-   - `tolka(svar)`: the choice must be on the allow-list, and confidence must be a finite number in [0, 1].
-   - A Jev-focus ↔ Ugneta-cue mapping, where the label set is Ugneta's own cues plus silence.
-3. **`server/JevShadow.luau`**:
-   - Builds sanitized evidence from server observations. It includes an explicit `absent` list, and never includes `userId`, `hastId`, names or text.
-   - Anonymous `provId` = `HttpService:GenerateGUID(false)` per sample; `t` = seconds since the ride started.
-   - Calls `RequestAsync` in a `task.spawn` wrapped in `pcall`, with `Timeout = 3` s and no retry.
-   - Cooldown ≥ 10 s per ride; at most 1 request in flight per ride; a global cap of ≤ 20 per minute.
-   - Records `jev | timeout | api_error | invalid_input | hard_gate` in an in-memory ring buffer (at most 200 entries). Readable from the server console / MCP; no DataStore.
-   - Never prints the secret, headers or raw bodies. Errors are logged by status code only.
-4. **Mirror remote** `JevShadowSpegel` (RemoteEvent, client → server): created only when the flag is on. The client hook sits behind `LektionController:466/499`, fires after Ugneta has already been shown, and is fire-and-forget. The server validates the payload and drops anything invalid as `invalid_input`.
-5. **Specs** registered in `tests/kor.sh` and `tests/build.py`. Spec names avoid the substring `ugneta`, which would route them to the PARITET bundle.
+- It isn't a table, or it has any key outside `{ovningId, forsokNr, nu, fore}`.
+- `ovningId` isn't a string in `RidKanon.UGNETA.ORDNING` (6 exercises, exact case).
+- `forsokNr` isn't the integer 1 or 2.
+- `nu` isn't a non-empty table.
+- Any key in `nu` isn't in `UGNETA.DIMENSIONER` minus `Lektion.SAKNAS`. `rytm` is never measured on Roblox, so a `rytm` key is invalid.
+- Any value in `nu` isn't a number, or is NaN or ±inf, or is outside [0, 1]. Every dimension is `klamp`-ed in `Lektion.kvalitet`, so a mean is always in [0, 1].
+- `nu` has more than 6 keys.
+- `fore` is present and not `nil`, and fails the same rules as `nu`.
+- Any key isn't a string, or any value is a nested table (except `nu`/`fore` at top level), a string, a boolean or an Instance.
 
-## 5. Out of scope
+`fore` is optional for either `forsokNr`, because a first attempt without data
+gives a second attempt with `fore = nil` (`Lektion.avslutaForsok`). The X09 pattern
+from POC-1 is rejected three times over: an unknown key (`line_error`,
+`rein_pressure`), a string value (`"???"`) and 42 > 1.
 
-- Any player-visible Jev output, text, UI or sound.
-- Writes to physics, horse state, lesson state, score, progression, competition or persistence.
-- A proxy or backend server; DataStore logging; production enablement.
-- Web implementation. This is a server-side experiment with no player-visible change. The parity rule in `CLAUDE.md` covers changes that affect the playable experience, and this one doesn't. **Please confirm this reading explicitly**, since the rule has no "experiment" clause.
-- Porting POC-1 files; only the policy concepts are re-implemented in Luau.
-- Changing Ugneta's deterministic logic.
-- The P3 branch.
+## 5. Hard gate (after validation, before the network)
 
-## 6. Acceptance tests
+The sample is recorded as `hard_gate` with **no request** if any of these holds:
 
-Automated, in `kor.sh` and CI:
+- The player isn't mounted according to the server: `HorseService.horseOf(player) == nil` (`HorseService.luau:1827`).
+- The same player sent a sample less than 10 s ago (per-player cooldown). An attempt is 22 s, so 10 s never blocks a real attempt.
+- A request is already in flight for the player.
+- The global cap of 20 requests in the last 60 s is reached.
+- The secret can't be read (not configured) — `hard_gate`/`reason=no_secret`.
 
-1. The validator accepts valid known telemetry.
-2. A malformed enum, NaN, ±inf, an impossible range or a missing required field each gives `invalid_input` and **zero HTTP calls** (checked with a counting stub). This includes an X09-style case.
-3. The allow-list rejects unknown and wrong-case Jev choices, as well as confidence that is NaN, missing or outside [0, 1].
-4. A thrown `RequestAsync`, a non-2xx response, a timeout and an undecodable body are each recorded as `api_error` or `timeout` only. No error propagates.
-5. Gameplay isolation: with the flag on vs. off, the deterministic Ugneta output and a snapshot of the session and attributes are identical, including when the stub throws.
-6. The serialized request body contains no `userId`, name, `DisplayName` or GUID-with-braces; the key set equals the allow-list exactly.
-7. A sentinel secret never appears in anything captured from `print`/`warn` or in the ring buffer.
-8. Rate: N triggers within the cooldown give 1 request, and a burst above the global cap is refused.
-9. Flag off means no remote, no `GetSecret` and no HTTP call.
-10. **Falsification:** one deliberate break each in the validator, the allow-list and the isolation must turn a test red. Each is committed first and restored from a copy, never with `git checkout`.
+## 6. The request to Jev
 
-Runtime (Studio, needs the human step in §7):
+- `state` contains exactly:
+  - `ovning`, `forsok`, `nu`, `fore`: the validated copy, with keys re-sorted
+  - `dimensioner`: the exercise's dimensions
+  - `saknas`: an explicit list of absent fields: `rytm`, `rein_pressure`, `rider_body`, `free_text`
+- There is no `userId`, name, `DisplayName`, `hastId`, text or GUID. Keys are allow-listed, and the body is built only from the validated copy.
+- `questions.focus.criteria`: one entry per dimension of the exercise, plus `ingen`. Descriptions are fixed Swedish constants in the code.
+- `task.spawn` + `pcall(RequestAsync)`, `Timeout = 4` s, **0 retries**.
+- Answer: `choice` must be on the per-sample allow-list, and `confidence` must be a finite number in [0, 1]. Anything else gives `api_error` / `reason=bad_answer`.
 
-11. Real shadow samples from real riding in Studio, with sample count, agreement rate, a disagreement table, latency p50/p95/max and error rates reported as measured. No sufficiency claim.
-12. Ride stability with the shadow on vs. off: FPS via RenderStepped and ride-loop hitches, measured in the same session.
+## 7. Sample (sanitized evidence)
 
-## 7. Human gate
+`{ id, t, ovningId, forsokNr, nu, fore, ugneta = {fokus, obs}, jev = {fokus, confidence, model}?, agree?, latensMs?, kalla, reason? }`
 
-- **Tobias:** decide §2.1.
-- **Tobias:** add the TypeSafe key as a Studio local secret (Game Settings → Security) and enable HTTP requests in Studio. Claude never sees or handles the key.
-- **Tobias:** the later product decision on any player-visible Jev (not part of this package).
+- `id`: a per-server counter (`s1`, `s2`, …), not linked to the player.
+- `t`: seconds since the server started (`os.clock`), not wall-clock time.
+- `kalla ∈ jev | timeout | api_error | invalid_input | hard_gate`.
+  - `timeout`: `RequestAsync` threw with a timeout message, or took ≥ the timeout.
+  - `api_error`: a non-2xx response, a decode error, or a bad answer. Only the HTTP status code is kept.
+- The buffer is in-memory, with at most 200 entries (FIFO).
+  - `JevShadow.prov()` returns a copy.
+  - `JevShadow.sammanfattning()` returns count, agreement, the source distribution and latency p50/p95/max.
+  - It can be read via MCP/the server console. There is no DataStore and no auto-print.
+- Logging: one line per sample at most, with `kalla` and the status code. **Never the secret, headers, body or raw response.**
+
+## 8. Flag and remote
+
+- **Flag:** the `ServerStorage` attribute `JevShadowEnabled == true`. Anything else means off. It is read once at `JevShadow.start()`.
+  - Off: no listener, no `GetSecret`, no HTTP call, no attribute.
+- **Remote:** `JevSkugga` (RemoteEvent) is registered in `Networking.DEFINITIONS`. The integrity gate (`Integritet.luau`) fails on unknown remotes, so it has to be registered.
+  - It is **always** present but inert.
+  - Only when the flag is on does the server set `JevSkugga:SetAttribute("Aktiv", true)` and connect its listener.
+- **Client:** one hook right after the existing `UgnetaController.efterForsok(...)` in `LektionController`.
+  - It fires only if the remote has `Aktiv == true`.
+  - `pcall`, no wait, no return value.
+  - It sends a new table with the four fields; nothing else is touched.
+
+## 9. Files
+
+- New: `shared/HorseCore/JevShadowPolicy.luau`. It is pure: validation, focus projection, allowed labels, answer interpretation and body construction.
+- New: `server/JevShadow.luau`. It holds the flag, remote listener, gate, HTTP, ring buffer and summary. HTTP and the clock are injectable for tests.
+- Changed:
+  - `shared/HorseCore/Networking.luau`: +1 definition
+  - `server/init.server.luau`: `JevShadow.start()`
+  - `client/LektionController.luau`: the hook, about 5 lines
+- New specs: `jevskugga-policy.spec.luau` and `jevskugga-server.spec.luau`, registered in `kor.sh`.
+  - The names avoid `ugneta`, which routes to PARITET.
+  - Each spec ends with `alla gröna`.
+- Unchanged: `Ugneta.luau`, `UgnetaTema.luau`, `Lektion.luau`, `UgnetaController.luau`, and everything on the web side.
+
+## 10. Out of scope
+
+- Any player-visible Jev output (text, UI, sound).
+- Writes to physics, horse, lesson, score, progression, competition or persistence.
+- A proxy/backend, DataStore logging, or production enablement.
+- Comparing the live cues (`UgnetaTema`), see §2.1.
+- **Web implementation.** TOBIAS_DECISION: parity is not required for this off-by-default, player-invisible experiment.
+- Porting POC-1 files, the P3 branch, or merging.
+
+## 11. Acceptance tests
+
+Automated, in `kor.sh`/CI:
+
+1. Validator: every real `avslutaForsok` output from the canon's 6 exercises is accepted, both with and without `fore`.
+2. Validator: each rule in §4 has its own red case, plus X09. Each gives `invalid_input` and **0 HTTP calls** (counting stub).
+3. Allow-list: an unknown label, the wrong case, a dimension from another exercise, and confidence that is NaN, missing, negative, > 1 or a string are all rejected.
+4. The comparator equals `Ugneta.observationer` on the same input, as a golden table across all 6 exercises × first/second attempt. The policy may not have its own ranking; this is checked by comparing against a direct call.
+5. `RequestAsync` that throws, a timeout, 4xx/5xx, and an undecodable body each give `timeout`/`api_error` only, and **no error propagates** to the caller.
+6. Isolation:
+   - With the flag on vs. off, `UgnetaController.efterForsok`'s return value and the lesson pass (`pass` deep copy) are identical, including when the stub throws.
+   - The server handler writes no attribute on the player or horse.
+7. The body's key set equals the allow-list exactly. No `userId`/`Name`/`DisplayName`/GUID appears in the JSON, even if they are sent in the payload.
+8. A sentinel secret never appears in captured `print`/`warn` output, in the buffer, or in the summary.
+9. Rate: 5 triggers within 10 s give 1 request. 25 players in 60 s give ≤ 20 requests, and the rest are `hard_gate`.
+10. Flag off: no listener, `Aktiv ~= true`, 0 `GetSecret`, 0 HTTP, and the client hook does not fire.
+11. **Falsification:** one deliberate break each in the validator, the allow-list and the isolation turns a test red. Each break is committed first, and restored from a copy, not with `git checkout`.
+
+Runtime (Studio, needs §12):
+
+12. Real samples from real riding. Report the count, agreement, a disagreement table against the attempt evidence, latency p50/p95/max, and error rates as measured. There is no claim that the sample size is sufficient.
+13. Stability with the shadow on vs. off: FPS via RenderStepped, measured in the same session.
+
+## 12. Human gate
+
+- **Tobias:**
+  - Add the TypeSafe key as a Studio local secret named `typesafe` (Game Settings → Security → Secrets).
+  - Enable HTTP requests.
+  - Set `ServerStorage` attribute `JevShadowEnabled = true` in the test place only.
+  - Claude never sees or handles the key.
+- Any player-visible Jev requires a later Tobias decision, including parity.
 - No merge and no production enablement.
 
-## 8. Known uncertainty
+## 13. Known uncertainty
 
-- `VERIFIED`: everything in §2 and §3.
-- `ASSUMPTION`: Studio local secrets behave like published secrets for `RequestAsync`. This will be verified at runtime, and marked NOT_TESTED if it isn't.
-- `ASSUMPTION`: `jev-latest` resolves to the same model as POC-1. The shadow records `model` from every response.
-- Limitation: server telemetry is richest for `storvolt` (volt geometry). For the other 5 exercises it is only gait, tempo and position, so coverage per exercise will be uneven and will be reported that way.
-- The mirror label is client-reported. That is fine for shadow comparison, but it is not tamper-proof.
+- `VERIFIED`: §2.1, §3 (SDK source + Creator docs), §4 ranges (`klamp` in `Lektion.kvalitet`).
+- `ASSUMPTION`: a Studio local secret works with `AddPrefix` in `RequestAsync` the same way a published secret does. This is verified at runtime; otherwise it is marked NOT_TESTED.
+- `ASSUMPTION`: `jev-latest` is stable during the measurement. `model` is logged per sample.
+- **Limitation:** the evidence is client-derived and not tamper-proof. Spoofing can only affect a shadow sample.
+- **Limitation:** Jev gets the same numbers as the rule. The PoC measures whether Jev reproduces or improves on a threshold rule given **current** telemetry. It does not measure richer signals.
