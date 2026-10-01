@@ -1317,23 +1317,25 @@ do
 		if type(__senasteDelay) == "function" then __senasteDelay() end
 	end
 
-	--[[ e. EN VALFAS STÄLLER SIN FRÅGA.
+	--[[ e. INSTRUKTIONEN GRATULERAR ALDRIG I FÖRVÄG.
 
-		Hälsningen är ett VAL, och momentens `text` är kanonens SVAR på
-		valet — "Bra. Nu vet hon att du är där." Den stod som instruktion
-		innan spelaren valt: panelen gratulerade till något som inte hänt,
-		och frågan fanns ingenstans. Nu är fasens egen text instruktionen. ]]
+		Förr var hälsningen ett VAL och momentens `text` kanonens SVAR —
+		panelen gratulerade till något som inte hänt. Sedan UI-2 är
+		hälsningen handlingar i ordning: `text` är Ugnetas instruktion för
+		nästa handling och `kvittens` det som sägs efteråt. Invarianten är
+		densamma: instruktionen före handlingen är aldrig kvittensen. ]]
 	do
 		local ny = Preparation.nyState("cosmo", 1)
 		visa(ny)
 		local fas = Preparation.fas("halsa")
 		local paTur = Preparation.nastaMoment(ny, "halsa")
-		check("instruktionen är fasens FRÅGA",
-			ytor.instruktion.Text == fas.text,
+		check("instruktionen är nästa handlings (Ugnetas ord), inte fasens sammanfattning",
+			ytor.instruktion.Text == paTur.text and fas.text ~= paTur.text,
 			("[%s]"):format(tostring(ytor.instruktion.Text)))
-		check("MUTATION: den är inte momentets svarstext — de två skiljer sig",
-			fas.text ~= paTur.text,
-			("fas [%s] · moment [%s]"):format(fas.text, paTur.text))
+		check("MUTATION: instruktionen är inte kvittensen — de två skiljer sig",
+			type(paTur.kvittens) == "string" and paTur.kvittens ~= paTur.text
+				and ytor.instruktion.Text ~= paTur.kvittens,
+			("text [%s] · kvittens [%s]"):format(tostring(paTur.text), tostring(paTur.kvittens)))
 		--[[ …och kvittensen är då kanonens egen mening, inte ett generiskt
 			ord: valet HAR ett svar, och det är själva lärandet. ]]
 		local moment = Networking.get("PreparationMoment")
@@ -1343,9 +1345,9 @@ do
 			return true
 		end
 		PC.begar("halsa", paTur.id)
-		check("valet kvitteras med kanonens egen konsekvens",
+		check("handlingen kvitteras med kanonens egen konsekvens",
 			type(PC._bekraftelse()) == "string"
-				and string.find(PC._bekraftelse(), paTur.text, 1, true) ~= nil,
+				and string.find(PC._bekraftelse(), paTur.kvittens, 1, true) ~= nil,
 			("[%s]"):format(tostring(PC._bekraftelse())))
 		moment.InvokeServer = fore
 		if type(__senasteDelay) == "function" then __senasteDelay() end

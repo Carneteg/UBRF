@@ -683,12 +683,22 @@ do
 	state = Preparation.nyState(HAST_ID, 1)
 	visa(Preparation.STATUS.FORBEREDER)
 	NR.satRider(false)
+	--[[ UI-1 (docs/UI1-START-CHOICE-CONTRACT.md): startskärmen visar bara de två
+	     vägarna; hälsningens fråga kommer först efter «Gör i ordning … själv». ]]
+	for _, v in ipairs(NR._val()) do
+		if v.id == "start:sjalv" then v.skicka() end
+	end
+	NR.satRider(false)
 	local harFel = false
 	for _, v in ipairs(NR._val()) do if v.fel then harFel = true end end
 	local l1, n1 = lyfta()
-	prova("HÄLSNINGEN: inget alternativ lyft före svaret",
-		harFel and n1 >= 2 and #l1 == 0,
-		("%d alternativ, lyfta: %s"):format(n1, table.concat(l1, " | ")))
+	--[[ UI-2: hälsningen är ingen fråga längre utan handlingar i ordning —
+	     där ska just NÄSTA handling lyftas (Ugneta säger den). R2:s regel
+	     gäller frågor, och fyndet nedan är fortfarande en. ]]
+	local forsta = Preparation.nastaMoment(state, "halsa")
+	prova("HÄLSNINGEN: inga felaktiga svar, bara nästa handling lyft",
+		not harFel and n1 == 3 and #l1 == 1 and forsta ~= nil and l1[1] == forsta.namn,
+		("%d handlingar, lyfta: %s"):format(n1, table.concat(l1, " | ")))
 
 	local vy = Preparation.vy(state, Preparation.STATUS.FORBEREDER, rev + 1, "Trixie")
 	rev += 1
@@ -802,6 +812,53 @@ do
 	prova("men ledknappen är fortfarande borta — den lyder sin egen regel",
 		p.LedPrompt == nil,
 		if p.LedPrompt then "LedPrompt tänd av uppsittningens svar" else "(borta)")
+end
+
+print("\n── C2: textinställningarna öppna bredvid skötselfrågan och 0..3 äldre kort ──")
+do
+	--[[ docs/INSTRUCTOR-TEXT-CONTROLS-CONTRACT.md. Frågan kommer genom
+		produktionens väg (`PreparationController.tillampa` via `visa`), de
+		äldre korten genom `UgnetaController.visa`, och panelen ritas av
+		Naromrade med sin riktiga kapacitet (MAX_VAL = 4). Inställningarna
+		öppnas med samma handling som Text-knappen.
+		SKRIVET FÖR SENARE KÖRNING. Inte kört. ]]
+	local UC = UgnetaController
+	local NR = Naromrade
+	state = Preparation.nyState(HAST_ID, 1)
+	visa(Preparation.STATUS.FORBEREDER)
+	local function rader()
+		NR.satRider(false)
+		local ut, fraga = {}, 0
+		for _, v in ipairs(NR._val()) do
+			table.insert(ut, tostring(v.text))
+			if v.fel ~= nil then fraga += 1 end
+		end
+		return table.concat(ut, " | "), #ut, fraga
+	end
+	NR.satRider(false)
+	--[[ UI-1 (docs/UI1-START-CHOICE-CONTRACT.md): startskärmen visar bara de två
+	     vägarna; hälsningens fråga kommer först efter «Gör i ordning … själv». ]]
+	for _, v in ipairs(NR._val()) do
+		if v.id == "start:sjalv" then v.skicka() end
+	end
+	NR.satRider(false)
+	local _, _, fraga0 = rader()
+	prova("KONTROLL: skötselfrågan står i panelen", fraga0 >= 2, fraga0)
+	for n = 0, 3 do
+		UC.dolj()
+		if n > 0 then UC.visa("Kort", {}, n >= 1, nil, n >= 2, n >= 3) end
+		if UC._installning().oppen then UC._vaxlaInstallning() end
+		local stangd, antalS, fragaS = rader()
+		UC._vaxlaInstallning()
+		local oppen, antalO, fragaO = rader()
+		UC._vaxlaInstallning()
+		prova(("%d äldre kort: samma rader med inställningarna öppna, högst fyra"):format(n),
+			oppen == stangd and antalO <= 4 and fragaO == fragaS,
+			("%d/%d rader, fråga %d/%d · %s"):format(antalS, antalO, fragaS, fragaO, oppen))
+	end
+	UC.dolj()
+	local _, _, fragaSist = rader()
+	prova("frågan står kvar efteråt", fragaSist == fraga0)
 end
 
 print("")

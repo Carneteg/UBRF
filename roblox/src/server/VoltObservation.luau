@@ -101,6 +101,7 @@ type Ritt = {
 	rittId: string, hastId: string, userId: number, oppen: boolean,
 	pagar: Avsnitt?, avslutade: { Avsnitt }, nr: number, bild: any,
 	sistaIn: any, satt: string?, sistaT: number?,
+	baslinje: boolean?,
 }
 
 local ritter: { [string]: Ritt } = {}
@@ -195,6 +196,11 @@ function VoltObservation.sampla(rittId: string?, plats: any): boolean
 		första segment. ]]
 	local tFore = r.sistaT
 	r.sistaT = if andligt(plats.t) then plats.t else nil
+	if r.baslinje then
+		r.baslinje = nil
+		bygg(r, "lektions_baslinje")
+		return true
+	end
 
 	local seg = plats.segment
 	local mitt = plats.dressyrMitt
@@ -280,6 +286,16 @@ function VoltObservation.sampla(rittId: string?, plats: any): boolean
 
 	bygg(r, "segment")
 	return true
+end
+
+-- A consumer boundary preserves old sections and consumes the next fresh input.
+function VoltObservation.lektionsGrans(rittId: string?): number?
+	local r = rittId and ritter[rittId]
+	if not r or not r.oppen then return nil end
+	avsluta(r, "lektions_grans")
+	r.baslinje = true
+	bygg(r, "lektions_grans")
+	return r.nr
 end
 
 function VoltObservation.avsluta(rittId: string?, satt: string): boolean

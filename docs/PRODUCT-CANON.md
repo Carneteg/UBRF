@@ -2,6 +2,10 @@
 
 Det här dokumentet är den överordnade produktvisionen för UBRF-spelet. Vid konflikt mellan en bekväm implementation och den här visionen vinner visionen, om inte Product Owner uttryckligen beslutar något annat.
 
+Nuvarande roller, behörigheter och testpolicy: se
+[WORKING-AGREEMENT](WORKING-AGREEMENT.md). Daterade beslut nedan bevarar
+produktens historia, men äldre personuppdrag eller testordrar återstartas inte.
+
 ## North Star
 
 **Bygg ett rid- och hästspel där spelaren har roligt samtidigt som hon lär sig hur hästar faktiskt fungerar, hur man rider och vilket ansvar och vilka plikter som följer med hästlivet. Allt utspelar sig på UBRF, som ska återskapas så verklighetstroget som det tillgängliga källmaterialet tillåter.**
@@ -74,6 +78,9 @@ Målet är maximal verklighetstrohet i:
 **Verkligheten är facit.** Foton, film, ritningar, satellitbilder, platsdata och verifierade uppgifter väger högre än estetisk bekvämlighet.
 
 "100 % likt" är ett fidelity-mål, inte tillåtelse att hitta på. Om underlag saknas ska delen markeras som `[REFERENCE GAP]` eller `[antagande]` och inte presenteras som verifierad verklighet. När nytt källmaterial kommer ska antagandet ersättas.
+
+Regel mot falsk precision: exakt kodvärde får inte beskrivas som exakt verklighetsmått
+om källan bara stödjer proportion eller intervall.
 
 ## Hästen är spelets kärna
 
@@ -180,6 +187,39 @@ levererats.
 Beskriv aldrig en saknad webbimplementation som genomförd paritet. Under
 etappen redovisas den som en **medveten, tidsbegränsad avvikelse** med
 hänvisning hit.
+
+### Produktbeslut 2026-09-28: Roblox och webb uppdateras samtidigt
+
+Det tidsbegränsade Roblox-först-undantaget från 2026-09-22 är **avslutat och
+ersatt för allt framtida arbete**.
+
+Från och med detta beslut gäller följande stående regel:
+
+- Varje ändring som påverkar produktbeteende, gameplay, spelarföde,
+  instruktioner, UI, lokalisering, hästhantering, lektioner, miljöbeteende
+  eller annan spelbar upplevelse ska implementeras och verifieras på
+  **både Roblox och HTML/webb i samma leverans**.
+- Roblox är fortsatt primär spelplattform och är facit när versionerna har
+  driftat, men en Roblox-ändring är inte färdiglevererad förrän webben är
+  uppdaterad till motsvarande produktutfall.
+- En webbändring som påverkar den gemensamma spelupplevelsen ska på samma sätt
+  föras över till Roblox i samma leverans.
+- Rendering, input och teknisk implementation får skilja sig mellan
+  plattformarna, men spelarens avsedda regler, flöde, instruktioner och
+  produktutfall ska motsvara varandra.
+- Om identiskt beteende verkligen inte är möjligt av tekniska plattformsskäl
+  krävs ett **uttryckligt produktägarbeslut från Tobias**. Skillnaden ska
+  dokumenteras som ett plattformsundantag med motivering och samma avsedda
+  spelarutfall.
+- Ingen ensidig plattformsändring får lämnas som normal backlog eller
+  "paritet senare".
+- Varje handoff ska redovisa Roblox-filer, webbfiler, parity-kontroll,
+  relevanta tester/build för båda plattformarna och eventuella uttryckligen
+  godkända undantag.
+
+Detta beslut ersätter punkt 1 och 5 i «Tidsbegränsat produktbeslut 2026-09-22»
+i den mån de pausar samtidig webbleverans. Den historiska texten ligger kvar
+för spårbarhet men är inte längre aktuell arbetsorder.
 
 ### Produktbeslut 2026-09-26: completion first
 

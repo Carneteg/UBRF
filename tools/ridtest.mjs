@@ -1045,6 +1045,7 @@ const live = await page.evaluate(async () => {
      ett tillstånd som redan är false bevisar inget om startaVandring(). */
   ridSittUpp("bandit", "ridhus");
   const forevandring = RID_TILLSTAND.uppsutten;           // ska vara true
+  SPAR.pass = 1;                     // återvändande: på pass 0 tar First Ride över (P1b)
   startaVandring();
   await new Promise(r => setTimeout(r, 400));
   const eftervandring = RID_TILLSTAND.uppsutten;          // ska vara false
@@ -1052,6 +1053,16 @@ const live = await page.evaluate(async () => {
      vald häst och ett RideModel-tillstånd. Det som TESTAS är att den
      körande ridloopen följer gångarten och fyller G.telemetri. */
   G.hastId = G.hastId || Object.keys(HORSES)[0];
+  /* Uppsittningen prövas mot förberedelsen (Roblox provaUppsittning,
+     P1a). Hästen görs i ordning genom spelets riktiga väg — «Rida nu» —
+     i stället för att grinden kringgås med handsatt tillstånd. */
+  /* Ett pass där hästen inte har något fynd — annars stannar «Rida nu»
+     helt riktigt vid välfärdsfrågan och ingen uppsittning ska ske. */
+  if (typeof Forb !== "undefined") {
+    let p = 1; while (Forb.fyndFor(G.hastId, p + 1)) p++;
+    SPAR.pass = p; sattAktivHast(G.hastId);
+  }
+  if (typeof stegkortRidaNu === "function") stegkortRidaNu();
   G.hastPlats = "box";
   G.ride = nyState(G.dagsform, 0.5, G.sadellage);
   sittUpp("ridhus");

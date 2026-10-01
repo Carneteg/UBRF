@@ -65,6 +65,11 @@ for (const vy of vyer) {
   await page.goto(`http://localhost:${PORT}/`, { waitUntil: "load" });
   await page.waitForTimeout(500);
   const ev = f => page.evaluate(f);
+  /* Kimi Q4 (P3 § 7): en tangent i ett textfält är text. Första sidan kan
+     vara karaktärsskaparen med namnfältet i fokus, och då ska W skrivas i
+     fältet — inte driva en häst. Provet mäter ridreglagen, så fokus lämnar
+     fältet först, som när spelaren rider. */
+  await ev(() => { const a = document.activeElement; if (a && a !== document.body && a.blur) a.blur(); });
 
   /* ── FOCUS LOSS ──────────────────────────────────────────────────
      Håll skänkeln, lämna fliken. En hjälp som ligger kvar betyder att

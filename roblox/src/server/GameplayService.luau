@@ -46,6 +46,7 @@ local Sparning = require(ReplicatedStorage.HorseCore.Sparning)
 	genererade kanon som resten av spelet läser. ]]
 local Spel = require(ReplicatedStorage.UBRFSpel)
 local LedService = require(script.Parent.LedService)
+local LedLektion = require(script.Parent.LedLektion)
 --[[ #182: ledningen oppnar boxdorren i samma tryck. Se `satDorrKrok`.
 	`DorrService` ager dorrarna; den har raden ar bara kopplingen. ]]
 local DorrService = require(script.Parent.DorrService)
@@ -64,6 +65,8 @@ local Net = Core.Networking
 local HorseService = require(script.Parent.HorseService)
 local StallService = require(script.Parent.StallService)
 local SparService = require(script.Parent.SparService)
+--[[ C (skötsel): spelarens egna första gånger. docs/CARE-MEMORY-CONTRACT.md. ]]
+local LektionsMinne = require(script.Parent.LektionsMinne)
 local Aktor = require(ReplicatedStorage.HorseCore.Aktor)
 --[[ #259 Gate 1A: takten framfor de klientanropade fjarrfunktionerna.
 	En delad skopa, inte en per handlare — se `Skopa.luau`. ]]
@@ -172,12 +175,21 @@ local function burenFor(player: Player)
 	return Preparation.buren(valdUtrustning[player], paHasten, hastnamnFor)
 end
 
+--[[ R1 (docs/EQUIPMENT-GUIDANCE-CONTRACT.md): det som FYSISKT bärs, per typ,
+	med ägarregistrets förvärv. `burenUtrustning` är en sammanfattning som
+	avsiktligt utelämnar det som redan sitter på den tilldelade hästen och
+	slår ihop blandade ägare — rättelsen läser därför detta i stället.
+	Framåtdeklarerad: den behöver `burenAv`, som står längre ned. ]]
+local burnaFor: ((Player) -> { any })? = nil
+
 local function vyFor(player: Player)
 	--[[ Hästens egennamn följer med så att klienten kan sätta in det där
 		kanonen skriver `%N`. Det översätts aldrig. ]]
 	local dagens = StallService.hastFor(player)
-	return Preparation.vy(state[player], status(player), nastaRev(player),
+	local v = Preparation.vy(state[player], status(player), nastaRev(player),
 		if dagens then dagens.namn else nil, burenFor(player))
+	if burnaFor then v.burnaDelar = burnaFor(player) end
+	return v
 end
 
 --[[ Spontan sanning till ägaren. Den kan gå förlorad om klienten ännu inte
@@ -440,6 +452,10 @@ function GameplayService.moment(player: Player, fasId: string, momentId: string,
 	--[[ TREDJE VÄRDET FÖLJER MED (#246 A). Se noten i `Preparation`. ]]
 	local ok, avslag, avslagArg =
 		Preparation.utforMoment(s, fasId, momentId, s.hastId, utforare)
+	--[[ C: skötselminnet prövar ett LYCKAT moment direkt, innan vyn skickas
+		och innan någon ombindning kan ersätta tillståndet. Bara spelarens
+		eget arbete räknas (se LektionsMinne.skotselMoment). ]]
+	if ok then LektionsMinne.skotselMoment(player, s, fasId, momentId, utforare) end
 	skicka(player)
 	--[[ KVITTENSEN NAMNGER DELEN OCH HÄSTEN. Den går ut som svarets andra
 		och tredje värde — samma kanal som nejen redan använder — så att
@@ -784,9 +800,28 @@ end
 	burna delen svetsas server-side i `TackRigg.byggBuren`, och det enda
 	klienten far ar resultatet. ]]
 local burenAv: { [string]: Player } = {}
+--[[ R1: ett FÖRVÄRV per registrerad hämtning. En återlämning bär numret
+	den visades med; en ny hämtning av samma sak är ett nytt förvärv, så
+	en sen gammal återlämning kan aldrig röra den. ]]
+local burenForvarv: { [string]: number } = {}
+local forvarvNr = 0
 
 local function agarnyckel(typ: string, hastId: string): string
 	return hastId .. "/" .. typ
+end
+
+burnaFor = function(player: Player): { any }
+	local ut = {}
+	for _, typ in ipairs({ "sadel", "trans" }) do
+		local id = TackService.barBuren(player, typ)
+		if id ~= nil then
+			local nyckel = agarnyckel(typ, id)
+			local reg = burenAv[nyckel] == player
+			table.insert(ut, { typ = typ, hastId = id, hastnamn = hastnamnFor(id) or id,
+				registrerad = reg, forvarv = if reg then burenForvarv[nyckel] else nil })
+		end
+	end
+	return ut
 end
 
 --[[ Slapper allt den har spelaren bar — annars later registret en sadel
@@ -801,6 +836,7 @@ function GameplayService.slappBuret(player: Player)
 	for nyckel, agare in pairs(burenAv) do
 		if agare == player then
 			burenAv[nyckel] = nil
+			burenForvarv[nyckel] = nil
 			local hastId, typ = nyckel:match("^(.+)/([^/]+)$")
 			if hastId and typ then
 				pcall(function() TackForradService.satSynlig(hastId, typ, true) end)
@@ -936,8 +972,81 @@ function GameplayService.valjEn(player: Player, hastId: string?, typ: string?): 
 		krok pa fronten — alltsa forst nu ar `WORLD -> HELD` sant. ]]
 	skrivVal(player, t, id)
 	burenAv[nyckel] = player
+	forvarvNr += 1
+	burenForvarv[nyckel] = forvarvNr
 	skicka(player)
 	return true
+end
+
+--[[ ══ ATT LÄMNA TILLBAKA (docs/EQUIPMENT-GUIDANCE-CONTRACT.md) ═══════
+
+	`valjEn` säger «spelaren får lämna tillbaka sadeln hon bar först», men
+	vägen fanns inte: fronten och dess prompt släcks när utrustningen tas,
+	och de enda som släpper en buren del är `slappBuret` (hela sessionen,
+	eller kroppen borta) och påsättningen. Den som tagit fel hästs sadel
+	satt fast. Det här är den SMALA vägen tillbaka — FAS 1 baklänges:
+
+	    validera -> tänd fronten -> släpp den burna -> committa
+
+	Samma räckvidd som hämtningen, vid utrustningens EGEN front. Ingenting
+	annat: ingen annan del rörs, inget teleporteras, inget sätts på, inget
+	framsteg, ingen belöning, felräknaren orörd. `forvantatHastId` är den
+	hästs utrustning klienten VISADE; bär spelaren något annat nu nekas
+	begäran som inaktuell. ]]
+function GameplayService.lamnaTillbaka(player: Player, typ: any, forvantatHastId: any,
+	forvantatForvarv: any, forvantadTilldelad: any): (boolean, string?)
+	if typ ~= "sadel" and typ ~= "trans" then return false, "tack.okand_utrustning" end
+	local t = typ :: string
+	local id = TackService.barBuren(player, t)
+	if id == nil then return false, "tack.bar_inget" end
+	if type(forvantatHastId) ~= "string" or forvantatHastId ~= id then
+		return false, "tack.bar_inte_den"
+	end
+	--[[ Bara en REGISTRERAD hämtning. «Rida nu» bygger burna delar utan
+		ägarpost; de tas aldrig tillbaka den här vägen. ]]
+	local nyckel = agarnyckel(t, id)
+	if burenAv[nyckel] ~= player then return false, "tack.kan_inte_lamnas" end
+	--[[ R1: SAMMA FÖRVÄRV OCH SAMMA TILLDELNING som visades. En sen
+		återlämning efter att samma sak hängts tillbaka och hämtats igen, eller
+		efter att den tilldelade hästen bytts, rör aldrig det nyare. ]]
+	if forvantatForvarv ~= burenForvarv[nyckel] then return false, "tack.inaktuell" end
+	if forvantadTilldelad ~= StallService.hastIdFor(player) then return false, "tack.inaktuell" end
+
+	local karaktar = player.Character
+	local rot = karaktar and karaktar:FindFirstChild("HumanoidRootPart")
+	if not (rot and rot:IsA("BasePart")) then return false, "tack.ingen_karaktar" end
+	local front = TackForradService.forHast(id)
+	local plats = front and front.PrimaryPart
+	if not (plats and plats:IsA("BasePart")) then return false, "tack.ingen_front" end
+	if (rot.Position - plats.Position).Magnitude > STEG_RACKVIDD then
+		return false, "tack.ga_till_fronten"
+	end
+	--[[ Hänger den redan där vore en till en dubblett. ]]
+	if TackForradService.paFronten(id, t) == true then return false, "tack.front_upptagen" end
+
+	--[[ TRANSAKTIONEN. `satSynlig` är allt-eller-inget; ett nej där betyder
+		att ingenting ändrats. Släpps inte den burna delen tas fronten
+		ned igen, så att den aldrig står både i handen och på kroken. ]]
+	if not TackForradService.satSynlig(id, t, true) then
+		return false, "tack.front_visar_inte"
+	end
+	local ok, slapptes = pcall(function() return TackService.slappBuren(player, t) end)
+	if not (ok and slapptes) then
+		pcall(function() TackForradService.satSynlig(id, t, false) end)
+		return false, "tack.kunde_inte_slappas"
+	end
+
+	burenAv[nyckel] = nil
+	burenForvarv[nyckel] = nil
+	local vald = valdUtrustning[player]
+	if vald and vald[t] == id then vald[t] = nil end
+	skicka(player)
+	return true
+end
+
+--[[ Provkrok: den riktiga producentens per-del-data (samma som vyn bär). ]]
+function GameplayService._burnaForProv(player: Player): { any }
+	return if burnaFor then burnaFor(player) else {}
 end
 
 function GameplayService.valdFor(player: Player): { [string]: string }?
@@ -995,6 +1104,7 @@ end
 	hangande bredvid den som redan ligger pa ryggen. ]]
 function GameplayService.slappAgande(typ: string, hastId: string)
 	burenAv[agarnyckel(typ, hastId)] = nil
+	burenForvarv[agarnyckel(typ, hastId)] = nil
 end
 
 function GameplayService.sadla(player: Player, modell: Model?): (boolean, string?)
@@ -1582,6 +1692,12 @@ function GameplayService.start()
 		return GameplayService.transa(player, modell)
 	end)
 
+	--[[ Att lämna tillbaka det man bär (docs/EQUIPMENT-GUIDANCE-CONTRACT.md). ]]
+	Net.get("LamnaTillbaka").OnServerInvoke = Skopa.grind("LamnaTillbaka",
+		function(player, typ, hastId, forvarv, tilldelad)
+			return GameplayService.lamnaTillbaka(player, typ, hastId, forvarv, tilldelad)
+		end)
+
 	--[[ ── LEDNINGEN (#162 blockerare 2) ──────────────────────────────
 
 		Målzonen är RIDBANAN, inte "utanför stallet". Källan säger att
@@ -1632,6 +1748,18 @@ function GameplayService.start()
 	LedService.satRattHastKrok(function(player)
 		return bunden[player] or GameplayService.bind(player)
 	end)
+
+	--[[ Ledningslektionen till fots (docs/LEADING-LESSON-CONTRACT.md) OBSERVERAR
+		vanlig ledning. Den får samma svar om rätt häst som ledningen, men
+		frågar bara vad som redan är bundet (ingen ny bindning), och om
+		spelaren sitter upp. Ingen krok i LedService, ingen kvittering. ]]
+	LedLektion.start({
+		rattHast = function(player) return bunden[player] end,
+		rider = function(player) return HorseService.horseOf(player) ~= nil end,
+		--[[ C4 ledning: första genuina fullföljandet, prövat och noterat av
+			minnet. LedService:s egen målkrok för förberedelsen är orörd. ]]
+		klar = LektionsMinne.ledningKlar,
+	})
 
 	--[[ Uppsittningen och avsittningen driver passets läge. De hakas på
 		`HorseService` i stället för att `GameplayService` skulle lyssna på

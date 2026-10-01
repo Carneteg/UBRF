@@ -47,6 +47,10 @@ const RIDIN={
 const IN={
   kan:{skankel:{v:0,mal:0},tygel:{v:0,mal:0},sits:{v:0,mal:0},styrning:{v:0,mal:0}},
   latt:true,diagonal:1,spo:false,hh:-1,paradFore:0,ned:{},
+  /* När varje tangent trycktes ned, och hur länge ett släppt håll varade —
+     hållprompterna (world.js interagera) mäter på HÄNDELSERNA, inte på
+     bildrutorna, så att ett håll räknas även när bildtakten är låg. */
+  nedT:{},slappt:{},
   styrDigital:null,styrKansla:{v:0},
   joy:null,          // pekskärmens analoga spak: {x,y,styrka} eller null
 };
@@ -83,16 +87,39 @@ function ridAvsiktTillHjalp(){
    själv — en resa som ridmodellen med rätta läser som en framåtimpuls. */
 ridNollstallHjalp();
 const STIG=0.28,FALL=0.22;
+/* ── EN TANGENT I ETT TEXTFÄLT ÄR TEXT, INTE ETT KOMMANDO (Kimi Q4, H1) ──
+   Reproducerat 2026-09-30 (engångsskript, nu regressionen
+   tools/kameratest.mjs): att skriva namnet
+   «Vera» i karaktärsskaparen bytte vyn till kartan bakom rutan (V), och
+   spelaren möttes av en ovanifrånvy hon aldrig bett om när rutan stängdes.
+   Samma sak gällde varje bokstav som är ett reglage (R, Q, E, T, M…).
+   Ett fält som tar text äger tangenten; spelet ser den inte. */
+function tangentIText(e){
+  const m=e&&e.target;
+  if(!m||m===window||m===document||typeof m.closest!=="function")return false;
+  const tag=String(m.tagName||"").toLowerCase();
+  if(tag==="textarea"||tag==="select")return true;
+  if(tag==="input"){const typ=String(m.type||"text").toLowerCase();
+    return !["button","checkbox","radio","range","submit","reset","color","file","image"].includes(typ);}
+  return !!m.isContentEditable;
+}
+/* I sadeln i huvudvägen (P3): ridpanelen, lektionerna och fri träning. */
+function iSadeln(){return G.scen==="lektion"||G.scen==="bana";}
 addEventListener("keydown",e=>{
   if(e.repeat)return;
+  if(tangentIText(e))return;
   const wasDown=!!IN.ned[e.code];
   IN.ned[e.code]=true;
+  if(!wasDown)IN.nedT[e.code]=(typeof performance!=="undefined"?performance:Date).now();
   /* E är en engångshandling i gångläget. Bevara den tills spelet samplar,
      men skapa aldrig en impuls från autorepeat, en overlay eller ridning. */
   if(e.code==="KeyE"&&!wasDown&&
      (G.scen==="gard"||G.scen==="stallinne"||G.scen==="ridhusinne")&&
      !overlayUppe())InputImpulse.press("KeyE",G.scen);
   switch(e.code){
+    /* ↑/↓ är samma som W/S i sadeln (Roblox binder båda, P3 § 3). */
+    case"ArrowUp":if(!iSadeln())break;e.preventDefault();IN.ned.KeyW=true;RIDIN.skankel=1;RIDIN.pek=false;break;
+    case"ArrowDown":if(!iSadeln())break;e.preventDefault();IN.ned.KeyS=true;RIDIN.skankel=-1;RIDIN.pek=false;break;
     case"KeyW":RIDIN.skankel=1;RIDIN.pek=false;break;
     case"KeyS":RIDIN.skankel=-1;RIDIN.pek=false;break;
     case"Space":RIDIN.tygel=1;e.preventDefault();break;
@@ -100,13 +127,21 @@ addEventListener("keydown",e=>{
     case"ControlLeft":case"ControlRight":RIDIN.sits=1;e.preventDefault();break;
     case"KeyA":IN.styrDigital=-1;RIDIN.pek=false;break;
     case"KeyD":IN.styrDigital=1;RIDIN.pek=false;break;
-    case"KeyR":IN.latt=!IN.latt;break;
+    /* Till fots hör R till «Rida nu» vid hästen (paritetspasset P1a R1,
+       Roblox RidaNuPrompt). Lättridningen växlas bara i sadeln. */
+    case"KeyR":if(G.scen!=="gard"&&G.scen!=="stallinne"&&G.scen!=="ridhusinne")IN.latt=!IN.latt;break;
     case"KeyQ":IN.diagonal=1-IN.diagonal;break;
-    case"KeyF":IN.spo=true;break;
-    case"KeyE":RIDIN.parad=1;break;
+    /* BINDNINGARNA I SADELN (P3 § 3, Roblox Input): E = sitt av,
+       F = halvhalt, G = spö (webbens egen hjälp, bara under `?`). Till fots
+       är E «använd» (InputImpulse ovan) och F är sadlingsprompten —
+       inget där ändras. Ridfysiken rörs inte: bara vilken tangent som
+       matar vilken befintlig kanal. */
+    case"KeyF":if(iSadeln())RIDIN.parad=1;break;
+    case"KeyG":IN.spo=true;break;
+    case"KeyE":if(iSadeln()&&!wasDown&&!overlayUppe()&&typeof ridAvsittning==="function")ridAvsittning();break;
     case"KeyN":G.hoppaMoment=true;break;
     case"KeyP":G.auto=!G.auto;saga(G.auto?"Jag visar. Titta på vägen jag väljer.":"Din tur.",2.5);break;
-    case"KeyV":vaxlaVy();break;
+    case"KeyV":if(!overlayUppe())vaxlaVy();break;
     /* G02-D: H visar reglagen. Tangenten är fri — game.js tar W A S D,
        Space, Shift, Ctrl, E, R, Q, F, N, P, V, M, T. */
     case"KeyH":if(typeof vaxlaKontrollHjalp==="function")vaxlaKontrollHjalp();break;
@@ -123,15 +158,22 @@ addEventListener("keydown",e=>{
 });
 addEventListener("keyup",e=>{
   IN.ned[e.code]=false;
+  if(IN.nedT[e.code]!=null){
+    IN.slappt[e.code]={s:((typeof performance!=="undefined"?performance:Date).now()-IN.nedT[e.code])/1000,
+      fran:IN.nedT[e.code]};
+    IN.nedT[e.code]=null;
+  }
   switch(e.code){
+    case"ArrowUp":IN.ned.KeyW=false;RIDIN.skankel=IN.ned.KeyS?-1:0;break;
+    case"ArrowDown":IN.ned.KeyS=false;RIDIN.skankel=IN.ned.KeyW?1:0;break;
     case"KeyW":RIDIN.skankel=IN.ned.KeyS?-1:0;break;
     case"KeyS":RIDIN.skankel=IN.ned.KeyW?1:0;break;
     case"Space":RIDIN.tygel=0;break;
     case"ShiftLeft":case"ShiftRight":case"ControlLeft":case"ControlRight":RIDIN.sits=0;break;
     case"KeyA":if(!RIDIN.pek)IN.styrDigital=IN.ned.KeyD?1:0;break;
     case"KeyD":if(!RIDIN.pek)IN.styrDigital=IN.ned.KeyA?-1:0;break;
-    case"KeyF":IN.spo=false;break;
-    case"KeyE":RIDIN.parad=0;break;
+    case"KeyG":IN.spo=false;break;
+    case"KeyF":RIDIN.parad=0;break;
   }
 });
 /* ── FOKUS FÖRSVINNER — SLÄPP ALLT ────────────────────────────────
@@ -293,10 +335,29 @@ function hastAnvisning(namn){
    spelas, och kartan är ett uppslag man tar när man vill orientera
    sig. Med kartan som förval landade en ny spelare i en ovanifrånvy
    där styrningen har en annan referens än den hon strax byter till. */
-function vaxlaVy(){G.vy=G.vy==="2d"?"3d":"2d";
+/* ── KAMERAN EFTER EN FLYTT (Kimi Q4) ─────────────────────────────
+   Roblox har ingen ovanifrånkamera. Webben har kartan (G.vy "2d"), och den
+   ska bara synas när spelaren själv valt den. Reproducerat 2026-09-30:
+     H1  V i ett textfält bytte vy bakom rutan — se tangentIText ovan;
+     H2  kartan överlevde varje flytt och uppsittning, så en karta öppnad
+         till fots var fortfarande kartan i sadeln;
+     +   växlaren startade med «Bana» markerad medan vyn var 3D.
+   Regeln: kartan gäller i den scen där hon valde den. En teleport, en dörr
+   eller en uppsittning till en ANNAN scen ger 3D-vyn igen. */
+function vyMarkera(){
+  if(typeof document==="undefined")return;
   document.querySelectorAll("#viewToggle button").forEach(b=>b.classList.toggle("on",b.dataset.v===G.vy));}
+function vaxlaVy(){G.vy=G.vy==="2d"?"3d":"2d";
+  G.vyScen=G.vy==="2d"?G.scen:null;
+  vyMarkera();}
+function vyEfterFlytt(nyScen){
+  if(G.vy==="2d"&&G.vyScen!==nyScen){G.vy="3d";G.vyScen=null;}
+  vyMarkera();
+}
 document.querySelectorAll("#viewToggle button").forEach(b=>b.addEventListener("click",()=>{
+  if(typeof overlayUppe==="function"&&overlayUppe())return;
   if(b.dataset.v!==G.vy)vaxlaVy();}));
+vyMarkera();
 
 /* ── NPC-ekipage: rider fyrkantspåret olika bra ── */
 function initNPC(){
@@ -774,6 +835,7 @@ function saga(txt,dur){const s=document.getElementById("saga");
 /* ── Lektionen ── */
 function startaLektion(){
   G.scen="lektion";G.momentIx=0;G.momentT=0;G.momentForsok=1;G.betyg={};
+  G.p3=false;               // sätts av startaRidP3 i huvudvägen, se nedan
   /* En ny lektion börjar aldrig pausad. Lämnade spelaren förra passet
      med valpanelen uppe låg flaggan kvar och hästen stod stilla. */
   G.paus=false;
@@ -809,6 +871,11 @@ function startaLektion(){
     overlay(false);document.getElementById("viewToggle").hidden=false;
     return;
   }
+  /* P3: HUVUDVÄGEN RIDER SOM ROBLOX — ridpanelen, lektionsmenyn och fri
+     träning. Gruppstegen (momentserien nedan) är inte längre huvudvägen;
+     koden och dess sparade läge står kvar orörda, och var den erbjuds som
+     sidoaktivitet är Tobias beslut (P3 § 9, § 11.3). */
+  if(!G.stege){startaRidP3();return;}
   G.lektion=byggLektion(G.grupp,G.seed,G.plats);
   /* Vägen tillbaka: första passet efter en skada rids utan galopp
      och utan bana — stegrande arbete, som efter en hälta. */
@@ -834,6 +901,82 @@ function startaLektion(){
   else if(G.plats==="stig")
     saga("Uteritt på skogsstigen. Lydighetsövningar behöver ingen bana — grusvägar duger.",4.5);
   overlay(false);document.getElementById("viewToggle").hidden=false;
+}
+/* ── P3: RITTEN I HUVUDVÄGEN ────────────────────────────────────────
+   En ny ritt får ett nytt rittId och nya observationer (RittLektion).
+   Fri träning startar vid uppsittningen under menyn (FriPass); en vald
+   lektion (Lektionsmeny) tar över och fri träning tiger — exakt Roblox
+   LektionController.start → VoltLektionController.start. Inga NPC-ekipage:
+   Roblox huvudväg rider ensam med Ugneta, och ett ekipage på spåret hade
+   knuffat spelaren ur lektionernas korridorer. */
+function startaRidP3(){
+  G.p3=true;
+  G.lektion=[];G.moment=null;G.npcs=[];
+  G.hinderAktiva=false;G.hadeBana=false;
+  document.getElementById("protWrap").hidden=true;
+  const id=RittLektion.start();
+  FriPass.nyttPass();
+  Lektionsmeny.start(id,()=>FriPass.nyttPass());
+  G.p3CueTid=G.ride?G.ride.cueTid:null;G.p3Parad=0;G.p3Fore=null;
+  if(typeof RIDPANEL!=="undefined"){RIDPANEL.hjalpUt=false;RIDPANEL.installOppen=false;RIDPANEL.radLage=null;}
+  if(typeof vyEfterFlytt==="function")vyEfterFlytt("lektion");
+  overlay(false);document.getElementById("viewToggle").hidden=false;
+}
+/* En bildruta i huvudvägen. Observationerna i serverns takt, lektionen
+   efter varje observationssteg, fri träning när ingen lektion är vald. */
+function stegaP3(dt){
+  if(G.scen!=="lektion"||!G.p3)return;
+  RittLektion.steg(dt,{x:G.px,y:G.py,gangart:G.ride&&G.ride.gangart,ridhus:G.plats==="ridhus"},
+    G.ride,G.t,X=>Lektionsmeny.observation(X));
+  Lektionsmeny.steg(dt);
+  /* En hjälp besvarar Ugnetas kort (Roblox init.client #263 P1): en ny
+     gångartsbegäran eller en halvhalt, inte en styrning eller en tygel. */
+  /* Roblox räknar HJÄLPEN (intent.gaitUp/gaitDown/parad), inte om
+     gångarten faktiskt byttes — i galopp finns inget steg upp, men ett
+     tryck på W är fortfarande ett svar. Därför: en ny skänkelimpuls framåt
+     eller bakåt (tangent eller spak förbi halva utslaget), en parad, eller
+     en ny gångartsbegäran. */
+  const cue=G.ride?G.ride.cueTid:null;
+  const parad=RIDIN.parad||0, sk=RIDIN.skankel||0, skF=G.p3Sk||0;
+  const hjalp=(cue!==G.p3CueTid)||(parad>0.05&&G.p3Parad<=0.05)
+    ||(sk>0.5&&skF<=0.5)||(sk<-0.5&&skF>=-0.5);
+  G.p3CueTid=cue;G.p3Parad=parad;G.p3Sk=sk;
+  /* Över ett av ridhusets stående hinder hoppar hästen — bara bilden
+     (samma G.luft som banans hopp). Passagen bedöms av HinderObs, inte här. */
+  /* En flytt (ny ritt, teleport) är inget hopp: bara en bildrutas verkliga
+     förflyttning under en meter räknas. */
+  if(G.p3Fore&&G.plats==="ridhus"&&Math.hypot(G.px-G.p3Fore.x,G.py-G.p3Fore.y)<1)
+    for(const hi of ((typeof RIDHUSINNE!=="undefined"&&RIDHUSINNE.hinder)||[])){
+      if(!(hi.h>0.02))continue;
+      const y0=G.p3Fore.y-hi.y, y1=G.py-hi.y;
+      if((y0<0&&y1>=0)||(y0>0&&y1<=0)){
+        const k=y0/(y0-y1), x=G.p3Fore.x+(G.px-G.p3Fore.x)*k;
+        if(Math.abs(x-hi.x)<=hi.b/2&&G.luft<=0)G.luft=0.55;
+      }
+    }
+  G.p3Fore={x:G.px,y:G.py};
+  if(!Lektionsmeny.tarOver())FriPass.steg(dt,hjalp);
+  if(typeof ridpanelSteg==="function")ridpanelSteg(dt);
+}
+/* SITT AV (E, pek SITT AV). Ritten tar slut: ett pågående försök blir
+   avbrutet (clear round: «avbruten»), fri träning släpps, och spelet
+   lämnar över till den befintliga vägen efter ritten (P4 ersätter den). */
+function ridAvsittning(){
+  if(G.scen!=="lektion"||!G.p3)return false;
+  const X=RittLektion.kontext(G.t,RittLektion.tillRoblox(G.ride&&G.ride.gangart));
+  Lektionsmeny.avbryt(X);
+  FriPass.avbryt();
+  RittLektion.slut();
+  if(typeof doljKontrollHjalp==="function")doljKontrollHjalp();
+  G.p3=false;G.paus=false;
+  const dom=domaRitt([],0,true);
+  dom.tid=0;
+  /* Inga moment bedömdes: efter-vägen visar inget snitt och ingen
+     uppflyttningsrad för moment som inte längre finns (P3 § 9). */
+  dom.p3=true;
+  G.moment=null;G.momentKlart=false;
+  avslutaBana(dom);
+  return true;
 }
 function visaMoment(){
   const m=G.moment;
@@ -1110,7 +1253,8 @@ function loop(now){
        men ingenting stegas. Utan det red hästen vidare medan replayen
        låg öppen, och försöket hon just tittade på hann bli ogiltigt. */
     if(!G.paus){
-      stegaRitt(dt);stegaNPC(dt);stegaLektion(dt);
+      stegaRitt(dt);stegaNPC(dt);
+      if(G.p3)stegaP3(dt);else stegaLektion(dt);
       if(G.luft>0)G.luft-=dt;
     }
     if(G.vy==="2d"){gl3dLage(false);draw2D(G);}else draw3D(G);
@@ -1121,6 +1265,9 @@ function loop(now){
   } else if(G.scen==="resultat"){
     if(G.vy==="2d"){gl3dLage(false);draw2D(G);}else draw3D(G);
   } else gl3dLage(false);
+  /* Ridpanelen ritas (eller döljs) i VARJE scen: efter en avsittning ska
+     den bort även när ingen ritt längre stegas. */
+  if(typeof ridpanelRita==="function")ridpanelRita();
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);

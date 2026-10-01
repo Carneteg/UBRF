@@ -59,7 +59,14 @@ async function walk(pos,label){
  }throw Error(`Timeout på väg till ${label}`);
 }
 async function interact(){const s=await state();if(!s.prompt)throw Error(`Ingen E-prompt vid ${stage}`);
- if(mode==='touch'){const b=page.locator('#pekGang [data-tap="KeyE"]');if(!await b.count()||!await b.isVisible())throw Error('Synlig ANVÄND-knapp saknas');await b.tap();}
+ /* Paritetspasset P1a R1: en prompt med hålltid (Roblox HoldDuration) HÅLLS
+    med sin egen tangent — «Rida nu» R, «Sitt upp» E. På pekskärm hålls
+    ANVÄND, som ett finger på prompten. */
+ const p=await page.evaluate(()=>VD.prompt?{hall:VD.prompt.hall||0,tangent:VD.prompt.tangent||'KeyE'}:{hall:0,tangent:'KeyE'});
+ if(mode==='touch'){const b=page.locator('#pekGang [data-tap="KeyE"]');if(!await b.count()||!await b.isVisible())throw Error('Synlig ANVÄND-knapp saknas');
+  if(p.hall>0){await b.dispatchEvent('pointerdown');await page.waitForTimeout(p.hall*1000+350);await b.dispatchEvent('pointerup');}
+  else await b.tap();}
+ else if(p.hall>0){await page.keyboard.down(p.tangent);await page.waitForTimeout(p.hall*1000+350);await page.keyboard.up(p.tangent);}
  else await key('KeyE');await page.waitForTimeout(250);
 }
 async function goToScene(target){
@@ -97,10 +104,20 @@ async function firstDay(){
  // riktiga gästgenväg, utan att förskriva localStorage eller profilen.
  if(await button('#bSkapHoppa')){s=await snap('00b-guest');record('Karaktärsskaparens gästgenväg','PASS',{scene:s.scene});}
  if(!await button('#bStart'))throw Error(`Rid nu-knappen saknas efter gäststart: ${JSON.stringify((await state()).buttons)}`);
- s=await snap('01-start');record('Gäststart via Rid nu',s.scene==='gard'?'PASS':'FAIL',{scene:s.scene});
- if(s.scene!=='gard')throw Error('Rid nu öppnade inte gården');
+ s=await snap('01-start');
+ /* Paritetspasset P1b: en ny gäst får First Ride som i Roblox — uppsutten
+    i ridhuset. Det är spelets egen väg, inget kringgående. */
+ record('Gäststart via Rid nu',(s.scene==='gard'||s.scene==='lektion')?'PASS':'FAIL',{scene:s.scene});
+ if(s.scene!=='gard'&&s.scene!=='lektion')throw Error('Rid nu öppnade varken gården eller First Ride');
  if(mode==='touch'){
-  const b=page.locator('#pekGang [data-tap="KeyE"]');record('Touch ANVÄND är synlig och fingerstor',await b.count()&&await b.isVisible()&&await b.evaluate(e=>e.getBoundingClientRect().height>=44)?'PASS':'FAIL');
+  /* Touchens huvudknapp följer läget: till fots ANVÄND, uppsutten (First
+     Ride, P1b) ridsatsens TYGEL. Mobil.js byter sats var 250 ms — vänta på
+     synligheten i stället för att läsa i samma ögonblick. */
+  const uppsutten=s.scene==='lektion'||s.scene==='bana';
+  const [namn,sel]=uppsutten?['TYGEL','#pekRitt [data-hall="Space"]']:['ANVÄND','#pekGang [data-tap="KeyE"]'];
+  const b=page.locator(sel);
+  const synlig=await b.waitFor({state:'visible',timeout:2000}).then(()=>true,()=>false);
+  record(`Touch ${namn} är synlig och fingerstor`,synlig&&await b.evaluate(e=>e.getBoundingClientRect().height>=44)?'PASS':'FAIL',{scene:s.scene});
  }
  for(let i=0;i<60;i++){
   s=await state();stage=`day-${i}-${s.objective?.id||s.scene}`;
@@ -117,7 +134,8 @@ async function firstDay(){
 async function riding(){
  const s=await firstDay();if(s.scene!=='lektion'||!s.ride)throw Error('Ridtest BLOCKED: ingen uppsittning');stage='riding';
  const before=await state();await hold('KeyW',1000);await hold('Space',800);
- await hold('KeyA',650);await hold('KeyD',650);await hold('KeyS',500);await key('KeyE');
+ /* P3 § 3: halvhalten är F i sadeln (E sitter av, som i Roblox). */
+ await hold('KeyA',650);await hold('KeyD',650);await hold('KeyS',500);await key('KeyF');
  const r=await snap('riding-input');record('Ridinput och aktiv ridloop',r.ride?'PASS':'FAIL',{scene:r.scene,horse:r.horse,before:before.riding,after:r.riding});
  await key('KeyT');await snap('riding-training-book');record('Träningsboken öppnas från sadeln',(await state()).overlay?'PASS':'FAIL');
 }

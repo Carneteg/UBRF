@@ -38,7 +38,10 @@ const vyer=[
 ];
 
 for(const vy of vyer){
-  const page=await browser.newPage({viewport:{width:vy.width,height:vy.height}});
+  /* Provet läser SVENSKA texter. Sedan P3 går kontrollhjälpen genom tSpr och
+     följer webbläsarens språk — utan angivet locale blev den engelsk i CI
+     (rött på f3a40bf, första gången provet kördes där). */
+  const page=await browser.newPage({viewport:{width:vy.width,height:vy.height},locale:"sv-SE"});
   page.on("pageerror",e=>console.error("PAGEERROR",vy.namn,e.message));
   await page.goto(`http://localhost:${PORT}/`,{waitUntil:"load"});
   await page.waitForTimeout(400);
@@ -110,14 +113,25 @@ for(const vy of vyer){
   if(!h.saknas){
     prova(h.synlig&&h.antal>=8,`${vy.namn}: hjälpen visar reglagen`,
       `${h.antal} rader`);
-    prova(h.karta["Sitt upp / använd"]==="E",
-      `${vy.namn}: hjälpen svarar hur man sitter upp`,h.karta["Sitt upp / använd"]);
-    prova(h.karta["Tygel (kontakt)"]==="Mellanslag",
+    /* P3 § 3 (docs/P3-RIDING-PANEL-LESSON-MENU-CONTRACT.md): samma rader
+       som ridpanelens kärna — «Sitt upp / sitt av» på E, som i Roblox. */
+    const sittUpp=h.inmatning==="touch"?"SITT AV":"E";
+    prova(h.karta["Sitt upp / sitt av"]===sittUpp,
+      `${vy.namn}: hjälpen svarar hur man sitter upp`,h.karta["Sitt upp / sitt av"]);
+    prova(h.karta["Tygel (kontakt)"]===(h.inmatning==="touch"?"TYGEL":"Mellanslag"),
       `${vy.namn}: …och vad tygeln är`,h.karta["Tygel (kontakt)"]);
-    /* Gångart och hopp SKA sakna reglage på webben. */
-    prova(h.utan.includes("Gångart")&&h.utan.includes("Hoppa"),
+    /* Gångart och hopp har FORTFARANDE ingen uppfunnen tangent: webben
+       rider med hjälperna. Raderna som byter gångart säger vilken HJÄLP
+       tangenten ger (skänkel, tygel), aldrig Roblox «ett steg upp/ned»,
+       och hoppet har ingen rad alls — en rad utan reglage hoppas över
+       (Roblox regel, P3 § 3). Ingen rad står med tom reglagekolumn. */
+    const namn=Object.keys(h.karta);
+    prova(!namn.some(n=>/steg upp|steg ned|^Hoppa$/i.test(n))
+      &&/skänkel/.test(namn.find(n=>/^Driv på/.test(n))||"")
+      &&/tygel/.test(namn.find(n=>/^Bromsa/.test(n))||"")
+      &&h.utan.length===0,
       `${vy.namn}: gångart och hopp anges utan uppfunnen tangent`,
-      h.utan.join(", "));
+      namn.join(" | "));
     prova(h.box.l>=-1&&h.box.r<=h.inner.w+1&&h.box.t>=-1&&h.box.b<=h.inner.h+1,
       `${vy.namn}: hjälpen ryms i viewporten`,JSON.stringify(h.box));
     prova(!h.overflowX,`${vy.namn}: hjälpen ger ingen horisontell overflow`);

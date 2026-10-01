@@ -134,8 +134,13 @@ local function halsMoment()
 		table.insert(ut, {
 			id = "halsa" .. i,
 			namn = h.t,
-			text = h.svar,
-			steg = 1,
+			--[[ UI-2: hälsningen är handlingar i ordning (man talar innan man
+			     rör). Som i varje checklista är `text` nästa instruktion —
+			     Ugnetas ord för handlingen — och `kvittens` det som sägs när
+			     den är gjord. ]]
+			text = h.text or h.svar,
+			kvittens = h.svar,
+			steg = i,
 			fel = not h.ratt,
 		})
 	end
@@ -485,7 +490,7 @@ local function byggKanonIndex()
 		end
 	end
 	lista(Skotsel.faser, "namn"); lista(Skotsel.faser, "text")
-	lista(Skotsel.halsning, "t"); lista(Skotsel.halsning, "svar")
+	lista(Skotsel.halsning, "t"); lista(Skotsel.halsning, "svar"); lista(Skotsel.halsning, "text")
 	lista(Skotsel.hovar, "namn"); lista(Skotsel.hovar, "text")
 	lista(Skotsel.eftervard, "namn"); lista(Skotsel.eftervard, "text")
 	lista(Skotsel.sadelfaser, "t")
@@ -569,6 +574,7 @@ function Preparation.momentPaSprak(m: any, sprak: string?, hastnamn: string?)
 	local ut = table.clone(m)
 	ut.namn = namn
 	ut.text = text
+	if type(m.kvittens) == "string" then ut.kvittens = Preparation.kanonPaSprak(m.kvittens, sprak) end
 	return ut
 end
 
@@ -954,6 +960,7 @@ function Preparation.vy(state: State?, status: string, rev: number?, hastnamn: s
 				id = m.id,
 				namn = m.namn,
 				text = m.text,
+				kvittens = m.kvittens,
 				fel = m.fel == true,
 				klar = gjort[m.id] == true,
 			})

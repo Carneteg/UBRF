@@ -40,9 +40,9 @@
    den avslutande fasen: den utförs inte, den LÅSER UPP uppsittningen. */
 const FASER=[
   {id:"halsa",   namn:"Hälsa lugnt",   krav:false, sitt:false,
-   text:"Gå fram från sidan. Säg hennes namn innan du rör henne.",
+   text:"Gå fram från sidan vid bogen — aldrig rakt bakifrån. Säg hennes namn innan du rör henne, och lägg sedan handen på halsen.",
    namnEn:"Greet her calmly",
-   textEn:"Walk up from the side. Say her name before you touch her."},
+   textEn:"Walk up from the side at her shoulder — never straight from behind. Say her name before you touch her, then put your hand on her neck."},
   {id:"visitera",namn:"Visitera",      krav:true,  sitt:false,
    text:"Kolla ögon, mun, sadelläge, gjordläge och ben.",
    namnEn:"Check her over",
@@ -73,22 +73,36 @@ const FASER=[
 
    Det här är den enda regeln på en ridskola som kan sluta illa på
    riktigt: hon ska se dig komma och höra dig först. Aldrig rakt
-   bakifrån, aldrig tyst. Två av tre val är rätt, och det är meningen —
-   det finns mer än ett sätt att göra rätt, men bara ett sätt att göra
-   fel som gör ont. */
+   bakifrån, aldrig tyst.
+
+   INSTRUKTION, INTE FRÅGESPORT (UI-2, docs/P2-UGNETA-INSTRUCTION-CONTRACT.md).
+   Förut tre SVAR varav ett fel; nu tre HANDLINGAR i den ordning man gör
+   dem — man talar innan man rör. Ugneta säger vad (fasens `text` ovan,
+   där «aldrig rakt bakifrån» bor kvar); spelaren gör det. Ordningen är
+   listans: momenten får `steg` = plats, och den befintliga
+   stegregeln säger «fel tur» om man tar dem i fel ordning. Alla är
+   rätt, så fasen är en checklista, inte ett val (`arVal` härleds).
+   `text` är Ugnetas instruktion för just den handlingen (en checklistas
+   text är nästa instruktion); `svar` är kvittensen när den är gjord. */
 const HALSNING=[
-  {t:"Framifrån, och säg hennes namn", ratt:true,
-   svar:"Bra. Nu vet hon att du är där.",
-   tEn:"From the front, saying her name",
-   svarEn:"Good. Now she knows you are there."},
-  {t:"Från sidan vid bogen, med handen på halsen", ratt:true,
-   svar:"Bra. Handen först, och du står där hon ser dig.",
-   tEn:"From the side at her shoulder, with a hand on her neck",
-   svarEn:"Good. Hand first, and you stand where she can see you."},
-  {t:"Rakt bakifrån, tyst", ratt:false,
-   svar:"Hon skräms. Gå aldrig rakt bakifrån.",
-   tEn:"Straight from behind, without a word",
-   svarEn:"She startles. Never approach straight from behind."},
+  {t:"Gå fram från sidan vid bogen", ratt:true,
+   text:"Gå fram från sidan vid bogen, där hon ser dig komma — aldrig rakt bakifrån.",
+   svar:"Där ser hon dig komma.",
+   tEn:"Walk up from the side, at her shoulder",
+   textEn:"Walk up from the side at her shoulder, where she can see you coming — never straight from behind.",
+   svarEn:"There she can see you coming."},
+  {t:"Säg hennes namn", ratt:true,
+   text:"Säg hennes namn innan du rör henne, så att hon vet att du är där.",
+   svar:"Nu vet hon att du är där.",
+   tEn:"Say her name",
+   textEn:"Say her name before you touch her, so she knows you are there.",
+   svarEn:"Now she knows you are there."},
+  {t:"Lägg handen på hennes hals", ratt:true,
+   text:"Lägg nu handen lugnt på hennes hals.",
+   svar:"Lugnt och vänligt. Nu kan ni börja.",
+   tEn:"Put your hand on her neck",
+   textEn:"Now put your hand calmly on her neck.",
+   svarEn:"Calm and kind. Now you can begin."},
 ];
 
 /* ── HOVARNA ────────────────────────────────────────────────────────

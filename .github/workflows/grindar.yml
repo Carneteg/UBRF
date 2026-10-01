@@ -60,6 +60,12 @@ jobs:
           python3 -m pip install --quiet pyyaml
           python3 tools/testa-grindar-workflow.py
 
+      - name: Lokal leveranskontroll foljer CI
+        run: |
+          set -euo pipefail
+          test -f tools/testa-fore-leverans.py || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/testa-fore-leverans.py" >&2; exit 1; }
+          python3 tools/testa-fore-leverans.py
+
       # G8 (#264): FORHANDSKOLL. Stegen nedan fäller var och en på sin egen
       # saknade indata, men GitHub stoppar jobbet vid det första röda steget
       # — saknas tre kontroller upptäcks de en CI-körning i taget. Det här
@@ -388,6 +394,48 @@ jobs:
           set -euo pipefail
           test -f tools/sprakgrind.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/sprakgrind.mjs (steget 'Lokalisering — webben läser samma katalog som Roblox')" >&2; exit 1; }
           node tools/sprakgrind.mjs
+
+      - name: Lokalisering — ett språk i taget i stegkortet (UI-3)
+        run: |
+          set -euo pipefail
+          test -f tools/sprakblandningtest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/sprakblandningtest.mjs (steget 'Lokalisering — ett språk i taget i stegkortet (UI-3)')" >&2; exit 1; }
+          node tools/sprakblandningtest.mjs
+
+      # P3 (docs/P3-RIDING-PANEL-LESSON-MENU-CONTRACT.md § 8): Roblox är facit.
+      # Paritetsgrinden läser Luau-källan direkt; proven rider genom den byggda
+      # sidan. Fail closed som grannarna.
+      - name: P3 — lektionsparitet mot Roblox-källan (konstanter, meny, textnycklar, ram)
+        run: |
+          set -euo pipefail
+          test -f tools/lektionsparitet.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/lektionsparitet.mjs (steget 'P3 — lektionsparitet mot Roblox-källan (konstanter, meny, textnycklar, ram)')" >&2; exit 1; }
+          node tools/lektionsparitet.mjs
+
+      - name: P3 — de tolv lektionerna ridna syntetiskt genom produktionsvägen
+        run: |
+          set -euo pipefail
+          test -f tools/lektionstest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/lektionstest.mjs (steget 'P3 — de tolv lektionerna ridna syntetiskt genom produktionsvägen')" >&2; exit 1; }
+          node tools/lektionstest.mjs
+
+      - name: P3 — ridpanelen (hierarki, meny, Text, tangenter, layout)
+        run: |
+          set -euo pipefail
+          test -f tools/ridpaneltest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/ridpaneltest.mjs (steget 'P3 — ridpanelen (hierarki, meny, Text, tangenter, layout)')" >&2; exit 1; }
+          node tools/ridpaneltest.mjs
+
+      - name: P3 — kameran efter en flytt (Kimi Q4)
+        run: |
+          set -euo pipefail
+          test -f tools/kameratest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/kameratest.mjs (steget 'P3 — kameran efter en flytt (Kimi Q4)')" >&2; exit 1; }
+          node tools/kameratest.mjs
+
+      # Baskandidaten (#273 5928307604, blockerare 4): EN lektion riden hela
+      # vägen med riktiga tangenter — ridtillståndet, kopplingen, lektionen,
+      # panelen och lektionsminnet i samma körning. Fail closed som grannarna.
+      - name: P3 — en lektion riden hela vägen i webbläsaren (halt vid X)
+        run: |
+          set -euo pipefail
+          test -f tools/lektion-e2e-test.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/lektion-e2e-test.mjs (steget 'P3 — en lektion riden hela vägen i webbläsaren (halt vid X)')" >&2; exit 1; }
+          node tools/lektion-e2e-test.mjs
 
       - name: Ridkärnan — Gate 01-värden, telemetri, live-koppling och volten
         run: |

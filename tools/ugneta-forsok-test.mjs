@@ -58,7 +58,8 @@ function prova(namn, ok, detalj) { resultat.push({ namn, ok });
     if (typeof SPAR !== "undefined" && SPAR) SPAR.pass = Math.max(1, SPAR.pass || 0);
     G.dagsform = 0.72; G.sadellage = 0.8;
     G.ride = nyState(G.dagsform, hastminne(G.hastId).rang, G.sadellage);
-    startaLektion();
+    /* P3 § 9: momentserien är inte längre huvudvägen, men motorn finns kvar (gruppstegen, tävlingen). Provet väljer den uttryckligen och mäter samma livscykel som förut. */ 
+    G.stege = true; startaLektion();
     const ix = G.lektion.findIndex(m => !!ugnetaOvningFor(m));
     if (ix < 0) return { fel: "ingen G02-C-övning i lektionen" };
     G.momentIx = ix; G.moment = G.lektion[ix]; G.momentForsok = 1;

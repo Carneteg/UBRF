@@ -23,6 +23,12 @@ local DEFINITIONS = {
 	MountRequest = "RemoteFunction",    -- klient → server: får jag sitta upp?
 	DismountRequest = "RemoteFunction",
 	MountChanged = "RemoteEvent",       -- server → alla: vem rider vad
+	VoltLektion = "RemoteFunction",     -- owner intent; no client verdict or coordinates
+	VoltLektionSync = "RemoteEvent",    -- server -> owner: session-local circle outcome
+	LedLektion = "RemoteFunction",      -- owner intent (on foot): sync/start/retry/finish + seq
+	LedLektionSync = "RemoteEvent",     -- server -> owner: session-local leading-lesson outcome
+	LektionsMinne = "RemoteFunction",   -- owner read only ("sync"): own completion memory projection
+	LektionsMinneSync = "RemoteEvent",  -- server -> owner: own completion memory projection
 	--[[ #233 FAS 4b. `StateSync` bar förut PARET (gångart, tempo), och
 	     gångarten på tråden var serverns enda källa till vilken gångart
 	     hästen var i. Det var klientauktoritet med ett rimlighetsfilter:
@@ -73,6 +79,7 @@ local DEFINITIONS = {
 		 påstående. ]]
 	SadlaHast = "RemoteFunction",          -- klient → server: lägg sadeln jag bär på den här hästen
 	TransaHast = "RemoteFunction",         -- klient -> server: lagg transet jag bar pa den har hasten
+	LamnaTillbaka = "RemoteFunction",      -- klient -> server: hang tillbaka det jag bar pa dess egen front
 	--[[ #264 GAIT_READABILITY_AND_UGNETA: spelarens språkval ur flaggan.
 		 Argumentet är "sv" eller "en" och ingenting annat; servern skriver
 		 bara spelarens eget attribut, så att serverns egna texter till
