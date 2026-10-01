@@ -380,6 +380,7 @@ print("\n── 8. Klienten: menyn, sidans texter, guiden och resultatkortet ─
 		and string.find(sk, "förenkling", 1, true) ~= nil
 		and hitta(VC.panel().knappar, Sprak.t("clearround.start")) ~= nil, sk)
 	check("banskissen visar start- och mållinjen i guiden", workspace:FindFirstChild("Voltguide") ~= nil)
+	check("#276: banskissen — hopp är inte relevant än", VC.hoppRelevant() == false)
 	Sprak.satVal("en")
 	check("banskissen på engelska", string.find(VC.panel().text, "1 blue towards C", 1, true) ~= nil
 		and string.find(VC.panel().text, "walk the course on foot", 1, true) ~= nil, VC.panel().text)
@@ -388,22 +389,34 @@ print("\n── 8. Klienten: menyn, sidans texter, guiden och resultatkortet ─
 	request("start"); leverera()
 	check("sidan säger startsignal och startlinjen", borjar(VC.panel().text, Sprak.t("clearround.to_start")),
 		VC.panel().text)
+	check("#276: mot startlinjen — hopp är inte relevant än", VC.hoppRelevant() == false)
 	local guide = workspace:FindFirstChild("Voltguide")
 	check("guiden ritar start- och mållinjen (streck, inga hinder)", guide ~= nil and #guide:GetChildren() > 0,
 		guide and #guide:GetChildren() or 0)
 	overStartlinjen(); leverera()
 	check("sidan säger nästa hinder: «Hinder 1: blått, mot C.»",
 		borjar(VC.panel().text, Sprak.t("clearround.hopp", 1, Sprak.t("clearround.farg_bla"), "C")), VC.panel().text)
+	check("#276: banan pågår (serverns «course») — hopp är relevant", VC.hoppRelevant() == true)
+	do
+		--[[ En bild från en ANNAN ritt får inte tända hoppet. Deklarerad bild,
+			högre revision; därefter nollställs klientens bild som ovan. ]]
+		local fake = table.clone(image())
+		fake.rittId = "en-annan-ritt"; fake.revision = fake.revision + 1000
+		sync0.OnClientEvent:Fire(table.freeze(fake))
+		check("#276: en annan ritts bild ändrar inte svaret", VC.hoppRelevant() == true)
+	end
 	hopp1(); hopp2(); leverera()
 	check("efter två hopp: «Hinder 3: blått, mot A.»",
 		borjar(VC.panel().text, Sprak.t("clearround.hopp", 3, Sprak.t("clearround.farg_bla"), "A")), VC.panel().text)
 	hopp3(); hopp4(); leverera()
 	check("efter sista hoppet: mot mållinjen", borjar(VC.panel().text, Sprak.t("clearround.to_finish")), VC.panel().text)
+	check("#276: efter sista hindret — hopp är inte relevant", VC.hoppRelevant() == false)
 	malet(); leverera()
 	local t = VC.panel().text
 	check("resultatkortet: inga observerade fel, förenklad bedömning, träningsbana", har(t,
 		string.sub(Sprak.t("aterkoppling.clearround.inga_fel", "X"), 1, 22)) and har(t, Sprak.t("aterkoppling.clearround.forenklad")), t)
 	check("resultatkortet säger aldrig felfri", not har(string.lower(t), "felfri"), t)
+	check("#276: resultatkortet — hopp är inte relevant", VC.hoppRelevant() == false)
 	check("utan fel: ingen omstartsknapp", hitta(VC.panel().knappar, Sprak.t("clearround.retry")) == nil)
 	LararInstallning.satDetalj("kort")
 	check("kort text: domen och förbehållet står kvar", har(VC.panel().text, Sprak.t("aterkoppling.clearround.forenklad")))
@@ -432,8 +445,14 @@ print("\n── 8. Klienten: menyn, sidans texter, guiden och resultatkortet ─
 			string.find(tt, "1 rött mot A · 2 blått mot A · 3 rött mot C.", 1, true) ~= nil
 			and string.find(tt, "efter hinder 3", 1, true) ~= nil, tt)
 	end
+	--[[ #276, sist: andra lektioner och avbruten koppling. ]]
+	VC.valj("halt")
+	check("#276: en annan lektion — hopp är inte relevant", VC.hoppRelevant() == false)
+	VC.valj("markbom")
+	check("#276: markbommen (skrittbom) — hopp är inte relevant", VC.hoppRelevant() == false)
 	UC.satLektionsVal(nil)
 	VC.avbryt()
+	check("#276: efter avbrott — hopp är inte relevant", VC.hoppRelevant() == false)
 	request("finish")
 end)()
 

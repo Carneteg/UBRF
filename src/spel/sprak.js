@@ -1038,6 +1038,7 @@ const SPRAK = {
      in av den som aldrig ridit och kannas ratt for den som gjort det. */
   "touch.driv": { sv: "DRIV", en: "GO" },
   "touch.broms": { sv: "BROMS", en: "SLOW" },
+  "touch.hopp": { sv: "HOPP", en: "JUMP" },
   "touch.blickytan": { sv: "Dra på högra halvan", en: "Drag on the right half" },
   "stall.din_hast": { sv: "DIN HÄST", en: "YOUR HORSE" },
   "stall.idag_rider_du": { sv: "Idag rider du %s.", en: "Today you ride %s." },

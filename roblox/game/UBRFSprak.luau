@@ -2817,6 +2817,10 @@ Sprak.text = {
 		sv = "BROMS",
 		en = "SLOW",
 	},
+	["touch.hopp"] = {
+		sv = "HOPP",
+		en = "JUMP",
+	},
 	["touch.blickytan"] = {
 		sv = "Dra på högra halvan",
 		en = "Drag on the right half",
