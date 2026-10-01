@@ -132,18 +132,12 @@ const LektionAterkoppling = (() => {
         else s += " " + t(nu < forr ? n.narmare : n.forra, tal(forr / 10), tal(nu / 10));
       }
       s += " " + t("aterkoppling." + typ + ".nasta");
-      /* Efter clear round-resultatet pekar kortet in i den befintliga
-         eftervården — namnen ur kanonen (EFTERVARD), aldrig ur en egen lista. */
-      if (typ === "clearround" && Array.isArray(b.eftervard) && b.eftervard.length > 0) {
-        const en = sprakNu() === "en";
-        const namn = [];
-        for (const m of b.eftervard) {
-          const x = m ? (en ? m.namnEn : m.namn) : null;
-          if (typeof x !== "string" || x === "") { namn.length = 0; break; }
-          namn.push(x);
-        }
-        if (namn.length) s += " " + t("aterkoppling.clearround.eftervard", namn.join(" · "));
-      }
+      /* Efter clear round-resultatet pekar kortet vidare till eftervården.
+         #273 S3 (T1): den är ett VAL — stallet eller själv — inte fem
+         moment som väntar. Raden räknar därför inte upp dem längre; den
+         visas när bilden säger att eftervården finns. */
+      if (typ === "clearround" && Array.isArray(b.eftervard) && b.eftervard.length > 0)
+        s += " " + t("aterkoppling.clearround.eftervard");
       return s;
     } else if (b.lage === "timeout") {
       if (kort()) return t("aterkoppling.timeout_kort") + " " + t("aterkoppling." + typ + ".igen");

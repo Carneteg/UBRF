@@ -211,18 +211,12 @@ function A.text(b: any, kontext: any): string?
 			end
 		end
 		s ..= " " .. Sprak.t("aterkoppling." .. typ .. ".nasta")
-		--[[ D2c: efter clear round-resultatet pekar kortet vidare in i den
-			befintliga eftervården — momentens namn ur SERVERNS bild (kanonen),
-			aldrig ur en lista här. Saknas eller är listan trasig: ingen rad. ]]
+		--[[ D2c: efter clear round-resultatet pekar kortet vidare till
+			eftervården. #273 S3 (T1): den är ett VAL — stallet eller själv —
+			inte fem moment som väntar. Raden räknar därför inte upp dem
+			längre; den visas när SERVERNS bild säger att eftervården finns. ]]
 		if typ == "clearround" and type(b.eftervard) == "table" and #b.eftervard > 0 then
-			local en = Sprak.eget() == "en"
-			local namn = {}
-			for _, m in ipairs(b.eftervard) do
-				local n = if type(m) == "table" then (if en then m.namnEn else m.namn) else nil
-				if type(n) ~= "string" or n == "" then namn = nil break end
-				table.insert(namn, n)
-			end
-			if namn then s ..= " " .. Sprak.t("aterkoppling.clearround.eftervard", table.concat(namn, " · ")) end
+			s ..= " " .. Sprak.t("aterkoppling.clearround.eftervard")
 		end
 		return s
 	elseif b.lage == "timeout" then

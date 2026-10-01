@@ -2170,8 +2170,8 @@ Sprak.text = {
 		en = "Next time: ride the course again – blue, red, blue, red.",
 	},
 	["aterkoppling.clearround.eftervard"] = {
-		sv = "När ni är klara: sitt av – eftervården väntar: %s.",
-		en = "When you are done: dismount – the aftercare is waiting: %s.",
+		sv = "När ni är klara: sitt av. Sedan väljer du om stallet tar hand om henne eller om du gör det själv.",
+		en = "When you are done: dismount. Then you choose whether the stable looks after her or you do it yourself.",
 	},
 	["aterkoppling.clearround.kort"] = {
 		sv = "Ritten är bedömd (förenklat).",
