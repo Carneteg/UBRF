@@ -43,6 +43,15 @@ Kortversion:
 
 UBRF:s primära kandidat är Ugneta: Jev kan prioritera ett coaching focus ur en allow-list efter validerad telemetri. Jev får inte hitta på observationer som spelet inte mäter och får inte avgöra om en lektion är godkänd.
 
+Varje icke-trivialt gameplay-, integrations-, QA- eller produktionsjobb ska också göra ett explicit Jev-beslut:
+
+- `JEV_NOT_NEEDED`
+- `JEV_OFFLINE_QA_CANDIDATE`
+- `JEV_SHADOW_CANDIDATE`
+- `JEV_FUTURE_PILOT_CANDIDATE`
+
+Beslutet ska skrivas som `JEV_DECISION: <klassificering> — <kort motivering>` i briefen/arbetsstarten och upprepas i builderns handoff. Klassificeringen är inte authorization att aktivera Jev; rollout-gaterna i policyn gäller fortfarande.
+
 ## Roll: ChatGPT
 
 ChatGPT ansvarar främst för **vad som bör byggas, varför, i vilken ordning och hur vi vet att det blev bra**.
@@ -128,6 +137,7 @@ Minst:
 - Acceptance tests
 - Human gate
 - Known uncertainty
+- `JEV_DECISION` med klassificering och kort motivering
 
 ### 3. Claude implementerar
 
@@ -220,7 +230,8 @@ Claude → review:
 6. Not tested
 7. Remaining risk
 8. Human gate
-9. SHA
+9. `JEV_DECISION`
+10. SHA
 
 När Jules används:
 
