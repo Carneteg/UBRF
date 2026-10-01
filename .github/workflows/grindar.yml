@@ -428,6 +428,15 @@ jobs:
           test -f tools/kameratest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/kameratest.mjs (steget 'P3 — kameran efter en flytt (Kimi Q4)')" >&2; exit 1; }
           node tools/kameratest.mjs
 
+      # Baskandidaten (#273 5928307604, blockerare 4): EN lektion riden hela
+      # vägen med riktiga tangenter — ridtillståndet, kopplingen, lektionen,
+      # panelen och lektionsminnet i samma körning. Fail closed som grannarna.
+      - name: P3 — en lektion riden hela vägen i webbläsaren (halt vid X)
+        run: |
+          set -euo pipefail
+          test -f tools/lektion-e2e-test.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/lektion-e2e-test.mjs (steget 'P3 — en lektion riden hela vägen i webbläsaren (halt vid X)')" >&2; exit 1; }
+          node tools/lektion-e2e-test.mjs
+
       - name: Ridkärnan — Gate 01-värden, telemetri, live-koppling och volten
         run: |
           set -euo pipefail
