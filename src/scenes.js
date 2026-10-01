@@ -555,10 +555,9 @@ function avslutaSkotsel(){
    förtroende (webbens relation) när eftervården är klar — stallets hand
    ger noll, och det är golvet, inte ett avdrag.
 
-   [PLATTFORMSSKILLNAD, redovisad] Webben räknar passet vid avsittningen
-   (avslutaBana → registreraPass), alltså FÖRE valet; Roblox räknar det när
-   valet är gjort. Utfallet för spelaren är detsamma på båda vägarna:
-   passet räknas, utan straff. */
+   PASSET RÄKNAS HÄR, när valet är gjort — inte vid avsittningen. Samma
+   ordning som Roblox (`GameplayService.avslutaPass` efter eftervården):
+   den som sitter av och lämnar vid valet har inte avslutat passet. */
 const EFTER_TEXT={
   sadla_av:{knapp:()=>tSpr("eftervard.sadla_av"),text:()=>tSpr("eftervard.sadla_av_text")},
   transa_av:{knapp:()=>tSpr("eftervard.transa_av"),text:()=>tSpr("eftervard.transa_av_text")},
@@ -566,9 +565,15 @@ const EFTER_TEXT={
 };
 function efterKlar(dom){
   const e=G.efter, andel=Efter.egenAndel(e);
+  /* Först passet (en gång — `raknaPass` bär kvittot), sedan den lilla
+     bonusen ovanpå det passet gav. `e.bonus` är vad som faktiskt lades på,
+     för redovisningen och för provet. */
+  if(typeof raknaPass==="function")raknaPass(dom);
+  e.bonus=0;
   if(andel>0&&typeof SPAR!=="undefined"&&SPAR&&SPAR.fortroende&&SPAR.fortroende[e.hastId]){
-    const m=SPAR.fortroende[e.hastId];
-    m.rang=clamp((m.rang??0.45)+Efter.BONUS*andel,0,1);
+    const m=SPAR.fortroende[e.hastId], fore=m.rang??0.45;
+    m.rang=clamp(fore+Efter.BONUS*andel,0,1);
+    e.bonus=m.rang-fore;
     if(typeof sparaRyttare==="function")sparaRyttare();
   }
   visaResultat(dom);

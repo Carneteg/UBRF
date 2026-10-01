@@ -1215,14 +1215,32 @@ function avslutaBana(dom){
     visaTavlingsResultat(dom);
     return;
   }
+  G.domare=dom;G.scen="resultat";
+  document.getElementById("protWrap").hidden=true;
+  document.getElementById("viewToggle").hidden=true;
+  /* #273 S3 (T1, granskning R1): I HUVUDVÄGEN RÄKNAS PASSET NÄR
+     EFTERVÅRDENS VAL ÄR GJORT — «Stallet tar hand om henne» eller den egna
+     eftervården klar — precis som i Roblox. Den som sitter av och stänger
+     fliken vid valet har inte avslutat passet. `efterKlar` (src/scenes.js)
+     räknar och synkar. */
+  if(dom&&dom.p3&&G.efter&&!G.efter.klar&&typeof Efter!=="undefined"){
+    G.passRes=null;
+    visaEftervard(dom);
+    return;
+  }
+  raknaPass(dom);
+  visaResultat(dom);
+}
+/* Räknar passet och skickar det till molnet. EN väg in, så att passet
+   aldrig kan räknas två gånger: `dom.raknat` är kvittot. */
+function raknaPass(dom){
+  if(dom.raknat)return false;
+  dom.raknat=true;
   G.passRes=registreraPass(dom);
   /* Molnet är frivilligt och får misslyckas tyst — resultatrutan visas
      likadant vare sig raden kom fram eller inte. */
   if(typeof synkSparaPass==="function"){synkSparaPass(dom);synkTryck();}
-  G.domare=dom;G.scen="resultat";
-  document.getElementById("protWrap").hidden=true;
-  document.getElementById("viewToggle").hidden=true;
-  visaResultat(dom);
+  return true;
 }
 
 /* ── HUD ── */

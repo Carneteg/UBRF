@@ -722,7 +722,15 @@ function stepRide(s,a,h,ctx,dt){
       balansen också styra rakriktningen hade räknat samma yttertygel
       två gånger; att ta bort den här termen hade gjort punkt 1:s
       mekanik osynlig. De är komplement. */
-   const stod=HS?HS.ytterstod:1;
+   /* #273 T4 (granskning R1): I GRUNDRIDNINGEN ÄR YTTERTYGELN INTE ETT
+      KRAV — inte i balansen, och inte här heller. Termen skalas med samma
+      kanontal som balansmodellen (SVAR_KANON.HJALP_KRAV): vid 0 är stödet
+      fullgott oavsett tygel, så en ryttare som bara styr får inte en
+      lägre rakriktning för att hon låter bli en avancerad hjälp. Linjens
+      egen kvalitet (`rak`: hur väl styrningen följer bågen) räknas som
+      förut, och mekaniken finns kvar när kravet slås på. */
+   const stodKrav=(typeof SVAR_KANON!=="undefined"&&SVAR_KANON.HJALP_KRAV!==undefined)?clamp(SVAR_KANON.HJALP_KRAV,0,1):1;
+   const stod=1-stodKrav*(1-(HS?HS.ytterstod:1));
    mal.rakriktning=clamp(0.02+0.46*rak*(0.55+0.45*stod)+0.26*mal.schvung+0.20*s.mjukhet-0.20*s.spanning,0,1);
    if(parad>0)mal.samling=clamp(s.skala.samling+parad*0.22*(0.5+0.7*h.utbildning),0,1);
    else if(hhKval<0)mal.samling=clamp(s.skala.samling+hhKval*0.4,0,1);
