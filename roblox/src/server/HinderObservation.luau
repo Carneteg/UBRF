@@ -62,6 +62,31 @@
 	registreringen står det som `bom = "flyttad"` — en observation, inget
 	straff.
 
+	── NEDSLAG (B4a, docs/B4A-KNOCKDOWN-EVENT-CONTRACT.md) ────────────
+	Varje försök bär `nedslag` = "ja" | "nej" | "okand" | "vantar", med
+	`nedslagGrund` och `tNedslag`. STÄNGT VID FEL: bara en bom som KAN falla
+	(`Anchored == false` och `CanCollide == true`, läst när försöket börjar)
+	och som stod UPPE då (mittens höjd inom bommens tjocklek från det
+	registrerade läget) kan ge "nej" — och först när NEDSLAG_FONSTER sekunder
+	ritt-tid gått efter stängningen utan fall. Ett fall är att bommens mitt
+	sjunkit mer än bommens tjocklek sedan försöket började, medan det pågår
+	eller inom fönstret. Allt annat är "okand"; en bom som inte kan falla
+	(alla i dag) ger ALDRIG "nej". Tröskel och fönster är spelantaganden som
+	kalibreras i Studio. `rivning` och `overlapp` är oförändrade.
+
+	── EVIDENS FÖR OLYDNAD (B4b R1, docs/B4B-DISOBEDIENCE-CLASSIFIER-CONTRACT.md) ──
+	BARA NEUTRAL EVIDENS, ALDRIG EN DOM. TR III 2025 moment 385 dömer vägran
+	(3.1) och utbrytning (4.1) mot «ett hinder som ska hoppas» — och det vet
+	inte den här modulen (banordning, nästa hinder, förnyad anridning). Per
+	försök: `stoppObserverat` (ett segment i zonen, på inridningssidan, före
+	varje korsning, med planfart ≤ STOPP_FART), `tStopp`, `bakatEfterStopp`
+	(|v| växte mer än BAKAT_TOL efter stoppet, före korsning, på inridnings-
+	sidan), `sidanOm` (planet korsat utanför bredden under försöket), `inSida`
+	(inridningssidan, samma tecken som `riktning`) och `evidensGrund`
+	("ofullstandigt" när giltigheten inte är fullständig). Tröskelvärdena är
+	kalibreringsantaganden för evidensen, inga regler. Första lager som får
+	döma är den banmedvetna konsumenten (D2).
+
 	── MINNE ─────────────────────────────────────────────────────────
 	Per steg O(antal hinder). Per ritt högst MAX_FORSOK försök; fler tappas
 	och `overflode` sätts. Avslutade ritter i en ring om MAX_AVSLUTADE.
@@ -78,6 +103,15 @@ HinderObservation.ZON_DJUP = 6
 HinderObservation.SID_TOL = 0.25
 HinderObservation.MAX_FORSOK = 64
 HinderObservation.MAX_AVSLUTADE = 32
+--[[ B4a, spelantagande (kalibreras i Studio): hur länge efter att försöket
+	stängts ett fall fortfarande räknas till det, i ritt-tid (s). ]]
+HinderObservation.NEDSLAG_FONSTER = 2.0
+--[[ B4b, kalibreringsantaganden för EVIDENSEN (TR anger ingen fart eller
+	stegmått; kalibreras i Studio): planfart i studs/s som räknas som stopp,
+	och hur långt bort från planet hästen måste röra sig efter stoppet för att
+	det ska räknas som bakåt. Ingen dom byggs på dem här. ]]
+HinderObservation.STOPP_FART = 0.3
+HinderObservation.BAKAT_TOL = 1.0
 local MAX_ID = 64
 
 type Hinder = {
@@ -93,6 +127,11 @@ type Forsok = {
 	sampel: number, luftSampel: number, markSampel: number, okandSampel: number,
 	luftfas: string, landning: string, overlapp: boolean, overlappAntal: number,
 	kontakt: string, rivning: boolean, bom: string,
+	nedslag: string, nedslagGrund: string?, tNedslag: number?,
+	stoppObserverat: boolean, tStopp: number?, bakatEfterStopp: boolean, sidanOm: boolean,
+	inSida: string?, evidensGrund: string?,
+	_stoppV: number?, _bakat: boolean, _inSida: number?,
+	_fysisk: boolean, _uppsatt: boolean, _bomY0: number?, _delRef: any, _fallT: number?, _frist: number?,
 	_korsat: boolean, _sidanOm: boolean, _luftAktiv: boolean, _markEfterLuft: boolean,
 	_sida: number?, _kandU: number?, _kandY: number?,
 }
@@ -100,11 +139,19 @@ type Ritt = {
 	v: number, rittId: string, hastId: string, userId: number,
 	oppen: boolean, satt: string?, overflode: boolean, tappade: number,
 	forsok: { Forsok }, _aktiva: { [string]: Forsok }, _nr: { [string]: number },
+	_vantande: { [Forsok]: boolean },
+	_tSist: number?,
 }
 
 local hinder: { [string]: Hinder } = {}
 local avvisade: { [string]: string } = {}
 local delar: { [string]: { [any]: boolean } } = {}
+--[[ GENERATION per id (#264 markbom): räknas upp vid VARJE ändring i
+	registreringen — en del som läggs till, tas bort eller prövas om, eller
+	hela id:t bort. En konsument som vill veta att geometrin är SAMMA
+	registrering (inte en ersättare med identiska mått) jämför den. Rent
+	tillägg; inga livscykelregler ändras. ]]
+local generation: { [string]: number } = {}
 local ritter: { [string]: Ritt } = {}
 local avslutade: { string } = {}
 local gallrade = 0
@@ -117,6 +164,23 @@ local function vektorOk(p: any): boolean
 	if p == nil then return false end
 	local ok, x, y, z = pcall(function() return p.X, p.Y, p.Z end)
 	return ok and andligt(x) and andligt(y) and andligt(z)
+end
+
+--[[ B4a: kan bommen falla? Läst på delen; ett fel i läsningen är ett nej. ]]
+local function kanFalla(del: any): boolean
+	local ok, ankrad, kolliderar = pcall(function() return del.Anchored, del.CanCollide end)
+	return ok and ankrad == false and kolliderar == true
+end
+
+--[[ B4a: bommens mitt i höjd just nu, eller nil när delen är borta eller
+	inte går att läsa. Läst ur CFrame, som geometrin. ]]
+local function bomY(del: any): number?
+	local ok, y = pcall(function()
+		if del == nil or del.Parent == nil then return nil end
+		return del.CFrame.Position.Y
+	end)
+	if ok and andligt(y) then return y end
+	return nil
 end
 
 --[[ ── REGISTRET ─────────────────────────────────────────────────── ]]
@@ -177,7 +241,57 @@ local function stangForsok(r: Ritt, f: Forsok, giltighet: string, t: number?)
 		f.bom = if (nu - h._lage).Magnitude <= 0.01 then "ligger" else "flyttad"
 	end
 	f.rivning = false
+	--[[ B4a: nedslaget. Stängt vid fel i varje gren; "vantar" blir "nej"
+		först när fönstret passerat utan fall (`vantande` nedan). ]]
+	if giltighet ~= "fullstandig" then
+		f.nedslag, f.nedslagGrund = "okand", "ej_fullstandigt"
+	elseif not f._fysisk then
+		f.nedslag, f.nedslagGrund = "okand", "bom_ej_fysisk"
+	elseif not f._uppsatt then
+		f.nedslag, f.nedslagGrund = "okand", "bom_ej_uppsatt"
+	else
+		local y = if h and h._del == f._delRef then bomY(f._delRef) else nil
+		if y == nil then
+			f.nedslag, f.nedslagGrund = "okand", "hinder_saknas"
+		elseif f._fallT ~= nil or (f._bomY0 :: number) - y > (h :: Hinder).tjocklek then
+			f.nedslag, f.nedslagGrund = "ja", "bom_foll"
+			f.tNedslag = f._fallT or t
+		else
+			f.nedslag, f.nedslagGrund = "vantar", nil
+			f._frist = (t :: number) + HinderObservation.NEDSLAG_FONSTER
+			r._vantande[f] = true
+		end
+	end
+	--[[ B4b R1: neutral evidens — ingen dom (se huvudkommentaren). ]]
+	f.inSida = if f._inSida == nil then nil elseif (f._inSida :: number) < 0 then "fram" else "bak"
+	f.stoppObserverat = f._stoppV ~= nil
+	f.bakatEfterStopp = f._bakat
+	f.sidanOm = f._sidanOm
+	f.evidensGrund = if giltighet ~= "fullstandig" then "ofullstandigt" else nil
 	r._aktiva[f.hinderId] = nil
+end
+
+--[[ B4a: försök vars fönster står öppet. Ett fall inom fönstret ger "ja";
+	ett passerat fönster utan fall ger "nej". En borttagen eller ersatt bom
+	ger "okand". `slut` (brott/ritten slut) stänger allt som "okand". ]]
+local function vantande(r: Ritt, t: number?, slut: string?)
+	for f in pairs(r._vantande) do
+		local h = hinder[f.hinderId]
+		local y = if h and h._del == f._delRef then bomY(f._delRef) else nil
+		local klar = true
+		if slut then
+			f.nedslag, f.nedslagGrund = "okand", slut
+		elseif y == nil then
+			f.nedslag, f.nedslagGrund = "okand", "hinder_saknas"
+		elseif (f._bomY0 :: number) - y > (h :: Hinder).tjocklek then
+			f.nedslag, f.nedslagGrund, f.tNedslag = "ja", "bom_foll", t
+		elseif t ~= nil and t >= (f._frist :: number) then
+			f.nedslag, f.nedslagGrund = "nej", "bom_ligger"
+		else
+			klar = false
+		end
+		if klar then r._vantande[f] = nil end
+	end
 end
 
 --[[ Varje pågående försök vid hindret stängs med okänt utfall. Anropas
@@ -203,6 +317,7 @@ end
 	  · samma del igen   → ingen dubblett; geometrin läses om.
 	Pågående försök ärvs aldrig av en annan geometri. ]]
 local function prova(id: string)
+	generation[id] = (generation[id] or 0) + 1
 	local n, del = antalDelar(id)
 	if n == 0 then
 		delar[id] = nil
@@ -261,6 +376,7 @@ end
 
 --[[ Hela id:t bort, med alla dess delar. ]]
 function HinderObservation.avregistrera(id: string)
+	generation[id] = (generation[id] or 0) + 1
 	stangAktiva(id, "hinder_borttaget")
 	hinder[id] = nil
 	delar[id] = nil
@@ -290,7 +406,7 @@ function HinderObservation.starta(rittId: string, hastId: string, userId: number
 	ritter[rittId] = {
 		v = HinderObservation.VERSION, rittId = rittId, hastId = tostring(hastId),
 		userId = tonumber(userId) or 0, oppen = true, satt = nil, overflode = false, tappade = 0,
-		forsok = {}, _aktiva = {}, _nr = {},
+		forsok = {}, _aktiva = {}, _nr = {}, _vantande = {},
 	}
 	return true
 end
@@ -328,9 +444,18 @@ local function nyttForsok(r: Ritt, h: Hinder, t: number): Forsok?
 		sampel = 0, luftSampel = 0, markSampel = 0, okandSampel = 0,
 		luftfas = "okand", landning = "okand", overlapp = false, overlappAntal = 0,
 		kontakt = "otillganglig", rivning = false, bom = "okand",
+		nedslag = "okand", nedslagGrund = nil, tNedslag = nil,
+		stoppObserverat = false, tStopp = nil, bakatEfterStopp = false, sidanOm = false,
+		inSida = nil, evidensGrund = nil,
+		_stoppV = nil, _bakat = false, _inSida = nil,
+		_fysisk = false, _uppsatt = false, _bomY0 = nil, _delRef = h._del, _fallT = nil, _frist = nil,
 		_korsat = false, _sidanOm = false, _luftAktiv = false, _markEfterLuft = false,
 		_sida = nil, _kandU = nil, _kandY = nil,
 	}
+	-- B4a: kan bommen falla, och stod den uppe när försöket började?
+	f._fysisk = kanFalla(h._del)
+	f._bomY0 = bomY(h._del)
+	f._uppsatt = f._bomY0 ~= nil and math.abs(h.cy - (f._bomY0 :: number)) <= h.tjocklek
 	table.insert(r.forsok, f)
 	r._aktiva[h.id] = f
 	return f
@@ -343,6 +468,15 @@ function HinderObservation.segment(rittId: string?, fran: Vector3, till: Vector3
 	local r = rittId and ritter[rittId]
 	if not r or not r.oppen then return false end
 	if not (vektorOk(fran) and vektorOk(till) and andligt(t)) then return false end
+	vantande(r, t, nil)
+	-- B4b: planfarten över segmentet (nil för rittens första segment eller efter ett brott).
+	local dt = if r._tSist ~= nil then t - (r._tSist :: number) else nil
+	local fart = nil
+	if dt ~= nil and dt > 0 then
+		local dx, dz = till.X - fran.X, till.Z - fran.Z
+		fart = math.sqrt(dx * dx + dz * dz) / dt
+	end
+	r._tSist = t
 	for id, h in pairs(hinder) do
 		local u0, v0 = lokal(h, fran)
 		local u1, v1 = lokal(h, till)
@@ -363,6 +497,11 @@ function HinderObservation.segment(rittId: string?, fran: Vector3, till: Vector3
 		if f then
 			local forst = f.sampel == 0
 			f.sampel += 1
+			-- B4a: ett fall medan försöket pågår (bara för en bom som kan falla).
+			if f._fysisk and f._uppsatt and f._fallT == nil and h._del == f._delRef then
+				local y = bomY(f._delRef)
+				if y ~= nil and (f._bomY0 :: number) - y > h.tjocklek then f._fallT = t end
+			end
 			--[[ LANDNINGSKEDJAN (granskning R1): luft följd DIREKT av mark är
 				en observerad landning. Okänd evidens bryter kedjan — en senare
 				mark återupplivar inte den gamla luften. En ny luft → mark efter
@@ -423,6 +562,20 @@ function HinderObservation.segment(rittId: string?, fran: Vector3, till: Vector3
 				end
 				f._sida = sida
 			end
+			--[[ B4b: inridningssidan, stoppet och steget bakåt — bara före varje
+				korsning (i planet eller vid sidan om) och på inridningssidan. ]]
+			if f._inSida == nil and f._sida ~= nil then f._inSida = f._sida end
+			if not f._korsat and not f._sidanOm and f._inSida ~= nil
+				and v1 * (f._inSida :: number) > HinderObservation.SID_TOL then
+				if f._stoppV == nil then
+					if fart ~= nil and fart <= HinderObservation.STOPP_FART and iZon(h, u1, v1) then
+						f._stoppV = math.abs(v1)
+						f.tStopp = t
+					end
+				elseif not f._bakat and math.abs(v1) - (f._stoppV :: number) > HinderObservation.BAKAT_TOL then
+					f._bakat = true
+				end
+			end
 			if overlappar(h, u1, v1, till.Y, halv) then
 				f.overlapp = true
 				f.overlappAntal += 1
@@ -441,12 +594,15 @@ function HinderObservation.brott(rittId: string?, t: number?)
 	local r = rittId and ritter[rittId]
 	if not r or not r.oppen then return end
 	for _, f in pairs(r._aktiva) do stangForsok(r, f, "brott", t) end
+	vantande(r, t, "ej_fullstandigt") -- B4a: ett brott under fönstret är okänt
+	r._tSist = nil -- B4b: ingen fart räknas över ett brott
 end
 
 function HinderObservation.avsluta(rittId: string?, satt: string): boolean
 	local r = rittId and ritter[rittId]
 	if not r or not r.oppen then return false end
 	for _, f in pairs(r._aktiva) do stangForsok(r, f, "ritten_slut", nil) end
+	vantande(r, nil, "ritten_slut") -- B4a: ritten slut under fönstret är okänt
 	r.oppen = false
 	r.satt = satt
 	table.insert(avslutade, r.rittId)
@@ -478,12 +634,40 @@ function HinderObservation.ogonblick(rittId: string?): any
 	})
 end
 
---[[ Registrets innehåll, fryst: giltiga hinder och avvisade id:n. ]]
+--[[ Registrets innehåll, fryst: giltiga hinder och avvisade id:n.
+	`generation` (se ovan) och `flyttad` är rena tillägg (#264 markbom).
+	`flyttad` är en LEVANDE jämförelse av HELA geometrin (markbom R1):
+	delens nuvarande läge, breddaxel (med tecken — en vriden bom byter
+	normalens riktning), bredd, tjocklek och överkant jämförs med det
+	registrerade, genom samma `geometri()`. Registret läser inte om
+	geometrin vid en ändring, så en konsument som använder den cachade
+	geometrin måste veta när den inte längre stämmer. STÄNGD VID FEL:
+	saknad del, ingen förälder, ogiltig eller icke-ändlig geometri, eller
+	ett fel i läsningen räknas som ändrad. Toleranser: 0,01 studs för läge
+	och mått, 1e-4 för axelns komponenter. ]]
+local TOL_LAGE, TOL_AXEL = 0.01, 1e-4
+local function andrad(h: Hinder): boolean
+	local del = h._del
+	local ok, ut = pcall(function()
+		if del == nil or del.Parent == nil then return true end
+		local g = geometri(del)
+		if not g then return true end
+		return math.abs(g.cx - h.cx) > TOL_LAGE or math.abs(g.cy - h.cy) > TOL_LAGE
+			or math.abs(g.cz - h.cz) > TOL_LAGE
+			or math.abs(g.ux - h.ux) > TOL_AXEL or math.abs(g.uz - h.uz) > TOL_AXEL
+			or math.abs(g.bredd - h.bredd) > TOL_LAGE or math.abs(g.tjocklek - h.tjocklek) > TOL_LAGE
+			or math.abs(g.topp - h.topp) > TOL_LAGE
+	end)
+	return (not ok) or ut ~= false
+end
+
 function HinderObservation.register(): any
 	local ut = {}
 	for id, h in pairs(hinder) do
 		ut[id] = { id = id, x = h.cx, y = h.cy, z = h.cz, bredd = h.bredd,
-			breddaxel = { x = h.ux, z = h.uz }, normal = { x = h.nx, z = h.nz }, topp = h.topp }
+			breddaxel = { x = h.ux, z = h.uz }, normal = { x = h.nx, z = h.nz }, topp = h.topp,
+			tjocklek = h.tjocklek, generation = generation[id] or 0, flyttad = andrad(h),
+			fysisk = kanFalla(h._del) } -- B4a
 	end
 	return frys({ hinder = ut, avvisade = avvisade })
 end
@@ -496,6 +680,7 @@ function HinderObservation._glomForProv()
 	hinder = {}
 	avvisade = {}
 	delar = {}
+	generation = {}
 	ritter = {}
 	avslutade = {}
 	gallrade = 0

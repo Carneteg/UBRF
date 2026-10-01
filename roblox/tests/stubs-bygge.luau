@@ -92,6 +92,16 @@ local function cframe(pos, yaw, look)
 	     gjorde det spawnens riktning omatbar i bankan — och det ar just den
 	     riktningen som kom ut 180 grader fel i fyra Studio-builds. ]]
 	c.LookVector = look or vec(-math.sin(c.Yaw), 0, -math.cos(c.Yaw))
+	--[[ `ToOrientation` ger (pitch, yaw, roll) i radianer, som i Roblox och
+	     som i stubs.luau. Byggstubben bär bara girning, så lutning och
+	     rullning är noll. Ugnetas blick (C2) läser girningen härur. ]]
+	c.ToOrientation = function(self) return 0, self.Yaw or 0, 0 end
+	-- Exact relative transform for the yaw-only building test model.
+	c.ToObjectSpace = function(self, other)
+		local p = other.Position - self.Position
+		local co, si = math.cos(self.Yaw), math.sin(self.Yaw)
+		return cframe(vec(p.X * co - p.Z * si, p.Y, p.X * si + p.Z * co), other.Yaw - self.Yaw)
+	end
 	--[[ Rotationsmatrisen for ren girning. `BuildKit.speglaCF` har tva
 	     grenar, och utan den har foll bankan alltid till girningsfallbacken
 	     — alltsa provades aldrig den kod Studio faktiskt kor. ]]
@@ -302,6 +312,10 @@ local function instance(klass)
 					if b == self then table.remove(self.__parent.Children, k) break end
 				end
 			end
+			--[[ Som i Roblox: en riven instans har `Parent == nil`. Stubben tog
+			     bort den ur förälderns barn men lät `Parent` peka kvar, så kod
+			     som frågar "är jag riven?" (UgnetaGestalt.steg) fick fel svar. ]]
+			rawset(self, "__parent", nil)
 		end,
 		SetAttribute = function(_, k, v)
 			assert(string.match(k, "^[A-Za-z0-9_]+$"),
@@ -393,6 +407,7 @@ local function instance(klass)
 		     placerar något genom att MÄTA mellan två byggda delar fick då
 		     nil i stället för ett läge. ]]
 		__index = function(_, k)
+			if k == "Parent" then return rawget(i, "__parent") end
 			--[[ Samma kast som Roblox, med samma meddelande. Se noten vid
 			     `__UTAN_CFRAME`: den här raden är hela skillnaden mellan en
 			     bänk som kan se vakten och en som inte kan. ]]
@@ -409,6 +424,13 @@ local function instance(klass)
 		end,
 		__newindex = function(t, k, v)
 			if k == "Parent" then
+				local old = rawget(t, "__parent")
+				if old == v then return end
+				if old then
+					for n, child in ipairs(old.Children) do
+						if child == t then table.remove(old.Children, n) break end
+					end
+				end
 				rawset(t, "__parent", v)
 				if v then table.insert(v.Children, t) end
 			else

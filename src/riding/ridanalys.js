@@ -193,18 +193,21 @@ function jamforRitter(fore,nu,mal){
    en halvmeter är skillnaden inte värd en mening. Den ändrar ingen
    bedömning och står med flit inte i UGNETA_KVALITET. */
 const RIDANALYS_MARKBAR_M = 0.5;
+/* Orden på spelarens språk (P3 § 1.6). Utan katalogen — i ett prov som
+   bara laddar analysen — står de svenska orden kvar, oförändrade. */
 function voltIOrd(analys){
   if(!analys||!analys.ok)return null;
+  const T=(k,sv,...a)=>typeof tSpr==="function"?tSpr(k,...a):sv;
   const mal=analys.mal;
-  const bitar=[`Din volt blev ${analys.radie.toFixed(1)} m i radie`];
+  const bitar=[T("replay.ord_radie",`Din volt blev ${analys.radie.toFixed(1)} m i radie`,analys.radie.toFixed(1))];
   if(mal!==null&&mal!==undefined){
     const d=analys.radie-mal;
     if(Math.abs(d)>=RIDANALYS_MARKBAR_M)
-      bitar.push(d>0?`— större än de ${mal} m övningen ber om`
-                    :`— mindre än de ${mal} m övningen ber om`);
-    else bitar.push(`— nära de ${mal} m övningen ber om`);
+      bitar.push(d>0?T("replay.ord_storre",`— större än de ${mal} m övningen ber om`,mal)
+                    :T("replay.ord_mindre",`— mindre än de ${mal} m övningen ber om`,mal));
+    else bitar.push(T("replay.ord_nara",`— nära de ${mal} m övningen ber om`,mal));
   }
-  return bitar.join(" ")+`. Formen höll sig inom ${(analys.avvikelse.rms).toFixed(2)} m från cirkeln.`;
+  return bitar.join(" ")+". "+T("replay.ord_form",`Formen höll sig inom ${(analys.avvikelse.rms).toFixed(2)} m från cirkeln.`,(analys.avvikelse.rms).toFixed(2));
 }
 
 if(typeof window!=="undefined"){

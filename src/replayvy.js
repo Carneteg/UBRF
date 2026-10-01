@@ -119,7 +119,7 @@ function replaySynk(){
   if (skjut && document.activeElement !== skjut)
     skjut.value = String(up.langd() > 0 ? (up.lage / up.langd()) * 1000 : 0);
   if (tid) tid.textContent = `${up.lage.toFixed(1)} / ${up.langd().toFixed(1)} s`;
-  if (spela) spela.textContent = up.spelar ? "Pausa" : "Spela";
+  if (spela) spela.textContent = up.spelar ? rT("replay.pausa") : rT("replay.spela");
 }
 
 /* Den läsbara jämförelsen — reduced-motion-alternativet. Siffror, inte
@@ -134,21 +134,39 @@ function replayArOvergang(post){
   return !!(d && d.gangart);
 }
 
+/* ── SPRÅKET (P3 § 1.6) ────────────────────────────────────────────
+   Vyn skrivs på spelarens språk genom katalogen (replay.*). Talen får
+   svenskt decimalkomma bara på svenska. Analysens skäl (ridanalys.js) är
+   interna ord; de kända översätts, ett okänt skäl visas inte hellre än att
+   blanda språk. */
+const rT = (k, ...a) => (typeof tSpr === "function" ? tSpr(k, ...a) : k);
+function rTal(x, dec) {
+  const s = Number(x).toFixed(dec);
+  return typeof SPRAKET !== "undefined" && SPRAKET === "en" ? s : s.replace(".", ",");
+}
+const REPLAY_SKAL = {
+  "för få punkter med position": "replay.skal.fa_punkter", "för få punkter": "replay.skal.fa_punkter",
+  "ingen cirkel går att anpassa — vägen är rak": "replay.skal.rak",
+  "ingen gångartsändring i posten": "replay.skal.ingen_andring",
+};
+const rSkal = s => (s && REPLAY_SKAL[s] ? ` — ${rT(REPLAY_SKAL[s])}` : "");
+const REPLAY_GANG = { halt: "gangart.halt", skritt: "gangart.walk", trav: "gangart.trot", galopp: "gangart.canter" };
+const rGang = g => (REPLAY_GANG[g] ? rT(REPLAY_GANG[g]).toLowerCase() : g);
+
 function replayOvergangHTML(){
   const o = REPLAY.overgang;
   if (!o || !o.ok)
-    return `<p style="font-size:14px">Ingen gångartsändring finns i den här inspelningen${
-      o && o.skal ? ` — ${o.skal}` : ""}.</p>`;
+    return `<p style="font-size:14px">${rT("replay.ingen_overgang")}${rSkal(o && o.skal)}.</p>`;
   const f = o.forsta;
   const rader = [
-    `<tr><td>Övergång</td><td class="num">${f.fran} → ${f.till}</td></tr>`,
-    `<tr><td>Skedde efter</td><td class="num">${f.t.toFixed(1).replace(".", ",")} s</td></tr>`,
+    `<tr><td>${rT("replay.overgang")}</td><td class="num">${rGang(f.fran)} → ${rGang(f.till)}</td></tr>`,
+    `<tr><td>${rT("replay.skedde_efter")}</td><td class="num">${rTal(f.t, 1)} s</td></tr>`,
   ];
   if (f.fartFore !== null && f.fartEfter !== null)
-    rader.push(`<tr><td>Fart före → efter</td><td class="num">${
-      f.fartFore.toFixed(2).replace(".", ",")} → ${f.fartEfter.toFixed(2).replace(".", ",")} m/s</td></tr>`);
+    rader.push(`<tr><td>${rT("replay.fart_fore_efter")}</td><td class="num">${
+      rTal(f.fartFore, 2)} → ${rTal(f.fartEfter, 2)} m/s</td></tr>`);
   if (o.antal > 1)
-    rader.push(`<tr><td>Gångartsbyten totalt</td><td class="num">${o.antal}</td></tr>`);
+    rader.push(`<tr><td>${rT("replay.byten_totalt")}</td><td class="num">${o.antal}</td></tr>`);
   return `<table><tbody>${rader.join("")}</tbody></table>`;
 }
 
@@ -157,22 +175,22 @@ function replayTextHTML(){
   const a = REPLAY.analys, j = REPLAY.jamfor;
   const rader = [];
   if (a && a.ok) {
-    rader.push(`<tr><td>Voltens radie</td><td class="num">${a.radie.toFixed(1).replace(".", ",")} m</td></tr>`);
+    rader.push(`<tr><td>${rT("replay.voltens_radie")}</td><td class="num">${rTal(a.radie, 1)} m</td></tr>`);
     if (a.mal !== null && a.mal !== undefined)
-      rader.push(`<tr><td>Övningens mål</td><td class="num">${String(a.mal).replace(".", ",")} m</td></tr>`);
-    rader.push(`<tr><td>Formens spridning</td><td class="num">${a.avvikelse.rms.toFixed(2).replace(".", ",")} m</td></tr>`);
-    rader.push(`<tr><td>Ridd sträcka</td><td class="num">${a.stracka.toFixed(1).replace(".", ",")} m</td></tr>`);
-    rader.push(`<tr><td>Varv</td><td class="num">${a.varv.toFixed(2).replace(".", ",")}</td></tr>`);
+      rader.push(`<tr><td>${rT("replay.ovningens_mal")}</td><td class="num">${String(a.mal).replace(".", typeof SPRAKET !== "undefined" && SPRAKET === "en" ? "." : ",")} m</td></tr>`);
+    rader.push(`<tr><td>${rT("replay.spridning")}</td><td class="num">${rTal(a.avvikelse.rms, 2)} m</td></tr>`);
+    rader.push(`<tr><td>${rT("replay.stracka")}</td><td class="num">${rTal(a.stracka, 1)} m</td></tr>`);
+    rader.push(`<tr><td>${rT("replay.varv")}</td><td class="num">${rTal(a.varv, 2)}</td></tr>`);
   }
   if (j && j.ok) {
     const d = j.radie.diff;
-    rader.push(`<tr><td>Radie mot förra försöket</td><td class="num">${(d >= 0 ? "+" : "") + d.toFixed(1).replace(".", ",")} m</td></tr>`);
+    rader.push(`<tr><td>${rT("replay.radie_forra")}</td><td class="num">${(d >= 0 ? "+" : "") + rTal(d, 1)} m</td></tr>`);
   }
   const ord = (typeof voltIOrd === "function" && a) ? voltIOrd(a) : null;
   /* Ingen analys är ett giltigt svar — och ska stå som det, inte som en
      tom tabell som ser trasig ut. */
   if (!rader.length)
-    return `<p style="font-size:14px">Den här ritten gick inte att mäta som en volt${a && a.skal ? ` — ${a.skal}` : ""}.</p>`;
+    return `<p style="font-size:14px">${rT("replay.ej_volt")}${rSkal(a && a.skal)}.</p>`;
   return (ord ? `<p style="font-size:14px;margin-bottom:8px">${ord}</p>` : "")
     + `<table><tbody>${rader.join("")}</tbody></table>`;
 }
@@ -197,8 +215,8 @@ function visaReplay(ovningId, nr){
 
   const mindre = replayMindreRorelse();
   overlay(true, `
-  <span class="lbl">Din ritt</span>
-  <h1 style="margin-top:8px">Se ritten igen</h1>
+  <span class="lbl">${rT("replay.din_ritt")}</span>
+  <h1 style="margin-top:8px">${rT("replay.se_igen")}</h1>
   <!-- Rutnätet ligger i index.html som #replayRutnat, INTE som inline-stil.
        En inline-regel kan ingen media query ta över, och kolumnerna låg
        därför kvar ner till 320 px där canvasen blev 122 px bred. -->
@@ -206,26 +224,26 @@ function visaReplay(ovningId, nr){
     <div>
       <canvas id="replayBana" width="520" height="360"
         style="width:100%;height:auto;background:#181B21;border:1px solid rgba(214,174,60,.35);border-radius:8px"
-        role="img" aria-label="Din ridna väg, uppspelad"></canvas>
+        role="img" aria-label="${rT("replay.canvas")}"></canvas>
       <div class="btnrow" style="margin-top:10px;flex-wrap:wrap;gap:8px">
-        <button class="btn" id="replaySpela">${mindre ? "Spela" : "Pausa"}</button>
-        <button class="btn ghost" id="replayLangsam">Halv fart</button>
-        ${REPLAY.ghost ? `<button class="btn ghost" id="replayGhost">Dölj förra försöket</button>` : ""}
+        <button class="btn" id="replaySpela">${mindre ? rT("replay.spela") : rT("replay.pausa")}</button>
+        <button class="btn ghost" id="replayLangsam">${rT("replay.halv_fart")}</button>
+        ${REPLAY.ghost ? `<button class="btn ghost" id="replayGhost">${rT("replay.dolj_forra")}</button>` : ""}
         <span id="replayTid" style="font-family:'IBM Plex Mono',monospace;font-size:12px;align-self:center"></span>
       </div>
       <input type="range" id="replaySkjut" min="0" max="1000" value="0" step="1"
-        aria-label="Spola i uppspelningen"
+        aria-label="${rT("replay.spola")}"
         style="width:100%;margin-top:8px">
     </div>
     <div>
-      <div class="lbl" style="margin-bottom:6px">Det här mätte vi</div>
+      <div class="lbl" style="margin-bottom:6px">${rT("replay.matte")}</div>
       ${replayTextHTML()}
-      ${REPLAY.ghost ? `<p style="font-size:12px;opacity:.75;margin-top:8px">Streckad linje är ditt förra försök.</p>` : ""}
-      ${mindre ? `<p style="font-size:12px;opacity:.75;margin-top:8px">Uppspelningen startar inte av sig själv eftersom du bett om mindre rörelse.</p>` : ""}
+      ${REPLAY.ghost ? `<p style="font-size:12px;opacity:.75;margin-top:8px">${rT("replay.streckad")}</p>` : ""}
+      ${mindre ? `<p style="font-size:12px;opacity:.75;margin-top:8px">${rT("replay.mindre_rorelse")}</p>` : ""}
     </div>
   </div>
   <div class="btnrow" style="margin-top:16px">
-    <button class="btn" id="replayTillbaka">Tillbaka</button>
+    <button class="btn" id="replayTillbaka">${rT("lektionsval.tillbaka")}</button>
   </div>`);
 
   REPLAY.canvas = document.getElementById("replayBana");
@@ -242,12 +260,12 @@ function visaReplay(ovningId, nr){
     const e = document.getElementById("replayLangsam");
     const halv = REPLAY.up.fart !== 0.5;
     REPLAY.up.sattFart(halv ? 0.5 : 1);
-    if (e) e.textContent = halv ? "Normal fart" : "Halv fart";
+    if (e) e.textContent = halv ? rT("replay.normal_fart") : rT("replay.halv_fart");
   });
   kn("replayGhost", () => {
     REPLAY.ghostSyns = !REPLAY.ghostSyns;
     const e = document.getElementById("replayGhost");
-    if (e) e.textContent = REPLAY.ghostSyns ? "Dölj förra försöket" : "Visa förra försöket";
+    if (e) e.textContent = REPLAY.ghostSyns ? rT("replay.dolj_forra") : rT("replay.visa_forra");
     replayRita();
   });
   kn("replayTillbaka", stangReplay);
@@ -272,6 +290,9 @@ function stangReplay(){
      till Prova igen / Gå vidare, inte kastas ut i en pausad lektion
      utan väg vidare. */
   if (VAL.moment) { ritaForsokVal(); return; }
+  /* P3: återspelningen är det ENDA som pausar ritten (Roblox init.client);
+     stängd rider hon vidare, med Ugnetas kort kvar i ridpanelen. */
+  if (typeof G !== "undefined" && G.p3) G.paus = false;
   overlay(false);
 }
 

@@ -43,6 +43,7 @@ local InteractionController = require(script.InteractionController)
 local PreparationController = require(script.PreparationController)
 local UgnetaController = require(script.UgnetaController)
 local LektionController = require(script.LektionController)
+local LedLektionController = require(script.LedLektionController)
 local KontrollHjalp = require(script.KontrollHjalp)
 --[[ #264 GAIT_READABILITY_AND_UGNETA: Ugnetas ridrad utanför lektionen. ]]
 local UgnetaRad = require(script.UgnetaRad)
@@ -500,9 +501,8 @@ local function mount(model: Model, rittId: string?)
 	     återförening efter ett nekat nej — eller en ny. ]]
 	LektionController.start(anlaggning and anlaggning:FindFirstChild("UBRF"),
 		ride and ride.rittId)
-	--[[ Första uppsittningen: visa reglagen en gång, av sig själv. Då är
-	     frågan "vad gör jag nu?" som mest aktuell. ]]
-	KontrollHjalp.vidUppsittning()
+	--[[ #273 S1: kontrollistan öppnas inte av sig själv vid uppsittningen.
+	     Vänstermenyns fyra kärnrader står redan där. ]]
 
 	--[[ ══ EN VARNING SOM ALLTID FYRAR ÄR INGEN VARNING ═══════════════
 
@@ -908,13 +908,31 @@ Naromrade.start()
      ned — den återvänder direkt när man inte rider, och det är precis då
      frågan "står jag vid min häst?" spelar roll. Heartbeat räcker: det är
      ett avståndsmått, och HUD:en ritas bara om när svaret FAKTISKT byter. ]]
-RunService.Heartbeat:Connect(function()
+--[[ ONBOARDING (docs/ONBOARDING-STEP-CARD-CONTRACT.md): hästens prompter
+     («Rida nu», «Sitt upp», ledningen) räknades bara om vid en NY VY. Vid
+     join kom vyn innan hästens modell strömmat in, så «Rida nu» fanns inte
+     alls förrän spelaren gjort något — mätt i Studio. Nu räknas de också om
+     när en häst DYKER UPP, och en gång i sekunden (uppdateringen är
+     idempotent: finns prompten görs ingenting). ]]
+local promptSvep = 0
+RunService.Heartbeat:Connect(function(dt)
 	PreparationController.uppdateraKontext()
+	promptSvep += (if type(dt) == "number" then dt else 0)
+	if promptSvep >= 1 then
+		promptSvep = 0
+		InteractionController.uppdatera()
+	end
+end)
+game:GetService("CollectionService"):GetInstanceAddedSignal("Horse"):Connect(function()
+	task.defer(InteractionController.uppdatera)
 end)
 --[[ G02-C: Ugnetas lärar-UX byggs vid uppstart så att den finns när
      första ritten börjar. Själva LEKTIONEN startas av `mount` och stegas
      av loopen längst ned — HUD:en är ytan, LektionController är kedjan. ]]
 UgnetaController.start()
+--[[ Ledningslektionen till fots: en sekundär ingång i Ugnetas val när ingen
+     ridlektion är installerad (docs/LEADING-LESSON-CONTRACT.md). ]]
+LedLektionController.start()
 --[[ #161: `?`-knappen byggs vid uppstart och lever hela sessionen. Att
      bygga den vid uppsittning hade gett samma hål vi just stängde — hjälpen
      ska finnas i stallet också. ]]
