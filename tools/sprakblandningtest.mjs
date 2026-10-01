@@ -158,25 +158,19 @@ console.log("\n── A. Ugneta överst, hälsningen som handlingar ──");
     `${k.titel} · ${k.flagga}`);
   await klicka(page, `#stegkort .skV button[data-id="start:sjalv"]`);
   k = await kort(page);
+  /* #273 S2 (T2): hälsningen är EN handling. Ugneta säger handlingens
+     korta rad; de tre detaljmeningarna står i kunskapslagret. */
   const forsta = await page.evaluate(() => { const m = Forb.nastaMoment(G.forb, "halsa"); return m && m.text; });
-  prova("«Hälsa på …»: tre handlingar, bara den första primär",
-    k.id === "halsa" && k.knappar.length === 3 && k.knappar[0].primar && !k.knappar[1].primar && !k.knappar[2].primar,
+  prova("«Hälsa på …»: EN handling, och den är primär",
+    k.id === "halsa" && k.knappar.length === 1 && k.knappar[0].primar && k.knappar[0].text === "Hälsa",
     k.knappar.map(b => b.text + (b.primar ? "*" : "")).join(" / "));
-  prova("Ugneta säger den första handlingen; instruktionen står EN gång", k.instr === forsta && !k.dubbel, k.instr);
+  prova("Ugneta säger handlingens korta rad; instruktionen står EN gång",
+    k.instr === "Hon ska se och höra dig innan du rör henne." && k.instr !== forsta && !k.dubbel, k.instr);
   prova("ingen frågesport: inget «bakifrån» bland handlingarna", !k.knappar.some(b => /bakifrån|Framifrån/.test(b.text)));
-  await klicka(page, `#stegkort .skV button[data-id="halsa3"]`);
+  await klicka(page, `#stegkort .skV button[data-id="handling:halsa"]`);
   k = await kort(page);
-  prova("handen innan namnet: nej, och hälsningen står kvar", k.id === "halsa" && k.ater !== "" && k.knappar.length === 3,
-    k.ater);
-  await klicka(page, `#stegkort .skV button[data-id="halsa1"]`);
-  k = await kort(page);
-  prova("första handlingen gjord: kanonens kvittens, två kvar, «Säg hennes namn» primär",
-    k.ater === "✓  Där ser hon dig komma." && k.knappar.length === 2 && k.knappar[0].primar
-      && k.knappar[0].text === "Säg hennes namn", `${k.ater} · ${k.knappar.map(b => b.text).join(" / ")}`);
-  await klicka(page, `#stegkort .skV button[data-id="halsa2"]`);
-  await klicka(page, `#stegkort .skV button[data-id="halsa3"]`);
-  k = await kort(page);
-  prova("alla tre i ordning: nästa fas", k.id === "visitera", k.id);
+  prova("handlingen gjord: kvittensen, och nästa fas", k.ater === "✓  Nu vet hon att du är där." && k.id === "visitera",
+    `${k.ater} · ${k.id}`);
   await page.close();
 }
 
@@ -247,6 +241,8 @@ for (const lage of ["sv", "en"]) {
     .find(x => x.textContent.startsWith(t)); if (b) b.click(); return !!b; }, borjar);
   if (lage === "en") { await page.click("#ridpanel button[data-sprak]"); await vanta(page); }
   prova(`${lage}: språket är valt`, await page.evaluate(() => SPRAKET) === lage);
+  /* #273 S1: listan öppnas inte av sig själv längre — provet öppnar den. */
+  await page.evaluate(() => visaKontrollHjalp()); await vanta(page);
   await las("reglagelistan", "#kontrollhjalp");
   await page.evaluate(() => doljKontrollHjalp());
   await las("ridpanelen", "#ridpanel");

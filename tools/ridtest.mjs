@@ -464,10 +464,24 @@ const svar = await page.evaluate(() => {
     kor({ skankel: 0.55, tygel }, 12);
     iSvang.efterRakt = G.ride.balans;
     return iSvang; };
+  /* #273 T4: I GRUNDRIDNINGEN är yttertygeln inte ett krav (HJALP_KRAV 0).
+     Mekaniken finns kvar och mäts med kravet påslaget; grundläget mäts
+     för sig, och ska ge samma balans och samma båge med och utan tygel. */
+  ut.krav = SVAR_KANON.HJALP_KRAV;
+  ut.grundLos = volt(0);
+  ut.grundBuren = volt(0.5);
+  SVAR_KANON.HJALP_KRAV = 1;
   ut.los = volt(0);
   ut.buren = volt(0.5);
+  SVAR_KANON.HJALP_KRAV = ut.krav;
   return ut;
 });
+prova("#273 T4: utan tygel ingen balansförlust och inget infall i grundridningen",
+  svar.krav === 0 && svar.grundLos.balans > 0.95 &&
+  Math.abs(svar.grundLos.balans - svar.grundBuren.balans) < 1e-9 &&
+  Math.abs(svar.grundLos.radie - svar.grundBuren.radie) < 1e-9,
+  `krav ${svar.krav} · lös tygel: balans ${nf(svar.grundLos.balans)}, radie ${nf(svar.grundLos.radie, 2)} m · ` +
+  `kontakten kvar: balans ${nf(svar.grundBuren.balans)}, radie ${nf(svar.grundBuren.radie, 2)} m`);
 prova("kontroll först: fördröjningen skjuter svaret i tid, den tappar aldrig bort det",
   svar.aldrigTappad.bad >= 6 && svar.aldrigTappad.svarade === svar.aldrigTappad.bad &&
   svar.aldrigTappad.sagVantan === svar.aldrigTappad.bad &&
@@ -913,9 +927,19 @@ const sate = await page.evaluate(() => {
     kor({ tygel: 0.25, sits }, 2.0); kor({ skankel: 1, tygel: 0.25, sits }, 1.2);
     kor({ skankel: 0.55, tygel: 0.25, sits }, 20);
     return { balans: G.ride.balans, gang: G.ride.gangart }; };
-  return { latt: volt(-1), djup: volt(0.8),
-    raktLatt: rakt(-1), raktDjup: rakt(0.8) };
+  /* #273 T4: mekaniken mäts med kravet påslaget, grundläget för sig. */
+  const krav = SVAR_KANON.HJALP_KRAV;
+  const grund = { latt: volt(-1), djup: volt(0.8) };
+  SVAR_KANON.HJALP_KRAV = 1;
+  const ut = { latt: volt(-1), djup: volt(0.8),
+    raktLatt: rakt(-1), raktDjup: rakt(0.8), grund, krav };
+  SVAR_KANON.HJALP_KRAV = krav;
+  return ut;
 });
+prova("#273 T4: lätt sits kostar ingen balans i grundridningen",
+  sate.krav === 0 && sate.grund.latt.balans > 0.95 &&
+  Math.abs(sate.grund.latt.balans - sate.grund.djup.balans) < 1e-9 && sate.grund.latt.gang !== "halt",
+  `lätt sits → balans ${nf(sate.grund.latt.balans)} · djup sits → balans ${nf(sate.grund.djup.balans)} (${sate.grund.latt.gang})`);
 {
   const s2 = sate;
   prova("sätet är en balansmodifierare: djup sits bär bågen, lätt sits gör det inte",

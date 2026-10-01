@@ -235,11 +235,14 @@ do
 	local m1 = Preparation.nastaMoment(state, "halsa")
 	local vals = N._val()
 	prova("rubriken är «Hälsa på Trixie»", p.rubrik == Sprak.t("guide.halsa_rubrik", HAST_NAMN), p.rubrik)
-	prova("instruktionen är den första handlingens, i UGNETAS yta (inte två gånger)",
-		p.stegHos == "ugneta" and p.steg == m1.text, tostring(p.stegHos) .. " | " .. tostring(p.steg))
-	prova("tre handlingar, ingen är ett felaktigt svar", #vals == 3 and not vals[1].fel and not vals[2].fel and not vals[3].fel,
-		#vals)
-	prova("bara den första står på tur", vals[1] and vals[1].paTur and not vals[2].paTur and not vals[3].paTur)
+	--[[ #273 S2: hälsningen är EN handling. Ugneta säger handlingens korta
+	     rad; momentens detaljmeningar står i kunskapslagret. ]]
+	prova("instruktionen är handlingens korta rad, i UGNETAS yta (inte två gånger)",
+		p.stegHos == "ugneta" and p.steg == Sprak.t("handling.halsa_text") and p.steg ~= m1.text,
+		tostring(p.stegHos) .. " | " .. tostring(p.steg))
+	prova("EN handling, och den är inget felaktigt svar", #vals == 1 and not vals[1].fel
+		and vals[1].id == "handling:halsa", #vals)
+	prova("och den står på tur", vals[1] ~= nil and vals[1].paTur == true)
 	local ok, skal = Preparation.provaMoment(state, "halsa", "halsa3", HAST_ID)
 	prova("handen innan namnet nekas med «fel tur»", ok == false and skal == "forb.fel_tur", tostring(skal))
 	prova("hälsningen är en checklista, inte ett val", Preparation.arVal("halsa") == false)

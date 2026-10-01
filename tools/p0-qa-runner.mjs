@@ -111,10 +111,11 @@ async function firstDay(){
  if(s.scene!=='gard'&&s.scene!=='lektion')throw Error('Rid nu öppnade varken gården eller First Ride');
  if(mode==='touch'){
   /* Touchens huvudknapp följer läget: till fots ANVÄND, uppsutten (First
-     Ride, P1b) ridsatsens TYGEL. Mobil.js byter sats var 250 ms — vänta på
-     synligheten i stället för att läsa i samma ögonblick. */
+     Ride, P1b) ridsatsens DRIV (#273 S1: spak + DRIV + BROMS + SITT AV).
+     Mobil.js byter sats var 250 ms — vänta på synligheten i stället för
+     att läsa i samma ögonblick. */
   const uppsutten=s.scene==='lektion'||s.scene==='bana';
-  const [namn,sel]=uppsutten?['TYGEL','#pekRitt [data-hall="Space"]']:['ANVÄND','#pekGang [data-tap="KeyE"]'];
+  const [namn,sel]=uppsutten?['DRIV','#pekRitt [data-rid="driv"]']:['ANVÄND','#pekGang [data-tap="KeyE"]'];
   const b=page.locator(sel);
   const synlig=await b.waitFor({state:'visible',timeout:2000}).then(()=>true,()=>false);
   record(`Touch ${namn} är synlig och fingerstor`,synlig&&await b.evaluate(e=>e.getBoundingClientRect().height>=44)?'PASS':'FAIL',{scene:s.scene});

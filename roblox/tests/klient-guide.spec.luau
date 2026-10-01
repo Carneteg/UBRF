@@ -133,8 +133,10 @@ prova("inga hälsningssvar på startskärmen", not harHalsning)
 print("\n── 3. Den manuella kedjan genom den riktiga Preparation ──")
 valMed("start:sjalv").skicka()
 N.satRider(false)
-prova("«Gör i ordning själv»: «Hälsa på Trixie» med fasens fråga och hälsningens val",
-	rubrik() == Sprak.t("guide.halsa_rubrik", "Trixie") and steg() ~= "" and #N._val() >= 2 and valMed("start:sjalv") == nil,
+--[[ #273 S2: EN handling och EN kort rad — inte hälsningens tre val. ]]
+prova("«Gör i ordning själv»: «Hälsa på Trixie» med handlingens korta rad och EN handling",
+	rubrik() == Sprak.t("guide.halsa_rubrik", "Trixie") and steg() == Sprak.t("handling.halsa_text")
+		and #N._val() == 1 and valMed("handling:halsa") ~= nil and valMed("start:sjalv") == nil,
 	rubrik() .. " | " .. steg())
 gorFas("halsa"); visa("preparing")
 prova("visitera: «Kolla Trixie · x/y» med momentets egen text", borjar(rubrik(), Sprak.t("guide.visitera_rubrik", "Trixie"))

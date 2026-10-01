@@ -428,6 +428,14 @@ jobs:
           test -f tools/kameratest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/kameratest.mjs (steget 'P3 — kameran efter en flytt (Kimi Q4)')" >&2; exit 1; }
           node tools/kameratest.mjs
 
+      # #273 SIMPLIFY (Tobias T1–T4): kontrollerna, en handling per fas och
+      # eftervårdens val — i en riktig webbläsare mot den byggda sidan.
+      - name: "#273 — förenklingen (kontroller, en handling per fas, eftervårdens val)"
+        run: |
+          set -euo pipefail
+          test -f tools/simplifytest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/simplifytest.mjs (steget '#273 — förenklingen (kontroller, en handling per fas, eftervårdens val)')" >&2; exit 1; }
+          node tools/simplifytest.mjs
+
       - name: Ridkärnan — Gate 01-värden, telemetri, live-koppling och volten
         run: |
           set -euo pipefail

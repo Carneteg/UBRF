@@ -641,7 +641,7 @@ do
 	NR.satRider(false)
 	local forst = namnIPanelen()
 	prova("UTRUSTNINGEN: sadeln först, tränset efter — inte Rida nu",
-		paTur() == "utr:1" and forst[1] == "SadelPrompt"
+		paTur() == "handling:sadla" and forst[1] == "SadelPrompt"
 			and forst[2] == "TransPrompt",
 		("på tur %s · %s"):format(paTur(), table.concat(forst, " | ")))
 
@@ -654,7 +654,7 @@ do
 	NR.satRider(false)
 	local sist = namnIPanelen()
 	prova("och i sista utrustningssteget står tränset först",
-		antal > 1 and paTur() == "utr:" .. antal and sist[1] == "TransPrompt",
+		antal > 1 and paTur() == "handling:transa" and sist[1] == "TransPrompt",
 		("%d utr-moment · på tur %s · %s"):format(antal, paTur(),
 			table.concat(sist, " | ")))
 	forrad:Destroy()
@@ -695,9 +695,11 @@ do
 	--[[ UI-2: hälsningen är ingen fråga längre utan handlingar i ordning —
 	     där ska just NÄSTA handling lyftas (Ugneta säger den). R2:s regel
 	     gäller frågor, och fyndet nedan är fortfarande en. ]]
-	local forsta = Preparation.nastaMoment(state, "halsa")
-	prova("HÄLSNINGEN: inga felaktiga svar, bara nästa handling lyft",
-		not harFel and n1 == 3 and #l1 == 1 and forsta ~= nil and l1[1] == forsta.namn,
+	--[[ #273 S2: hälsningen är EN handling — «Hälsa» — och den är lyft. ]]
+	local forsta = Preparation.nastaHandling(state, "halsa")
+	prova("HÄLSNINGEN: inga felaktiga svar, EN handling och den är lyft",
+		not harFel and n1 == 1 and #l1 == 1 and forsta ~= nil and forsta.id == "halsa"
+			and l1[1] == Sprak.t("handling.halsa"),
 		("%d handlingar, lyfta: %s"):format(n1, table.concat(l1, " | ")))
 
 	local vy = Preparation.vy(state, Preparation.STATUS.FORBEREDER, rev + 1, "Trixie")
@@ -843,7 +845,8 @@ do
 	end
 	NR.satRider(false)
 	local _, _, fraga0 = rader()
-	prova("KONTROLL: skötselfrågan står i panelen", fraga0 >= 2, fraga0)
+	--[[ #273 S2: skötseln står i panelen som EN handling, inte tre val. ]]
+	prova("KONTROLL: skötselns handling står i panelen", fraga0 == 1, fraga0)
 	for n = 0, 3 do
 		UC.dolj()
 		if n > 0 then UC.visa("Kort", {}, n >= 1, nil, n >= 2, n >= 3) end
