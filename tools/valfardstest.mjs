@@ -200,30 +200,42 @@ async function medProfil(profil) {
   await starta(p);
   return { ctx, p };
 }
+/* CI:s mjukvarurendering är långsam: varje steg VÄNTAR PÅ SITT VILLKOR,
+   inte på en fast tid. En fast väntan lät ridlärarens E gå i tomma luften
+   på CI (modalen öppnades aldrig, listan lästes tom). Ett villkor som
+   aldrig uppfylls ger ett tomt läge, som kontrollerna sedan säger FEL om. */
+const vantaPa = (p, f, arg) => p.waitForFunction(f, arg, { timeout: 15000 }).then(() => true, () => false);
 async function starta(p) {
   await p.evaluate(() => { const b = document.getElementById("bSkapHoppa"); if (b) b.click(); });
-  await p.waitForTimeout(400);
+  await vantaPa(p, () => !!document.getElementById("bStart"));
   await p.evaluate(() => { const b = document.getElementById("bStart"); if (b) b.click(); });
-  await p.waitForTimeout(900);
+  await vantaPa(p, () => typeof G !== "undefined" && G.scen && G.scen !== "meny"
+    && (G.hastId || /ingen tilldelad häst/i.test((document.getElementById("saga") || {}).textContent || "")));
+  await ramar(p);
 }
 const ramar = p => p.evaluate(() => new Promise(k => requestAnimationFrame(() => requestAnimationFrame(k))));
 async function tillRidlararen(p) {
+  await vantaPa(p, () => !overlayUppe());
   await p.evaluate(() => { const r = STALLINNE.ridlarare.pos; gaTill("stallinne", { x: r[0], y: r[1] + 1.0, rikt: -Math.PI / 2 }); });
-  await ramar(p); await p.waitForTimeout(300);
+  await vantaPa(p, () => !!(VD.prompt && /ridläraren/.test(VD.prompt.text)));
   await p.keyboard.down("KeyE"); await p.waitForTimeout(120); await p.keyboard.up("KeyE");
-  await p.waitForTimeout(400);
+  /* overlay(false) DÖLJER modalen men lämnar dess knappar i DOM — en
+     dold, gammal lista får inte läsas som den nya. Vänta på öppen modal. */
+  await vantaPa(p, () => overlayUppe() && document.querySelectorAll(".hb-val").length > 0);
 }
 async function tillBoxen(p) {
   await p.evaluate(() => { const b = hittaBox(G.hastId); gaTill("stallinne", { x: b.dorr[0], y: b.dorr[1], rikt: 0 }); });
-  await ramar(p); await p.waitForTimeout(300);
+  await ramar(p);
+  await vantaPa(p, () => !!(document.getElementById("stegkort") || {}).dataset && !!document.getElementById("stegkort").dataset.kort);
 }
 async function kortKlick(p, id) {
+  await vantaPa(p, id => [...document.querySelectorAll("#stegkort button")].some(x => x.dataset.id === id), id);
   const ok = await p.evaluate(id => { const b = [...document.querySelectorAll("#stegkort button")].find(x => x.dataset.id === id);
     if (b) b.click(); return !!b; }, id);
   await p.waitForTimeout(300);
   return ok;
 }
-const bytesLista = p => p.evaluate(() => [...document.querySelectorAll(".hb-val")].map(b => b.dataset.id));
+const bytesLista = p => p.evaluate(() => overlayUppe() ? [...document.querySelectorAll(".hb-val")].map(b => b.dataset.id) : []);
 const bas274 = { grupp: "ledlektion", pass: 3, spelarId: 12345, fortroende: {}, historik: [], rosetter: [], jag: { namn: "Prov" } };
 
 /* Hästen rotationen ger den här profilen — den som sedan får vila. */
@@ -300,10 +312,12 @@ console.log("\n── #274: rätt svar sparar vilan först och räknar dagen en 
   const h = await p.evaluate(() => G.hastId);
   await tillBoxen(p);
   await kortKlick(p, "start:rida_nu");
+  await vantaPa(p, () => document.getElementById("stegkort").dataset.kort === "fynd");
   const fyndKort = await p.evaluate(() => document.getElementById("stegkort").dataset.kort);
   prova("förutsättning: fynddagen frågar", h === vilande && fyndKort === "fynd", `${h} · pass ${fyndPass} · ${fyndKort}`);
   const mark = await p.evaluate(() => window.__skriv.length);
   await kortKlick(p, "svar:1");
+  await vantaPa(p, () => document.getElementById("stegkort").dataset.kort === "stopp");
   const d = await p.evaluate(([mark, nyckel, h, annan]) => {
     const skr = window.__skriv.slice(mark).map(s => JSON.parse(s));
     const el = document.getElementById("stegkort");
