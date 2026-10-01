@@ -140,12 +140,32 @@ function draw2D(G){
   }
 
   // banguide för dagens övning (ur träningsboken)
-  const guide=G.scen==="lektion"&&G.moment&&
+  const guide=G.scen==="lektion"&&G.moment&&!G.p3&&
     (typeof OVNINGSGUIDE!=="undefined")&&OVNINGSGUIDE[G.moment.ovning];
   if(guide)ritaGuide2D(guide,s);
 
   // hinder
   if(G.hinderAktiva)for(const h of BANA.hinder)drawFence2D(h,s,G);
+  /* P3: ridhusets egna hinder och lektionens vägvisning på kartan — samma
+     hinder (src/site.js) och samma streck (src/lektioner/guide.js) som
+     3D-vyn ritar. */
+  if(G.p3&&!ute){
+    for(const hi of ((typeof RIDHUSINNE!=="undefined"&&RIDHUSINNE.hinder)||[])){
+      const[a,b]=w2s(hi.x-hi.b/2,hi.y),[a2]=w2s(hi.x+hi.b/2,hi.y);
+      cx.strokeStyle=hi.farg==="rod"?"#B0332E":"#3E7FB8";cx.lineWidth=Math.max(2,s*0.22);
+      cx.setLineDash(hi.h>0.02?[]:[s*0.4,s*0.25]);
+      cx.beginPath();cx.moveTo(a,b);cx.lineTo(a2,b);cx.stroke();cx.setLineDash([]);
+      cx.fillStyle="#EFEAE0";
+      for(const x of [a,a2]){cx.fillRect(x-s*0.12,b-s*0.12,s*0.24,s*0.24);}
+    }
+    if(typeof LektionGuide!=="undefined")for(const st of LektionGuide.aktuella()){
+      const x=LektionGuide.X(st.u), y=LektionGuide.Y(st.v), dx=-st.du*st.half, dy=st.dv*st.half;
+      const[a,b]=w2s(x-dx,y-dy),[a2,b2]=w2s(x+dx,y+dy);
+      cx.strokeStyle=`rgba(77,174,142,${st.ring?0.55:(st.stark?0.9:0.3)})`;
+      cx.lineWidth=Math.max(2,s*st.bredd*0.8);cx.lineCap="round";
+      cx.beginPath();cx.moveTo(a,b);cx.lineTo(a2,b2);cx.stroke();cx.lineCap="butt";
+    }
+  }
   // NPC-ekipage
   for(const n of G.npcs)drawHorse2D(n.x,n.y,n.rikt,n.farg,s*0.9,false);
   /* Ugneta vid sargen — samma `ugnetaPlats()` som 3D-vyn läser. */

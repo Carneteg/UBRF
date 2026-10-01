@@ -43,11 +43,20 @@ function migreraHastkanon(profil){
   profil.hastkanonVersion=HASTKANON_VERSION;
   return profil;
 }
+/* Gick sparningen att lita på? Samma fråga som Roblox
+   `SparService.betroddLasning` (paritetspasset P1b): ingen sparning alls
+   är en verkligt ny spelare och betrodd; en giltig sparning är betrodd;
+   ett läsfel eller trasig data är INTE det. First Ride ges bara på en
+   betrodd läsning — en spelare vars sparning inte gick att läsa ska inte
+   få nybörjarupplevelsen, för då vet vi inte om hon ridit förut. */
+let SPAR_BETRODD=false;
 function laddaRyttare(){
   SPAR=nyProfil();
+  SPAR_BETRODD=true;
   try{
     const s=localStorage.getItem(SPAR_NYCKEL);
     if(s){
+      SPAR_BETRODD=false;
       const d=JSON.parse(s);
       /* Vakterna kollar TYP, inte bara sanningsvärde. En sparning där
          fortroende är strängen "trasig" är truthy och slank förut
@@ -62,8 +71,18 @@ function laddaRyttare(){
           fardighet:obj(d.fardighet), jag:obj(d.jag),
           hastkanonVersion:d.hastkanonVersion===HASTKANON_VERSION?HASTKANON_VERSION:null,
           poang:+d.poang||0, pass:+d.pass||0};
+      if(d&&GRUPPSTEGE.includes(d.grupp))SPAR_BETRODD=true;
     }
-  }catch(_){/* privat läge eller blockerad lagring — spela från noll */}
+  }catch(_){/* privat läge eller blockerad lagring — spela från noll */
+    SPAR_BETRODD=false;}
+  /* SPELARENS NUMMER — webbens motsvarighet till Roblox UserId, som
+     tilldelningens rotation räknar från (`Stallet.tilldelaLedig`). Skapas
+     EN gång per profil och sparas med den. Sparas bara på en betrodd
+     läsning: en trasig sparning skrivs aldrig över härifrån. */
+  if(!Number.isInteger(SPAR.spelarId)||SPAR.spelarId<0){
+    SPAR.spelarId=Math.floor(Math.random()*4294967296);
+    if(SPAR_BETRODD)try{localStorage.setItem(SPAR_NYCKEL,JSON.stringify(SPAR));}catch(_){}
+  }
   SPAR=migreraHastkanon(SPAR);
   G.grupp=SPAR.grupp;
 }
@@ -238,8 +257,10 @@ function registreraPass(dom){
   /* Dagens tema följer med. Nästa pass läser det: satt det går hon
      vidare, satt det inte tar hon om det och SÄGER att hon gör det.
      Det är hela skillnaden mellan en lärare och en främling. */
+  /* P3: en ritt i huvudvägen bedömer inga moment — snittet finns inte,
+     det är inte noll (P3 § 9). Gruppstegens poäng rörs inte av den. */
   SPAR.historik.unshift({hast:G.hastId, grupp:G.grupp,
-    snitt:Math.round(snitt*100)/100, fel:dom.totalfel, utesluten:dom.utesluten,
+    snitt:dom.p3?null:Math.round(snitt*100)/100, fel:dom.totalfel, utesluten:dom.utesluten, p3:!!dom.p3,
     fokus:(typeof lararDagensId==="function")?lararDagensId():null,
     fokusAndel:(typeof lararAndel==="function")?Math.round(lararAndel()*100)/100:null});
   if(SPAR.historik.length>20)SPAR.historik.length=20;
@@ -267,7 +288,7 @@ function registreraPass(dom){
 function profilHTML(){
   const m=SPAR.historik[0];
   const senast=m?`Senast: ${HORSES[m.hast]?HORSES[m.hast].namn:m.hast} — ${
-    m.utesluten?"uteslutning":m.fel+" fel"}, snitt ${String(m.snitt).replace(".",",")}`
+    m.utesluten?"uteslutning":m.fel+" fel"}${m.snitt==null?"":", snitt "+String(m.snitt).replace(".",",")}`
     :"Första passet väntar.";
   const kanda=Object.entries(SPAR.fortroende).filter(([,v])=>v.pass>0).length;
   return `<div class="note" style="display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:baseline">

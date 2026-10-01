@@ -188,10 +188,14 @@ end
      själv. Termen biter bara när det finns en båge att stödja. ]]
 function Svar.balansMal(h: { [string]: any }?, utbildning: number, bojkrav: number,
 	ytterstod: number, fartkrav: number, iOvergang: boolean,
-	spanning: number, sits: number): number
+	spanning: number, sits: number, krav: number?): number
 	local S = RidKanon.SVAR
-	local avdrag = S.BALANS_YTTER * kl(bojkrav, 0, 1) * (1 - kl(ytterstod, 0, 1))
-		+ S.BALANS_VIKT * kl(bojkrav, 0, 1) * (1 - Svar.sitsStod(sits))
+	--[[ `krav` 0–1: hur mycket de avancerade hjälperna krävs (#273 T4).
+	     Utelämnat = 1, alltså formeln som den alltid varit. Ridningen
+	     skickar `S.HJALP_KRAV`; se kommentaren i src/riding/svar.js. ]]
+	local kr = if krav == nil then 1 else kl(krav, 0, 1)
+	local avdrag = S.BALANS_YTTER * kl(bojkrav, 0, 1) * (1 - kl(ytterstod, 0, 1)) * kr
+		+ S.BALANS_VIKT * kl(bojkrav, 0, 1) * (1 - Svar.sitsStod(sits)) * kr
 		+ S.BALANS_FART * kl(fartkrav, 0, 1)
 		+ (if iOvergang then S.BALANS_OVERGANG else 0)
 		+ S.BALANS_SPANNING * kl(spanning or 0, 0, 1)

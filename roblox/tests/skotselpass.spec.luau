@@ -83,9 +83,15 @@ do
 	local hals = Preparation.moment("halsa")
 	check("hälsningen har ett alternativ per kanonisk framgång",
 		#hals == #UBRFSkotsel.halsning, #hals .. " st")
-	local felAlt = 0
-	for _, m in ipairs(hals) do if m.fel then felAlt += 1 end end
-	check("exakt ett hälsningsalternativ är fel", felAlt == 1, felAlt .. " st")
+	--[[ UI-2: hälsningen är HANDLINGAR I ORDNING — inget felaktigt
+	     alternativ, och stegen 1..n i kanonens ordning. ]]
+	local felAlt, iOrdning = 0, true
+	for i, m in ipairs(hals) do
+		if m.fel then felAlt += 1 end
+		if m.steg ~= i then iOrdning = false end
+	end
+	check("hälsningen har inget felaktigt alternativ och stegen i ordning", felAlt == 0 and iOrdning,
+		felAlt .. " fel")
 
 	local iordning = Preparation.moment("iordning")
 	check("iordningställandet är fyra hovar plus utrustningen",
@@ -158,6 +164,10 @@ do
 
 	check("rätt moment på rätt häst går",
 		(Preparation.utforMoment(s, "halsa", m.id, "cosmo")))
+	-- Hälsningens övriga handlingar, i ordning (UI-2), innan visitationen.
+	while Preparation.nastaMoment(s, "halsa") do
+		Preparation.utforMoment(s, "halsa", Preparation.nastaMoment(s, "halsa").id, "cosmo")
+	end
 
 	--[[ Fel MOMENT inom rätt fas: visitationen tas framifrån och bakåt. ]]
 	local vis = Preparation.moment("visitera")

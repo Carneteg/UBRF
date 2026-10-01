@@ -816,12 +816,12 @@ function interaktioner(){
       L.push({pos:[174,126], text:G.tavling&&G.tavling.typ==="dressyr"
           ?`Sitt upp — Dressyr LC börjar här`
           :`Sitt upp på uteridbanan — lektion utomhus`,
-        gor(){sittUpp("utebana");}});
+        tangent:"KeyE", hall:0.35, gor(){sittUpp("utebana");}});
       const gIdx=GRUPPSTEGE.indexOf(G.grupp);
       L.push({pos:[114,118], text:gIdx>=5
           ?`Sitt upp för uteritt — skogsstigen`
           :`Skogsstigen (uteritt rids från grupp 3)`,
-        gor(){
+        tangent:"KeyE", hall:gIdx>=5?0.35:0, gor(){
           if(gIdx>=5)sittUpp("stig");
           else saga("Uteritt får du följa med på från grupp 3 — skogen kräver en säker ryttare.",4);
         }});
@@ -858,6 +858,7 @@ function interaktioner(){
           ? `Sitt upp — Påskhoppet, ${G.tavling.klass.namn}`
           : `Sitt upp på ${hastNamn()} — lektionen börjar`)
         : "Sargporten",
+      tangent:"KeyE", hall:G.leder?0.35:0,
       gor(){ if(G.leder)sittUpp("ridhus");
              else saga("Genom sargporten går man ut på banan. Hästarna kommer in genom hästgången från stallet.",3.5); }});
   }else{
@@ -883,9 +884,13 @@ function interaktioner(){
             saga(G.lerig
               ?`${hastNamn()} går in med leran kvar på benen. Ridläraren kommer att se den.`
               :`${hastNamn()} går in och drar en tugga hö. Nu: boxen, fodret och sadeln.`,3.5);}});
-      }else if(b&&G.hamtad){
-        L.push({pos:b.dorr, text:`Sköt om ${hastNamn()} vid boxen`,
-          gor(){visaBoxmeny();}});
+      }else if(b&&G.hamtad&&typeof stegkortPrimar==="function"){
+        /* Paritetspasset: vid hästen är E stegkortets primära handling —
+           samma sak som den prompt Roblox rankar först. Boxmenyn finns
+           kvar som sidoaktivitet under «Fler handlingar». */
+        for(const r of stegkortRader())
+          L.push({pos:b.dorr, text:r.text, tangent:r.tangent, hall:r.hall,
+            gor(){r.gor();stegkortRita(true);}});
       }
     }
     L.push({pos:S.whiteboard.pos, text:"Dagens schema (whiteboarden)",
@@ -903,8 +908,7 @@ function interaktioner(){
         continue;
       }
       if(i.sadelkammare){
-        L.push({pos:i.pos, text:G.hastId&&!G.utrustning
-            ?`Hämta ${hastNamn()}s sadel och träns`:"Sadelkammaren",
+        L.push({pos:i.pos, text:"Sadelkammaren",
           gor(){visaSadelkammare();}});
         continue;
       }
@@ -930,7 +934,39 @@ function interagera(){
   /* Konsumera även om inget giltigt mål finns: ett gammalt tryck får
      aldrig aktivera en dörr som spelaren närmar sig senare. */
   const e=InputImpulse.consume("KeyE",G.scen);
-  if(e&&bast&&!overlayUppe()) bast.gor();
+  /* HÅLLPROMPTERNA (paritetspasset P1a R1): Roblox ProximityPrompts har
+     egen tangent och HoldDuration. Varje prompt inom räckhåll med hålltid
+     > 0 fylls medan SIN tangent hålls, och utlöses en gång när tiden
+     nåtts; släpps tangenten börjar den om. På pekskärm är ANVÄND (KeyE)
+     ett tryck på den närmaste prompten, som ett finger på en prompt. */
+  /* Hålltiden är VERKLIG tid sedan hållet började, som Roblox
+     HoldDuration — inte summerade bildrutor, som vid låg bildtakt räknade
+     ett riktigt håll för kort. */
+  const nu=(typeof performance!=="undefined"?performance:Date).now();
+  const pek=typeof PEKSKARM!=="undefined"&&PEKSKARM;
+  const inom=bast?L.filter(i=>i.hall>0&&Math.hypot(VD.px-i.pos[0],VD.py-i.pos[1])<2.4):[];
+  /* Varje håll mäts från tangentens egen keydown-tid (IN.nedT). Ett håll
+     som både började och slutade mellan två bildrutor finns kvar i
+     IN.slappt med sin längd, så att det räknas en gång ändå. */
+  const nedT=IN.nedT||{}, slappt=IN.slappt||{};
+  const langd=k=>IN.ned[k]&&nedT[k]!=null?{s:(nu-nedT[k])/1000,fran:nedT[k],nere:true}
+    :slappt[k]?{s:slappt[k].s,fran:slappt[k].fran,nere:false}:null;
+  let hallen=null, h=null;
+  if(!overlayUppe())for(const i of inom){
+    const k=i.tangent||"KeyE";
+    h=langd(k)||(pek&&i===bast?langd("KeyE"):null);
+    if(h){hallen=i;break;}
+  }
+  if(!VD.hall)VD.hall={fran:null,t:0,klar:false};
+  if(hallen){
+    if(VD.hall.fran!==h.fran)VD.hall={fran:h.fran,t:0,klar:false};
+    VD.hall.t=h.s;
+    if(!VD.hall.klar&&VD.hall.t>=hallen.hall){VD.hall.klar=true;hallen.gor();}
+    if(!h.nere)VD.hall={fran:null,t:0,klar:false};
+  }else VD.hall={fran:null,t:0,klar:false};
+  for(const k in slappt)delete slappt[k];
+  VD.hallAndel=hallen&&hallen===bast&&h&&h.nere?Math.min(1,VD.hall.t/hallen.hall):0;
+  if(e&&bast&&!(bast.hall>0)&&(bast.tangent||"KeyE")==="KeyE"&&!overlayUppe()) bast.gor();
   VD.ePrev=!!IN.ned.KeyE;
 }
 /* Boxarnas mitt-y, per rad. Facken läses ur STALLINNE.fack — samma lista
@@ -1050,6 +1086,9 @@ function kameraNollstall(){
 }
 function gaTill(scen,spawn){
   InputImpulse.clear("KeyE");
+  /* Kimi Q4 H2: en dörr eller teleport till en annan scen ger 3D-vyn
+     igen, om inte spelaren valt kartan i just den scenen. */
+  if(typeof vyEfterFlytt==="function")vyEfterFlytt(scen);
   G.scen=scen;
   if(spawn){VD.px=spawn.x;VD.py=spawn.y;VD.rikt=spawn.rikt;VD.spår.length=0;VD.fart=0;VD.pz=nivaHojd(VD.px,VD.py,spawn.z||0);}
   slutaGa();                       // ett mål i förra scenen betyder inget här
@@ -1062,7 +1101,14 @@ function gaTill(scen,spawn){
 function startaVandring(){
   InputImpulse.clear("KeyE");
   if(typeof ridSittAv==="function")ridSittAv();   // G02-A: avsutten när ritten lämnas
+  /* Ridreglagen hör till sadeln. De öppnas av sig själva vid första
+     uppsittningen — som numera är First Ride — och låg kvar till fots över
+     stegkortet, så att dess övre knappar inte gick att trycka på (fångat
+     av tools/forstadagentest.mjs). Ny dag, avsuten: stäng dem. H öppnar
+     dem igen. */
+  if(typeof doljKontrollHjalp==="function")doljKontrollHjalp();
   overlay(false);
+  if(typeof vyEfterFlytt==="function")vyEfterFlytt("gard");
   G.scen="gard"; G.hastId=null; G.skotselRes=null;
   /* DAGEN BÖRJAR MED HÄSTEN I BOXEN (Tobias produkttest 2026-09-06,
      blocker 2). Vägen från grusplanen ut till hagen och tillbaka var
@@ -1080,21 +1126,46 @@ function startaVandring(){
   const s=ANL.spawn; VD.px=s.x;VD.py=s.y;VD.rikt=s.rikt;VD.spår.length=0;
   VD.fart=0; kameraNollstall();
   hudLage("gang");
-  const vtext={sol:"Kvällssolen ligger över åkrarna.",
-    mulet:"Mulet och stilla över Bro.",
-    regn:"Regnet trummar på plåttaken."}[G.vader.typ];
-  saga(`Du är framme på Husbyvägen 1A. ${vtext} Ridläraren väntar i stallgången.`,4.5);
+  /* P2 (L4): på spelarens språk, och utan «ridläraren väntar» — hästen
+     delas ut automatiskt sedan P1b. */
+  saga(tSpr("spel.framme", tSpr("vader."+G.vader.typ)),4.5);
+  /* Paritetspasset P1b: hästen delas ut AUTOMATISKT, som i Roblox
+     (Stallet.tilldelaLedig). Tävlingsdagen är en sidoaktivitet och
+     fördelas av ridläraren som förut. */
+  if(!G.tavling&&typeof tilldelaDagensHast==="function"){
+    const id=tilldelaDagensHast();
+    if(id)sattAktivHast(id);
+    else saga(tSpr("spel.ingen_hast"),5);
+    if(id&&typeof forstaRittenGaller==="function"&&forstaRittenGaller())forstaRitten();
+  }
 }
 function hudLage(lage){
   const gang=lage==="gang";
-  for(const id of ["pyr","aids","gait"]){
+  /* "moment" är den gamla vänsterrutan. Till fots ersätts den av
+     stegkortet (paritetspasset, #264) och syns bara under ritten.
+     P3: i huvudvägens ritt ersätts HELA fyrahörns-HUD:en (Moment,
+     Gångart, Utbildningsskalan, Hjälper) av ridpanelen. Ingenting raderas:
+     tävlingen (en sidoaktivitet) behåller sin HUD, utbildningsskalan finns
+     i träningsboken och hjälpmätarna under panelens `?`. */
+  const p3=lage==="ritt"&&!G.tavling&&!G.stege;
+  for(const id of ["pyr","aids","gait","moment"]){
     const el=document.getElementById(id);
-    if(el){const hud=el.closest(".hudh")||el; hud.style.display=gang?"none":"";}
+    if(el){const hud=el.closest(".hudh")||el; hud.style.display=gang||p3?"none":"";}
   }
   const vt=document.getElementById("viewToggle");
   vt.hidden=false;
-  vt.querySelector('[data-v="2d"]').textContent=gang?"Karta":"Bana";
-  vt.querySelector('[data-v="3d"]').textContent=gang?"Bakom dig":"Sidovy";
+  G.hudLage=lage;
+  sprakEtiketter();
+}
+/* Växlarens etiketter på spelarens språk — skrivs om vid språkbyte. */
+function sprakEtiketter(){
+  if(typeof document==="undefined")return;
+  const vt=document.getElementById("viewToggle");
+  if(!vt)return;
+  const gang=G.hudLage!=="ritt";
+  const t=(k)=>typeof tSpr==="function"?tSpr(k):k;
+  vt.querySelector('[data-v="2d"]').textContent=t(gang?"vy.karta":"vy.bana");
+  vt.querySelector('[data-v="3d"]').textContent=t(gang?"vy.bakom_dig":"vy.sidovy");
 }
 /* Rubrik + punkter. PO 2026-09-06: gameplay-text ska vara kort och
    skannbar — en rubrik och 1–3 punkter, inte ett stycke. Texten tas
@@ -2469,12 +2540,9 @@ function ritaRidhus3D(){
     }});
   }
   for(const d of R.dorrar) items.push({d:-avst2(d.pos), rita(){ritaMarkor3D(k,d.pos);}});
-  if(G.leder){
-    items.push({d:-avst2([VD.hastX,VD.hastY]), rita(){ritaLeddHast3D(k);}});
-    const sp=SPELABSTRAKTIONER.ridhus.sargport;
-    items.push({d:-avst2([(sp.x0+sp.x1)/2,ba.y+ba.h]),
-      rita(){ritaMarkor3D(k,[(sp.x0+sp.x1)/2,ba.y+ba.h]);}});
-  }
+  /* Ingen markör vid sargporten när hon leds (paritetspasset P1a R1):
+     Roblox har ingen, och stegkortet säger vart. */
+  if(G.leder) items.push({d:-avst2([VD.hastX,VD.hastY]), rita(){ritaLeddHast3D(k);}});
   items.sort((a,b)=>a.d-b.d);
   for(const o of items)o.rita();
   ritaSpelare3D();
@@ -2486,8 +2554,15 @@ function ritaVandring(){
   /* 3D-vyn ritar vägvisaren här; kartan gör det inne i sin egen
      ritfunktion, där projektionen finns. */
   if(G.vy!=="2d")ritaVagvisare();
+  if(typeof stegkortRita==="function"){ stegkortKvitteraLedning(); stegkortRita(); }
   const ap=document.getElementById("approach");
-  ap.textContent=VD.prompt&&!overlayUppe()?`Tryck E — ${VD.prompt.text}`:"";
+  const pr=VD.prompt&&!overlayUppe()?VD.prompt:null;
+  ap.textContent=!pr?"":pr.hall>0
+    ?`${tSpr("interaktion.hall_inne")} ${String(pr.tangent||"KeyE").replace(/^Key/,"")} — ${pr.text}`
+    :tSpr("interaktion.tryck_tangent",String(pr.tangent||"KeyE").replace(/^Key/,""),pr.text);
+  /* Fyllningen medan prompten hålls — samma återkoppling som Roblox ring. */
+  ap.style.backgroundImage=pr&&VD.hallAndel>0
+    ?`linear-gradient(90deg,rgba(236,196,92,.45) ${(VD.hallAndel*100).toFixed(0)}%,transparent ${(VD.hallAndel*100).toFixed(0)}%)`:"";
   if(G.sagaT>0){G.sagaT-=1/60;if(G.sagaT<=0)document.getElementById("saga").classList.remove("on");}
   /* ALL uppgiftstext kommer ur uppdraget (src/uppdrag.js) — samma
      objective som vägvisaren, kartan och markören läser. Den långa
