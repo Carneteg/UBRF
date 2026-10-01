@@ -155,6 +155,10 @@ Input.BROMS = "ActionBroms"
      ändå hos de andra två, så att `TouchControls` kan klä knappen
      utan att känna till klientens huvudskript. ]]
 Input.AVSITT = "ActionSittAv"
+--[[ #276: HOPPET PÅ PEKSKÄRM. En fjärde handling, men bara när hopp är
+     relevant — se `Input.satHopp`. Annars är grundridningens tre knappar
+     hela pekytan, precis som förut. ]]
+Input.HOPP = "ActionHopp"
 
 --[[ Spärren, i sekunder. Kontraktet ger spannet 0,5–0,8; 0,60 ligger i
      mitten. Lägre och hamrandet går igenom, högre och en ärlig
@@ -260,8 +264,62 @@ function Input.bind()
 		Enum.KeyCode.ButtonA, Enum.KeyCode.ButtonB)
 end
 
+--[[ ══ HOPPHANDLINGEN (#276) ════════════════════════════════════════
+
+     Hoppet var `Space`/`ButtonA` i "HorseControl", som inte ritar någon
+     pekknapp. En spelare på ren pekskärm kunde alltså inte hoppa alls.
+
+     `ActionHopp` binder SAMMA två tangenter plus en pekknapp, och bara
+     medan hopp är relevant. Senast bunden handling vinner en tangent i
+     `ContextActionService`, så medan den är bunden går Space hit i
+     stället för till "HorseControl" — och skriver i samma `state.jump`.
+     Det finns alltså EN hoppväg: `intent.jump` → `MovementController`,
+     vars villkor (mark, fart, nedkylning) är desamma för alla ytor.
+
+     TANGENT OCH FINGER SKILJS ÅT, och det är med flit. En tangent är ett
+     hållet läge som förut (Space nere = vill hoppa). Ett finger är en
+     IMPULS: `Begin` ger `touchJump()`, som släpper sig själv. Släppet
+     läses aldrig, så ett finger som lyfts utanför knappen — eller ett
+     `End` som aldrig kommer — kan inte lämna hoppet nere. ]]
+local hoppBunden = false
+local function onHopp(_, inputState: Enum.UserInputState, obj: InputObject)
+	if obj and obj.UserInputType == Enum.UserInputType.Touch then
+		if inputState == Enum.UserInputState.Begin then Input.touchJump() end
+	elseif inputState == Enum.UserInputState.Begin then
+		state.jump = true
+	elseif inputState == Enum.UserInputState.End
+		or inputState == Enum.UserInputState.Cancel then
+		state.jump = false
+	end
+	return Enum.ContextActionResult.Sink
+end
+
+--[[ Binder eller river hopphandlingen. Bara under en ritt (`bind` först);
+     returnerar om läget faktiskt ändrades, så att anroparen vet när
+     pekknappen ska kläs. Rivningen nollar hoppet: en tangent som hölls
+     när handlingen försvann får sitt `End` hos någon annan, eller inte
+     alls. ]]
+function Input.satHopp(pa: boolean): boolean
+	local ska = pa and bound
+	if ska == hoppBunden then return false end
+	hoppBunden = ska
+	if ska then
+		ContextActionService:BindAction(Input.HOPP, onHopp, true,
+			Enum.KeyCode.Space, Enum.KeyCode.ButtonA)
+	else
+		ContextActionService:UnbindAction(Input.HOPP)
+		state.jump = false
+	end
+	return true
+end
+
+function Input.hoppBunden(): boolean
+	return hoppBunden
+end
+
 function Input.unbind()
 	if not bound then return end
+	Input.satHopp(false)
 	bound = false
 	ContextActionService:UnbindAction(Input.DRIV)
 	ContextActionService:UnbindAction(Input.BROMS)
@@ -376,9 +434,16 @@ end
      och de går genom `drivImpuls`/`bromsImpuls` ovan — med spärren. En
      kvarlämnad ospärrad väg in i trappan hade varit en tyst väg runt
      hela beslutet. ]]
+--[[ #276: generationsmärkt. Två snabba tryck ska inte låta det första
+     trycket släppa det andra halvvägs. ]]
+local hoppGen = 0
 function Input.touchJump()
+	hoppGen += 1
+	local min = hoppGen
 	state.jump = true
-	task.delay(0.15, function() state.jump = false end)
+	task.delay(0.15, function()
+		if hoppGen == min then state.jump = false end
+	end)
 end
 
 return Input

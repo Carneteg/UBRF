@@ -329,6 +329,11 @@ function LektionController.pagar(): boolean
 	return pass ~= nil and not (pass :: Lektion.Pass).klar
 end
 
+--[[ #276: om hopphandlingen ska vara bunden. Se `VoltLektionController`. ]]
+function LektionController.hoppRelevant(): boolean
+	return VoltLektionController.hoppRelevant()
+end
+
 function LektionController.pass(): Lektion.Pass?
 	return pass
 end

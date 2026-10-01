@@ -1316,6 +1316,12 @@ RunService.RenderStepped:Connect(function(dt)
 	     annat i den här ordningen: den ska se bildrutans mätning, inte
 	     förra bildrutans, och den rör varken rörelse eller kamera. ]]
 	LektionController.steg(dt, ride.telemetri, poseAv(ride.rig))
+	--[[ #276: hopphandlingen följer lektionens läge, efter att lektionen
+	     läst bildrutans serverbild. Binds den kläs pekknappen; rivs den
+	     tar `UnbindAction` knappen med sig. ]]
+	if Input.satHopp(LektionController.hoppRelevant()) and Input.hoppBunden() then
+		TouchControls.klaHopp()
+	end
 	--[[ #264 GAIT_READABILITY_AND_UGNETA: panelens gångartsrad och Ugnetas
 	     ridrad läser samma bildrutas läge. Ugneta säger den knapp spelaren
 	     faktiskt har för högre gångart; lektionen äger rösten medan den pågår. ]]

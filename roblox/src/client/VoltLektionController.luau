@@ -1242,6 +1242,17 @@ function V._minneForProv(): any return minne end
 function V._halsningForProv(): any return halsning end
 function V._coachningForProv(): any return coachning end
 function V.lektion(): boolean return attached and valt end
+--[[ #276: ÄR HOPP RELEVANT NU. Bara clear round, bara i serverns läge
+	"course" — banan pågår och nästa hinder ska hoppas — och bara i en bild
+	som hör till den här ritten. Före startlinjen, efter sista hindret, i
+	markbommen (en skrittbom som inte ska hoppas) och i fri ridning är
+	svaret nej, och pekytan har då sina tre vanliga knappar. Läser serverns
+	bild; klienten bestämmer inte själv var banan är. ]]
+function V.hoppRelevant(): boolean
+	local b = bild
+	return attached and valt and typ == "clearround" and b ~= nil
+		and b.rittId == ritt and b.lage == "course"
+end
 
 function V.avbryt()
 	-- Keep selection only for reattachment to this SAME accepted ride.
