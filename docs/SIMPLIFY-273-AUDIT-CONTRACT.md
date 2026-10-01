@@ -176,4 +176,96 @@ Web, read from source, not run: after a welfare stop the card offers no next act
 
 ---
 
-`READY_FOR_CHATGPT_REVIEW` — audit and contract only. No production code changed.
+`READY_FOR_CHATGPT_REVIEW` — audit and contract only. No production code changed. *(State at `aa85be0`. The implementation follows in §5.)*
+
+---
+
+## 5. Implementation record — S1, S2, S3 (2026-10-01)
+
+Writer: Claude. Order: Tobias, 2026-10-01 — audit direction approved at `aa85be0`, decisions T1–T4 below, «implement the minimum change per S1, S2 and S3, Roblox and web together». Nothing merged to `main`. No new gameplay.
+
+### 5.1 Tobias' decisions
+
+| | Decision | Implemented as |
+|---|---|---|
+| **T1** aftercare | After dismount a simple choice: «Stallet tar hand om henne» → session counts, no penalty. «Ta hand om henne själv» → voluntary, small positive effect. The five mandatory click-through steps leave the main flow. Same model on both platforms. | S3 |
+| **T2** manual care | One meaningful player action per phase: hälsa → kontrollera → rykta → kratsa → sadla → tränsa → leda → sitt upp. Detail texts are not mandatory stops. Real safety/welfare gates stay. Detailed horse knowledge may move to a voluntary layer. | S2 |
+| **T3** web touch | Same mental model as Roblox: joystick + DRIV + BROMS + SITT AV. The six advanced buttons are not shown in the standard flow. | S1 |
+| **T4** advanced aids | Neutral / default-optional in the first ride and basic riding. No hidden balance or steering penalty for not using half-halt, outside rein, deep seat, whip. May return contextually when an exercise needs them. | S1 |
+
+### 5.2 U1–U4, checked before implementation (small targeted checks only)
+
+| | Result | How |
+|---|---|---|
+| **U1** | **Confirmed.** The Roblox list did open at the first mount: `vidUppsittning()` → `visa()` sets `Enabled = true` regardless of `MINIMAL_UI`. | Source, and the client bench: `klient-hjalpknapp.spec` already closed it after mounting («Första uppsittningen visar hjälpen av sig själv»). **Not run in Studio.** |
+| **U2** | **Material.** Steering only (no rein, neutral seat), full turn: balance fell to **0,49** in walk and trot and **0,42** in canter on web; **0,46** on Roblox (walk). The horse fell in: the ridden radius was about **14–15 % tighter** than asked (Roblox 2,05 m against 2,38 m). | One-off probe through the web input layer; the Roblox figure is printed by `movement.spec` with the requirement switched on. |
+| **U3** | **Confirmed, not changed.** On Roblox a jump needs `intent.jump` (`Space` / `ButtonA`, `MovementController.luau:773`); there is no touch control for it. A fence lesson on a pure touch device cannot produce a jump. Outside the first-ride scope — reported, not fixed here. | Source. |
+| **U4** | **Holds.** A half-halt pulse steps down one gait at every gait: canter → trot → walk → halt in three pulses. | Probe through the input layer; now `simplifytest` A. |
+| *found on the way* | On web, `S` alone followed by release stepped **up**: trot, `S` for 0,6 s, release → canter. The leg returning from «none» to neutral was read as a forward impulse. | Same probe. Fixed by B2. |
+
+### 5.3 What changed
+
+**S1 — controls**
+
+- *Both:* the control list never opens by itself. `KontrollHjalp.vidUppsittning` / `kontrollHjalpVidUppsittning` are removed, not disabled. The list shows the core first and the aids under a heading «Avancerat» (`KontrollHjalp.listrader`, `kontrollListrader`). The four core rows are unchanged on Roblox.
+- *Web:* `S` / `↓` in the saddle is **one step down per press** through the existing half-halt channel in the input layer (`ridBroms`, `src/game.js`). The riding model is untouched. The leg is no longer pushed to «none», which removes the step-up on release. Core rows 1–2 now read «Ett steg upp / ned i gångarterna» with one control each.
+- *Web touch (T3):* stick + **DRIV** + **BROMS** + **SITT AV** (+ the small VY). DRIV is a leg impulse (`ridDriv`), BROMS the same half-halt as `S`. In the saddle the stick steers and nothing else.
+- *Both (T4):* `SVAR_KANON.HJALP_KRAV = 0` (exported to `RidKanon.SVAR`). `svarBalansMal` / `Svar.balansMal` take an optional `krav` that scales the outside-rein and seat-support terms; the two riding call sites pass the canon value. Without the argument the formula is exactly as before — the parity golden rows are unchanged. Speed in the turn, transitions and tension count as before.
+- *Web texts (B5):* the «fyra hjälper» menu line and «Låt bli F-tangenten».
+
+**S2 — care before the ride**
+
+- *Both:* `Preparation.handlingar` / `Forb.handlingar` group a phase's existing moments into **one action**: `halsa`, `kolla`, `rykta`, `kratsa`, `sadla`, `transa`. Performing an action runs its moments in canon order through the **existing** moment path (`GameplayService.moment`, `Forb.utforMoment`) with the player as performer. The checklist, order rule, own-share, day-form bonus, care memory and every gate keep their data model. `leda` has no action — it is acknowledged by the horse physically arriving.
+- *Roblox:* new remote `PreparationHandling` → `GameplayService.handling`. The old `PreparationMoment` path is unchanged and still used for `leda`, by «Rida nu» and by the specs.
+- *Both:* one short line per card (`handling.*_text`). The detailed sentences — hooves, mouth corners, girth in three stages — are **not rewritten**: they are shown verbatim in the voluntary layer («Så gör man»; on Roblox in the panel's Hjälp list).
+- A finding stops the «kolla» action at the finding, exactly as the stable's preparation does. Nothing after it is performed; the decision is the player's.
+- *Web (A3):* «Samma häst igen» and «Rid igen — ny häst» go to the step card at the box. `visaSkotsel` (the legacy minigame with penalties) and `visaTilldelning` are no longer reached from the main path. A resting horse is never handed out.
+
+**S3 — after the ride (T1)**
+
+- *Both:* `Pass.handlingar` / `Efter.handlingar`: `sadla_av` (girth + saddle), `transa_av` (bridle), `ta_hand` (legs + water and hay). The five canon moments and their order are unchanged; `gjorda[id]` is `true` (player) or `"auto"` (stable).
+- «Stallet tar hand om henne»: the stable performs what remains, the session counts once, **no penalty**. On Roblox the tack is physically removed in canon order; presence is not required, but the player must have dismounted (`pass.sitt_av_forst`) and ridden (`pass.inte_dags`).
+- «Ta hand om henne själv»: three actions, one at a time, the stable remains available as a way out. Small positive effect: relation **+0,02 × own share** on top of the unchanged +0,04 (Roblox `EGEN_EFTERVARD_BONUS`, web `Efter.BONUS` on the horse's `rang`).
+- *Roblox:* new remote `PassHandling` (an action id, or `"stallet"`). `PassMoment` is unchanged.
+
+### 5.4 Gates — verified intact
+
+Welfare stop and open finding (blocks every action, both wrong answers refused, mount refused); mount gate (`pass.aterstar` while leading remains, physical tack read from the model); reach gate for every action (`spel.for_langt`) including own aftercare; phase order and order inside the phase (`forb.fel_tur`); tack must be fetched (`tack.hamta_forst`) and be the right horse's (`tack.fel_sadel`); bridle after saddle, saddle off before bridle; leading is physical and no action can acknowledge it; a resting horse is not assigned; the session cannot be counted without a ride. Measured in `integration-forenkling.spec` B, C, E, F and `simplifytest` F; the existing suites are green.
+
+### 5.5 Platform differences — need Tobias' explicit approval as exceptions
+
+1. **When the session is counted.** Web counts at dismount (`avslutaBana` → `registreraPass`), before the choice; Roblox counts when the choice is made. Same player outcome on both paths: the session counts, without penalty.
+2. **The stick.** On Roblox the stick also nudges tempo inside the gait's band; on web touch it only steers. Roblox BROMS from halt is rein-back; web has no rein-back.
+3. **Own aftercare on web is not physical.** Roblox removes the tack from the model; web has no tack model after the ride and shows the three actions in the result overlay.
+4. **Where the knowledge layer sits.** Web: a «Så gör man» toggle in the step card. Roblox: inside the panel's Hjälp list.
+5. **Competition day on web touch** keeps its old button set (stick gives leg; TYGEL, HALVHALT, LÄTT, DJUP, LÄTTR., DIAG, NÄSTA). The side activity's moment series judges contact and half-halt — T4's own «contextually when an exercise needs them». The main path never shows it.
+6. **Web-only advanced aids** (rising trot, diagonal, whip) remain web-only, now under «Avancerat».
+
+### 5.6 Not changed, and why
+
+- `rakriktning` on the web training scale still reads outside-rein support (`src/model.js`). It is a quality score, not balance or steering; whether T4 should reach it is a question for review.
+- The clear-round line «…sitt av – eftervården väntar: {moment}» still names the five canon moments. They still exist; they are now a choice.
+- Legacy web code (`visaSkotsel`, `visaTilldelning`) is not deleted (contract §4.5). The ride teacher still opens `visaTilldelning` on competition day.
+- #274 (rest filter in the manual horse swap; no way on after a welfare stop on web) is untouched.
+
+### 5.7 Tests
+
+New, on both platforms:
+
+- `roblox/tests/integration-forenkling.spec.luau` — S2 and S3 through `GameplayService` against the real rig. Six actions give a checklist **identical** to the 23 moment calls (same moments, same performer, own share 1,0, day form 0,76).
+- `roblox/tests/klient-forenkling.spec.luau` — S1 (first mount through `MountChanged`, list closed; core/advanced order; touch), S2 (one row per phase, short line, knowledge layer), S3 (the choice; own path; stable as way out).
+- `tools/simplifytest.mjs` — S1 keyboard and touch, T4, S3 both paths, A3, S2 chain and the finding. In CI (`grindar.yml`, job `ridning`) and in the G8 inventory.
+- `tools/falsifiera-forenkling.py` — 19 mutations (10 web, 9 Roblox).
+
+Changed to follow the new contract, none removed: `forberedelse.spec`, `varldshud.spec`, `klient-uikontext.spec`, `klient-guide.spec`, `klient-blandning.spec`, `movement.spec`; `ridpaneltest`, `ridtest`, `sprakblandningtest`, `stegkorttest`, `ugneta-ui-test`, `p0-qa-runner`. The two mechanics T4 switches off by default (outside rein carries the turn; the seat is a balance modifier) are still measured, with the requirement switched on in the test.
+
+Falsification found two redundant lines of my own, and both were resolved rather than counted away: a second copy of the aftercare order rule in `eftervardHandling` (removed — `Pass.farUtfora` owns it; the missing «already done» refusal was added and is now measured), and a test that could not tell «the check stopped at the finding» from «the rule refused the next moment» (sharpened).
+
+### 5.8 Not tested
+
+- **Roblox Studio runtime.** Nothing on this branch has run in the engine. Studio is connected, but Rojo serves another working tree. Bench specs only.
+- **Game feel and simplicity** — Tobias' gate (§4.7): PC, physical iPad, physical iPhone, Roblox and web. B4 changes riding feel and is not promoted without his judgment.
+- Gamepad on either platform beyond what the bench measures.
+- English was checked by the language gates, not read by a person.
+
+`READY_FOR_CHATGPT_REVIEW` — S1, S2, S3 implemented on Roblox and web.
