@@ -501,9 +501,8 @@ local function mount(model: Model, rittId: string?)
 	     återförening efter ett nekat nej — eller en ny. ]]
 	LektionController.start(anlaggning and anlaggning:FindFirstChild("UBRF"),
 		ride and ride.rittId)
-	--[[ Första uppsittningen: visa reglagen en gång, av sig själv. Då är
-	     frågan "vad gör jag nu?" som mest aktuell. ]]
-	KontrollHjalp.vidUppsittning()
+	--[[ #273 S1: kontrollistan öppnas inte av sig själv vid uppsittningen.
+	     Vänstermenyns fyra kärnrader står redan där. ]]
 
 	--[[ ══ EN VARNING SOM ALLTID FYRAR ÄR INGEN VARNING ═══════════════
 

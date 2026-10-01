@@ -1,10 +1,20 @@
 /* ══════════════════════════════════════════════════════════════════
    PEKSKÄRM — virtuell styrning för mobil och surfplatta.
    Joysticken till vänster och knapparna till höger skickar samma
-   tangenthändelser som tangentbordet, så all spellogik är orörd:
-   joystick upp = W (skänkel/gå), sida = A/D, knapparna mappas till
-   Space, E, Shift och togglarna. Kontexten (gå/ridning) avgör vilka
-   knappar som visas. Syns bara på enheter med pekskärm.
+   tangenthändelser som tangentbordet, så all spellogik är orörd.
+   Kontexten (gå/ridning) avgör vilka knappar som visas. Syns bara på
+   enheter med pekskärm.
+
+   I SADELN (#273 S1, T3): spaken STYR, och DRIV, BROMS och SITT AV är
+   de tre knapparna — samma enkla modell som Roblox pekyta. De sex
+   hjälpknapparna (TYGEL, HALVHALT, LÄTT, DJUP, LÄTTR., DIAG) står inte
+   i standardläget.
+
+   TÄVLINGENS MOMENTSERIE är undantaget, och det är T4:s egen regel: de
+   avancerade hjälperna får finnas «kontextuellt när en specifik övning
+   faktiskt behöver dem». Momentserien bedömer kontakt och halvhalt, så
+   där står den gamla satsen kvar orörd (#pekTavling) och spaken ger
+   skänkel som förut. Huvudvägen (G.p3) ser den aldrig.
    ══════════════════════════════════════════════════════════════════ */
 "use strict";
 
@@ -96,16 +106,24 @@ const PEKSKARM = matchMedia("(pointer:coarse)").matches || "ontouchstart" in win
       <button class="pekKnapp liten" data-hall="ShiftLeft" data-etikett="touch.webb.jogga">JOGGA</button>
       <button class="pekKnapp stor" data-tap="KeyE" data-etikett="touch.webb.anvand">ANVÄND</button>
     </div>
-    <!-- P3 § 3: E är SITT AV i sadeln och F halvhalten (Roblox bindningar).
-         Hjälpknapparna står kvar — de ÄR webbens inmatning. NÄSTA hör till
-         momentserien och visas bara där den finns (tävlingen). -->
+    <!-- #273 S1 (T3): spak + DRIV + BROMS + SITT AV, som Roblox. E är
+         SITT AV i sadeln. -->
     <div class="pekKnappar" id="pekRitt" style="display:none">
+      <div class="pekSmaRad">
+        <button class="pekKnapp liten" data-tap="KeyV" data-etikett="touch.webb.vy">VY</button>
+        <button class="pekKnapp liten" data-tap="KeyE" data-etikett="touch.sitt_av" id="pekSittAv">SITT AV</button>
+      </div>
+      <button class="pekKnapp stor" data-rid="broms" data-etikett="touch.broms" id="pekBroms">BROMS</button>
+      <button class="pekKnapp stor" data-rid="driv" data-etikett="touch.driv" id="pekDriv">DRIV</button>
+    </div>
+    <!-- Tävlingens momentserie (sidoaktivitet): den gamla satsen, orörd.
+         Visas bara när huvudvägen INTE rids (G.p3 falskt). -->
+    <div class="pekKnappar" id="pekTavling" style="display:none">
       <div class="pekSmaRad">
         <button class="pekKnapp liten" data-tap="KeyV" data-etikett="touch.webb.vy">VY</button>
         <button class="pekKnapp liten" data-tap="KeyR" data-etikett="touch.webb.lattr">LÄTTR.</button>
         <button class="pekKnapp liten" data-tap="KeyQ" data-etikett="touch.webb.diag">DIAG</button>
-        <button class="pekKnapp liten" data-tap="KeyN" data-etikett="touch.webb.nasta" id="pekNasta">NÄSTA</button>
-        <button class="pekKnapp liten" data-tap="KeyE" data-etikett="touch.sitt_av" id="pekSittAv">SITT AV</button>
+        <button class="pekKnapp liten" data-tap="KeyN" data-etikett="touch.webb.nasta">NÄSTA</button>
       </div>
       <div class="pekSmaRad">
         <button class="pekKnapp" data-hall="ShiftLeft" data-etikett="touch.webb.latt">LÄTT</button>
@@ -158,9 +176,15 @@ const PEKSKARM = matchMedia("(pointer:coarse)").matches || "ontouchstart" in win
     const kurva=v=>{const a=Math.abs(v);
       return Math.sign(v)*a*(EXPO+(1-EXPO)*a*a);};
     const dodzon=(v,d)=>Math.abs(v)<=d?0:Math.sign(v)*(Math.abs(v)-d)/(1-d);
+    /* #273 S1 (T3): I SADELN STYR SPAKEN, och bara det. Fart är DRIV och
+       BROMS. Förut skrev spakens höjdled skänkeln — då gav en sned tumme
+       i en sväng en framåtimpuls ingen bett om, och en spak som släpptes
+       bakifrån lästes som «driv». */
     if(typeof RIDIN!=="undefined"){
       RIDIN.styr=kurva(dodzon(dx*k,0.07));
-      RIDIN.skankel=kurva(dodzon(-dy*k,0.12));
+      /* Tävlingens momentserie har ingen DRIV-knapp: där ger spaken
+         skänkel som förut. */
+      if(typeof G!=="undefined"&&!G.p3)RIDIN.skankel=kurva(dodzon(-dy*k,0.12));
       RIDIN.pek=true;
     }
 
@@ -191,9 +215,18 @@ const PEKSKARM = matchMedia("(pointer:coarse)").matches || "ontouchstart" in win
     for(const ev of ["pointerup","pointercancel","pointerleave"])
       b.addEventListener(ev,()=>{b.classList.remove("ner"); tangent(code,false);});
   }
-  /* Håll-knapparna skickar tangenthändelser, och tangentlyssnaren i
-     game.js skriver dem till ridinputlagret — TYGEL, LÄTT och DJUP
-     hamnar alltså i samma kontrakt som spaken utan egen kod här. */
+  /* DRIV och BROMS är impulser i ridinputlagret (src/game.js ridDriv /
+     ridBroms) — ett tryck, ett steg. Inga syntetiska tangenter: W och S
+     hade skrivit i samma fält som spaken. */
+  for(const b of ui.querySelectorAll("[data-rid]")){
+    const vad=b.dataset.rid;
+    b.addEventListener("pointerdown",e=>{b.classList.add("ner");
+      if(vad==="driv"&&typeof ridDriv==="function")ridDriv();
+      if(vad==="broms"&&typeof ridBroms==="function")ridBroms();
+      e.preventDefault();});
+    for(const ev of ["pointerup","pointercancel","pointerleave"])
+      b.addEventListener(ev,()=>b.classList.remove("ner"));
+  }
   for(const b of ui.querySelectorAll("[data-tap]")){
     const code=b.dataset.tap;
     b.addEventListener("pointerdown",e=>{b.classList.add("ner");
@@ -204,7 +237,8 @@ const PEKSKARM = matchMedia("(pointer:coarse)").matches || "ontouchstart" in win
   }
 
   /* Visa rätt knappuppsättning för scenen; göm allt under overlay. */
-  const gang=document.getElementById("pekGang"), ritt=document.getElementById("pekRitt");
+  const gang=document.getElementById("pekGang"), ritt=document.getElementById("pekRitt"),
+    tavl=document.getElementById("pekTavling");
   setInterval(()=>{
     const ov2=document.getElementById("ov");
     const overlayUppe=ov2&&!ov2.classList.contains("hide");
@@ -212,10 +246,10 @@ const PEKSKARM = matchMedia("(pointer:coarse)").matches || "ontouchstart" in win
     const gar=G.scen==="gard"||G.scen==="stallinne"||G.scen==="ridhusinne";
     ui.style.display=overlayUppe||(!rider&&!gar)?"none":"";
     gang.style.display=gar?"":"none";
-    ritt.style.display=rider?"":"none";
-    const nasta=document.getElementById("pekNasta"), sittAv=document.getElementById("pekSittAv");
-    if(nasta)nasta.style.display=G.p3?"none":"";
-    if(sittAv)sittAv.style.display=G.p3?"":"none";
+    /* #273 S1: huvudvägen får spak + DRIV + BROMS + SITT AV; tävlingens
+       momentserie behåller sin gamla sats. */
+    ritt.style.display=rider&&G.p3?"":"none";
+    tavl.style.display=rider&&!G.p3?"":"none";
     pekEtiketter();
   },250);
 })();

@@ -82,6 +82,9 @@ local GRANSER: { [string]: Grans } = {
 		i rad — hon bockar av en checklista. Taket är därefter. ]]
 	PreparationMoment = { tak = 10, pafyll = 4 },
 	PassMoment = { tak = 10, pafyll = 4 },
+	--[[ #273: en handling är ett tryck per fas, inte en checklista. ]]
+	PreparationHandling = { tak = 6, pafyll = 2 },
+	PassHandling = { tak = 6, pafyll = 2 },
 
 	--[[ Ett fyndsvar är ett val bland få, och det görs en gång. ]]
 	PreparationSvar = { tak = 4, pafyll = 1 },

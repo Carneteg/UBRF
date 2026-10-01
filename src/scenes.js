@@ -22,8 +22,8 @@ function visaMeny(){
   <h1>Ridskolan</h1>
   <p style="font-size:16px;margin-top:4px">
     ${forsta
-      ? "Du styr inte hästen. Du styr fyra hjälper — skänkel, tygel, sits och styrning — och hon svarar på dem. Ridläraren visar dig resten."
-      : "Du styr inte hästen. Du styr fyra hjälper, och hon svarar på dem."}</p>
+      ? "Styr, driv på och bromsa — mer behöver du inte för att rida. Ridläraren visar dig resten."
+      : "Styr, driv på och bromsa. Hästen svarar på dig."}</p>
   <div class="btnrow" style="margin-top:16px">
     <button class="btn" id="bStart">${forsta?"Rid nu":"Till stallet"}</button>
     <button class="btn ghost" id="bTavling">Tävlingsdag</button>
@@ -148,7 +148,7 @@ function visaTilldelning(){
     ?`Tävlingsdag — ${G.tavling.klass.namn} i Påskhoppet. Du rider ${h.namn}. Sköt om ${h.namn} extra noga, domarna ser allt.`
     :`Tävlingsdag — dressyr LC på uteridbanan. Du rider ${h.namn}. Ren ridning slår djärv ridning i dag.`):null;
   const minne=hastminne(val);
-  const EGENHET={radd_for_spo:"är rädd för spö — det står på hästlistan. Låt bli F-tangenten.",
+  const EGENHET={radd_for_spo:"är rädd för spö — det står på hästlistan. Låt bli spöet.",
     blaser_upp_magen:"blåser upp magen när du gjordar. Vänta en stund och dra åt igen innan du sitter upp.",
     kittlig:"är kittlig — rykta med lugna, långsamma drag, annars registreras de inte.",
     svarfangad:"är svårfångad i hagen. Drar hästen sig undan: stå still och gå lugnt fram en gång till."};
@@ -545,7 +545,101 @@ function avslutaSkotsel(){
 }
 
 /* ── Resultatet ── */
+/* ── #273 S3 (T1): EFTERVÅRDEN ÄR ETT VAL ─────────────────────────
+   Efter avsittningen i huvudvägen: «Stallet tar hand om henne» eller «Ta
+   hand om henne själv». Reglerna bor i `Efter` (src/forberedelse.js, porten
+   av Roblox Pass.handlingar); den här funktionen ritar och skickar.
+
+   Egen eftervård är tre handlingar, en i taget, och stallet finns kvar som
+   väg ut hela tiden. Den lilla positiva effekten läggs på hästens
+   förtroende (webbens relation) när eftervården är klar — stallets hand
+   ger noll, och det är golvet, inte ett avdrag.
+
+   [PLATTFORMSSKILLNAD, redovisad] Webben räknar passet vid avsittningen
+   (avslutaBana → registreraPass), alltså FÖRE valet; Roblox räknar det när
+   valet är gjort. Utfallet för spelaren är detsamma på båda vägarna:
+   passet räknas, utan straff. */
+const EFTER_TEXT={
+  sadla_av:{knapp:()=>tSpr("eftervard.sadla_av"),text:()=>tSpr("eftervard.sadla_av_text")},
+  transa_av:{knapp:()=>tSpr("eftervard.transa_av"),text:()=>tSpr("eftervard.transa_av_text")},
+  ta_hand:{knapp:()=>tSpr("eftervard.ta_hand"),text:()=>tSpr("eftervard.ta_hand_text")},
+};
+function efterKlar(dom){
+  const e=G.efter, andel=Efter.egenAndel(e);
+  if(andel>0&&typeof SPAR!=="undefined"&&SPAR&&SPAR.fortroende&&SPAR.fortroende[e.hastId]){
+    const m=SPAR.fortroende[e.hastId];
+    m.rang=clamp((m.rang??0.45)+Efter.BONUS*andel,0,1);
+    if(typeof sparaRyttare==="function")sparaRyttare();
+  }
+  visaResultat(dom);
+}
+function visaEftervard(dom){
+  const e=G.efter;
+  const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const sv=typeof SPRAKET==="undefined"||SPRAKET!=="en";
+  const hd=Efter.nastaHandling(e);
+  const sjalv=e.sjalv||Efter.borjad(e);
+  const T=hd&&EFTER_TEXT[hd.id];
+  /* Kunskapslagret: handlingens moment med kanonens egna meningar. Stängt
+     tills spelaren öppnar det. */
+  const kunskap=sjalv&&hd?hd.moment.map(m=>`${(!sv&&m.namnEn)||m.namn} — ${(!sv&&m.textEn)||m.text}`):[];
+  overlay(true,`
+  <span class="lbl">${esc(tSpr("hud.ta_hand_om_henne"))}</span>
+  <h1 style="margin-top:8px" id="efterText">${esc(sjalv&&T?T.text():tSpr("eftervard.val_text"))}</h1>
+  ${kunskap.length?`<details class="note" style="font-size:13px"><summary>${esc(tSpr("handling.kunskap"))}</summary>
+    <ul style="margin:6px 0 0 18px">${kunskap.map(t=>`<li>${esc(t)}</li>`).join("")}</ul></details>`:""}
+  <div class="btnrow">
+    ${sjalv&&T
+      ?`<button class="btn" id="bEfterHandling" data-handling="${hd.id}">${esc(T.knapp())}</button>
+        <button class="btn ghost" id="bEfterStallet">${esc(tSpr("eftervard.stallet_resten"))}</button>`
+      :`<button class="btn" id="bEfterStallet">${esc(tSpr("eftervard.stallet"))}</button>
+        <button class="btn ghost" id="bEfterSjalv">${esc(tSpr("eftervard.sjalv"))}</button>`}
+  </div>`);
+  const bS=document.getElementById("bEfterStallet");
+  if(bS)bS.onclick=()=>{Efter.stallet(e);efterKlar(dom);};
+  const bJ=document.getElementById("bEfterSjalv");
+  if(bJ)bJ.onclick=()=>{e.sjalv=true;visaEftervard(dom);};
+  const bH=document.getElementById("bEfterHandling");
+  if(bH)bH.onclick=()=>{
+    const r=Efter.utforHandling(e,bH.dataset.handling);
+    if(!r[0]){saga(typeof skAvslag==="function"?skAvslag(r):tSpr(r[1]),3);return;}
+    if(e.klar)efterKlar(dom);else visaEftervard(dom);
+  };
+}
+
+/* ── #273 S2 (A3): TILLBAKA TILL STEGKORTET, inte till den gamla skötseln ──
+   «Samma häst igen» och «Rid igen — ny häst» öppnade förut `visaSkotsel`
+   (det gamla minispelet, med straff för den som hoppade över) och
+   ridlärarens `visaTilldelning`. Nu går båda till samma väg som första
+   gången: hästen i sin box, stegkortet med «Rida nu» eller «själv».
+
+   En ny häst väljs med tilldelningens egen regel (rotationen förbi den hon
+   just red och förbi dem som vilar). En vilande häst delas aldrig ut. */
+function ridIgenMed(id){
+  overlay(false);hudLage("gang");
+  if(!id||!sattAktivHast(id)){
+    G.hastId=null;G.skotselRes=null;
+    gaTill("stallinne",{x:7.5,y:40,rikt:-Math.PI/2});
+    saga(tSpr("spel.ingen_hast"),5);
+    return false;
+  }
+  const b=(typeof hittaBox==="function"&&hittaBox(id))||{dorr:[7.5,40]};
+  gaTill("stallinne",{x:7.5,y:b.dorr[1],rikt:0});
+  saga(tSpr("spel.dagens_hast",HORSES[id].namn),4);
+  return true;
+}
+function nastaHastEfter(nuvarande){
+  const vilande={},upptagna={};
+  for(const id of Object.keys(HORSES))
+    if(typeof hastVilarForSkada==="function"&&hastVilarForSkada(id))vilande[id]=true;
+  if(nuvarande)upptagna[nuvarande]=true;
+  return tilldelaLedig(tilldelningsId(),upptagna,vilande,null)
+    ||tilldelaLedig(tilldelningsId(),{},vilande,null);
+}
+
 function visaResultat(dom){
+  /* #273 S3: i huvudvägen kommer eftervårdens val först. */
+  if(dom&&dom.p3&&G.efter&&!G.efter.klar&&typeof Efter!=="undefined"){visaEftervard(dom);return;}
   const h=HORSES[G.hastId];
   const inv=Object.values(G.betyg);
   const snitt=inv.length?inv.reduce((a,b)=>a+b,0)/inv.length:0;
@@ -572,6 +666,8 @@ function visaResultat(dom){
   overlay(true,`
   <span class="lbl">${p3?tSpr("hud.passet_sparat"):"Efter lektionen"}</span>
   <h1 style="margin-top:8px">”${p3?tSpr("hud.bra_jobbat"):omdome}”</h1>
+  ${p3&&G.efter?`<p class="note" id="efterUtfall" style="font-size:14px">${
+    Efter.egenAndel(G.efter)>0?tSpr("eftervard.egen_klar"):tSpr("eftervard.stallet_klar")}</p>`:""}
   ${typeof efterPassHTML==="function"?efterPassHTML():""}
   <div style="display:${p3?"none":"grid"};grid-template-columns:1fr 1fr;gap:22px;margin-top:10px">
     <div>
@@ -607,25 +703,17 @@ function visaResultat(dom){
     <button class="btn ghost" id="bSamma">Samma häst igen</button>
   </div>`);
   if(typeof kopplaEfterPass==="function")kopplaEfterPass();
-  document.getElementById("bIgen").onclick=()=>{G.seed++;nollstall();
-    G.hastId=null;G.skotselRes=null;overlay(false);hudLage("gang");
-    gaTill("stallinne",{x:7.5,y:40,rikt:-Math.PI/2});
-    saga("Tillbaka i stallgången. Ridläraren fördelar hästarna.",3.5);};
+  /* #273 S2 (A3): båda knapparna leder till stegkortet vid boxen. */
+  document.getElementById("bIgen").onclick=()=>{
+    const forra=G.hastId;
+    G.seed++;nollstall();G.efter=null;
+    ridIgenMed(nastaHastEfter(forra));};
   document.getElementById("bSamma").onclick=()=>{
-    const mS=hastminne(G.hastId);
-    if(mS.skada&&mS.skada.passKvar>0){
-      G.seed++;nollstall();G.hastId=null;G.skotselRes=null;overlay(false);hudLage("gang");
-      gaTill("stallinne",{x:7.5,y:40,rikt:-Math.PI/2});
-      saga(`${h.namn} står på vila — ${mS.skada.namn}. Ridläraren ger dig en annan häst.`,4);
-      return;
-    }
-    nollstall();
-    G.skotselRes=null;G.hastPlats="box";G.tackePa=false;G.hastMott=true;
-    G.utrustning=true;G.lerig=false;G.spolad=0;   // sadeln är redan hämtad
-    overlay(false);hudLage("gang");
-    const b=hittaBox(G.hastId)||{dorr:[7.5,12]};
-    gaTill("stallinne",{x:7.5,y:b.dorr[1],rikt:0});
-    visaSkotsel();};
+    const samma=G.hastId;
+    const vilar=typeof hastVilarForSkada==="function"&&hastVilarForSkada(samma);
+    nollstall();G.efter=null;
+    if(vilar){G.seed++;ridIgenMed(nastaHastEfter(samma));return;}
+    ridIgenMed(samma);};
 }
 function nollstall(){
   /* `nollstall` rör INTE var hästen är: den nollar ritten, inte

@@ -8,13 +8,18 @@
    keydown/keyup och pekknapparnas etiketter i src/mobil.js. Ingenting här
    ändrar en bindning, och ridfysik, hjälpsemantik och hoppmodell rörs inte.
 
-   WEBBEN RIDER MED HJÄLPERNA. Roblox stegar gångarterna med W/S; webben
-   rider med skänkel, tygel och sits (src/riding/hjalper.js, svar.js) — den
-   deklarerade plattformsskillnaden i paritetsrevisionen. Därför säger
-   kärnraderna 1–2 «Driv på — skänkel» och «Bromsa — skänkel bak och tygel»
-   i stället för Roblox «Ett steg upp/ned i gångarterna». Hierarkin är
-   densamma: fyra kärnrader, `?` för resten. Ingen rad nämner en tangent
-   webben inte har.
+   ETT TRYCK, ETT STEG (#273 S1). Kärnraderna 1–2 säger samma sak som
+   Roblox «Ett steg upp/ned i gångarterna», med ett reglage var: W/↑ och
+   S/↓ på tangentbord, DRIV och BROMS på pek. Under dem ligger webbens
+   egen ridmodell (skänkelimpuls upp, halvhalt ned) — spelaren behöver
+   inte kunna den för att rida. Hierarkin: fyra kärnrader, resten bakom
+   `?`, och hjälperna sist under rubriken «Avancerat». Ingen rad nämner
+   en tangent webben inte har.
+
+   `avancerat` märker en hjälp som INTE behövs i grundridningen (tygel,
+   halvhalt, sits, lättridning, diagonal, spö). De är bundna på
+   tangentbord och gör vad de alltid gjort; på pek har de ingen knapp i
+   standardläget (#273 T3), och raden hoppas då över.
 
    REGLAGEN FÖLJER INMATNINGEN. En ren pekenhet får knapparnas egna
    etiketter; en rad utan reglage på den inmatningen hoppas över (Roblox
@@ -25,18 +30,18 @@
    (`hjalp.webb.mellanslag`). `pek` är en språknyckel till knappens etikett. */
 
 const KONTROLL_RADER = [
-  { nyckel: "hjalp.sitt_upp_av",       tgb: "E",                      pek: "touch.sitt_av" },
-  { nyckel: "hjalp.webb.driv",         tgb: "W / ↑",                  pek: "hjalp.webb.spak_fram" },
-  { nyckel: "hjalp.webb.bromsa",       tgb: "S / ↓ + %MELLANSLAG%",   pek: "hjalp.webb.spak_bak_tygel" },
+  { nyckel: "hjalp.webb.driv",         tgb: "W / ↑",                  pek: "touch.driv" },
+  { nyckel: "hjalp.webb.bromsa",       tgb: "S / ↓",                  pek: "touch.broms" },
   { nyckel: "hjalp.styr",              tgb: "A / D",                  pek: "hjalp.spaken" },
-  { nyckel: "hjalp.tygel",             tgb: "%MELLANSLAG%",           pek: "touch.webb.tygel" },
-  { nyckel: "hjalp.halvhalt",          tgb: "F",                      pek: "touch.webb.halvhalt" },
-  { nyckel: "hjalp.webb.sits",         tgb: "Shift / Ctrl",           pek: "touch.webb.latt_djup" },
-  { nyckel: "hjalp.webb.lattridning",  tgb: "R",                      pek: "touch.webb.lattr" },
-  { nyckel: "hjalp.webb.diagonal",     tgb: "Q",                      pek: "touch.webb.diag" },
-  { nyckel: "hjalp.webb.spo",          tgb: "G",                      pek: "" },
+  { nyckel: "hjalp.sitt_upp_av",       tgb: "E",                      pek: "touch.sitt_av" },
   { nyckel: "hjalp.webb.vy",           tgb: "V",                      pek: "touch.webb.vy" },
   { nyckel: "hjalp.denna_hjalp",       tgb: "H",                      pek: "?" },
+  { nyckel: "hjalp.tygel",             tgb: "%MELLANSLAG%",           pek: "", avancerat: true },
+  { nyckel: "hjalp.halvhalt",          tgb: "F",                      pek: "", avancerat: true },
+  { nyckel: "hjalp.webb.sits",         tgb: "Shift / Ctrl",           pek: "", avancerat: true },
+  { nyckel: "hjalp.webb.lattridning",  tgb: "R",                      pek: "", avancerat: true },
+  { nyckel: "hjalp.webb.diagonal",     tgb: "Q",                      pek: "", avancerat: true },
+  { nyckel: "hjalp.webb.spo",          tgb: "G",                      pek: "", avancerat: true },
 ];
 /* Ridpanelens fyra kärnrader, i Roblox RIDKARNA-ordning: upp, ned, styr,
    sitt upp/av. */
@@ -71,7 +76,7 @@ function kontrollRader(sort){
   const ut = [];
   for (const r of KONTROLL_RADER) {
     const reglage = kontrollReglage(r, s);
-    if (reglage) ut.push({ nyckel: r.nyckel, vad: khT(r.nyckel), reglage });
+    if (reglage) ut.push({ nyckel: r.nyckel, vad: khT(r.nyckel), reglage, avancerat: !!r.avancerat });
   }
   return ut;
 }
@@ -86,7 +91,16 @@ function kontrollReglageFor(nyckel, sort){
   return r ? r.reglage : null;
 }
 
-let kontrollVisadEnGang = false;
+/* Listan som den RITAS: kärnan och det vardagliga först, sedan rubriken
+   «Avancerat» och hjälperna under den. Rubriken finns bara när det finns
+   något att sätta under den — på pek gör det inte det. */
+function kontrollListrader(sort){
+  const alla = kontrollRader(sort);
+  const ut = alla.filter(r => !r.avancerat);
+  const av = alla.filter(r => r.avancerat);
+  if (av.length) ut.push({ rubrik: true, vad: khT("hjalp.avancerat"), reglage: "" }, ...av);
+  return ut;
+}
 
 function kontrollHjalpEl(){
   if (typeof document === "undefined") return null;
@@ -102,12 +116,12 @@ function kontrollHjalpEl(){
 function ritaKontrollHjalp(){
   const el = kontrollHjalpEl();
   if (!el) return null;
-  const rader = kontrollRader();
+  const rader = kontrollListrader();
   const tgb = kontrollInmatning() !== "touch";
   el.innerHTML =
     `<div class="khRubrik"></div>`
-    + `<div class="khRader">` + rader.map(() =>
-        `<div class="khRad"><span class="khVad"></span>`
+    + `<div class="khRader">` + rader.map(r =>
+        `<div class="khRad${r.rubrik ? " khAvancerat" : ""}"><span class="khVad"></span>`
         + `<span class="khReglage"></span></div>`).join("")
     + `</div>`
     /* Stängknappen finns även utan tangentbord: en panel som bara går att
@@ -158,19 +172,15 @@ function kontrollHjalpSprak(){
   if (el && !el.hidden && el.dataset.sprak !== (typeof SPRAKET !== "undefined" ? SPRAKET : "sv")) ritaKontrollHjalp();
 }
 
-/* Första uppsittningen i sessionen: visa reglagen en gång, av sig själv
-   (Roblox KontrollHjalp.vidUppsittning, P3 § 1.7). */
-function kontrollHjalpVidUppsittning(){
-  if (kontrollVisadEnGang) return false;
-  kontrollVisadEnGang = true;
-  return visaKontrollHjalp();
-}
+/* #273 S1: listan öppnas ALDRIG av sig själv — inte heller vid första
+   uppsittningen. H och panelens `?` är de enda vägarna in. */
 
 if (typeof window !== "undefined") {
   window.KONTROLL_RADER = KONTROLL_RADER;
   window.KONTROLL_KARNA = KONTROLL_KARNA;
   window.kontrollRader = kontrollRader;
   window.kontrollRidrader = kontrollRidrader;
+  window.kontrollListrader = kontrollListrader;
   window.kontrollReglageFor = kontrollReglageFor;
   window.kontrollInmatning = kontrollInmatning;
   window.visaKontrollHjalp = visaKontrollHjalp;
@@ -178,5 +188,4 @@ if (typeof window !== "undefined") {
   window.vaxlaKontrollHjalp = vaxlaKontrollHjalp;
   window.kontrollHjalpSynlig = kontrollHjalpSynlig;
   window.kontrollHjalpSprak = kontrollHjalpSprak;
-  window.kontrollHjalpVidUppsittning = kontrollHjalpVidUppsittning;
 }
