@@ -9,10 +9,11 @@ Spel om Upplands-Bro Ryttarförening (ubrf.se), Husbyvägen 1A, Bro. Man rider, 
 3. `docs/ASSET-SOURCE-OF-TRUTH.md`
 4. `docs/ENVIRONMENT-DELIVERY.md` (senaste rollbeslut, verktyg och två spelplattformar)
 5. `docs/AI-COLLABORATION.md`
-6. `docs/ACTIVE-GATE.md`
-7. relevant implementation-/referensdokumentation
+6. `docs/JEV-USAGE-POLICY.md` när Jev/TypeSafe, probabilistisk routing eller extern AI i runtime/QA berörs
+7. `docs/ACTIVE-GATE.md`
+8. relevant implementation-/referensdokumentation
 
-`docs/DELIVERY-PROTOCOL.md` är bindande för status, evidens, falsifiering, review, human acceptance och merge. Om äldre dokument antyder att implementerande agent själv kan slutgodkänna sitt arbete gäller leveransprotokollet. Tobias senaste uttryckliga produktbeslut har högst prioritet. `docs/ENVIRONMENT-DELIVERY.md` förtydligar den nuvarande ansvarsfördelningen: Replit bygger miljön, Claude bygger gameplay och integration, ChatGPT orkestrerar och granskar, Tobias godkänner. Äldre rolluppdrag som motsäger detta gäller inte.
+`docs/DELIVERY-PROTOCOL.md` är bindande för status, evidens, falsifiering, review, human acceptance och merge. `docs/JEV-USAGE-POLICY.md` är bindande för när Jev/TypeSafe får användas: deterministisk kod äger regler och konsekvenser; Jev får endast vara ett begränsat beslutslager med validering, fallback och rätt rollout-gate. Varje icke-trivialt gameplay-, integrations-, QA- eller produktionsjobb ska dessutom göra ett uttryckligt `JEV_DECISION` enligt policyn (`JEV_NOT_NEEDED`, `JEV_OFFLINE_QA_CANDIDATE`, `JEV_SHADOW_CANDIDATE` eller `JEV_FUTURE_PILOT_CANDIDATE`) innan implementationen expanderar, och upprepa beslutet i leveransrapporten. Klassificeringen är inte ett tillstånd att aktivera Jev. Om äldre dokument antyder att implementerande agent själv kan slutgodkänna sitt arbete gäller leveransprotokollet. Tobias senaste uttryckliga produktbeslut har högst prioritet. `docs/ENVIRONMENT-DELIVERY.md` förtydligar den nuvarande ansvarsfördelningen: Replit bygger miljön, Claude bygger gameplay och integration, ChatGPT orkestrerar och granskar, Tobias godkänner. Äldre rolluppdrag som motsäger detta gäller inte.
 
 ## Låst produktkärna
 
@@ -97,6 +98,13 @@ Vid konflikt gäller denna ordning:
 - lämnar bevis, kända begränsningar och commit-SHA,
 - expanderar inte scope på eget initiativ,
 - använder den gemensamma verktygskedjan och ändrar inte Replits aktiva miljöfiler utan samordning.
+
+### Jev-beslut i varje jobb
+Före implementation ska Claude för varje icke-trivialt gameplay-, integrations-, QA- eller produktionsjobb skriva:
+
+`JEV_DECISION: <klassificering> — <kort motivering>`
+
+Om uppgiften gäller deterministiska regler, kontroller, safety/welfare, fysik, pass/fail, progression eller persistence ska default vara `JEV_NOT_NEEDED`. Potentiella framtida Jev-case får markeras men inte smygimplementeras utanför aktuell scope.
 
 ### Arbetsloop
 1. Tobias anger mål/problem.

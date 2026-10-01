@@ -25,6 +25,33 @@ Jules ligger i en frivillig sidokanal. Leveransen får aldrig stå och vänta p�
 - Webben får inte förfalla till en icke-spelbar demo.
 - När logik delas mellan plattformarna ska avsikt, regler, parametrar och acceptance criteria hållas i paritet; rendering, UI och inputadapter får vara plattformsspecifika.
 
+## Jev / TypeSafe — beslutslager, inte beslutsägare
+
+Jev följer den bindande policyn i `docs/JEV-USAGE-POLICY.md`.
+
+Kortversion:
+
+- deterministisk kod äger regler, säkerhet, poäng, progression, fysik, persistence och tävlingsresultat;
+- Jev används bara när ett begränsat val mellan säkra alternativ är kontextberoende eller tvetydigt;
+- input valideras deterministiskt **före** nätverksanrop;
+- runtime har alltid deterministisk fallback och får inte blockera på Jev;
+- secrets hålls server-/tool-side och exponeras aldrig i klient eller logg;
+- player data/PII och fri spelartext skickas inte utan uttryckligt separat beslut;
+- ny runtime-användning går `offline PoC → shadow → eventuell pilot → player-visible`, aldrig direkt till spelaren;
+- player-visible Jev kräver Tobias uttryckliga produktbeslut och hanterad Roblox/webb-paritet;
+- shadow-/instrumentationsexperiment får vara plattformsspecifika endast när de är avstängda som standard, osynliga för spelaren och uttryckligen godkända.
+
+UBRF:s primära kandidat är Ugneta: Jev kan prioritera ett coaching focus ur en allow-list efter validerad telemetri. Jev får inte hitta på observationer som spelet inte mäter och får inte avgöra om en lektion är godkänd.
+
+Varje icke-trivialt gameplay-, integrations-, QA- eller produktionsjobb ska också göra ett explicit Jev-beslut:
+
+- `JEV_NOT_NEEDED`
+- `JEV_OFFLINE_QA_CANDIDATE`
+- `JEV_SHADOW_CANDIDATE`
+- `JEV_FUTURE_PILOT_CANDIDATE`
+
+Beslutet ska skrivas som `JEV_DECISION: <klassificering> — <kort motivering>` i briefen/arbetsstarten och upprepas i builderns handoff. Klassificeringen är inte authorization att aktivera Jev; rollout-gaterna i policyn gäller fortfarande.
+
 ## Roll: ChatGPT
 
 ChatGPT ansvarar främst för **vad som bör byggas, varför, i vilken ordning och hur vi vet att det blev bra**.
@@ -110,6 +137,7 @@ Minst:
 - Acceptance tests
 - Human gate
 - Known uncertainty
+- `JEV_DECISION` med klassificering och kort motivering
 
 ### 3. Claude implementerar
 
@@ -202,7 +230,8 @@ Claude → review:
 6. Not tested
 7. Remaining risk
 8. Human gate
-9. SHA
+9. `JEV_DECISION`
+10. SHA
 
 När Jules används:
 
