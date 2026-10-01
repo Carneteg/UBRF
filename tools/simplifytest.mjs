@@ -265,6 +265,10 @@ const bevakaGamla = page => page.evaluate(() => {
   window.visaSkotsel = function () { __gamla.skotsel++; return s.apply(this, arguments); };
   window.visaTilldelning = function () { __gamla.tilldelning++; return t.apply(this, arguments); };
 });
+/* Stegkortet ritas i spelloopen; den nya scenens första bildruta kan ta
+   över en sekund i CI. Vänta på kortet, inte på klockan. */
+const vantaStegkort = page => page.waitForFunction(() => { const el = document.getElementById("stegkort"); return !!el && !el.hidden; },
+  null, { timeout: 20000 }).catch(() => {});
 const efterKnappen = page => page.evaluate(() => {
   const el = document.getElementById("stegkort");
   return { scen: G.scen, hastId: G.hastId, plats: G.hastPlats, utrustning: G.utrustning,
@@ -301,7 +305,7 @@ console.log("\n── D. S3: «Stallet tar hand om henne» ──");
   prova("passet räknades inte en gång till av valet", (await page.evaluate(() => SPAR.pass)) === fore.pass + 1);
 
   console.log("\n── E. S2 (A3): «Samma häst igen» leder till stegkortet ──");
-  await page.click("#bSamma"); await vanta(page, 700);
+  await page.click("#bSamma"); await vanta(page, 700); await vantaStegkort(page);
   const s = await efterKnappen(page);
   prova("ingen overlay: varken den gamla skötseln eller tilldelningen öppnades",
     !s.overlay && s.gamla.skotsel === 0 && s.gamla.tilldelning === 0, JSON.stringify(s.gamla));
@@ -352,7 +356,7 @@ console.log("\n── D2. S3: «Ta hand om henne själv» ──");
     `${rang0.toFixed(4)} → ${rang1.toFixed(4)}`);
 
   console.log("\n── E2. S2 (A3): «Rid igen — ny häst» leder till stegkortet ──");
-  await page.click("#bIgen"); await vanta(page, 700);
+  await page.click("#bIgen"); await vanta(page, 700); await vantaStegkort(page);
   const s = await efterKnappen(page);
   prova("ingen overlay: varken tilldelningen eller den gamla skötseln öppnades",
     !s.overlay && s.gamla.skotsel === 0 && s.gamla.tilldelning === 0, JSON.stringify(s.gamla));
