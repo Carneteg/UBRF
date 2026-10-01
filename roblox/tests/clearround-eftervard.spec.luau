@@ -251,21 +251,29 @@ print("\n── 3. Resultatkortet: raden ur serverns bild ──")
 	local kontext = { typ = "clearround", ritt = "r1" }
 	Sprak.satVal("sv")
 	local t = A.text(bild(kanon), kontext)
-	check("sv: raden med kanonens namn i ordning", t ~= nil and string.find(t,
-		"eftervården väntar: Lossa gjorden · Ta av sadeln · Ta av tränset · Känn igenom benen · Vatten och hö.", 1, true) ~= nil, t)
+	--[[ #273 S3 (T1): raden lovar VALET, inte fem moment. ]]
+	local SV = "När ni är klara: sitt av. Sedan väljer du om stallet tar hand om henne eller om du gör det själv."
+	local EN = "When you are done: dismount. Then you choose whether the stable looks after her or you do it yourself."
+	check("sv: raden säger valet — stallet eller själv", t ~= nil and string.find(t, SV, 1, true) ~= nil, t)
+	local gamla = false
+	for _, e in ipairs(Pass.EFTERVARD) do
+		if string.find(t, e.namn, 1, true) ~= nil then gamla = true end
+	end
+	check("sv: inget av de fem momenten räknas upp, och inget «väntar»", not gamla
+		and string.find(t, "eftervården väntar", 1, true) == nil, t)
 	Sprak.satVal("en")
 	t = A.text(bild(kanon), kontext)
-	check("en: the aftercare line", t ~= nil and string.find(t,
-		"the aftercare is waiting: Loosen the girth · Take off the saddle", 1, true) ~= nil, t)
+	local gamlaEn = false
+	for _, e in ipairs(Pass.EFTERVARD) do
+		if string.find(t, e.namnEn, 1, true) ~= nil then gamlaEn = true end
+	end
+	check("en: the choice line, no moment list", t ~= nil and string.find(t, EN, 1, true) ~= nil
+		and not gamlaEn and string.find(t, "aftercare is waiting", 1, true) == nil, t)
 	Sprak.satVal("sv")
-	local annan = { { id = "x", namn = "Borsta", namnEn = "Brush" }, { id = "y", namn = "Filt på", namnEn = "Rug on" } }
-	t = A.text(bild(annan), kontext)
-	check("raden följer bilden (deklarerad annan lista syns ordagrant)", t ~= nil
-		and string.find(t, "eftervården väntar: Borsta · Filt på.", 1, true) ~= nil, t)
 	t = A.text(bild(nil), kontext)
-	check("utan eftervård i bilden: ingen rad", t ~= nil and string.find(t, "eftervården", 1, true) == nil, t)
-	t = A.text(bild({ { id = "x", namn = "" } }), kontext)
-	check("trasig lista: ingen rad", t ~= nil and string.find(t, "eftervården", 1, true) == nil, t)
+	check("utan eftervård i bilden: ingen rad", t ~= nil and string.find(t, "Sedan väljer du", 1, true) == nil, t)
+	t = A.text(bild({}), kontext)
+	check("tom lista: ingen rad", t ~= nil and string.find(t, "Sedan väljer du", 1, true) == nil, t)
 	check("aldrig i banans läge", A.text(bild(kanon, "course"), kontext) == nil)
 end)()
 
