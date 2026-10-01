@@ -311,7 +311,7 @@ console.log("\n── #274: rätt svar sparar vilan först och räknar dagen en 
       skr: skr.map(s => ({ pass: s.pass, kvar: s.fortroende[h] && s.fortroende[h].skada ? s.fortroende[h].skada.passKvar : null })),
       kort: el.dataset.kort,
       knappar: [...el.querySelectorAll("button")].map(b => b.dataset.id || b.textContent.trim()),
-      pass: SPAR.pass, skada: SPAR.fortroende[h].skada || null,
+      pass: SPAR.pass, skada: (SPAR.fortroende[h] || {}).skada || null,
       annan: SPAR.fortroende[annan].skada ? SPAR.fortroende[annan].skada.passKvar : 0,
       sparat: JSON.parse(localStorage.getItem(nyckel)), stoppad: G.forb ? G.forb.stoppad : null,
       igen: registreraValfardsstopp(G.forb), passIgen: SPAR.pass,
@@ -329,8 +329,8 @@ console.log("\n── #274: rätt svar sparar vilan först och räknar dagen en 
     `${JSON.stringify(d.skada)} · stoppad ${d.stoppad}`);
   prova("dagen räknar ned de andra hästarnas vila också", d.annan === 1, `${annan}: 2 → ${d.annan}`);
   prova("profilen är sparad med vila och räknat pass",
-    d.sparat.pass === fyndPass + 1 && !!(d.sparat.fortroende[h].skada && d.sparat.fortroende[h].skada.passKvar === 1),
-    `pass ${d.sparat.pass} · ${JSON.stringify(d.sparat.fortroende[h].skada)}`);
+    d.sparat.pass === fyndPass + 1 && !!((d.sparat.fortroende[h] || {}).skada && d.sparat.fortroende[h].skada.passKvar === 1),
+    `pass ${d.sparat.pass} · ${JSON.stringify((d.sparat.fortroende[h] || {}).skada)}`);
   /* Bytet tar inte tillbaka henne samma dag. */
   await tillRidlararen(p);
   const lista = await bytesLista(p);
