@@ -66,7 +66,7 @@ for (const vy of vyer) {
   await page.waitForTimeout(2500);
 
   /* Ett helt varv med A intryckt. Etiketten mäts varje steg. */
-  let synliga = 0, varsta = null, bredast = 0, flest = 0, flestTxt = "";
+  let synliga = 0, varsta = null, bredast = 0, flest = 0, flestTxt = "", onodigt = null;
   await page.keyboard.down("KeyA");
   for (let i = 0; i < 32; i++) {
     await page.waitForTimeout(250);
@@ -85,6 +85,7 @@ for (const vy of vyer) {
         - parseFloat(cs.borderTopWidth) - parseFloat(cs.borderBottomWidth);
       return { l: Math.round(r.left), r: Math.round(r.right), w: Math.round(r.width),
         t: Math.round(r.top), b: Math.round(r.bottom), txt: (e.textContent || "").trim(),
+        tak: parseFloat(cs.maxWidth) || 0,
         rader: Math.max(1, Math.round(inre / rad)) };
     });
     if (!m) continue;
@@ -92,7 +93,14 @@ for (const vy of vyer) {
     bredast = Math.max(bredast, m.w);
     /* Texten följer med i utskriften: ett rött «2 rader» utan att säga
        VILKEN rubrik som bröts går inte att felsöka i CI. */
-    if (m.rader > flest) flestTxt = `"${m.txt}" ${m.w} px`;
+    if (m.rader > flest) flestTxt = `"${m.txt}" ${m.w} px av tak ${m.tak} px`;
+    /* EN BRUTEN RUBRIK ÄR BARA ETT FEL NÄR DEN HADE RYMTS. Sedan P1b bär
+       etiketten den tilldelade hästens namn, och hästen följer profilen:
+       «DIN HÄST · BERRA (Irco MencoBoy)» ryms inte på en rad inom
+       etikettens maxbredd, och då är radbrytningen rätt. Det som ska
+       fällas är en rubrik som brutits FAST den är smalare än taket — den
+       smala klumpen kommentaren nedan beskriver. */
+    if (m.rader > 1 && !(m.tak > 0 && m.w >= m.tak - 1) && !onodigt) onodigt = m;
     flest = Math.max(flest, m.rader);
     const ut = Math.max(0, -m.l, m.r - vy.width, -m.t, m.b - vy.height);
     if (ut > 0 && (!varsta || ut > varsta.ut)) varsta = { ...m, ut };
@@ -116,7 +124,9 @@ for (const vy of vyer) {
      en smal klump i stället för att klampas rätt — vilket ett tidigare
      utkast av rättelsen faktiskt gjorde (98 px i stället för 231). */
   if (vy.width >= 420) prova(`${vy.namn}: rubriken bryts inte i onödan`,
-    flest === 1, `flest ${flest} rader, bredast ${bredast} px · ${flestTxt}`);
+    onodigt === null, onodigt
+      ? `"${onodigt.txt}" bröts till ${onodigt.rader} rader på ${onodigt.w} px, fast taket är ${onodigt.tak} px`
+      : `flest ${flest} rader, bredast ${bredast} px · ${flestTxt}`);
 
   await page.close();
 }
