@@ -385,7 +385,13 @@ sektion = "D: hela produktionsvägen";
 {
   const TANGENT = { N:"w", S:"s", O:"d", V:"a" };
   async function gaHit(mal, namn, maxMs = 150000) {
-    await ev(({ m }) => { satMal(m[0], m[1]); }, { m: mal });
+    /* KARTAN, vald i DEN HÄR scenen. Sedan P3 ger en flytt till en annan
+       scen 3D-vyn igen (`vyEfterFlytt`), och `G.vy = "2d"` före flytten
+       räcker inte längre. I CI:s mjukvarurendering blir 3D-bildrutorna så
+       långa att gå-hit inte hinner fram: på draft-PR #275 (8927a18) nådde
+       hon aldrig boxen, och hela kedjan föll. Varje ben väljer därför
+       kartan själv — samma val en spelare gör med V efter dörren. */
+    await ev(({ m }) => { if (G.vy !== "2d") vaxlaVy(); satMal(m[0], m[1]); }, { m: mal });
     let p = await ev(() => ({ x: VD.px, y: VD.py })), stilla = 0, t = 0;
     while (t < maxMs) {
       await page.waitForTimeout(250); t += 250;
