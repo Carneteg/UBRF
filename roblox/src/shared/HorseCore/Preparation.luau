@@ -134,8 +134,13 @@ local function halsMoment()
 		table.insert(ut, {
 			id = "halsa" .. i,
 			namn = h.t,
-			text = h.svar,
-			steg = 1,
+			--[[ UI-2: hälsningen är handlingar i ordning (man talar innan man
+			     rör). Som i varje checklista är `text` nästa instruktion —
+			     Ugnetas ord för handlingen — och `kvittens` det som sägs när
+			     den är gjord. ]]
+			text = h.text or h.svar,
+			kvittens = h.svar,
+			steg = i,
 			fel = not h.ratt,
 		})
 	end
@@ -245,6 +250,96 @@ function Preparation.moment(fasId: string)
 	end
 	momentCache[fasId] = ut
 	return ut
+end
+
+--[[ ══ #273 S2 (T2): EN SPELARHANDLING PER FAS ═══════════════════════
+
+	Tobias beslut 2026-10-01. Huvudflödet är
+
+	    hälsa → kolla → rykta → kratsa → sadla → tränsa → leda → sitt upp
+
+	En HANDLING är en grupp av fasens befintliga moment. När spelaren utför
+	den gör servern momenten i sin ordning med spelaren som utförare —
+	checklistan, ordningsregeln, egen andel, skötselminnet och varje grind
+	har kvar sin datamodell. Det som försvinner är läs-och-klicka-stoppen
+	mellan momenten, inte momenten.
+
+	Gruppen HÄRLEDS ur momentens egna id (samma regel som webbens
+	`Forb.handlingar`): `iordning` delas i hovarna, sadeln (utr:1 … näst
+	sista) och tränset (sista sadelfasen). `leda` har ingen handling — den
+	kvitteras av att hästen fysiskt är framme. ]]
+function Preparation.handlingar(fasId: string): { { id: string, fas: string, moment: { any } } }
+	local alla = {}
+	for _, m in ipairs(Preparation.moment(fasId)) do
+		if not m.fel then table.insert(alla, m) end
+	end
+	if fasId == "halsa" then return { { id = "halsa", fas = fasId, moment = alla } } end
+	if fasId == "visitera" then return { { id = "kolla", fas = fasId, moment = alla } } end
+	if fasId == "rykta" then return { { id = "rykta", fas = fasId, moment = alla } } end
+	if fasId == "iordning" then
+		local sista = "utr:" .. #Skotsel.sadelfaser
+		local hov, sadel, trans = {}, {}, {}
+		for _, m in ipairs(alla) do
+			if string.sub(m.id, 1, 4) ~= "utr:" then table.insert(hov, m)
+			elseif m.id == sista then table.insert(trans, m)
+			else table.insert(sadel, m) end
+		end
+		return {
+			{ id = "kratsa", fas = fasId, moment = hov },
+			{ id = "sadla", fas = fasId, moment = sadel },
+			{ id = "transa", fas = fasId, moment = trans },
+		}
+	end
+	return {}
+end
+
+--[[ Handlingen som står på tur i fasen: den som äger nästa moment. ]]
+function Preparation.nastaHandling(state: State, fasId: string)
+	local n = Preparation.nastaMoment(state, fasId)
+	if not n then return nil end
+	for _, h in ipairs(Preparation.handlingar(fasId)) do
+		for _, m in ipairs(h.moment) do
+			if m.id == n.id then return h end
+		end
+	end
+	return nil
+end
+
+function Preparation.hittaHandling(handlingId: string)
+	for _, f in ipairs(Preparation.stegFaser()) do
+		for _, h in ipairs(Preparation.handlingar(f.id)) do
+			if h.id == handlingId then return h end
+		end
+	end
+	return nil
+end
+
+--[[ FÅR handlingen utföras nu? Samma nej, i samma ordning, som momentens
+	egen prövning: stopp → fel häst → öppet fynd → okänd → redan gjort →
+	fel tur. Ändrar ingenting. ]]
+function Preparation.provaHandling(state: State, handlingId: string,
+	hastId: string): (boolean, string?, any?)
+	if state.stoppad then
+		return false, "forb.lararen_tar_over", Preparation.kanontext(state.stoppad)
+	end
+	if hastId ~= state.hastId then return false, "forb.fel_hast" end
+	if state.fyndSett and not state.fyndRapporterat then
+		return false, "forb.oppet_fynd"
+	end
+	local h = Preparation.hittaHandling(handlingId)
+	if not h then return false, "forb.okant_moment" end
+	local nastaFas = Preparation.nasta(state)
+	local paTur = if nastaFas then Preparation.nastaHandling(state, nastaFas.id) else nil
+	if not paTur or paTur.id ~= h.id then
+		local gjort = state.gjorda[h.fas] or {}
+		local alla = true
+		for _, m in ipairs(h.moment) do
+			if not gjort[m.id] then alla = false end
+		end
+		if alla then return false, "forb.redan_gjort" end
+		return false, "forb.fel_tur", Preparation.kanontext(if nastaFas then nastaFas.namn else nil)
+	end
+	return true, nil, h
 end
 
 --[[ Är fasens moment ALTERNATIV eller en checklista?
@@ -485,7 +580,7 @@ local function byggKanonIndex()
 		end
 	end
 	lista(Skotsel.faser, "namn"); lista(Skotsel.faser, "text")
-	lista(Skotsel.halsning, "t"); lista(Skotsel.halsning, "svar")
+	lista(Skotsel.halsning, "t"); lista(Skotsel.halsning, "svar"); lista(Skotsel.halsning, "text")
 	lista(Skotsel.hovar, "namn"); lista(Skotsel.hovar, "text")
 	lista(Skotsel.eftervard, "namn"); lista(Skotsel.eftervard, "text")
 	lista(Skotsel.sadelfaser, "t")
@@ -569,6 +664,7 @@ function Preparation.momentPaSprak(m: any, sprak: string?, hastnamn: string?)
 	local ut = table.clone(m)
 	ut.namn = namn
 	ut.text = text
+	if type(m.kvittens) == "string" then ut.kvittens = Preparation.kanonPaSprak(m.kvittens, sprak) end
 	return ut
 end
 
@@ -928,7 +1024,7 @@ function Preparation.vy(state: State?, status: string, rev: number?, hastnamn: s
 	buren: any?)
 	if not state then
 		return { status = status, hastId = nil, hastnamn = nil, steg = {}, nasta = nil,
-			moment = {}, nastaMoment = nil, fynd = nil, svar = {},
+			moment = {}, nastaMoment = nil, handlingar = {}, nastaHandling = nil, fynd = nil, svar = {},
 			stoppad = nil, redo = false, burenUtrustning = buren, rev = rev or 0 }
 	end
 	local steg = {}
@@ -954,12 +1050,32 @@ function Preparation.vy(state: State?, status: string, rev: number?, hastnamn: s
 				id = m.id,
 				namn = m.namn,
 				text = m.text,
+				kvittens = m.kvittens,
 				fel = m.fel == true,
 				klar = gjort[m.id] == true,
 			})
 		end
 		local pa_tur = Preparation.nastaMoment(state, nastaFas.id)
 		nastaM = pa_tur and pa_tur.id or nil
+	end
+
+	--[[ #273 S2: HANDLINGARNA för den aktuella fasen. Det är dem panelen
+		ritar — en knapp per handling. `kunskap` är handlingens moment med
+		kanonens egna meningar, för det frivilliga kunskapslagret. ]]
+	local handlingar = {}
+	local nastaH = nil
+	if nastaFas then
+		local gjort = state.gjorda[nastaFas.id] or {}
+		local paTurH = Preparation.nastaHandling(state, nastaFas.id)
+		nastaH = paTurH and paTurH.id or nil
+		for _, h in ipairs(Preparation.handlingar(nastaFas.id)) do
+			local klar, kunskap = true, {}
+			for _, m in ipairs(h.moment) do
+				if not gjort[m.id] then klar = false end
+				table.insert(kunskap, { id = m.id, namn = m.namn, text = m.text })
+			end
+			table.insert(handlingar, { id = h.id, klar = klar, kunskap = kunskap })
+		end
 	end
 
 	--[[ Svarsalternativen skickas bara när det finns ett obesvarat fynd.
@@ -980,6 +1096,8 @@ function Preparation.vy(state: State?, status: string, rev: number?, hastnamn: s
 		nasta = nastaFas and nastaFas.id or nil,
 		moment = moment,
 		nastaMoment = nastaM,
+		handlingar = handlingar,
+		nastaHandling = nastaH,
 		fynd = fyndtext,
 		svar = svar,
 		stoppad = state.stoppad,

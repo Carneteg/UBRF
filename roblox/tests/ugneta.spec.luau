@@ -92,7 +92,8 @@ end
 do
 	local nu = { linje = 0.78, rytm = 0.60, balans = 0.41,
 		timing = 0.5, mjukhet = 0.5, respons = 0.5, tempo = 0.5 }
-	local punkter = UgnetaController.efterForsok("storvolt", nu, nil, 1)
+	-- C3 alternativ A: sekunderna kommer från passets klocka, som i LektionController.
+	local punkter = UgnetaController.efterForsok("storvolt", nu, nil, 1, nil, 22)
 	local knapp = hitta("Knapp")
 	local mal, detalj = CoachBanner.text()
 	check("efter försök 1 visas beskedet i bannern", CoachBanner.synlig() == true,
@@ -101,9 +102,14 @@ do
 		#punkter == 2 and string.find(punkter[1], "Bra") ~= nil
 		and string.find(punkter[2], "Jobba på") ~= nil,
 		string.format('("%s" / "%s")', punkter[1] or "-", punkter[2] or "-"))
-	check("målraden och knappen säger Prova igen",
-		mal == CoachBanner.versaler("Prova igen")
-			and knapp ~= nil and knapp.Visible == true,
+	--[[ C3 alternativ A (docs/FREE-PRACTICE-FRAMING-CONTRACT.md): målraden säger att
+		rundan tog slut på tiden — inte "Prova igen" som ett besked om övningen.
+		Knappen är fortfarande handlingen Prova igen. ]]
+	check("målraden säger att runda 1 tog slut på tiden, och knappen finns",
+		mal == CoachBanner.versaler(Sprak.t("ugneta.runda_slut", 1, 22))
+			and not string.find(mal, CoachBanner.versaler("Prova igen"), 1, true)
+			and knapp ~= nil and knapp.Visible == true
+			and string.find(knapp.Text, Sprak.t("ugneta.prova_igen"), 1, true) ~= nil,
 		string.format('(mål "%s", knapp %s)', mal,
 			tostring(knapp and knapp.Visible)))
 	--[[ Båda observationerna ska nå spelaren, inte bara den första:
@@ -115,7 +121,21 @@ do
 
 	local fore = { linje = 0.40, rytm = 0.50, balans = 0.60 }
 	local nu2 = { linje = 0.62, rytm = 0.52, balans = 0.45 }
-	local p2 = UgnetaController.efterForsok("storvolt", nu2, fore, 2)
+	local p2 = UgnetaController.efterForsok("storvolt", nu2, fore, 2, nil, 22)
+	do
+		local mal2 = CoachBanner.text()
+		check("C3 A: runda 2 får samma slag av rubrik, med sitt nummer",
+			mal2 == CoachBanner.versaler(Sprak.t("ugneta.runda_slut", 2, 22))
+				and not string.find(mal2, CoachBanner.versaler("Försök"), 1, true),
+			string.format('("%s")', mal2))
+	end
+	do -- Utan passets sekunder hittas inget tal på.
+		UgnetaController.efterForsok("storvolt", nu2, fore, 3)
+		local mal3 = CoachBanner.text()
+		check("C3 A: utan sekunder står ingen påhittad tid i rubriken",
+			mal3 == CoachBanner.versaler(Sprak.t("ugneta.runda_slut_kort", 3)) and not string.find(mal3, "22", 1, true),
+			string.format('("%s")', mal3))
+	end
 	check("efter försök 2 jämförs det mot försök 1",
 		#p2 <= 2 and string.find(p2[1], "Bättre") ~= nil
 		and string.find(p2[1], "linjen") ~= nil,

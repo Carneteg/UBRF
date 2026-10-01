@@ -59,11 +59,14 @@ for (const vy of vyer) {
   if (await page.evaluate(() => !!document.getElementById("bSkapHoppa"))) {
     await page.click("#bSkapHoppa"); await page.waitForTimeout(300);
   }
+  /* Vägvisaren mäts TILL FOTS: en återvändande spelare. På pass 0 tar
+     First Ride över och spelaren sitter redan upp (paritetspasset P1b). */
+  await page.evaluate(() => { SPAR.pass = 1; });
   await page.click("#bStart");
   await page.waitForTimeout(2500);
 
   /* Ett helt varv med A intryckt. Etiketten mäts varje steg. */
-  let synliga = 0, varsta = null, bredast = 0, flest = 0;
+  let synliga = 0, varsta = null, bredast = 0, flest = 0, flestTxt = "";
   await page.keyboard.down("KeyA");
   for (let i = 0; i < 32; i++) {
     await page.waitForTimeout(250);
@@ -87,6 +90,9 @@ for (const vy of vyer) {
     if (!m) continue;
     synliga++;
     bredast = Math.max(bredast, m.w);
+    /* Texten följer med i utskriften: ett rött «2 rader» utan att säga
+       VILKEN rubrik som bröts går inte att felsöka i CI. */
+    if (m.rader > flest) flestTxt = `"${m.txt}" ${m.w} px`;
     flest = Math.max(flest, m.rader);
     const ut = Math.max(0, -m.l, m.r - vy.width, -m.t, m.b - vy.height);
     if (ut > 0 && (!varsta || ut > varsta.ut)) varsta = { ...m, ut };
@@ -110,7 +116,7 @@ for (const vy of vyer) {
      en smal klump i stället för att klampas rätt — vilket ett tidigare
      utkast av rättelsen faktiskt gjorde (98 px i stället för 231). */
   if (vy.width >= 420) prova(`${vy.namn}: rubriken bryts inte i onödan`,
-    flest === 1, `flest ${flest} rader, bredast ${bredast} px`);
+    flest === 1, `flest ${flest} rader, bredast ${bredast} px · ${flestTxt}`);
 
   await page.close();
 }

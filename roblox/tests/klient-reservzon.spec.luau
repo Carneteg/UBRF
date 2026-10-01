@@ -226,9 +226,16 @@ for _, sk in ipairs(SKARMAR) do
 	     att det inte finns två. «Påslagen» betyder numera att PANELEN bär
 	     skötselns rubrik. ]]
 	local pnl = Naromrade._panel()
+	--[[ ONBOARDING (docs/ONBOARDING-STEP-CARD-CONTRACT.md): panelens rubrik är
+	     numera stegkortets («Sitt upp på …») när hästen är redo — det är
+	     fortfarande SKÖTSELNS innehåll i panelen, inte ridningens. ]]
+	local guideRedo = string.gsub(Sprak.t("guide.sittupp_rubrik", "\0"), "%z.*$", "")
+	local function skotselRubrik(r)
+		return (PC._rubrik() ~= "" and string.find(r, PC._rubrik(), 1, true) ~= nil)
+			or string.sub(r, 1, #guideRedo) == guideRedo
+	end
 	prova("före uppsittningen är skötsel-HUD:en påslagen",
-		pnl.synlig and PC._rubrik() ~= ""
-			and string.find(pnl.rubrik, PC._rubrik(), 1, true) ~= nil,
+		pnl.synlig and skotselRubrik(pnl.rubrik),
 		("panel=%s rubrik=%q"):format(tostring(pnl.synlig), pnl.rubrik))
 	prova("och skötselns egen yta är släckt — en yta, inte två",
 		g == nil or g.Enabled == false)
@@ -412,7 +419,7 @@ for _, sk in ipairs(SKARMAR) do
 	local _, g5 = hudPaSkarmen(W, H)
 	local pnl5 = Naromrade._panel()
 	prova("serverns nästa vy tänder skötseln igen — utan reglage på skärmen",
-		pnl5.synlig and string.find(pnl5.rubrik, PC._rubrik(), 1, true) ~= nil
+		pnl5.synlig and skotselRubrik(pnl5.rubrik)
 			and (g5 == nil or g5.Enabled == false) and reserv(W, H) == nil,
 		("panel=%s rubrik=%q"):format(tostring(pnl5.synlig), pnl5.rubrik))
 

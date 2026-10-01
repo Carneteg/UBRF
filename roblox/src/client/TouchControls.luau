@@ -82,6 +82,9 @@ TouchControls.KNAPP = 56          -- knopens diameter
 local gui: ScreenGui? = nil
 local aktivFinger: InputObject? = nil
 local Input = nil :: any            -- sätts av mount, för att undvika cykel
+--[[ #276: hoppknappens klädsel, med den monterade layoutens mått. Sätts
+     av `mount`, nollas av `unmount`. ]]
+local klaHoppNu: (() -> ())? = nil
 
 --[[ ── RYTTARENS BLICK PÅ PEKSKÄRM ──────────────────────────────────
 
@@ -644,6 +647,9 @@ function TouchControls.mount(input: any, hooks: {
 		ContextActionService:SetTitle(Input.BROMS, Sprak.t("touch.broms"))
 		ContextActionService:SetTitle(Input.DRIV, Sprak.t("touch.driv"))
 		ContextActionService:SetTitle(Input.AVSITT, Sprak.t("touch.sitt_av"))
+		if Input.hoppBunden and Input.hoppBunden() then
+			ContextActionService:SetTitle(Input.HOPP, Sprak.t("touch.hopp"))
+		end
 	end)
 	ager({ Disconnect = frankoppla } :: any)
 
@@ -753,6 +759,25 @@ function TouchControls.mount(input: any, hooks: {
 		sakerstallSynlighet(h)
 	end
 
+	--[[ ══ HOPPET (#276) — DEN TOMMA RUTAN I 2×2 ════════════════════
+
+	              [SITT AV] [DRIV ]
+	              [HOPP   ] [BROMS]
+
+	     Rutan nere till vänster var tom, och reserven (`reglageBredd`,
+	     `reglageTopp`) täckte den redan. Knappen ryms alltså utan att
+	     blocket växer, utan att något annat flyttas och utan att den
+	     täcker DRIV, BROMS, SITT AV eller spaken på vänster sida.
+
+	     Den finns bara när `Input.HOPP` är bunden, alltså bara medan
+	     hopp är relevant. `init.client` binder och kallar `klaHopp`;
+	     en ombyggnad (#208) kläder om den här om den redan är bunden. ]]
+	klaHoppNu = function()
+		klaHandling(Input.HOPP, Sprak.t("touch.hopp"), KD + LUFT, 0, 0.25)
+		sakerstallSynlighet(Input.HOPP)
+	end
+	if Input.hoppBunden and Input.hoppBunden() then klaHoppNu() end
+
 	local efter = hooks.efterLayout
 	if efter then efter(reglageBredd, reglageTopp) end
 end
@@ -762,6 +787,7 @@ function TouchControls.unmount()
 	     en handlare som fyrar mitt i rivningen ska inte hinna läsa en
 	     halvt förstörd ram. Se noten vid `rittKopplingar`. ]]
 	slappKopplingar()
+	klaHoppNu = nil
 	if gui then
 		gui:Destroy()
 		gui = nil
@@ -791,6 +817,13 @@ function TouchControls.unmount()
 	local h = senasteHooks
 	local efter = h and h.efterLayout
 	if efter then efter(0, math.huge) end
+end
+
+--[[ #276: kläder hoppknappen. Gör ingenting utan monterad pekyta — på
+     skrivbordet finns ingen knapp att klä, och tangenten behöver ingen. ]]
+function TouchControls.klaHopp()
+	local f = klaHoppNu
+	if f then f() end
 end
 
 function TouchControls.isActive(): boolean

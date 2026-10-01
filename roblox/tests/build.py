@@ -176,13 +176,32 @@ FORBEREDELSE = SPEL + [
     ("RidPlatsObservation", "src/server/RidPlatsObservation.luau"),  # #264 INFRA-OBS-PLATS1
     ("VoltObservation", "src/server/VoltObservation.luau"),  # #264 INFRA-VOLT1
     ("RidForsok", "src/server/RidForsok.luau"),  # #264 INFRA-FORSOK1
+    ("VoltLektion", "src/server/VoltLektion.luau"),
+    ("HaltLektion", "src/server/HaltLektion.luau"),  # start/halt-lektionen
+    ("OvergangLektion", "src/server/OvergangLektion.luau"),  # overgangslektionen
+    ("SerpentinLektion", "src/server/SerpentinLektion.luau"),  # serpentinlektionen
+    ("TempoLektion", "src/server/TempoLektion.luau"),  # jamn fart i skritt
+    ("VagLektion", "src/server/VagLektion.luau"),  # ridvagar: mittlinje, diagonal
+    ("HalvvoltLektion", "src/server/HalvvoltLektion.luau"),  # halvvolt tillbaka till sparet
+    ("GaloppLektion", "src/server/GaloppLektion.luau"),  # galoppfattning vid K (delvis)
+    ("MarkbomLektion", "src/server/MarkbomLektion.luau"),  # bom pa marken i skritt
+    ("HornLektion", "src/server/HornLektion.luau"),  # genom hornet (egen typ hornet)
+    ("Klassprofil", "src/shared/HorseCore/Klassprofil.luau"),  # D1: regelprofilen A: Clear Round
+    ("ClearRoundUnderlag", "src/server/ClearRoundUnderlag.luau"),  # B4c: skuggbedomningen
+    ("Tavlingsklader", "src/shared/HorseCore/Tavlingsklader.luau"),  # D5: katalogen (#248)
+    ("TavlingskladerService", "src/server/TavlingskladerService.luau"),  # D5: livscykeln (#248)
+    ("ClearRoundLektion", "src/server/ClearRoundLektion.luau"),  # D2a: forsta clear round-ritten
     # AKTOREN (#252 DEL C) FORE tjansterna: GameplayService, HorseService
     # och LedService fragar den om aktoren har en klient att skicka till.
     ("Aktor",        "src/shared/HorseCore/Aktor.luau"),
-    ("HorseService", "src/server/HorseService.luau"),
     # SparService FORE StallService: StallService.hastminnen laser saven ur
     # den. Ordningen ar samma som init.server.luau har.
+    # C4: och FORE HorseService, som via LektionsMinne require:ar den.
     ("SparService",  "src/server/SparService.luau"),
+    ("LedService",     "src/server/LedService.luau"),  # C4 ledning: fore LektionsMinne, som kraver LedLektion
+    ("LedLektion",     "src/server/LedLektion.luau"),  # ledningslektionen till fots
+    ("LektionsMinne", "src/server/LektionsMinne.luau"),  # C4: forsta-klarad-minnet
+    ("HorseService", "src/server/HorseService.luau"),
     ("StallService", "src/server/StallService.luau"),
     # Klientsidan: prompt-beslutet (krav 8) provas har, inte i en lokal funktion.
     ("InteractionController", "src/client/InteractionController.luau"),
@@ -215,7 +234,6 @@ FORBEREDELSE = SPEL + [
     #   i banken alls. Dubbletterna ar borttagna; det finns nu EN definition
     #   av varje bunt. ]]
     ("TackForradService", "src/server/TackForradService.luau"),
-    ("LedService",     "src/server/LedService.luau"),
     #[[ #252 DEL B: GameplayService require:ar DorrService (dorrkroken i
     #   `start`). Raden saknades har, sa `DorrService` var nil i varje spec
     #   pa forberedelse-/integrationsbunten — tyst, tills banken slutade
@@ -287,6 +305,7 @@ PARITET = [
     #[[ #244: bannern FORE UgnetaController, som require:ar den. Samma
     #   regel som hela listan: en modul far bara referera det som star
     #   over. ]]
+    ("LararInstallning", "src/client/LararInstallning.luau"),  # C2: textinstallningar
     ("CoachBanner",      "src/client/CoachBanner.luau"),
     #[[ #264: sprakflaggan fragar servern genom Networking. ]]
     ("Networking",       "src/shared/HorseCore/Networking.luau"),
@@ -295,6 +314,8 @@ PARITET = [
     ("UgnetaGestalt",    "src/client/UgnetaGestalt.luau"),
     ("ReplayController", "src/client/ReplayController.luau"),
     # Kedjan som binder ihop dem. Utan den var HUD:en bara anropbar.
+    ("LektionsAterkoppling", "src/client/LektionsAterkoppling.luau"),  # C1: aterkoppling efter ovningen
+    ("VoltLektionController", "src/client/VoltLektionController.luau"),
     ("LektionController", "src/client/LektionController.luau"),
 ]
 
@@ -370,12 +391,16 @@ KLIENT = SPEL + [
     #   require:ar den, i BADA listorna — ligger den bara i en blir
     #   require:t nil i den andra, och det syns forst som ett
     #   "attempt to index nil" langt fran orsaken. ]]
+    ("LararInstallning",    "src/client/LararInstallning.luau"),  # C2: textinstallningar
     ("CoachBanner",         "src/client/CoachBanner.luau"),
     ("UgnetaController",    "src/client/UgnetaController.luau"),
     ("Ridhusplats",   "src/shared/HorseCore/Ridhusplats.luau"),  # #264 INFRA-PLATS1: UgnetaGestalt require:ar den
     ("UgnetaGestalt",       "src/client/UgnetaGestalt.luau"),
     ("ReplayController",    "src/client/ReplayController.luau"),
+    ("LektionsAterkoppling", "src/client/LektionsAterkoppling.luau"),  # C1: aterkoppling efter ovningen
+    ("VoltLektionController", "src/client/VoltLektionController.luau"),
     ("LektionController",   "src/client/LektionController.luau"),
+    ("LedLektionController", "src/client/LedLektionController.luau"),  # ledningslektionen till fots
     # Kontrollhjalpen: bara init.client.luau require:ar den, sa den behovs
     # bara i KLIENT. Star har och inte i PARITET av det skalet -- inte av
     # forbiseende. Jamfor noten vid Inspelning/ReplayController ovan.
@@ -437,11 +462,29 @@ KOHERENS = GEOMETRI + [
     ("RidPlatsObservation", "src/server/RidPlatsObservation.luau"),  # #264 INFRA-OBS-PLATS1
     ("VoltObservation", "src/server/VoltObservation.luau"),  # #264 INFRA-VOLT1
     ("RidForsok", "src/server/RidForsok.luau"),  # #264 INFRA-FORSOK1
+    ("VoltLektion", "src/server/VoltLektion.luau"),
+    ("HaltLektion", "src/server/HaltLektion.luau"),  # start/halt-lektionen
+    ("OvergangLektion", "src/server/OvergangLektion.luau"),  # overgangslektionen
+    ("SerpentinLektion", "src/server/SerpentinLektion.luau"),  # serpentinlektionen
+    ("TempoLektion", "src/server/TempoLektion.luau"),  # jamn fart i skritt
+    ("VagLektion", "src/server/VagLektion.luau"),  # ridvagar: mittlinje, diagonal
+    ("HalvvoltLektion", "src/server/HalvvoltLektion.luau"),  # halvvolt tillbaka till sparet
+    ("GaloppLektion", "src/server/GaloppLektion.luau"),  # galoppfattning vid K (delvis)
+    ("MarkbomLektion", "src/server/MarkbomLektion.luau"),  # bom pa marken i skritt
+    ("HornLektion", "src/server/HornLektion.luau"),  # genom hornet (egen typ hornet)
+    ("Klassprofil", "src/shared/HorseCore/Klassprofil.luau"),  # D1: regelprofilen A: Clear Round
+    ("ClearRoundUnderlag", "src/server/ClearRoundUnderlag.luau"),  # B4c: skuggbedomningen
+    ("Tavlingsklader", "src/shared/HorseCore/Tavlingsklader.luau"),  # D5: katalogen (#248)
+    ("TavlingskladerService", "src/server/TavlingskladerService.luau"),  # D5: livscykeln (#248)
+    ("ClearRoundLektion", "src/server/ClearRoundLektion.luau"),  # D2a: forsta clear round-ritten
     # AKTOREN (#252 DEL C) FORE tjansterna: GameplayService, HorseService
     # och LedService fragar den om aktoren har en klient att skicka till.
     ("Aktor",        "src/shared/HorseCore/Aktor.luau"),
+    ("SparService",     "src/server/SparService.luau"),  # C4: fore HorseService (LektionsMinne)
+    ("LedService",     "src/server/LedService.luau"),  # C4 ledning: fore LektionsMinne, som kraver LedLektion
+    ("LedLektion",      "src/server/LedLektion.luau"),  # ledningslektionen till fots
+    ("LektionsMinne",   "src/server/LektionsMinne.luau"),  # C4: forsta-klarad-minnet
     ("HorseService",    "src/server/HorseService.luau"),
-    ("SparService",     "src/server/SparService.luau"),
     ("StallService",    "src/server/StallService.luau"),
     #[[ LedService laddas FORE GameplayService: den senare require:ar
     #   den, och grinden pa "leda" ar hela poangen med blockerare 2. ]]
@@ -449,7 +492,6 @@ KOHERENS = GEOMETRI + [
     #   GameplayService, som prover utrustningen fysiskt. ]]
     ("TackRigg",       "src/server/TackRigg.luau"),
     ("TackService",    "src/server/TackService.luau"),
-    ("LedService",     "src/server/LedService.luau"),
     #[[ #235 FAS 1: boxfrontens upphangning. FORE GameplayService, som
     #   numera require:ar den for att slacka en tagen sadel. ]]
     ("TackForradService", "src/server/TackForradService.luau"),
@@ -725,6 +767,11 @@ def valjBunt(spec_rel: str):
     elif "tavlingsklader" in spec_rel:
         moduler = [("Tavlingsklader", "src/shared/HorseCore/Tavlingsklader.luau")]
         stubbar = "tests/stubs.luau"
+    #[[ D1 (#266): klassprofilen ar en REN regelmodul utan beroenden. Egen
+    #   minimal bunt av samma skal som tavlingsklader-katalogen. ]]
+    elif "regelprofil" in spec_rel:
+        moduler = [("Klassprofil", "src/shared/HorseCore/Klassprofil.luau")]
+        stubbar = "tests/stubs.luau"
     elif "ridefirst" in spec_rel:
         #[[ INTEGRATION, inte FORBEREDELSE: provet kor den VERKLIGA
         #   GameplayService.ridaNu-kedjan med rigg, fysisk utrustning och
@@ -748,11 +795,49 @@ def valjBunt(spec_rel: str):
     #[[ #264 INFRA-FORSOK1: samma bank — voltdata ur den riktiga ramen. ]]
     elif "forsok" in spec_rel:
         moduler, stubbar = KOHERENS, "tests/stubs.luau"
+    #[[ Start/halt-lektionen: samma bank som voltlektionen. ]]
+    elif "markbomlektion" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
+    #[[ D2c: kedjan clear round -> eftervard behover ridhuset OCH
+    #   tjanstestacken (GameplayService finns i KOHERENS). ]]
+    #[[ D5: tavlingsklader vid clear round-anmalan: ridhuset, tjansterna och klienten. ]]
+    elif "clearround-klader" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
+    elif "clearround-eftervard" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
+    elif "clearroundlektion" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
+    elif "galopplektion" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
+    elif "halvvoltlektion" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
+    elif "vaglektion" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
+    elif "tempolektion" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
+    elif "serpentinlektion" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
+    elif "overganglektion" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
+    elif "haltlektion" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
     #[[ #264 INFRA-VOLT1: samma bank som ridplats — den riktiga ramen. ]]
     elif "volt" in spec_rel:
         moduler, stubbar = KOHERENS, "tests/stubs.luau"
     elif "ridplats" in spec_rel:
         moduler, stubbar = KOHERENS, "tests/stubs.luau"
+    #[[ B4a: nedslagshandelsen ar ett MODULKONTRAKT -- bara HinderObservation. ]]
+    #[[ B4b: olydnadsklassificeringen, samma modulkontrakt som nedslaget. ]]
+    #[[ B4c: skuggbedomningen ar ren -- bara modulen. ]]
+    elif "clearroundunderlag" in spec_rel:
+        moduler = [("ClearRoundUnderlag", "src/server/ClearRoundUnderlag.luau")]
+        stubbar = "tests/stubs.luau"
+    elif "hinderolydnad" in spec_rel:
+        moduler = [("HinderObservation", "src/server/HinderObservation.luau")]
+        stubbar = "tests/stubs.luau"
+    elif "hindernedslag" in spec_rel:
+        moduler = [("HinderObservation", "src/server/HinderObservation.luau")]
+        stubbar = "tests/stubs.luau"
     elif "hinderobservation" in spec_rel:
         moduler, stubbar = KOHERENS, "tests/stubs.luau"
     elif "ridobservation" in spec_rel:
@@ -790,6 +875,24 @@ def valjBunt(spec_rel: str):
     #[[ M3.1: navvagens livslangd i hornet. Samma bunt, samma skal. ]]
     elif "ledvag" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
+    elif "hornlektion" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
+    elif "tempocoachning" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
+    elif "ledningsminne" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
+    elif "skotselminne" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
+    elif "instruktorstart" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
+    elif "lektionsminne" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
+    elif "lektionsaterkoppling" in spec_rel:
+        moduler, stubbar = KLIENT, "tests/stubs.luau"
+    elif "utrustning-rattelse" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
+    elif "ledlektion" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
     elif "ledning-integration" in spec_rel:
         moduler, stubbar = KOHERENS, "tests/stubs.luau"
     elif "ledning" in spec_rel:

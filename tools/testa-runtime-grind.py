@@ -402,6 +402,54 @@ def smoken_har_alla_avsnitt():
         "AVSNITT och skyddat() ar inte overens: %s" % (namn ^ anropade)
 
 
+def _urval(kalla, delen):
+    """Samma urval som smokens `valt`: alla, det namngivna avsnittet, och
+    de forutsattningar FORUTSATTNINGAR anger for det — i AVSNITT-ordning."""
+    m = re.search(r"local AVSNITT = \{(.*?)\}", kalla, re.S)
+    ordning = re.findall(r'"([a-z]+)"', m.group(1))
+    t = re.search(r"local FORUTSATTNINGAR[^=]*= \{(.*?)\n\}", kalla, re.S)
+    assert t, "hittade ingen FORUTSATTNINGAR-tabell i smoken"
+    tabell = {k: re.findall(r'"([a-z]+)"', v)
+              for k, v in re.findall(r"([a-z]+) = \{([^}]*)\}", t.group(1))}
+    for beroende, forut in tabell.items():
+        assert beroende in ordning, "okant avsnitt i FORUTSATTNINGAR: %s" % beroende
+        for f in forut:
+            assert f in ordning and ordning.index(f) < ordning.index(beroende), \
+                "%s maste finnas och koras fore %s" % (f, beroende)
+    return [n for n in ordning
+            if delen == "alla" or n == delen or n in tabell.get(delen, [])]
+
+
+def fokuserad_del_kor_sina_forutsattningar():
+    """`--del voltlektion` ska na lektionen: aktoren forbereds genom de
+    befintliga avsnitten ridanu och mountrequest, inte en kopia av dem."""
+    kalla = (ROT / "qa" / "runtime" / "smoke.luau").read_text(encoding="utf-8")
+    sk = re.search(r"local function skyddat\(.*?\nend\n", kalla, re.S)
+    assert sk and "valt(namn)" in sk.group(0), "skyddat() valjer inte genom valt()"
+    va = re.search(r"local function valt\(.*?\nend\n", kalla, re.S)
+    assert va and "FORUTSATTNINGAR" in va.group(0), "valt() laser inte FORUTSATTNINGAR"
+    assert _urval(kalla, "voltlektion") == ["ridanu", "mountrequest", "voltlektion"], \
+        _urval(kalla, "voltlektion")
+    alla = re.findall(r'"([a-z]+)"',
+                      re.search(r"local AVSNITT = \{(.*?)\}", kalla, re.S).group(1))
+    assert _urval(kalla, "alla") == alla, "alla far inte andras"
+    assert _urval(kalla, "ledning") == ["ledning"], "andra delar far inga nya beroenden"
+
+
+def voltlektion_utan_forberedelse_faller():
+    """Saknas den forberedda aktoren ar det ROTT, aldrig en tom passage."""
+    kalla = (ROT / "qa" / "runtime" / "smoke.luau").read_text(encoding="utf-8")
+    sek = re.search(r'skyddat\("voltlektion", function\(\)(.*?)\nend\)', kalla, re.S)
+    assert sek, "hittade inte avsnittet voltlektion"
+    kropp = sek.group(1)
+    forsta_kolla = kropp.find("kolla(")
+    assert forsta_kolla != -1 and \
+        kropp.startswith('kolla("aktören från mountrequest sitter upp"', forsta_kolla), \
+        "forsta matningen maste vara att aktoren sitter upp"
+    assert re.search(r'sitter upp", type\(ritt\) == "string".*?\n\s*if not \(hast and ritt\) then return end',
+                     kropp, re.S), "avsnittet maste falla och avbryta utan forberedd aktor"
+
+
 def smoken_raknar_noll_som_fel():
     kalla = (ROT / "qa" / "runtime" / "smoke.luau").read_text(encoding="utf-8")
     assert "if antal == 0 then" in kalla, \
@@ -418,6 +466,8 @@ if __name__ == "__main__":
                placen_gar_inte_att_bygga, task_som_inte_ar_complete,
                task_utan_resultat, task_med_resultat,
                okant_tasklage_ar_inte_klart, smoken_har_alla_avsnitt,
+               fokuserad_del_kor_sina_forutsattningar,
+               voltlektion_utan_forberedelse_faller,
                smoken_raknar_noll_som_fel):
         prov(fn.__name__, fn)
     if fynd:

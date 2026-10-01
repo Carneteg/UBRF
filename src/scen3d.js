@@ -390,6 +390,10 @@ function s3BygHast(){
   /* Hinder och stolpar. */
   D.bom=nyNat(new Bygge().cyl(0.055,0.055,1,vit,null,S(8,6)));
   D.stod=nyNat(new Bygge().lada(0.10,1,0.10,"#4A3F30"));
+  /* P3: ridhusets egna hinder (vita stöd, som gå-lägets ridhus) och
+     lektionernas vägvisning — ett platt streck som tonas grönt. */
+  D.stodVit=nyNat(new Bygge().lada(0.10,1,0.10,vit));
+  D.streck=nyNat(new Bygge().lada(1,0.02,1,vit));
   /* Natur och staket. */
   D.stam=nyNat(new Bygge().cyl(0.16,0.11,1,"#4A3A28",null,S(7,5)));
   D.krona=nyNat(new Bygge().klot(1,vit,null,S(12,6)));
@@ -1176,6 +1180,43 @@ function s3RitaHinder(){
   }
 }
 
+/* ── P3: RIDHUSETS HINDER OCH LEKTIONENS VÄGVISNING ────────────────
+   Hindren är ridhusets BEFINTLIGA, ur den delade källan (src/site.js
+   RIDHUSINNE.hinder — samma lista som Roblox bygger i Anlaggningen och som
+   gå-lägets ridhus ritar): vita stöd, bommar i blå-vitt eller röd-vitt,
+   och bommen på marken (h 0) som markbomslektionen rider över. Ridbanans
+   koordinater är banans, så x och y läses rakt.
+
+   Vägvisningen är samma streck som Roblox VoltLektionController ritar,
+   räknade i src/lektioner/guide.js ur lektionens egen `referens`. Samma
+   färg (77,174,142); delmålet starkt, resten svagt. */
+function s3RitaLektion(){
+  const D=S3.del;
+  const lista=(typeof RIDHUSINNE!=="undefined"&&RIDHUSINNE.hinder)||[];
+  for(const hi of lista){
+    const fa=hi.farg==="rod"?"#B0332E":"#3E7FB8";
+    for(const s of [-1,1]){
+      const m=M4.mul(M4.translation(hi.x+s*hi.b/2,0.64,hi.y),M4.skala(1,1.28,1));
+      GL.rita(D.stodVit,m,{ton:"#EFEAE0"});
+      GL.skugga(D.stodVit,m,0);
+    }
+    const y=hi.h>0.02?hi.h:0.055, n=6;
+    for(let i=0;i<n;i++){
+      const x0=hi.x-hi.b/2+hi.b/n*i;
+      const m=s3Segment([x0,y,hi.y],[x0+hi.b/n,y,hi.y],1);
+      GL.rita(D.bom,m,{ton:i%2?fa:"#F2EDE2"});
+      GL.skugga(D.bom,m,0);
+    }
+  }
+  if(typeof LektionGuide==="undefined")return;
+  for(const st of LektionGuide.aktuella()){
+    const x=LektionGuide.X(st.u), z=LektionGuide.Y(st.v);
+    const dx=-st.du, dz=st.dv, L=st.half*2, B=st.bredd;
+    const m=new Float32Array([dz*B,0,-dx*B,0, 0,1,0,0, dx*L,0,dz*L,0, x,0.035,z,1]);
+    GL.rita(D.streck,m,{ton:"#4DAE8E",platt:true,alfa:st.ring?0.5:(st.stark?0.75:0.22)});
+  }
+}
+
 /* ── Kameran under ritten: SADELN ÄR STANDARD ─────────────────────
    G02-E del 1 (#150), Tobias produktbeslut 2026-09-08.
 
@@ -1517,6 +1558,7 @@ function rita3D(Gs){
     if(u)GL.rita(S3.del.ugneta,M4.mul(M4.translation(u.x,0,u.y),M4.skala(1)),{});
   }
   if(G.hinderAktiva)s3RitaHinder();
+  if(plats==="ridhus"&&G.p3)s3RitaLektion();
   /* NPC-ekipagen. */
   for(const n of G.npcs)
     s3RitaHast({hast:HORSES[n.hast]||{typ:"hast",farg:n.farg,man:"#2B1E15"},

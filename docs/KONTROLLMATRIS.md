@@ -47,49 +47,63 @@ provet fyrar hjälpens egen tangent och läser vad `Input.luau` gjorde.
 | Gå vidare | `G` | — | *Gå vidare* |
 | Kontrollhjälp — öppna/stäng | `H` | `DPadUp` | `?`-knappen uppe till höger |
 | Kontrollhjälp — stäng | `H` | `DPadUp` | panelens *Stäng* |
-| Skötselmoment | — | — | momentknapparna i skötsel-HUD:en |
-| Eftervårdsmoment | — | — | samma knappar, efter avsittning |
+| Skötselns handling (hälsa, kolla, rykta, kratsa, sadla, tränsa) | — | — | EN knapp per fas i panelen (#273 S2) |
+| Eftervårdens val (stallet / själv) och handlingar | — | — | samma knappar, efter avsittning (#273 S3) |
+
+Sedan #273 (2026-10-01) öppnas kontrollhjälpen **aldrig av sig själv**.
+Vänstermenyns fyra kärnrader — ett steg upp, ett steg ned, styr, sitt
+upp/av — är det en ny spelare behöver. Tygel, halvhalt, sits och hopp
+står under rubriken **Avancerat** i listan, och är neutrala i
+grundridningen (`RidKanon.SVAR.HJALP_KRAV = 0`).
 
 ## Webb
 
+Sedan #273 (Tobias beslut 2026-10-01, T3 och T4). Kärnan först; resten är
+**Avancerat** och behövs inte i grundridningen.
+
 | Handling | Tangentbord | Pekskärm |
 |---|---|---|
-| Använd / sitt upp | `E` | `ANVÄND` |
-| Skänkel fram / bak | `W` / `S` | spaken |
+| Använd / sitt upp (till fots) | `E` | `ANVÄND` |
+| **Ett steg upp i gångarterna** | `W` / `↑` | `DRIV` |
+| **Ett steg ned i gångarterna** | `S` / `↓` | `BROMS` |
 | Styr | `A` / `D` | spaken |
-| Tygel (kontakt) | `Mellanslag` | `TYGEL` |
-| Sits lätt / djup | `Shift` / `Ctrl` | `LÄTT` / `DJUP` |
-| Halvhalt | `E` | `HALVHALT` |
-| Lättridning | `R` | `LÄTTR.` |
-| Diagonal | `Q` | `DIAG` |
-| Nästa moment | `N` | `NÄSTA` |
+| Sitt av | `E` | `SITT AV` |
 | Byt vy | `V` | `VY` |
-| Kontrollhjälp | `H` | panelens *Stäng* |
-| **Gångart** | *inget eget reglage* | *inget eget reglage* |
+| Kontrollhjälp | `H` | panelens `?` |
+| Nästa moment (bara tävlingens momentserie) | `N` | `NÄSTA` |
+| *Avancerat:* Tygel (kontakt) | `Mellanslag` | *ingen knapp* |
+| *Avancerat:* Halvhalt | `F` | *ingen knapp* |
+| *Avancerat:* Sits lätt / djup | `Shift` / `Ctrl` | *ingen knapp* |
+| *Avancerat:* Lättridning | `R` | *ingen knapp* |
+| *Avancerat:* Diagonal | `Q` | *ingen knapp* |
+| *Avancerat:* Spö | `G` | *ingen knapp* |
 | **Hoppa** | *inget eget reglage* | *inget eget reglage* |
 
-## De två raderna utan reglage
+## Ett steg upp, ett steg ned — och hoppet utan reglage
 
-Webben har **ingen gångartsknapp och inget hoppreglage**, och det är ett
-produktval, inte ett hål:
+**Ett tryck är ett steg**, som på Roblox. Under knapparna ligger webbens
+egen ridmodell — skänkelimpuls upp, halvhalt ned (`src/game.js`
+`ridBroms`/`ridDriv`, genom samma halvhaltskanal som `F`) — men spelaren
+behöver inte kunna den för att rida. Före #273 fanns inget ensamt reglage
+för «långsammare» på webben: `S` tog bort skänkeln, och när tangenten
+släpptes läste modellen resan tillbaka som en framåtimpuls (uppmätt: trav,
+`S` i 0,6 s, släpp → galopp). Ridfysiken är oförändrad; det som ändrats är
+vilken befintlig kanal tangenten matar.
 
-- **Gångarten följer skänkeln och tygeln.** Spelaren ber om mer eller
-  mindre gång, och övergångsmodellen i `src/riding/` avgör när bytet
-  sker. Roblox har i stället en uttrycklig begäran (`LeftShift`/`R1`).
-- **Avsprånget kommer ur anridningen.** Webben har ingen hoppknapp;
-  hoppet avgörs av hur hästen rids fram mot hindret. Roblox har ett
-  hoppreglage (`Space`/`ButtonA`).
+På pekskärm **styr spaken, och bara det**. Fart är `DRIV` och `BROMS`.
 
-Det här är en **verklig skillnad i inputsemantik**, och den ska inte
-jämnas ut. Att lägga en gångartsknapp på webben, eller att ta bort
-Roblox hoppknapp, vore en ändring av hoppfysik och bedömning — inte en
-kontrollförbättring. `CLAUDE.md`:s paritetsregel tillåter uttryckligen
-att inputadapter och UI är plattformsspecifika; det är kärnloopen,
-hästlogiken och lärandet som ska motsvara varandra, och de gör det.
+[PLATTFORMSSKILLNAD] Roblox spak flyttar dessutom tempot inom gångartens
+band; webbens gör det inte. Roblox `BROMS` ur halt är rygga; webben har
+ingen rygga.
 
-Kontrollhjälpen på båda ytorna säger detta rakt ut i stället för att
-uppfinna en tangent: raderna står med texten *"följer skänkeln och
-tygeln"* respektive *"avsprånget kommer ur anridningen"*.
+**Avsprånget kommer ur anridningen.** Webben har ingen hoppknapp; hoppet
+avgörs av hur hästen rids fram mot hindret. Roblox har ett hoppreglage
+(`Space`/`ButtonA`) och ingen pekknapp för det. Den skillnaden står kvar.
+
+De avancerade hjälperna gör vad de alltid gjort för den som använder dem,
+men **ingen straffas för att låta bli**: yttertygelstödet och sitsstödet
+är neutrala i balansmodellen i grundridningen (`SVAR_KANON.HJALP_KRAV = 0`,
+samma tal på Roblox genom `RidKanon`).
 
 ## Kontextuell rid-UX — DRIV och BROMS
 
