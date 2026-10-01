@@ -38,7 +38,10 @@ const vyer=[
 ];
 
 for(const vy of vyer){
-  const page=await browser.newPage({viewport:{width:vy.width,height:vy.height}});
+  /* Provet läser SVENSKA texter. Sedan P3 går kontrollhjälpen genom tSpr och
+     följer webbläsarens språk — utan angivet locale blev den engelsk i CI
+     (rött på f3a40bf, första gången provet kördes där). */
+  const page=await browser.newPage({viewport:{width:vy.width,height:vy.height},locale:"sv-SE"});
   page.on("pageerror",e=>console.error("PAGEERROR",vy.namn,e.message));
   await page.goto(`http://localhost:${PORT}/`,{waitUntil:"load"});
   await page.waitForTimeout(400);
