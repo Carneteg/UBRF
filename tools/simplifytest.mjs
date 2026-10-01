@@ -72,6 +72,12 @@ async function sittUppNy(vp = { width: 1366, height: 768 }, opt = {}) {
     SPAR.pass = 0; SPAR_BETRODD = true; startaVandring();
   });
   await page.waitForTimeout(700);
+  /* Panelen ritas i spelloopen, och första bildrutan i en ny scen bygger
+     3D-världen — med mjukvarurendering i CI tar den över en sekund. En fast
+     väntan läste panelen innan den fanns (rött i CI på f3a40bf, grönt
+     lokalt). Vänta på villkoret; finns panelen aldrig faller proven nedan. */
+  await page.waitForFunction(() => { const el = document.getElementById("ridpanel"); return !!el && !el.hidden; },
+    null, { timeout: 20000 }).catch(() => {});
   return page;
 }
 const vanta = (page, ms = 300) => page.waitForTimeout(ms);
@@ -179,7 +185,11 @@ console.log("\n── B. S1: pek — spak + DRIV + BROMS + SITT AV ──");
 {
   const page = await sittUppNy({ width: 844, height: 390 }, { pek: true });
   await page.evaluate(SIDHJALP);
-  await vanta(page, 600);   // mobil.js byter knappsats var 250 ms
+  /* mobil.js byter knappsats var 250 ms — vänta på satsen, inte på klockan. */
+  await page.waitForFunction(() => { const r = document.getElementById("pekRitt");
+    return !!r && getComputedStyle(r).display !== "none" && r.getBoundingClientRect().height > 0; },
+    null, { timeout: 20000 }).catch(() => {});
+  await vanta(page, 300);
   const k = await page.evaluate(() => {
     const syns = e => !!e && getComputedStyle(e).display !== "none" && e.getBoundingClientRect().height > 0;
     const ritt = document.getElementById("pekRitt");
