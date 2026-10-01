@@ -437,6 +437,14 @@ jobs:
           test -f tools/lektion-e2e-test.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/lektion-e2e-test.mjs (steget 'P3 — en lektion riden hela vägen i webbläsaren (halt vid X)')" >&2; exit 1; }
           node tools/lektion-e2e-test.mjs
 
+      # #273 SIMPLIFY (Tobias T1–T4): kontrollerna, en handling per fas och
+      # eftervårdens val — i en riktig webbläsare mot den byggda sidan.
+      - name: "#273 — förenklingen (kontroller, en handling per fas, eftervårdens val)"
+        run: |
+          set -euo pipefail
+          test -f tools/simplifytest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/simplifytest.mjs (steget '#273 — förenklingen (kontroller, en handling per fas, eftervårdens val)')" >&2; exit 1; }
+          node tools/simplifytest.mjs
+
       - name: Ridkärnan — Gate 01-värden, telemetri, live-koppling och volten
         run: |
           set -euo pipefail

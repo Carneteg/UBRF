@@ -112,13 +112,23 @@ const klick = (page, borjar) => page.evaluate(t => {
     && /A \/ D/.test(p.karna[2]) && /\[E\]/.test(p.karna[3]), p.karna.join(" | "));
   prova("högst fyra val", p.knappar.length >= 1 && p.knappar.length <= 4, p.knappar.join(" | "));
   prova("fyrahörns-HUD:en är borta ur huvudvägen", p.hud.every(d => d === "none"), p.hud.join(","));
-  prova("reglagelistan öppnades av sig själv vid första uppsittningen", scen.kh === true);
+  /* #273 S1: listan öppnas ALDRIG av sig själv. H är vägen in. */
+  prova("reglagelistan öppnas INTE av sig själv vid första uppsittningen", scen.kh === false);
   await page.keyboard.press("KeyH"); await vanta(page);
-  prova("H stänger reglagelistan", !(await page.evaluate(() => kontrollHjalpSynlig())));
+  prova("H öppnar reglagelistan", await page.evaluate(() => kontrollHjalpSynlig()));
+  {
+    const l = await page.evaluate(() => [...document.querySelectorAll("#kontrollhjalp .khRad")].map(r =>
+      ({ t: r.textContent.replace(/\s+/g, " ").trim(), av: r.classList.contains("khAvancerat") })));
+    const iAv = l.findIndex(r => r.av);
+    prova("listan: kärnan först, hjälperna under «Avancerat»", iAv >= 4
+      && /W \/ ↑/.test(l[0].t) && /S \/ ↓/.test(l[1].t) && /A \/ D/.test(l[2].t) && /E$/.test(l[3].t)
+      && l.slice(0, iAv).every(r => !/Tygel|Halvhalt|Sits|Lättridning|diagonal|Spö/.test(r.t))
+      && ["Tygel", "Halvhalt", "Sits", "Lättridning", "diagonal", "Spö"].every(o => l.slice(iAv + 1).some(r => r.t.includes(o))),
+      l.map(r => (r.av ? "§" : "") + r.t).join(" | "));
+  }
   await page.keyboard.press("KeyH"); await vanta(page);
-  prova("H öppnar den igen", await page.evaluate(() => kontrollHjalpSynlig()));
-  await page.keyboard.press("KeyH"); await vanta(page);
-  /* En andra uppsittning i samma session öppnar den inte igen. */
+  prova("H stänger den igen", !(await page.evaluate(() => kontrollHjalpSynlig())));
+  /* En andra uppsittning i samma session öppnar den inte heller. */
   await page.keyboard.press("KeyE"); await vanta(page, 500);
   const andra = await page.evaluate(() => { overlay(false); SPAR.pass = 0; startaVandring(); return true; });
   await vanta(page, 700);
@@ -265,7 +275,8 @@ const klick = (page, borjar) => page.evaluate(t => {
   const page = await sittUppNy({ width: 1366, height: 768 }, { sprak: "en" });
   const p = await panel(page);
   prova("titeln på engelska", p.titel === "Ugneta · Riding instructor", p.titel);
-  prova("kärnraderna på engelska", /Ride forward/.test(p.karna[0]) && /Space/.test(p.karna[1]) && /Mount \/ dismount/.test(p.karna[3]),
+  prova("kärnraderna på engelska", /One step up/.test(p.karna[0]) && /One step down/.test(p.karna[1]) && !/Space/.test(p.karna[1])
+    && /Mount \/ dismount/.test(p.karna[3]),
     p.karna.join(" | "));
   await page.click("#ridpanel button[data-sprak]"); await vanta(page);
   prova("flaggan byter till svenska på plats", (await panel(page)).titel === "Ugneta · Ridinstruktör");

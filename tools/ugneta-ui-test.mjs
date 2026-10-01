@@ -118,20 +118,22 @@ for(const vy of vyer){
     const sittUpp=h.inmatning==="touch"?"SITT AV":"E";
     prova(h.karta["Sitt upp / sitt av"]===sittUpp,
       `${vy.namn}: hjälpen svarar hur man sitter upp`,h.karta["Sitt upp / sitt av"]);
-    prova(h.karta["Tygel (kontakt)"]===(h.inmatning==="touch"?"TYGEL":"Mellanslag"),
+    /* #273 T3: på pek har tygeln ingen knapp i standardläget — raden hoppas över. */
+    prova(h.karta["Tygel (kontakt)"]===(h.inmatning==="touch"?undefined:"Mellanslag"),
       `${vy.namn}: …och vad tygeln är`,h.karta["Tygel (kontakt)"]);
-    /* Gångart och hopp har FORTFARANDE ingen uppfunnen tangent: webben
-       rider med hjälperna. Raderna som byter gångart säger vilken HJÄLP
-       tangenten ger (skänkel, tygel), aldrig Roblox «ett steg upp/ned»,
-       och hoppet har ingen rad alls — en rad utan reglage hoppas över
-       (Roblox regel, P3 § 3). Ingen rad står med tom reglagekolumn. */
+    /* #273 S1: webben har nu ETT reglage för «ett steg upp» och ETT för
+       «ett steg ned», bundna på riktigt (W/↑ och S/↓, DRIV och BROMS på
+       pek) — samma två rader som Roblox. Hoppet har fortfarande ingen rad
+       alls (avsprånget kommer ur anridningen), och ingen rad står med tom
+       reglagekolumn. */
     const namn=Object.keys(h.karta);
-    prova(!namn.some(n=>/steg upp|steg ned|^Hoppa$/i.test(n))
-      &&/skänkel/.test(namn.find(n=>/^Driv på/.test(n))||"")
-      &&/tygel/.test(namn.find(n=>/^Bromsa/.test(n))||"")
+    const upp=namn.find(n=>/steg upp/i.test(n)), ned=namn.find(n=>/steg ned/i.test(n));
+    prova(!namn.some(n=>/^Hoppa$/i.test(n))
+      &&h.karta[upp]===(h.inmatning==="touch"?"DRIV":"W / ↑")
+      &&h.karta[ned]===(h.inmatning==="touch"?"BROMS":"S / ↓")
       &&h.utan.length===0,
-      `${vy.namn}: gångart och hopp anges utan uppfunnen tangent`,
-      namn.join(" | "));
+      `${vy.namn}: ett steg upp och ett steg ned har var sitt bundna reglage, hoppet ingen rad`,
+      namn.map(n=>n+" ["+h.karta[n]+"]").join(" | "));
     prova(h.box.l>=-1&&h.box.r<=h.inner.w+1&&h.box.t>=-1&&h.box.b<=h.inner.h+1,
       `${vy.namn}: hjälpen ryms i viewporten`,JSON.stringify(h.box));
     prova(!h.overflowX,`${vy.namn}: hjälpen ger ingen horisontell overflow`);

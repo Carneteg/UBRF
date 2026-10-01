@@ -162,25 +162,65 @@ console.log("\n── A. Startvalet vid hästen ──");
   console.log("\n── B. «Gör i ordning … själv» ──");
   await klicka(page, "start:sjalv");
   k = await kort(page);
-  prova("själv → «Hälsa på …» med tre handlingar, den första primär (UI-2)", k.id === "halsa"
-    && k.rubrik === `Hälsa på ${h.namn}` && k.knappar.length === 3 && k.knappar[0].primar && !k.knappar[2].primar,
-    `${k.rubrik} · ${k.knappar.length}`);
+  /* #273 S2 (T2): EN handling per fas — «Hälsa», inte tre knappar. */
+  prova("själv → «Hälsa på …» med EN handling, och den är primär (#273 S2)", k.id === "halsa"
+    && k.rubrik === `Hälsa på ${h.namn}` && k.knappar.length === 1 && k.knappar[0].primar
+    && k.knappar[0].id === "handling:halsa" && k.knappar[0].text === "Hälsa",
+    `${k.rubrik} · ${k.knappar.map(b => b.text).join(" / ")}`);
   prova("boxen finns under «Fler handlingar»", k.fler);
   prova("R1: «Rida nu» står som prompt med «[Håll inne R]», som i Roblox",
     k.rader.some(r => r.id === "rad:rida_nu" && r.text.includes("[Håll inne R]")), k.rader.map(r => r.text).join(" / "));
-  await klicka(page, "halsa3");
+  /* Ordningsregeln finns kvar i regelmodulen — handen före namnet nekas —
+     men den är inte längre tre läs-och-klicka-stopp. Kortet bär EN kort
+     rad; de tre detaljmeningarna står ordagrant i kunskapslagret. */
+  const regel = await page.evaluate(() => ({
+    nej: Forb.provaMoment(G.forb, "halsa", "halsa3", G.hastId),
+    detalj: HALSNING.map(x => x.text) }));
+  prova("handen före namnet: regeln nekar fortfarande med «fel tur» (#273 S2)",
+    regel.nej[0] === false && regel.nej[1] === "forb.fel_tur", JSON.stringify(regel.nej));
+  prova("kortet: EN kort rad, ingen av hälsningens tre detaljmeningar (#273 S2)",
+    k.text.includes("Hon ska se och höra dig innan du rör henne.") && !regel.detalj.some(t => k.text.includes(t)),
+    k.text.replace(/\n/g, " ¦ ").slice(0, 160));
+  await page.evaluate(() => document.querySelector("#stegkort button[data-kunskap]").click());
+  await vanta(page);
   k = await kort(page);
-  prova("handen före namnet: «fel tur», hälsningen står kvar (UI-2)",
-    k.id === "halsa" && k.aterkoppling.startsWith("fel tur"), k.aterkoppling);
-  for (const id of ["halsa1", "halsa2", "halsa3"]) await klicka(page, id);
+  prova("«Så gör man» öppnar kunskapslagret med de tre meningarna ordagrant (#273 S2)",
+    regel.detalj.length === 3 && regel.detalj.every(t => k.text.includes(t)), k.text.replace(/\n/g, " ¦ ").slice(0, 200));
+  await klicka(page, "handling:halsa");
+  k = await kort(page);
+  const efterHalsa = await page.evaluate(() => ({ ...G.forb.gjorda.halsa }));
+  prova("ETT tryck gör hälsningens tre moment som spelarens egna, och kvitterar (#273 S2)",
+    efterHalsa.halsa1 === true && efterHalsa.halsa2 === true && efterHalsa.halsa3 === true
+      && k.aterkoppling === "✓  Nu vet hon att du är där.", `${JSON.stringify(efterHalsa)} · ${k.aterkoppling}`);
   const foreE = await kort(page);
   await tangent(page, "KeyE", 550);
   const efterE = await kort(page);
   prova("R1: E gör inget skötselmoment — momenten är panelknappar, som i Roblox",
     foreE.id === "visitera" && efterE.id === "visitera" && efterE.rubrik === foreE.rubrik, `${foreE.rubrik} → ${efterE.rubrik}`);
   const texter = [];
+  const fore = await page.evaluate(() => ({ kolla: VISITPUNKT.map(p => p.ok), hov: HOVAR.map(x => x.text),
+    rykt: RYKTREDSKAP.map(x => x.text), sadel: SADELFAS.map(x => x.t) }));
   k = await gorSjalv(page, "leda", texter);
   const sagda = texter.join("\n");
+  /* #273 S2: sex handlingar och två hämtningar fram till ledningen — och
+     checklistan är densamma som de 23 klicken gav: varje moment gjort av
+     spelaren själv. */
+  const lista = await page.evaluate(() => {
+    const ut = { egna: 0, totalt: 0, auto: 0 };
+    for (const f of Forb.stegFaser()) { if (f.id === "leda") continue;
+      for (const m of Forb.moment(f.id)) { if (m.fel) continue; ut.totalt++;
+        const g = (G.forb.gjorda[f.id] || {})[m.id];
+        if (g === true) ut.egna++; else if (g === "auto") ut.auto++; } }
+    return ut; });
+  prova("hälsa → kolla → rykta → kratsa → sadla → tränsa: 23 moment gjorda, alla spelarens egna (#273 S2)",
+    lista.totalt === 23 && lista.egna === 23 && lista.auto === 0, JSON.stringify(lista));
+  /* Hälsningen är redan gjord ovan: kvar är kolla, rykta, kratsa, hämta
+     sadeln, sadla, hämta tränset och tränsa — sju kort, sedan ledningen. */
+  prova("efter hälsningen: fem handlingar och två hämtningar, sju kort före ledningen (#273 S2)",
+    texter.length === 8, `${texter.length - 1} kort före ledningen`);
+  prova("inget kort i huvudflödet bär en detaljmening om hovar, mungipor eller gjord (#273 S2)",
+    ![...fore.kolla, ...fore.hov, ...fore.rykt, ...fore.sadel].some(t => sagda.includes(t)),
+    [...fore.kolla, ...fore.hov, ...fore.rykt, ...fore.sadel].filter(t => sagda.includes(t)).join(" ¦ ") || "inga");
   prova("kedjan går genom alla Roblox-kort i ordning",
     ["Kolla ", "Rykta ", "Kratsa hovarna", "Hämta sadeln", "Lägg på sadeln", "Hämta tränset", "Sätt på tränset", "Led "]
       .every((t, i, a) => sagda.indexOf(t) >= 0 && (i === 0 || sagda.indexOf(t) > sagda.indexOf(a[i - 1]))),
