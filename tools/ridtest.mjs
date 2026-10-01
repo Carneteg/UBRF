@@ -299,8 +299,15 @@ const hj = await page.evaluate(() => {
       kontakt: G.ride.skala.kontakt, gangart: G.ride.gangart,
       stod: G.telemetri.hjalper.ytterstod,
       inner: G.telemetri.hjalper.innerTygel, ytter: G.telemetri.hjalper.ytterTygel }; };
+  /* #273 T4 (granskning R1): yttertygeln i rakriktningen är en AVANCERAD
+     hjälp. Mekaniken mäts med kravet påslaget; grundläget mäts för sig. */
+  const kravFore = SVAR_KANON.HJALP_KRAV;
+  ut.grundLos = volt(0); ut.grundBuren = volt(0.5);
+  SVAR_KANON.HJALP_KRAV = 1;
   ut.los = volt(0);
   ut.buren = volt(0.5);
+  SVAR_KANON.HJALP_KRAV = kravFore;
+  ut.krav = kravFore;
 
   ut.dublett = { kanon: HJALP_KANON.TYGEL_NEUTRAL, modell: K.TYGEL_NEUTRAL,
     styr: HJALP_KANON.STYR_FULLT, styrMal: (() => { RIDIN.styr = 1; ridAvsiktTillHjalp();
@@ -337,6 +344,14 @@ prova("yttertygeln bär svängen: buren volt ger bättre rakriktning än lös",
   `(+${((hj.buren.rak / hj.los.rak - 1) * 100).toFixed(1)} %) trots schvung ` +
   `${hj.los.schvung.toFixed(3)} → ${hj.buren.schvung.toFixed(3)} och kontakt ` +
   `${hj.los.kontakt.toFixed(3)} → ${hj.buren.kontakt.toFixed(3)}, båda i ${hj.buren.gangart}`);
+/* Med kravet 0 är stödtermen neutral. Då vänder ordningen, precis som
+   kommentaren ovan förutsäger: den lösa volten har högre schvung och
+   kontakt, och inget dras längre av för den utelämnade yttertygeln. */
+prova("#273 T4: i grundridningen sänks inte rakriktningen av utelämnad yttertygel",
+  hj.krav === 0 && hj.grundLos.rak >= hj.grundBuren.rak && hj.grundLos.rak > hj.los.rak + 0.02
+    && hj.grundLos.stod <= 0.45,
+  `lös tygel: ${hj.grundLos.rak.toFixed(3)} i grundläget mot ${hj.los.rak.toFixed(3)} med kravet påslaget ` +
+  `(stöd ${hj.grundLos.stod.toFixed(2)}) · kontakten kvar: ${hj.grundBuren.rak.toFixed(3)}`);
 prova("hjälpkanonen och modellen delar tal i stället för att spegla dem",
   hj.dublett.kanon === hj.dublett.modell &&
   Math.abs(hj.dublett.styr - hj.dublett.styrMal) < 1e-9,

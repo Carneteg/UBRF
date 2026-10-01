@@ -11,7 +11,9 @@
      C. T4: den som bara styr tappar ingen balans — genom tangenterna,
      D. S3 (T1): efter avsittningen ETT val. «Stallet» — passet klart, ingen
         straffavgift. «Själv» — tre handlingar i kanonens ordning och en
-        liten positiv effekt,
+        liten positiv effekt. Passet räknas och sparas FÖRST när valet är
+        gjort: den som lämnar vid valet har inte avslutat passet. Clear
+        round-raden lovar valet, inte fem moment,
      E. S2 (A3): «Samma häst igen» och «Rid igen — ny häst» leder till
         stegkortet vid boxen, aldrig till den gamla skötseln eller
         ridlärarens tilldelning; en vilande häst delas inte ut,
@@ -165,18 +167,23 @@ console.log("\n── A. S1: tangentbord — listan stängd, fyra kärnrader, et
       if (extra) dispatchEvent(new KeyboardEvent("keydown", { code: extra }));
       dispatchEvent(new KeyboardEvent("keydown", { code: "KeyD" }));
       __kor(20);
-      const ut = { gang: G.ride.gangart, balans: G.ride.balans, kappa: Math.abs(G.kappa),
+      const ut = { gang: G.ride.gangart, balans: G.ride.balans, kappa: Math.abs(G.kappa), rak: G.ride.skala.rakriktning,
         stod: G.telemetri && G.telemetri.hjalper ? G.telemetri.hjalper.ytterstod : null };
       dispatchEvent(new KeyboardEvent("keyup", { code: "KeyD" }));
       if (extra) dispatchEvent(new KeyboardEvent("keyup", { code: extra }));
       return ut; };
-    return { krav: SVAR_KANON.HJALP_KRAV, bara: volt(null), tygel: volt("Space") };
+    /* Samma ritt med kravet PÅSLAGET — det enda som skiljer är om den
+       utelämnade yttertygeln får kosta. */
+    const bara = volt(null);
+    return { krav: SVAR_KANON.HJALP_KRAV, bara };
   });
   prova("kanonens krav på de avancerade hjälperna är 0", b.krav === 0, String(b.krav));
   prova("full volt i trav med BARA styrning: balansen står kvar",
     b.bara.gang === "trav" && b.bara.balans > 0.95, `${b.bara.gang} · balans ${b.bara.balans.toFixed(3)}`);
   prova("…fast yttertygelstödet inte är fullt — det är inte längre ett dolt krav",
     b.bara.stod !== null && b.bara.stod < 0.95, `stöd ${b.bara.stod === null ? "—" : b.bara.stod.toFixed(2)}`);
+  /* Rakriktningen (granskning R1) mäts i tools/ridtest.mjs, där volten rids
+     med den skänkel som gör att skalans lägre nivåer inte kapar den. */
   await page.context().close();
 }
 
@@ -286,23 +293,33 @@ console.log("\n── D. S3: «Stallet tar hand om henne» ──");
   const fore = await page.evaluate(() => ({ hast: G.hastId, pass: SPAR.pass }));
   await page.keyboard.press("KeyE"); await vanta(page, 500);
   let o = await overlayLage(page);
-  const rang0 = await page.evaluate(() => SPAR.fortroende[G.hastId] && SPAR.fortroende[G.hastId].rang);
+  const sparat = () => page.evaluate(() => { try { return (JSON.parse(localStorage.getItem("ubrf-ridskolan-v1") || "{}").pass) || 0; } catch (_) { return -1; } });
   prova("avsittningen öppnar valet «Ta hand om henne»", o.uppe && o.text.toLowerCase().includes("vill du ta hand om henne själv, eller ska stallet göra det?"), o.text.slice(0, 80).replace(/\n/g, " ¦ "));
   prova("EXAKT två val: «Stallet tar hand om henne» och «Ta hand om henne själv»",
     o.knappar.length === 2 && o.knappar[0] === "Stallet tar hand om henne" && o.knappar[1] === "Ta hand om henne själv",
     o.knappar.join(" | "));
   prova("inga av de fem eftervårdsmomenten står som obligatoriska steg",
     !/Lossa gjorden|Känn igenom benen|Grimma på först/.test(o.text));
-  prova("passet är räknat en gång", (await page.evaluate(() => SPAR.pass)) === fore.pass + 1);
+  /* GRANSKNING R1: passet räknas INTE vid avsittningen. Valet avslutar det. */
+  const vidValet = await page.evaluate(() => ({ pass: SPAR.pass, passRes: G.passRes, raknat: !!(G.domare && G.domare.raknat) }));
+  prova("vid valet är passet ÄNNU INTE räknat — varken i minnet eller i sparfilen",
+    vidValet.pass === fore.pass && vidValet.passRes === null && vidValet.raknat === false && (await sparat()) === fore.pass,
+    JSON.stringify(vidValet));
   await page.click("#bEfterStallet"); await vanta(page);
   o = await overlayLage(page);
-  const rang1 = await page.evaluate(h => SPAR.fortroende[h] && SPAR.fortroende[h].rang, fore.hast);
+  const efterVal = await page.evaluate(h => ({ pass: SPAR.pass, rang: SPAR.fortroende[h] && SPAR.fortroende[h].rang,
+    passRang: G.passRes && G.passRes.rangEfter, bonus: G.efter.bonus, raknat: !!G.domare.raknat }), fore.hast);
+  prova("«Stallet» räknar passet — en gång, och det är sparat", efterVal.pass === fore.pass + 1 && efterVal.raknat
+    && (await sparat()) === fore.pass + 1, JSON.stringify(efterVal));
+  const rang0 = efterVal.passRang, rang1 = efterVal.rang;
   prova("stallet: passet är klart, och det sägs", o.uppe && o.utfall === "Stallet tar hand om henne. Passet är klart."
     && o.text.toLowerCase().includes("passet är klart och sparat"), o.utfall);
-  prova("ingen straffavgift: hästens förtroende är oförändrat av valet", rang1 === rang0, `${rang0} → ${rang1}`);
+  prova("ingen straffavgift och ingen bonus: förtroendet är exakt det passet gav", rang1 === rang0 && efterVal.bonus === 0,
+    `${rang0} → ${rang1}`);
   prova("vägen vidare: «Rid igen — ny häst» och «Samma häst igen»",
     o.knappar.includes("Rid igen — ny häst") && o.knappar.includes("Samma häst igen"), o.knappar.join(" | "));
-  prova("passet räknades inte en gång till av valet", (await page.evaluate(() => SPAR.pass)) === fore.pass + 1);
+  prova("ett andra anrop räknar inte passet en gång till",
+    (await page.evaluate(() => { raknaPass(G.domare); efterKlar(G.domare); return SPAR.pass; })) === fore.pass + 1);
 
   console.log("\n── E. S2 (A3): «Samma häst igen» leder till stegkortet ──");
   await page.click("#bSamma"); await vanta(page, 700); await vantaStegkort(page);
@@ -335,24 +352,28 @@ console.log("\n── D2. S3: «Ta hand om henne själv» ──");
   prova("tränset före sadeln nekas med fel tur, och inget blir gjort",
     regel.fel[0] === false && regel.fel[1] === "pass.fel_tur" && regel.orord, JSON.stringify(regel.fel.slice(0, 2)));
   await page.keyboard.press("KeyE"); await vanta(page, 500);
-  const rang0 = await page.evaluate(h => SPAR.fortroende[h].rang, fore.hast);
+  const passFore = await page.evaluate(() => SPAR.pass);
   await page.click("#bEfterSjalv"); await vanta(page);
   const steg = [];
   for (let i = 0; i < 3; i++) {
     const o = await overlayLage(page);
-    steg.push({ knappar: o.knappar, text: o.text });
+    steg.push({ knappar: o.knappar, text: o.text, pass: await page.evaluate(() => SPAR.pass) });
     await page.click("#bEfterHandling"); await vanta(page);
   }
+  prova("under den egna eftervården är passet ännu inte räknat", steg.every(s => s.pass === passFore), steg.map(s => s.pass).join(","));
   prova("själv: en handling i taget — Ta av sadeln → Ta av tränset → Vatten och hö",
     steg.map(s => s.knappar[0]).join(" → ") === "Ta av sadeln → Ta av tränset → Vatten och hö", steg.map(s => s.knappar[0]).join(" → "));
   prova("och stallet finns kvar som väg ut vid varje steg", steg.every(s => s.knappar[1] === "Stallet tar hand om resten"));
   prova("varje steg bär EN kort rad; detaljmeningarna ligger bakom «Så gör man»",
     steg[0].text.includes("Lossa gjorden och lyft av sadeln.") && steg.every(s => s.text.includes("Så gör man")));
   const o = await overlayLage(page);
-  const rang1 = await page.evaluate(h => SPAR.fortroende[h].rang, fore.hast);
+  const slut = await page.evaluate(h => ({ pass: SPAR.pass, rang: SPAR.fortroende[h].rang, passRang: G.passRes.rangEfter, bonus: G.efter.bonus }), fore.hast);
+  const rang0 = slut.passRang, rang1 = slut.rang;
+  prova("när den egna eftervården är klar räknas passet — en gång", slut.pass === passFore + 1, String(slut.pass));
   prova("efter tredje handlingen: passet är klart, och hennes egen omsorg sägs",
     o.utfall === "Du tog hand om henne själv. Det märker hon.", o.utfall);
-  prova("liten positiv effekt: förtroendet +0,02 — inte mer", Math.abs((rang1 - rang0) - regel.bonus) < 1e-9 && regel.bonus === 0.02,
+  prova("liten positiv effekt: förtroendet +0,02 ovanpå det passet gav — inte mer",
+    Math.abs((rang1 - rang0) - regel.bonus) < 1e-9 && regel.bonus === 0.02 && Math.abs(slut.bonus - 0.02) < 1e-9,
     `${rang0.toFixed(4)} → ${rang1.toFixed(4)}`);
 
   console.log("\n── E2. S2 (A3): «Rid igen — ny häst» leder till stegkortet ──");
@@ -364,6 +385,36 @@ console.log("\n── D2. S3: «Ta hand om henne själv» ──");
   prova("hon står i sin box, stegkortet är uppe och förberedelsen är orörd",
     s.plats === "box" && s.scen === "stallinne" && ["ga_till", "valj", "fynd"].includes(s.kort) && s.forbOrord && s.forbHast === s.hastId,
     `${s.plats} · ${s.kort}`);
+  await page.context().close();
+}
+
+console.log("\n── D3. S3: den som lämnar vid valet har inte avslutat passet ──");
+{
+  const page = await sittUppNy();
+  const fore = await page.evaluate(() => SPAR.pass);
+  await page.keyboard.press("KeyE"); await vanta(page, 500);
+  const o = await overlayLage(page);
+  const lagrat = await page.evaluate(() => { try { return (JSON.parse(localStorage.getItem("ubrf-ridskolan-v1") || "{}").pass) || 0; } catch (_) { return -1; } });
+  await page.reload({ waitUntil: "load" }); await vanta(page, 700);
+  const efter = await page.evaluate(() => SPAR.pass);
+  prova("valet stod uppe, fliken laddades om utan val: passet är INTE räknat",
+    o.knappar.length === 2 && lagrat === fore && efter === fore, `före ${fore} · sparfil ${lagrat} · efter omladdning ${efter}`);
+
+  /* Clear round-raden lovar VALET, inte de fem momenten — sv och en. */
+  const rad = await page.evaluate(() => {
+    const bild = { typ: "clearround", lage: "complete", forsokId: "f1", rittId: "r1", eftervard: EFTERVARD.map(e => ({ id: e.id, namn: e.namn, namnEn: e.namnEn })),
+      resultat: { forsokId: "f1", rittId: "r1", ovning: "clearround", bedomning: "forenklad", forsokNr: 1, utfall: "inga_observerade_fel", tid: 31 } };
+    const ut = {}; const fore = window.SPRAKET;
+    for (const sp of ["sv", "en"]) { window.SPRAKET = sp; ut[sp] = LektionAterkoppling.text(bild, { typ: "clearround", ritt: "r1" }); }
+    window.SPRAKET = fore;
+    ut.namn = EFTERVARD.flatMap(e => [e.namn, e.namnEn]);
+    return ut; });
+  prova("clear round-raden säger valet på svenska och engelska",
+    String(rad.sv).includes("Sedan väljer du om stallet tar hand om henne eller om du gör det själv.")
+      && String(rad.en).includes("Then you choose whether the stable looks after her or you do it yourself."), `${rad.sv} ¦ ${rad.en}`);
+  prova("…och räknar inte upp de fem momenten, på något språk",
+    !rad.namn.some(n => String(rad.sv).includes(n) || String(rad.en).includes(n))
+      && !/väntar|is waiting/.test(String(rad.sv) + String(rad.en)), rad.namn.join(" · "));
   await page.context().close();
 }
 

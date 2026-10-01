@@ -21,6 +21,10 @@ provet inte det den sager sig vakta.
   W8  kollen stannar inte vid ett fynd
   W9  kortet visar momentets detaljmening i stallet for den korta raden
   W10 eftervardens ordningsregel borta (transet fore sadeln gar igenom)
+  W11 rakriktningen laser yttertygelstodet oavsett kravet (granskning R1)
+  W12 passet raknas vid avsittningen, fore eftervardens val (granskning R1)
+  W13 clear round-raden raknar upp momenten igen (webb)
+  R10 clear round-raden raknar upp momenten igen (Roblox)
   R1  serverns «Kolla» stannar inte vid fyndet
   R2  stallets eftervard bokfors som spelarens egen
   R3  den egna eftervardens bonus ar noll
@@ -60,6 +64,9 @@ FILER = {
     "scenes": "src/scenes.js",
     "forb": "src/forberedelse.js",
     "stegkort": "src/stegkort.js",
+    "model": "src/model.js",
+    "webbak": "src/lektioner/aterkoppling.js",
+    "rbxak": "roblox/src/client/LektionsAterkoppling.luau",
     "gs": "roblox/src/server/GameplayService.luau",
     "prep": "roblox/src/shared/HorseCore/Preparation.luau",
     "init": "roblox/src/client/init.client.luau",
@@ -116,8 +123,23 @@ def kor_luau(spec):
     return _kor
 
 
+def kor_ridtest():
+    b = subprocess.run([sys.executable, "tools/build.py"], cwd=str(ROT),
+                       capture_output=True, text=True, encoding="utf-8", errors="replace")
+    if b.returncode != 0:
+        return "BYGGFEL", [(b.stdout + b.stderr).strip()[-200:]]
+    r = subprocess.run(["node", "tools/ridtest.mjs"], cwd=str(ROT),
+                       capture_output=True, text=True, encoding="utf-8", errors="replace")
+    ut = r.stdout + r.stderr
+    fel = [l.strip() for l in ut.splitlines() if l.strip().startswith("FEL")]
+    if r.returncode == 0 and not fel:
+        return "GRONT", []
+    return ("ROTT" if fel else "KRASCH"), fel[:4] or [ut.strip()[-200:]]
+
+
 SERVER = kor_luau("integration-forenkling")
 KLIENT = kor_luau("klient-forenkling")
+CLEARROUND = kor_luau("clearround-eftervard")
 
 # (namn, fil, gammalt, nytt, korning, beskrivning)
 MUTATIONER = [
@@ -160,6 +182,22 @@ MUTATIONER = [
      '      return [false, "pass.fel_tur", paTur.moment[0]];\n    }\n',
      "    }\n",
      kor_webb, "eftervardens ordningsregel borta"),
+    ("W11", "model",
+     "   const stod=1-stodKrav*(1-(HS?HS.ytterstod:1));",
+     "   const stod=HS?HS.ytterstod:1;",
+     kor_ridtest, "rakriktningen laser yttertygelstodet oavsett kravet"),
+    ("W12", "game",
+     "    G.passRes=null;\n    visaEftervard(dom);",
+     "    raknaPass(dom);\n    visaEftervard(dom);",
+     kor_webb, "passet raknas vid avsittningen, fore valet"),
+    ("W13", "webbak",
+     '        s += " " + t("aterkoppling.clearround.eftervard");',
+     '        s += " " + t("aterkoppling.clearround.eftervard") + " " + b.eftervard.map(m => m.namn).join(" · ");',
+     kor_webb, "clear round-raden raknar upp momenten igen (webb)"),
+    ("R10", "rbxak",
+     '			s ..= " " .. Sprak.t("aterkoppling.clearround.eftervard")',
+     '			s ..= " " .. Sprak.t("aterkoppling.clearround.eftervard") .. " " .. tostring(b.eftervard[1].namn)',
+     CLEARROUND, "clear round-raden raknar upp momenten igen (Roblox)"),
     ("R1", "gs",
      '			if s.fyndSett and not s.fyndRapporterat then\n				return true, "forb.oppet_fynd", nil\n			end\n',
      "",
@@ -199,8 +237,8 @@ MUTATIONER = [
 # W7 i tva led: villkoret bort racker inte (andelen ar 0 och ger 0). Bonusen
 # ska laggas pa aven for stallet.
 _W7 = ("W7", "scenes",
-       "    m.rang=clamp((m.rang??0.45)+Efter.BONUS*andel,0,1);",
-       "    m.rang=clamp((m.rang??0.45)+Efter.BONUS,0,1);",
+       "    m.rang=clamp(fore+Efter.BONUS*andel,0,1);",
+       "    m.rang=clamp(fore+Efter.BONUS,0,1);",
        kor_webb, "stallets eftervard ger ocksa bonusen")
 
 
