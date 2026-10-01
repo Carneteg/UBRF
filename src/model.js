@@ -544,7 +544,8 @@ function stepRide(s,a,h,ctx,dt){
      let fartkrav=0;
      if(s.tempo>0.5&&ctx.svangradie<40)
        fartkrav=clamp(((s.tempo*s.tempo)/Math.max(ctx.svangradie,1)-3.0)/9.0,0,1);
-     const bMal=svarBalansMal(s,h,bojkrav,stodNu,fartkrav,!!s._ov,a.sits);
+     /* #273 T4: i grundridningen är yttertygel och sits inte ett krav. */
+     const bMal=svarBalansMal(s,h,bojkrav,stodNu,fartkrav,!!s._ov,a.sits,S.HJALP_KRAV);
      const bTau=bMal<s.balans?S.BALANS_TAU_NER:S.BALANS_TAU_UPP;
      s.balans+=(bMal-s.balans)*clamp(dt/bTau,0,1);
 

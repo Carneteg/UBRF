@@ -202,6 +202,65 @@ const Forb = (() => {
     return [true];
   }
 
+  /* ── #273 S2 (T2): EN SPELARHANDLING PER FAS ──────────────────────
+     Huvudflödet är hälsa → kolla → rykta → kratsa → sadla → tränsa →
+     leda → sitt upp. En HANDLING är en grupp av fasens befintliga moment;
+     när spelaren utför den görs momenten i sin ordning med spelaren som
+     utförare. Checklistan, ordningsregeln, egen andel och varje grind har
+     kvar sin datamodell — det som försvinner är läs-och-klicka-stoppen
+     mellan momenten, inte momenten.
+
+     Gruppen härleds ur momentens egna id, som i Preparation.handlingar:
+     iordning delas i hovarna, sadeln (utr:1 … näst sista) och tränset
+     (sista sadelfasen). `leda` har ingen handling — den kvitteras av att
+     hästen fysiskt är framme. */
+  function handlingar(fasId) {
+    const m = moment(fasId).filter(x => !x.fel);
+    if (fasId === "halsa") return [{ id: "halsa", fas: fasId, moment: m }];
+    if (fasId === "visitera") return [{ id: "kolla", fas: fasId, moment: m }];
+    if (fasId === "rykta") return [{ id: "rykta", fas: fasId, moment: m }];
+    if (fasId === "iordning") return [
+      { id: "kratsa", fas: fasId, moment: m.filter(x => !x.utr) },
+      { id: "sadla", fas: fasId, moment: m.filter(x => x.utr && x.utr < SADELFAS.length) },
+      { id: "transa", fas: fasId, moment: m.filter(x => x.utr === SADELFAS.length) }];
+    return [];
+  }
+  /* Handlingen som står på tur i fasen: den som äger nästa moment. */
+  function nastaHandling(s, fasId) {
+    const n = nastaMoment(s, fasId);
+    if (!n) return null;
+    return handlingar(fasId).find(h => h.moment.some(x => x.id === n.id)) || null;
+  }
+  function hittaHandling(id) {
+    for (const f of stegFaser()) for (const h of handlingar(f.id)) if (h.id === id) return h;
+    return null;
+  }
+  /* Utför handlingen: dess återstående moment i ordning, genom den
+     RIKTIGA vägen (utforMoment). Varje nej respekteras och avbryter. Ett
+     fynd stannar kollen i samma ögonblick — beslutet är spelarens, precis
+     som när stallet hittar det. Returnerar [ok, skäl, arg/händelse]. */
+  function utforHandling(s, handlingId, hastId, utforare) {
+    if (s.stoppad) return [false, "forb.lararen_tar_over", s.stoppad];
+    if (hastId !== s.hastId) return [false, "forb.fel_hast"];
+    if (s.fyndSett && !s.fyndRapporterat) return [false, "forb.oppet_fynd"];
+    const h = hittaHandling(handlingId);
+    if (!h) return [false, "forb.okant_moment"];
+    const f = nasta(s);
+    const paTur = f ? nastaHandling(s, f.id) : null;
+    if (!paTur || paTur.id !== h.id) {
+      const gjort = s.gjorda[h.fas] || {};
+      if (h.moment.every(m => gjort[m.id])) return [false, "forb.redan_gjort"];
+      return [false, "forb.fel_tur", f ? f.namn : null];
+    }
+    for (const m of h.moment) {
+      if ((s.gjorda[h.fas] || {})[m.id]) continue;
+      const r = utforMoment(s, h.fas, m.id, hastId, utforare);
+      if (!r[0]) return r;
+      if (r[2] === "fynd") return [true, null, "fynd"];
+    }
+    return [true, null, null];
+  }
+
   /* Stallets förberedelse. Går genom den RIKTIGA vägen (utforMoment med
      "auto") och respekterar varje nej — fail closed. `leda` rörs aldrig:
      den fasen kvitteras när hästen fysiskt är framme. Felaktiga
@@ -251,7 +310,76 @@ const Forb = (() => {
 
   return { stegFaser, fas, moment, arVal, nastaMoment, fasKlar, fyndFor, fyndSvar,
     nyState, nasta, redo, provaSteg, provaMoment, utforMoment, svaraFynd,
+    handlingar, nastaHandling, utforHandling,
     provaUppsittning, autoForbered, egenAndel, dagsform, DAGSFORM_BONUS, FYNDCHANS };
 })();
 
-if (typeof window !== "undefined") window.Forb = Forb;
+/* ══════════════════════════════════════════════════════════════════
+   EFTERVÅRDEN — webbens port av Roblox Pass.handlingar (#273 S3, T1)
+
+   Tobias beslut 2026-10-01. Efter avsittningen får spelaren ett val:
+
+     «Stallet tar hand om henne»  passet är klart, ingen straffavgift
+     «Ta hand om henne själv»     frivillig egen eftervård, liten positiv effekt
+
+   Momenten och deras ordning är kanonens (EFTERVARD i src/spel/skotsel.js)
+   och oförändrade. Spelarens egen väg är tre handlingar i stället för fem
+   kvittenser, samma grupper som Roblox:
+
+     sadla_av   lossa gjorden + ta av sadeln
+     transa_av  ta av tränset
+     ta_hand    känn igenom benen + vatten och hö
+
+   `gjorda[id]` är `true` när spelaren gjorde momentet och "auto" när
+   stallet gjorde det — samma märkning som förberedelsen.
+   ══════════════════════════════════════════════════════════════════ */
+const Efter = (() => {
+  const GRUPP = { gjord: "sadla_av", sadel: "sadla_av", trans: "transa_av", ben: "ta_hand", vatten: "ta_hand" };
+  const ORDNING = ["sadla_av", "transa_av", "ta_hand"];
+  /* GameplayService.EGEN_EFTERVARD_BONUS — relationen, × egen andel. */
+  const BONUS = 0.02;
+
+  const moment = () => EFTERVARD.map((e, i) => ({ ...e, steg: i + 1 }));
+  function handlingar() {
+    const per = {};
+    for (const m of moment()) (per[GRUPP[m.id] || "ta_hand"] ||= []).push(m);
+    return ORDNING.filter(id => per[id]).map(id => ({ id, moment: per[id] }));
+  }
+  const nyState = hastId => ({ hastId, gjorda: {}, klar: false, sjalv: false });
+  const nastaMoment = s => moment().find(m => !s.gjorda[m.id]) || null;
+  function nastaHandling(s) {
+    const n = nastaMoment(s);
+    return n ? handlingar().find(h => h.moment.some(m => m.id === n.id)) || null : null;
+  }
+  const borjad = s => Object.keys(s.gjorda).some(k => s.gjorda[k]);
+  /* Spelarens egen handling: dess återstående moment, i kanonens ordning.
+     Fel tur nekas — sadeln av innan tränset. Returnerar [ok, skäl, arg]. */
+  function utforHandling(s, handlingId) {
+    const h = handlingar().find(x => x.id === handlingId);
+    if (!h) return [false, "pass.okant_moment"];
+    const paTur = nastaHandling(s);
+    if (!paTur) return [false, "pass.redan_gjort"];
+    if (paTur.id !== h.id) {
+      if (h.moment.every(m => s.gjorda[m.id])) return [false, "pass.redan_gjort"];
+      return [false, "pass.fel_tur", paTur.moment[0]];
+    }
+    for (const m of h.moment) if (!s.gjorda[m.id]) s.gjorda[m.id] = true;
+    if (!nastaMoment(s)) s.klar = true;
+    return [true];
+  }
+  /* Stallet gör det som återstår. Ingen straffavgift. */
+  function stallet(s) {
+    for (const m of moment()) if (!s.gjorda[m.id]) s.gjorda[m.id] = "auto";
+    s.klar = true;
+    return [true];
+  }
+  function egenAndel(s) {
+    if (!s) return 0;
+    const alla = moment();
+    return alla.length ? alla.filter(m => s.gjorda[m.id] === true).length / alla.length : 0;
+  }
+  return { moment, handlingar, nyState, nastaMoment, nastaHandling, borjad,
+    utforHandling, stallet, egenAndel, BONUS };
+})();
+
+if (typeof window !== "undefined") { window.Forb = Forb; window.Efter = Efter; }

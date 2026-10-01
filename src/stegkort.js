@@ -14,11 +14,17 @@
    Reglerna bor i src/forberedelse.js (porten av Preparation.luau). Den här
    filen RITAR och skickar handlingar — den bestämmer ingenting själv.
 
+   #273 S2 (T2): EN HANDLING PER KORT. Hälsa, kolla, rykta, kratsa, sadla
+   och tränsa är var sin knapp; servern/regelmodulen utför fasens moment i
+   ordning (Forb.utforHandling). Kortet bär EN kort rad. Detaljmeningarna
+   — hovarna, mungiporna, gjorden i tre tag — står ordagrant kvar, men i
+   det frivilliga kunskapslagret bakom «Så gör man».
+
    All text går genom tSpr (src/spel/sprak.js) eller skötselkanonens
    engelska syskonfält. Ingen svensk sträng står här.
    ══════════════════════════════════════════════════════════════════ */
 
-const STEGKORT = { sjalv: {}, fler: false, aterkoppling: "", aterT: 0, sig: "", ridaNu: false };
+const STEGKORT = { sjalv: {}, fler: false, kunskap: false, aterkoppling: "", aterT: 0, sig: "", ridaNu: false };
 
 const skSv = () => typeof SPRAKET === "undefined" || SPRAKET !== "en";
 /* Kanonens text på spelarens språk: `text`/`textEn`, `namn`/`namnEn`. */
@@ -67,16 +73,30 @@ function skMomentNamn(m) {
 
 function skAterkoppla(text) { STEGKORT.aterkoppling = text || ""; STEGKORT.aterT = 6; stegkortRita(true); }
 
-function skUtfor(fasId, m) {
-  const s = G.forb;
-  const r = Forb.utforMoment(s, fasId, m.id, G.hastId);
+/* #273 S2: handlingens knapp, korta rad och kvittens. VARJE NYCKEL ÄR EN
+   LITERAL — språkgrinden ska kunna se dem. */
+const SK_HANDLING = {
+  halsa:  { knapp: () => tSpr("handling.halsa"),  text: () => tSpr("handling.halsa_text"),  klar: () => tSpr("handling.halsa_klar") },
+  kolla:  { knapp: () => tSpr("handling.kolla"),  text: () => tSpr("handling.kolla_text"),  klar: () => tSpr("handling.kolla_klar") },
+  rykta:  { knapp: () => tSpr("handling.rykta"),  text: () => tSpr("handling.rykta_text"),  klar: () => tSpr("hud.bra") },
+  kratsa: { knapp: () => tSpr("handling.kratsa"), text: () => tSpr("handling.kratsa_text"), klar: () => tSpr("hud.bra") },
+  sadla:  { knapp: () => tSpr("handling.sadla"),  text: () => tSpr("handling.sadla_text"),  klar: () => tSpr("hud.bra") },
+  transa: { knapp: () => tSpr("handling.transa"), text: () => tSpr("handling.transa_text"), klar: () => tSpr("hud.bra") },
+};
+function skHandling(id) {
+  const r = Forb.utforHandling(G.forb, id, G.hastId);
   if (!r[0]) { skAterkoppla(skAvslag(r)); return; }
+  STEGKORT.kunskap = false;
   if (r[2] === "fynd") { skAterkoppla(""); return; }
-  /* Ett moment med egen kvittens (hälsningens handlingar, UI-2) säger
-     den, som PreparationController.kvittens i Roblox. */
-  if (m.kvittens) skAterkoppla("✓  " + skKanon(m, "kvittens"));
-  else if (fasId === "visitera") skAterkoppla(skKanon(m, "text"));
-  else skAterkoppla("✓  " + tSpr("hud.bra"));
+  skAterkoppla("✓  " + SK_HANDLING[id].klar());
+}
+/* Det frivilliga kunskapslagret: handlingens moment med kanonens egna
+   meningar, ordagrant. Läses bara av den som öppnar det. */
+function skKunskap(h) {
+  return h.moment.map(m => {
+    const namn = skMomentNamn(m), text = skKanon(m, "text");
+    return namn && namn !== text ? `${namn} — ${text}` : text;
+  });
 }
 
 /* Förberedelsen är klar till ledningen: hästens dag sätts EN gång, av
@@ -228,12 +248,11 @@ function stegkortKort(antaNara) {
 
   const fas = Forb.nasta(s);
   if (!fas) return null;
-  const knapp = (m, fasId) => ({ id: m.id, text: skMomentNamn(m), primar: true, gor() { skUtfor(fasId, m); } });
-  const raknare = fasId => {
-    const alla = Forb.moment(fasId).filter(m => !m.fel);
-    const gjorda = alla.filter(m => s.gjorda[fasId]?.[m.id]).length;
-    return `  ·  ${gjorda}/${alla.length}`;
-  };
+  /* #273 S2: handlingen som står på tur — EN knapp, EN kort rad. */
+  const hd = Forb.nastaHandling(s, fas.id);
+  const knapp = () => ({ id: "handling:" + hd.id, text: SK_HANDLING[hd.id].knapp(), primar: true,
+    gor() { skHandling(hd.id); } });
+  const hText = () => SK_HANDLING[hd.id].text();
 
   /* PROMPTRADERNA — Roblox ProximityPrompts vid hästen, med samma tangent
      och hålltid som InteractionController (RidaNuPrompt R 0,35 s,
@@ -243,27 +262,19 @@ function stegkortKort(antaNara) {
   const ridaNuRad = { id: "rad:rida_nu", text: tSpr("guide.val_rida_nu", n), tangent: "KeyR", hall: 0.35,
     gor: stegkortRidaNu };
   const kort = (id, rubrik, text, val, egna) => ({ id, rubrik, text, val: val || [], fler,
+    kunskap: hd ? skKunskap(hd) : [],
     rader: [...(egna || []), ridaNuRad].slice(0, 3) });
 
   const m = Forb.nastaMoment(s, fas.id);
-  /* UI-2: hälsningen är handlingar i ordning, inte en fråga. Ugneta säger
-     nästa handling (momentets `text`); de ogjorda står kvar som val och
-     bara den som står på tur är primär — som Roblox, där panelen visar
-     de aktiva momenten med `paTur` markerat. */
   if (fas.id === "halsa")
-    return kort("halsa", tSpr("guide.halsa_rubrik", n), skKanon(m, "text"),
-      Forb.moment("halsa").filter(x => !x.fel && !s.gjorda.halsa?.[x.id]).map(x => ({ id: x.id,
-        text: skKanon(x, "namn"), primar: x.id === m.id, gor() { skUtfor("halsa", x); } })));
-
+    return kort("halsa", tSpr("guide.halsa_rubrik", n), hText(), [knapp()]);
   if (fas.id === "visitera")
-    return kort("visitera", tSpr("guide.visitera_rubrik", n) + raknare("visitera"),
-      skKanon(fas, "text"), [knapp(m, "visitera")]);
+    return kort("visitera", tSpr("guide.visitera_rubrik", n), hText(), [knapp()]);
   if (fas.id === "rykta")
-    return kort("rykta", tSpr("guide.rykta_rubrik", n) + raknare("rykta"),
-      skKanon(m, "text"), [knapp(m, "rykta")]);
+    return kort("rykta", tSpr("guide.rykta_rubrik", n), hText(), [knapp()]);
   if (fas.id === "iordning") {
     if (!m.utr)
-      return kort("hovar", tSpr("guide.hovar_rubrik"), skKanon(m, "text"), [knapp(m, "iordning")]);
+      return kort("hovar", tSpr("guide.hovar_rubrik"), hText(), [knapp()]);
     const trans = m.utr === SADELFAS.length;
     if (!s.hand[trans ? "trans" : "sadel"])
       return trans
@@ -274,9 +285,9 @@ function stegkortKort(antaNara) {
             [{ id: "tack:sadel", text: tSpr("tack.ta_sadeln"), tangent: "KeyE", hall: 0,
               gor() { s.hand.sadel = true; skAterkoppla(""); } }]);
     return kort(trans ? "transa" : "sadla", tSpr(trans ? "guide.transa_rubrik" : "guide.sadla_rubrik"),
-      skKanon(m, "text"), [knapp(m, "iordning")],
+      hText(), [knapp()],
       [{ id: trans ? "rad:transa" : "rad:sadla", text: tSpr(trans ? "interaktion.transa_namn" : "interaktion.sadla_namn", n),
-        tangent: "KeyF", hall: 0.35, gor() { skUtfor("iordning", Forb.nastaMoment(s, "iordning")); } }]);
+        tangent: "KeyF", hall: 0.35, gor() { skHandling(hd.id); } }]);
   }
   if (fas.id === "leda")
     return kort("leda", tSpr("guide.leda_rubrik", n), tSpr("guide.leda_text"), [],
@@ -352,6 +363,7 @@ function stegkortInstallera() {
   #stegkort button.rad .skK{position:relative;font-size:12px;color:#BFB8A8;white-space:nowrap}
   #stegkort button.rad .skFyll{position:absolute;left:0;top:0;bottom:0;width:0%;background:rgba(236,196,92,.28)}
   #stegkort .skF{margin-top:6px;font-size:12.5px;color:#BFB8A8}
+  #stegkort .skKun{margin:6px 0 0;padding-left:18px;color:#BFB8A8;font-size:12.5px;display:grid;gap:4px}
   #stegkort .skA{margin-top:8px;color:rgb(236,196,92);min-height:0}
   #stegkort .skA:empty{display:none}
   @media (max-width:760px){#stegkort{max-width:calc(100vw - 28px);width:auto;right:14px}}`;
@@ -372,13 +384,15 @@ function stegkortRita(tvinga) {
   const fler = k.fler || [];
   const sig = [k.id, k.rubrik, k.text, (k.val || []).map(v => v.id + v.text).join("|"),
     (k.rader || []).map(r => r.id + r.text).join("|"),
-    fler.length, STEGKORT.fler, STEGKORT.aterkoppling, typeof SPRAKET !== "undefined" ? SPRAKET : ""].join("§");
+    fler.length, STEGKORT.fler, STEGKORT.kunskap, (k.kunskap || []).length,
+    STEGKORT.aterkoppling, typeof SPRAKET !== "undefined" ? SPRAKET : ""].join("§");
   el.hidden = false;
   if (!tvinga && sig === STEGKORT.sig) return;
   STEGKORT.sig = sig;
   const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const val = (k.val || []).slice(0, 4);
   const rader = (k.rader || []).slice(0, 3);
+  const kunskap = k.kunskap || [];
   el.dataset.kort = k.id;
   /* UI-2 (docs/P2-UGNETA-INSTRUCTION-CONTRACT.md § 4): Ugneta överst —
      hennes titel, språkflaggan och hennes instruktion. Handlingarna under.
@@ -397,6 +411,9 @@ function stegkortRita(tvinga) {
     + (fler.length ? `<div class="skF"><button data-fler="1">+  ${esc(tSpr("panel.fler"))}</button>${
         STEGKORT.fler ? `<div class="skV" style="margin-top:6px">${fler.map((v, i) =>
           `<button data-f="${i}" data-id="${esc(v.id)}">${esc(v.text)}</button>`).join("")}</div>` : ""}</div>` : "")
+    /* #273 S2: det frivilliga kunskapslagret. Stängt tills spelaren öppnar det. */
+    + (kunskap.length ? `<div class="skF"><button data-kunskap="1">${STEGKORT.kunskap ? "−" : "+"}  ${esc(tSpr("handling.kunskap"))}</button>${
+        STEGKORT.kunskap ? `<ul class="skKun">${kunskap.map(t => `<li>${esc(t)}</li>`).join("")}</ul>` : ""}</div>` : "")
     + `<div class="skA">${esc(STEGKORT.aterkoppling)}</div>`;
   for (const b of el.querySelectorAll("button[data-i]"))
     b.onclick = () => { const v = val[+b.dataset.i]; if (v) v.gor(); stegkortRita(true); };
@@ -426,6 +443,8 @@ function stegkortRita(tvinga) {
     b.onpointerup = slapp; b.onpointerleave = slapp; b.onpointercancel = slapp;
     b.onclick = e => e.preventDefault();
   }
+  const kb = el.querySelector("button[data-kunskap]");
+  if (kb) kb.onclick = () => { STEGKORT.kunskap = !STEGKORT.kunskap; stegkortRita(true); };
   const fb = el.querySelector("button[data-fler]");
   if (fb) fb.onclick = () => { STEGKORT.fler = !STEGKORT.fler; stegkortRita(true); };
   const sb = el.querySelector("button[data-sprak]");

@@ -1933,6 +1933,12 @@ local function fyllText(data: any, minHast: string?, hastnamn: string?)
 			visaInstruktion(steg)
 			visaAterkoppling(ater)
 			local hjalpG = stegLista(data.steg or {})
+			--[[ #273 S2: kunskapslagret — «Så gör man» — för handlingen på
+				tur. Frivilligt: det står bakom Hjälp, aldrig i kortet. ]]
+			if type(data.kunskap) == "string" and data.kunskap ~= "" then
+				local k = Sprak.t("handling.kunskap") .. "\n" .. data.kunskap
+				hjalpG = if hjalpG ~= "" then (hjalpG .. "\n\n" .. k) else k
+			end
 			if type(data.historik) == "string" and data.historik ~= "" then
 				hjalpG = if hjalpG ~= "" then (hjalpG .. "\n\n" .. data.historik) else data.historik
 			end
@@ -1946,6 +1952,10 @@ local function fyllText(data: any, minHast: string?, hastnamn: string?)
 	--[[ C: skötselminnets avsnitt EFTER dagens steg, åtskilt — samma
 		valfria hjälplista, ingen rad och ingen fråga. ]]
 	local hjalp = if data then stegLista(data.steg or {}) else ""
+	if data and type(data.kunskap) == "string" and data.kunskap ~= "" then
+		local k = Sprak.t("handling.kunskap") .. "\n" .. data.kunskap
+		hjalp = if hjalp ~= "" then (hjalp .. "\n\n" .. k) else k
+	end
 	if data and type(data.historik) == "string" and data.historik ~= "" then
 		hjalp = if hjalp ~= "" then (hjalp .. "\n\n" .. data.historik) else data.historik
 	end
@@ -2051,8 +2061,10 @@ rita = function()
 		valEfter = false
 		if valYta then valYta.LayoutOrder = 3; valYta.Visible = ridVal > 0 end
 		local alla = {}
-		for _, r in ipairs(KontrollHjalp.rader()) do
-			table.insert(alla, r.vad .. "  [" .. r.reglage .. "]")
+		--[[ #273 S1: kärnan först, hjälperna under «Avancerat». ]]
+		for _, r in ipairs(KontrollHjalp.listrader()) do
+			table.insert(alla, if r.rubrik then "— " .. r.vad .. " —"
+				else r.vad .. "  [" .. r.reglage .. "]")
 		end
 		visaHjalp(table.concat(alla, "\n"))
 		placera(pn)
@@ -2205,6 +2217,15 @@ rita = function()
 		if type(v.id) == "string" and string.sub(v.id, 1, 4) == "utr:" then
 			utrustningAntal += 1
 			if v.paTur then utrustningNr = tonumber(string.sub(v.id, 5)) end
+		end
+		--[[ #273 S2: utrustningssteget är numera en HANDLING — «Sadla» eller
+		     «Tränsa» — och känns igen på handlingens id. Regeln är densamma:
+		     sadelns handlingar först när sadeln står på tur, tränsets när
+		     tränset gör det. ]]
+		if v.paTur and v.id == "handling:sadla" then
+			utrustningNr, utrustningAntal = 1, math.max(utrustningAntal, 2)
+		elseif v.paTur and v.id == "handling:transa" then
+			utrustningNr, utrustningAntal = math.max(utrustningAntal, 2), math.max(utrustningAntal, 2)
 		end
 		if v.paTur and v.id == "leda" then ledaPaTur = true end
 	end

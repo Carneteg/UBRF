@@ -471,6 +471,50 @@ function GameplayService.moment(player: Player, fasId: string, momentId: string,
 	return ok, avslag, avslagArg
 end
 
+--[[ ══ #273 S2 (T2): EN HANDLING PER FAS ═════════════════════════════
+
+	«Hälsa», «Kolla», «Rykta», «Kratsa», «Sadla», «Tränsa». Handlingen går
+	genom `GameplayService.moment` — samma väg, samma prövningar, samma
+	FYSISKA utrustning — ett moment i taget, med spelaren som utförare.
+	VARJE returvärde respekteras: ett nej avbryter handlingen där det kom.
+
+	KOLLEN STANNAR VID ETT FYND, precis som stallets förberedelse gör:
+	hästens dagstillstånd finns oavsett vem som tittar, och har spelaren
+	sett något återstår exakt ett beslut — hennes. Inget moment efter
+	fyndet utförs.
+
+	`tack.redan_pa` och `forb.redan_gjort` är inga fel: utrustningen kan ha
+	kommit på genom hållprompten (`sadla`/`transa`) ett ögonblick tidigare. ]]
+function GameplayService.handling(player: Player, handlingId: string): (boolean, string?, any?)
+	if typeof(handlingId) ~= "string" then
+		return false, "spel.ogiltigt_steg"
+	end
+	local naravaro_ok, skal = narvaro(player)
+	if not naravaro_ok then return false, skal end
+	local s = state[player]
+	local far, avslag0, h = Preparation.provaHandling(s, handlingId, s.hastId)
+	if not far then
+		skicka(player)
+		return false, avslag0, h
+	end
+	local svar, svarArg = nil, nil
+	for _, m in ipairs(h.moment) do
+		if not (s.gjorda[h.fas] or {})[m.id] then
+			local ok, avslag, arg = GameplayService.moment(player, h.fas, m.id)
+			if not ok and avslag ~= "forb.redan_gjort" and avslag ~= "tack.redan_pa" then
+				return false, avslag, arg
+			end
+			--[[ Kvittensen som namnger den del som faktiskt kom på henne
+				(«Sadeln sitter på Troy») följer med ut. ]]
+			if ok and avslag == "tack.pa_plats" then svar, svarArg = avslag, arg end
+			if s.fyndSett and not s.fyndRapporterat then
+				return true, "forb.oppet_fynd", nil
+			end
+		end
+	end
+	return true, svar, svarArg
+end
+
 --[[ ══ RIDA NU ════════════════════════════════════════════════════════
 
 	Produktbeslut FUN FIRST / RIDE FIRST: spelaren kommer för att rida.
@@ -1404,6 +1448,92 @@ function GameplayService.eftervard(player: Player, momentId: string): (boolean, 
 	return ok, avslag, arg
 end
 
+--[[ ══ #273 S3 (T1): EFTERVÅRDEN ÄR ETT VAL ═══════════════════════════
+
+	«Ta hand om henne själv»: en HANDLING är en grupp av eftervårdens
+	moment (`Pass.handlingar`). Den går genom `eftervard` ovan — samma
+	närvarokrav, samma fysiska avtagning, samma ordning — ett moment i
+	taget. Ett nej avbryter där det kom. ]]
+function GameplayService.eftervardHandling(player: Player, handlingId: string): (boolean, string?, string?)
+	if typeof(handlingId) ~= "string" then
+		return false, "spel.ogiltigt_steg"
+	end
+	local p = passState[player]
+	if not p then return false, "spel.inget_pass" end
+	local h = nil
+	for _, x in ipairs(Pass.handlingar()) do
+		if x.id == handlingId then h = x end
+	end
+	if not h then return false, "pass.okant_moment" end
+	--[[ REDAN GJORD. Utan den här raden svarade en upprepad handling «ja»
+		utan att göra något — ett tryck till på «Ta av sadeln» hade kvitterats
+		som om sadeln lyfts av en gång till.
+
+		TURORDNINGEN prövas INTE här. Den ägs av `Pass.farUtfora`, som
+		`eftervard` frågar för varje moment: tränset före sadeln nekas där
+		med `pass.fel_tur`. En egen kopia av regeln här var överflödig —
+		falsifieringen visade det (mutationen som tog bort den kom ut grön)
+		— och två sanningar om samma ordning är en för mycket. ]]
+	local kvar = 0
+	for _, m in ipairs(h.moment) do
+		if not p.gjorda[m.id] then kvar += 1 end
+	end
+	if kvar == 0 then
+		skickaPass(player)
+		return false, "pass.redan_gjort"
+	end
+	for _, m in ipairs(h.moment) do
+		if not p.gjorda[m.id] then
+			local ok, avslag, arg = GameplayService.eftervard(player, m.id)
+			if not ok then return false, avslag, arg end
+		end
+	end
+	return true, nil
+end
+
+--[[ «Stallet tar hand om henne». Stallet gör det som återstår av
+	eftervården — korrekt och i kanonens ordning — och passet räknas.
+	Ingen straffavgift: det är samma princip som «Rida nu».
+
+	INGEN NÄRVARO KRÄVS. Det är stallets hand, inte spelarens; hon får gå.
+	Men hon måste ha SUTTIT AV: `Pass.farUtfora` nekar i sadeln
+	(`pass.sitt_av_forst`) och före ritten (`pass.inte_dags`), så valet kan
+	inte användas för att räkna ett pass som aldrig reds.
+
+	UTRUSTNINGEN TAS AV PÅ RIKTIGT. Varje moment som lyfter av något går
+	genom `TackService.taAv` i kanonens ordning, och `avslutaPass` sveper
+	resterna (`taAvAllt`) som förut. Momenten bokförs som `"auto"`, så att
+	`Pass.egenAndel` bara räknar det spelaren gjorde själv. ]]
+function GameplayService.eftervardStallet(player: Player): (boolean, string?, string?)
+	local p = passState[player]
+	if not p then return false, "spel.inget_pass" end
+	while true do
+		local m = Pass.nastaMoment(p)
+		if not m then break end
+		local far, skal, arg = Pass.farUtfora(p, m.id)
+		if not far then
+			skickaPass(player)
+			return false, skal, arg
+		end
+		local delar = TackService.eftervardsDelar(m.id)
+		local modell = bunden[player]
+		if delar and modell then
+			for _, typ in ipairs(delar) do
+				local okAv, skalAv = TackService.taAv(player, modell, typ)
+				if not okAv and skalAv ~= "tack.inget_pa" then
+					skickaPass(player)
+					return false, skalAv
+				end
+			end
+		end
+		Pass.utfor(p, m.id, "auto")
+	end
+	local ok, skal = GameplayService.avslutaPass(player)
+	skickaPass(player)
+	if not ok then return false, skal end
+	return true, "eftervard.stallet_klar"
+end
+
 --[[ Avslutar och RÄKNAR passet. Fail-closed genom `Pass.farAvsluta`, och
 	idempotent genom `Sparning.registreraPass`:
 
@@ -1414,6 +1544,8 @@ end
 
 	Ordningen minne → lager är vald åt spelarens håll: `markeraRaknat`
 	sätts först efter att skrivningen gick fram. ]]
+local EGEN_EFTERVARD_BONUS = 0.02
+
 function GameplayService.avslutaPass(player: Player): (boolean, string?)
 	local p = passState[player]
 	if not p then
@@ -1469,6 +1601,12 @@ function GameplayService.avslutaPass(player: Player): (boolean, string?)
 			ridit. Det är samma värdering som resten av loopen: ansvaret är
 			innehållet. Talet är litet — en relation byggs över veckor. ]]
 		Sparning.hojRelation(save, p.hastId, 0.04)
+		--[[ #273 S3 (T1): EGEN EFTERVÅRD GER LITE EXTRA. Den som tog hand
+			om henne själv får en aning mer — «jag tog extra bra hand om
+			henne». Stallets hand ger 0, och det är golvet: raden ovan är
+			densamma för alla. Talet är litet med flit, så att frivillig
+			eftervård inte blir en optimeringsplikt. ]]
+		Sparning.hojRelation(save, p.hastId, EGEN_EFTERVARD_BONUS * Pass.egenAndel(p))
 		Sparning.markeraForstaDagen(save, p.hastId)
 	end
 
@@ -1788,6 +1926,18 @@ function GameplayService.start()
 	Net.get("PassMoment").OnServerInvoke = Skopa.grind("PassMoment",
 		function(player, momentId)
 			return GameplayService.eftervard(player, momentId)
+		end)
+	--[[ #273 S2/S3: handlingarna. Argumentet är ett id och ingenting annat. ]]
+	Net.get("PreparationHandling").OnServerInvoke = Skopa.grind("PreparationHandling",
+		function(player, handlingId)
+			return GameplayService.handling(player, handlingId)
+		end)
+	Net.get("PassHandling").OnServerInvoke = Skopa.grind("PassHandling",
+		function(player, handlingId)
+			if handlingId == "stallet" then
+				return GameplayService.eftervardStallet(player)
+			end
+			return GameplayService.eftervardHandling(player, handlingId)
 		end)
 
 	--[[ `PreparationStep` finns kvar i nätkontraktet men gör inget mer än

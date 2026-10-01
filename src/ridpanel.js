@@ -171,6 +171,7 @@ function ridpanelInstallera() {
   #ridpanel .rpK{margin:0 0 8px;color:#D6D2C8;font-size:13px;display:grid;gap:2px}
   #ridpanel .rpRad{display:flex;justify-content:space-between;gap:8px}
   #ridpanel .rpRad b{font-weight:600;color:#BFB8A8;white-space:nowrap}
+  #ridpanel .rpAvancerat{margin-top:4px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;opacity:.7}
   #ridpanel .rpAlla{margin:4px 0 8px;padding-top:6px;border-top:1px solid rgba(255,255,255,.10);display:grid;gap:2px;
     font-size:12.5px;color:#BFB8A8}
   #ridpanel .rpM{display:grid;grid-template-columns:62px 1fr;gap:6px;align-items:center;font-size:12px}
@@ -209,8 +210,9 @@ function ridpanelRita(tvinga) {
   const knappar = ridpanelKnappar(extra);
   const rubrik = ridpanelRubrik();
   const karna = typeof kontrollRidrader === "function" ? kontrollRidrader() : [];
-  const alla = RIDPANEL.hjalpUt && typeof kontrollRader === "function"
-    ? kontrollRader().filter(r => !(typeof KONTROLL_KARNA !== "undefined" && KONTROLL_KARNA.includes(r.nyckel))) : [];
+  /* Bakom `?`: det vardagliga först, hjälperna under «Avancerat» (#273 S1). */
+  const alla = RIDPANEL.hjalpUt && typeof kontrollListrader === "function"
+    ? kontrollListrader().filter(r => !(typeof KONTROLL_KARNA !== "undefined" && KONTROLL_KARNA.includes(r.nyckel))) : [];
   const I = typeof LararInstallning !== "undefined" ? LararInstallning : null;
   const sv = typeof SPRAKET === "undefined" || SPRAKET !== "en";
   const matare = RIDPANEL.hjalpUt && G.aids ? [
@@ -241,7 +243,9 @@ function ridpanelRita(tvinga) {
     + `<div class="rpH"><span class="rpHt">${esc(rubrik)}</span>`
     + `<button class="rpQ${RIDPANEL.hjalpUt ? " pa" : ""}" data-hjalp="1" aria-label="${esc(rpT("panel.hjalp"))}" title="${esc(rpT("panel.hjalp"))}">?</button></div>`
     + `<div class="rpK">${karna.map(r => `<div class="rpRad"><span>${esc(r.vad)}</span><b>[${esc(r.reglage)}]</b></div>`).join("")}`
-    + (RIDPANEL.hjalpUt ? `<div class="rpAlla">${alla.map(r => `<div class="rpRad"><span>${esc(r.vad)}</span><b>[${esc(r.reglage)}]</b></div>`).join("")}`
+    + (RIDPANEL.hjalpUt ? `<div class="rpAlla">${alla.map(r => r.rubrik
+        ? `<div class="rpRad rpAvancerat"><span>${esc(r.vad)}</span></div>`
+        : `<div class="rpRad"><span>${esc(r.vad)}</span><b>[${esc(r.reglage)}]</b></div>`).join("")}`
       + matare.map(m => `<div class="rpM"><span>${esc(rpT(m[0]))}</span><i><s style="width:${Math.round(Math.max(0, Math.min(1, m[1])) * 100)}%"></s></i></div>`).join("")
       + `</div>` : "") + `</div>`
     + (knappar.length ? `<div class="skV">${knappar.map((k, i) =>

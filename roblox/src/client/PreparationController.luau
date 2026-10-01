@@ -318,6 +318,14 @@ local momentRader: { [string]: TextButton } = {}
 local momentKoppling: { [string]: RBXScriptConnection } = {}
 local senasteVy: any = nil
 local senastePass: any = nil
+--[[ #273 S3: har spelaren valt «Ta hand om henne själv» för den här
+	hästens eftervård? Sessionslokalt och bara presentation — servern vet
+	vem som gjorde vad genom momentens utförare. Nollställs när passet
+	lämnar eftervården. ]]
+local egenEftervard: string? = nil
+--[[ #273 S2: det frivilliga kunskapslagret för den handling som står på
+	tur — kanonens egna meningar, ordagrant. Går till hjälplistan. ]]
+local kunskapNu: { string } = {}
 --[[ Revisionen på det som faktiskt ritats. `nil` = ingenting ritat än.
 	Förberedelsen och passet har VAR SIN, trots att servern räknar dem ur
 	samma serie: de kommer som två olika event och en passvy får inte
@@ -1548,7 +1556,58 @@ function PreparationController.tillampaPass(vy: any)
 	if not Preparation.farRita(senastePassRev, vy) then return end
 	senastePassRev = vy.rev
 	senastePass = vy
+	if vy.lage ~= "aftercare" then egenEftervard = nil end
 	if senasteVy then rita(senasteVy) end
+end
+
+--[[ ══ #273 S2/S3: HANDLINGARNAS TEXTER ═══════════════════════════════
+
+	VARJE NYCKEL ÄR EN LITERAL, av samma skäl som `GUIDE_RUBRIK` i
+	`Naromrade`: språkgrinden ska kunna se dem, och en okänd handling ska
+	fela högt i stället för att visa en rå nyckel. Knappen, EN kort rad
+	och kvittensen. ]]
+local HANDLING: { [string]: { knapp: () -> string, text: () -> string, klar: () -> string } } = {
+	halsa = { knapp = function() return Sprak.t("handling.halsa") end,
+		text = function() return Sprak.t("handling.halsa_text") end,
+		klar = function() return Sprak.t("handling.halsa_klar") end },
+	kolla = { knapp = function() return Sprak.t("handling.kolla") end,
+		text = function() return Sprak.t("handling.kolla_text") end,
+		klar = function() return Sprak.t("handling.kolla_klar") end },
+	rykta = { knapp = function() return Sprak.t("handling.rykta") end,
+		text = function() return Sprak.t("handling.rykta_text") end,
+		klar = function() return Sprak.t("hud.bra") end },
+	kratsa = { knapp = function() return Sprak.t("handling.kratsa") end,
+		text = function() return Sprak.t("handling.kratsa_text") end,
+		klar = function() return Sprak.t("hud.bra") end },
+	sadla = { knapp = function() return Sprak.t("handling.sadla") end,
+		text = function() return Sprak.t("handling.sadla_text") end,
+		klar = function() return Sprak.t("hud.bra") end },
+	transa = { knapp = function() return Sprak.t("handling.transa") end,
+		text = function() return Sprak.t("handling.transa_text") end,
+		klar = function() return Sprak.t("hud.bra") end },
+	sadla_av = { knapp = function() return Sprak.t("eftervard.sadla_av") end,
+		text = function() return Sprak.t("eftervard.sadla_av_text") end,
+		klar = function() return Sprak.t("hud.bra") end },
+	transa_av = { knapp = function() return Sprak.t("eftervard.transa_av") end,
+		text = function() return Sprak.t("eftervard.transa_av_text") end,
+		klar = function() return Sprak.t("hud.bra") end },
+	ta_hand = { knapp = function() return Sprak.t("eftervard.ta_hand") end,
+		text = function() return Sprak.t("eftervard.ta_hand_text") end,
+		klar = function() return Sprak.t("eftervard.egen_klar") end },
+}
+
+--[[ Handlingens moment som rader för kunskapslagret: «namn — mening», på
+	spelarens språk, ur kanonen. ]]
+local function kunskapsrader(h: any, lokalt: (any) -> any): { string }
+	local ut = {}
+	for _, k in ipairs(if type(h) == "table" and type(h.kunskap) == "table" then h.kunskap else {}) do
+		local lm = lokalt(k)
+		local namn, text = tostring(lm.namn or ""), tostring(lm.text or "")
+		if text ~= "" then
+			table.insert(ut, if namn ~= "" and namn ~= text then namn .. " — " .. text else text)
+		end
+	end
+	return ut
 end
 
 --[[ Står eftervården på tur? Passvyn äger frågan; förberedelsen vet inget
@@ -1717,6 +1776,10 @@ local function avsluta(lage: string, antalVal: number, ledtext: string,
 		hastnamn = panelHastnamn,
 		--[[ C: skötselminnets avsnitt för hjälplistan (nil när inget finns). ]]
 		historik = skotselHistorik(),
+		--[[ #273 S2: kunskapslagret för handlingen på tur — detaljmeningarna
+		     om hovar, mungipor och gjord, ordagrant ur kanonen. Hjälplistan
+		     visar dem; huvudflödet gör det inte. ]]
+		kunskap = if #kunskapNu > 0 then table.concat(kunskapNu, "\n") else nil,
 	}
 	if vard then
 		if gui then gui.Enabled = false end
@@ -1875,6 +1938,7 @@ function rita(vy: any)
 		är svårare att läsa. ]]
 	paTurNu, arValNu, allaNu = nil, false, false
 	fragaNu = false
+	kunskapNu = {}
 	table.clear(panelVal)
 	table.clear(panelSteg)
 	panelHastnamn = if type(vy.hastnamn) == "string" then vy.hastnamn else nil
@@ -1939,20 +2003,49 @@ function rita(vy: any)
 		det som återstår är hästen. ]]
 	if iEftervard() then
 		for _, r in pairs(rader) do r.ram.Visible = false end
-		local nasta = senastePass.nastaMoment
-		paTurNu = nasta
+		--[[ #273 S3 (T1): ETT ENKELT VAL. Innan något är gjort står två
+			rader: stallet (passet räknas, ingen straffavgift) eller själv.
+			Har hon valt själv — eller redan börjat — står handlingen på
+			tur, och stallet finns kvar som väg ut: ingen blir låst i en
+			eftervård hon inte vill göra färdigt. ]]
+		local hl = if type(senastePass.handlingar) == "table" then senastePass.handlingar else {}
+		local nastaH = senastePass.nastaHandling
+		local sjalv = senastePass.borjad == true or egenEftervard == senastePass.hastId
 		local text = ""
-		for i, m in ipairs(senastePass.moment or {}) do
-			anvanda[m.id] = true
-			local lm = lokalt(m)
-			momentRad(lm, i, m.id == nasta, function()
-				PreparationController.eftervard(m.id)
-			end)
-			if m.id == nasta then text = lm.text or "" end
+		allaNu = true
+		if not sjalv then
+			anvanda["efter:stallet"] = true
+			anvanda["efter:sjalv"] = true
+			paTurNu = "efter:stallet"
+			momentRad({ id = "efter:stallet", namn = Sprak.t("eftervard.stallet"), klar = false },
+				1, true, function() PreparationController.eftervardStallet() end)
+			momentRad({ id = "efter:sjalv", namn = Sprak.t("eftervard.sjalv"), klar = false },
+				2, false, function()
+					egenEftervard = senastePass and senastePass.hastId or nil
+					if senasteVy then rita(senasteVy) end
+				end)
+			text = Sprak.t("eftervard.val_text")
+		else
+			for _, h in ipairs(hl) do
+				local T = HANDLING[h.id]
+				if h.id == nastaH and T then
+					local rid = "efter:" .. h.id
+					anvanda[rid] = true
+					paTurNu = rid
+					momentRad({ id = rid, namn = T.knapp(), klar = false }, 1, true, function()
+						PreparationController.eftervardHandling(h.id)
+					end)
+					text = T.text()
+					kunskapNu = kunskapsrader(h, lokalt)
+				end
+			end
+			anvanda["efter:stallet"] = true
+			momentRad({ id = "efter:stallet", namn = Sprak.t("eftervard.stallet_resten"), klar = false },
+				2, false, function() PreparationController.eftervardStallet() end)
 		end
 		doljOanvanda(anvanda)
 		if rubrik then rubrik.Text = Sprak.t("hud.ta_hand_om_henne") end
-		avsluta("eftervard", #(senastePass.moment or {}), text, true)
+		avsluta("eftervard", 2, text, true)
 		return
 	end
 
@@ -1973,19 +2066,43 @@ function rita(vy: any)
 	local nasta = vy.nastaMoment
 	paTurNu = nasta
 	local momenttext = ""
-	--[[ En valfas är en fråga: den känns igen på att något alternativ är
-	     fel (`m.fel`), samma igenkänning som `arValNu` nedan. ]]
-	for _, m in ipairs(vy.moment or {}) do
-		if m.fel then fragaNu = true end
+	local antalRader = #(vy.moment or {})
+	--[[ #273 S2 (T2): EN HANDLING PER FAS. Servern skickar fasens
+		handlingar; panelen ritar den som står på tur som EN knapp och säger
+		EN kort rad. Momenten finns kvar i vyn — de är checklistan servern
+		bockar av — men de är inte längre var sitt läs-och-klicka-stopp.
+		`leda` har ingen handling (den kvitteras av att hästen är framme)
+		och ritas som förut. ]]
+	local handlingNu = nil
+	for _, h in ipairs(if type(vy.handlingar) == "table" then vy.handlingar else {}) do
+		if h.id == vy.nastaHandling and HANDLING[h.id] then handlingNu = h end
 	end
-	for i, m in ipairs(vy.moment or {}) do
-		anvanda[m.id] = true
-		if m.fel then arValNu = true end
-		local lm = lokalt(m)
-		momentRad(lm, i, m.id == nasta, function()
-			PreparationController.begar(vy.nasta, m.id)
+	if handlingNu then
+		local T = HANDLING[handlingNu.id]
+		local rid = "handling:" .. handlingNu.id
+		anvanda[rid] = true
+		paTurNu = rid
+		antalRader = 1
+		momentRad({ id = rid, namn = T.knapp(), klar = false }, 1, true, function()
+			PreparationController.begarHandling(handlingNu.id)
 		end)
-		if m.id == nasta then momenttext = lm.text or "" end
+		momenttext = T.text()
+		kunskapNu = kunskapsrader(handlingNu, lokalt)
+	else
+		--[[ En valfas är en fråga: den känns igen på att något alternativ är
+		     fel (`m.fel`), samma igenkänning som `arValNu` nedan. ]]
+		for _, m in ipairs(vy.moment or {}) do
+			if m.fel then fragaNu = true end
+		end
+		for i, m in ipairs(vy.moment or {}) do
+			anvanda[m.id] = true
+			if m.fel then arValNu = true end
+			local lm = lokalt(m)
+			momentRad(lm, i, m.id == nasta, function()
+				PreparationController.begar(vy.nasta, m.id)
+			end)
+			if m.id == nasta then momenttext = lm.text or "" end
+		end
 	end
 	doljOanvanda(anvanda)
 
@@ -2097,7 +2214,7 @@ function rita(vy: any)
 	--[[ HUD:en göms medan man rider — men INTE när eftervården väntar, och
 		det är hela skillnaden mot före #161: en spelare som satt av mötte
 		förut en tom skärm, och passet tog aldrig slut. ]]
-	avsluta(lage, #(vy.moment or {}) + extraVal, ledtext, vy.status ~= "riding")
+	avsluta(lage, antalRader + extraVal, ledtext, vy.status ~= "riding")
 end
 
 --[[ Körs av klientens loop. Ritar bara om när kontexten FAKTISKT byter —
@@ -2287,7 +2404,11 @@ local function skicka(nyckel: string, remote: string, bekrafta: string?, ...)
 		local ok, skal, extra = Net.get(remote):InvokeServer(table.unpack(args, 1, args.n))
 		vantarPa = nil
 		if ok then
-			visaBekraftelse(serverKvittens(skal, extra) or bekrafta)
+			--[[ #273 S2: kollen kan sluta i ett FYND. Då är «Allt ser bra
+				ut» fel sak att säga — fyndets egen vy tar över panelen. ]]
+			if skal ~= "forb.oppet_fynd" then
+				visaBekraftelse(serverKvittens(skal, extra) or bekrafta)
+			end
 		else
 			--[[ Nejet skrivs på BÅDA ytorna. Spelaren tittar på
 				interaktionspanelen när hon just tryckt; ett avslag som bara
@@ -2305,6 +2426,28 @@ function PreparationController.begar(fasId: string?, momentId: string?)
 	if not fasId or not momentId then return end
 	skicka(momentId, "PreparationMoment",
 		kvittens(senasteVy and senasteVy.moment, momentId), fasId, momentId)
+end
+
+--[[ #273 S2: en HANDLING — hälsa, kolla, rykta, kratsa, sadla, tränsa.
+	Servern utför fasens moment i ordning; klienten skickar bara avsikten. ]]
+function PreparationController.begarHandling(handlingId: string?)
+	if not handlingId then return end
+	local T = HANDLING[handlingId]
+	skicka("handling:" .. handlingId, "PreparationHandling",
+		"\u{2713}  " .. (if T then T.klar() else Sprak.t("hud.bra")), handlingId)
+end
+
+--[[ #273 S3: eftervårdens handling, och valet att låta stallet göra det. ]]
+function PreparationController.eftervardHandling(handlingId: string?)
+	if not handlingId then return end
+	local T = HANDLING[handlingId]
+	skicka("efter:" .. handlingId, "PassHandling",
+		"\u{2713}  " .. (if T then T.klar() else Sprak.t("hud.bra")), handlingId)
+end
+
+function PreparationController.eftervardStallet()
+	skicka("efter:stallet", "PassHandling",
+		"\u{2713}  " .. Sprak.t("eftervard.stallet_klar"), "stallet")
 end
 
 function PreparationController.svara(svarId: string)

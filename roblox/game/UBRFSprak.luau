@@ -2834,12 +2834,128 @@ Sprak.text = {
 		en = "Her stall door is shut — open her stall door first so she can walk out",
 	},
 	["hjalp.webb.driv"] = {
-		sv = "Driv på — skänkel",
-		en = "Ride forward — leg",
+		sv = "Ett steg upp i gångarterna",
+		en = "One step up the gaits",
 	},
 	["hjalp.webb.bromsa"] = {
-		sv = "Bromsa — mindre skänkel, mer tygel",
-		en = "Slow down — less leg, more rein",
+		sv = "Ett steg ned i gångarterna",
+		en = "One step down the gaits",
+	},
+	["hjalp.avancerat"] = {
+		sv = "Avancerat",
+		en = "Advanced",
+	},
+	["handling.halsa"] = {
+		sv = "Hälsa",
+		en = "Say hello",
+	},
+	["handling.halsa_text"] = {
+		sv = "Hon ska se och höra dig innan du rör henne.",
+		en = "Let her see and hear you before you touch her.",
+	},
+	["handling.halsa_klar"] = {
+		sv = "Nu vet hon att du är där.",
+		en = "Now she knows you are there.",
+	},
+	["handling.kolla"] = {
+		sv = "Kolla henne",
+		en = "Check her over",
+	},
+	["handling.kolla_text"] = {
+		sv = "Se efter att hon mår bra innan ni börjar.",
+		en = "Make sure she is well before you start.",
+	},
+	["handling.kolla_klar"] = {
+		sv = "Allt ser bra ut.",
+		en = "Everything looks fine.",
+	},
+	["handling.rykta"] = {
+		sv = "Rykta",
+		en = "Groom",
+	},
+	["handling.rykta_text"] = {
+		sv = "Borsta henne ren innan sadeln läggs på.",
+		en = "Brush her clean before the saddle goes on.",
+	},
+	["handling.kratsa"] = {
+		sv = "Kratsa hovarna",
+		en = "Pick out the hooves",
+	},
+	["handling.kratsa_text"] = {
+		sv = "Lyft och rensa alla fyra hovarna.",
+		en = "Lift and clean all four hooves.",
+	},
+	["handling.sadla"] = {
+		sv = "Sadla",
+		en = "Saddle up",
+	},
+	["handling.sadla_text"] = {
+		sv = "Underlägg och sadel på, sedan gjorden.",
+		en = "Numnah and saddle on, then the girth.",
+	},
+	["handling.transa"] = {
+		sv = "Tränsa",
+		en = "Put the bridle on",
+	},
+	["handling.transa_text"] = {
+		sv = "Tränset kommer sist.",
+		en = "The bridle goes on last.",
+	},
+	["handling.kunskap"] = {
+		sv = "Så gör man",
+		en = "How it is done",
+	},
+	["spel.dagens_hast"] = {
+		sv = "Du rider %s. Följ pilen till boxen.",
+		en = "You are riding %s. Follow the arrow to the box.",
+	},
+	["eftervard.val_text"] = {
+		sv = "Bra ridet. Vill du ta hand om henne själv, eller ska stallet göra det?",
+		en = "Well ridden. Do you want to look after her yourself, or shall the stable do it?",
+	},
+	["eftervard.stallet"] = {
+		sv = "Stallet tar hand om henne",
+		en = "The stable looks after her",
+	},
+	["eftervard.stallet_resten"] = {
+		sv = "Stallet tar hand om resten",
+		en = "The stable does the rest",
+	},
+	["eftervard.sjalv"] = {
+		sv = "Ta hand om henne själv",
+		en = "Look after her myself",
+	},
+	["eftervard.stallet_klar"] = {
+		sv = "Stallet tar hand om henne. Passet är klart.",
+		en = "The stable looks after her. The session is done.",
+	},
+	["eftervard.egen_klar"] = {
+		sv = "Du tog hand om henne själv. Det märker hon.",
+		en = "You looked after her yourself. She notices.",
+	},
+	["eftervard.sadla_av"] = {
+		sv = "Ta av sadeln",
+		en = "Take the saddle off",
+	},
+	["eftervard.sadla_av_text"] = {
+		sv = "Lossa gjorden och lyft av sadeln.",
+		en = "Loosen the girth and lift the saddle off.",
+	},
+	["eftervard.transa_av"] = {
+		sv = "Ta av tränset",
+		en = "Take the bridle off",
+	},
+	["eftervard.transa_av_text"] = {
+		sv = "Ta av tränset lugnt.",
+		en = "Take the bridle off gently.",
+	},
+	["eftervard.ta_hand"] = {
+		sv = "Vatten och hö",
+		en = "Water and hay",
+	},
+	["eftervard.ta_hand_text"] = {
+		sv = "Känn över benen och ge henne vatten och hö.",
+		en = "Feel her legs over and give her water and hay.",
 	},
 	["hjalp.webb.sits"] = {
 		sv = "Sits lätt / djup",

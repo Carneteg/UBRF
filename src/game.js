@@ -47,6 +47,13 @@ const RIDIN={
 const IN={
   kan:{skankel:{v:0,mal:0},tygel:{v:0,mal:0},sits:{v:0,mal:0},styrning:{v:0,mal:0}},
   latt:true,diagonal:1,spo:false,hh:-1,paradFore:0,ned:{},
+  /* #273 S1 — DRIV OCH BROMS SOM IMPULSER (Roblox ActionDriv/ActionBroms).
+     `broms` är en begäran om EN halvhalt: stegaInput startar samma
+     paradförlopp som F ger, och modellen läser det som ett steg ned.
+     `driv` är hur länge till skänkeln ligger på efter ett tryck på
+     pekknappen DRIV — en impuls, inte en gaspedal. Räknarna läses av
+     lektionens «en hjälp besvarar kortet» (stegaP3). */
+  broms:false,driv:0,bromsN:0,drivN:0,
   /* När varje tangent trycktes ned, och hur länge ett släppt håll varade —
      hållprompterna (world.js interagera) mäter på HÄNDELSERNA, inte på
      bildrutorna, så att ett håll räknas även när bildtakten är låg. */
@@ -65,16 +72,42 @@ const IN={
 function ridNollstallHjalp(){
   RIDIN.skankel=0; RIDIN.tygel=0; RIDIN.sits=0; RIDIN.styr=0; RIDIN.parad=0; RIDIN.pek=false;
   IN.styrDigital=null; IN.styrKansla.v=0;
+  IN.broms=false; IN.driv=0;
   ridAvsiktTillHjalp();
   for(const n in IN.kan)IN.kan[n].v=IN.kan[n].mal;
   IN.hh=-1; IN.paradFore=0;
 }
 
+/* ── #273 S1: ETT TRYCK = ETT STEG ───────────────────────────────────
+   Spelaren ska kunna rida med styra, snabbare, långsammare och sitt av.
+   Förut fanns inget ensamt reglage för «långsammare»: S tog bara bort
+   skänkeln, och när tangenten släpptes läste modellen skänkelns resa
+   tillbaka till neutralläget som en framåtimpuls — uppmätt 2026-10-01:
+   trav, S i 0,6 s, släpp → galopp.
+
+   BROMS går genom den befintliga halvhaltskanalen i inputlagret. Ingen
+   ridfysik ändras: det är samma förlopp som F, och modellens egen spärr
+   (K.HH_COOLDOWN, K.CUE_SPARR) gör att den som hamrar inte hoppar över en
+   gångart. DRIV är pekknappens skänkelimpuls; W/↑ rider som förut. */
+const DRIV_PULS=0.24;      // sekunder skänkeln ligger på efter ett tryck
+function ridBroms(){
+  if(!iSadeln())return false;
+  IN.broms=true; IN.bromsN++;
+  return true;
+}
+function ridDriv(){
+  if(!iSadeln())return false;
+  IN.driv=DRIV_PULS; IN.drivN++;
+  return true;
+}
+
 function ridAvsiktTillHjalp(){
   const r=RIDIN, k=IN.kan;
-  k.skankel.mal = r.skankel>=0
-    ? 0.42+r.skankel*(0.78-0.42)
-    : 0.42+r.skankel*(0.42-0.05);
+  /* Pekknappen DRIV håller skänkeln på så länge impulsen varar (#273). */
+  const sk = IN.driv>0 ? 1 : r.skankel;
+  k.skankel.mal = sk>=0
+    ? 0.42+sk*(0.78-0.42)
+    : 0.42+sk*(0.42-0.05);
   k.tygel.mal   = 0.34+clamp(r.tygel,0,1)*(0.80-0.34);
   k.sits.mal    = r.sits>=0 ? 0.2+r.sits*(0.85-0.2) : 0.2+r.sits*(0.2-(-0.6));
   /* Fullt styrutslag ligger i HJALP_KANON.STYR_FULLT — samma tal som
@@ -119,9 +152,12 @@ addEventListener("keydown",e=>{
   switch(e.code){
     /* ↑/↓ är samma som W/S i sadeln (Roblox binder båda, P3 § 3). */
     case"ArrowUp":if(!iSadeln())break;e.preventDefault();IN.ned.KeyW=true;RIDIN.skankel=1;RIDIN.pek=false;break;
-    case"ArrowDown":if(!iSadeln())break;e.preventDefault();IN.ned.KeyS=true;RIDIN.skankel=-1;RIDIN.pek=false;break;
+    /* #273 S1: S/↓ i sadeln är BROMS — ett steg ned per tryck, som Roblox.
+       Skänkeln rörs inte: resan tillbaka från «ingen skänkel» lästes som
+       en framåtimpuls när tangenten släpptes. */
+    case"ArrowDown":if(!iSadeln())break;e.preventDefault();IN.ned.KeyS=true;ridBroms();RIDIN.pek=false;break;
     case"KeyW":RIDIN.skankel=1;RIDIN.pek=false;break;
-    case"KeyS":RIDIN.skankel=-1;RIDIN.pek=false;break;
+    case"KeyS":if(iSadeln())ridBroms();else RIDIN.skankel=-1;RIDIN.pek=false;break;
     case"Space":RIDIN.tygel=1;e.preventDefault();break;
     case"ShiftLeft":case"ShiftRight":RIDIN.sits=-1;break;
     case"ControlLeft":case"ControlRight":RIDIN.sits=1;e.preventDefault();break;
@@ -164,9 +200,9 @@ addEventListener("keyup",e=>{
     IN.nedT[e.code]=null;
   }
   switch(e.code){
-    case"ArrowUp":IN.ned.KeyW=false;RIDIN.skankel=IN.ned.KeyS?-1:0;break;
+    case"ArrowUp":IN.ned.KeyW=false;RIDIN.skankel=0;break;
     case"ArrowDown":IN.ned.KeyS=false;RIDIN.skankel=IN.ned.KeyW?1:0;break;
-    case"KeyW":RIDIN.skankel=IN.ned.KeyS?-1:0;break;
+    case"KeyW":RIDIN.skankel=0;break;
     case"KeyS":RIDIN.skankel=IN.ned.KeyW?1:0;break;
     case"Space":RIDIN.tygel=0;break;
     case"ShiftLeft":case"ShiftRight":case"ControlLeft":case"ControlRight":RIDIN.sits=0;break;
@@ -228,6 +264,11 @@ function stegaInput(dt){
   const paradNu=clamp(RIDIN.parad||0,0,1);
   if(paradNu>0.05&&IN.paradFore<=0.05&&IN.hh<0)IN.hh=0;
   IN.paradFore=paradNu;
+  /* #273 S1: BROMS begär samma förlopp. En begäran som kommer medan ett
+     förlopp redan pågår förbrukas utan att starta ett till — ett tryck
+     är en hjälp, inte två. */
+  if(IN.broms){IN.broms=false;if(IN.hh<0)IN.hh=0;}
+  if(IN.driv>0)IN.driv=Math.max(0,IN.driv-dt);
   let par=0;
   if(IN.hh>=0){IN.hh+=dt;const t=IN.hh;
     if(t<0.14)par=t/0.14;else if(t<0.24)par=1;else if(t<0.42)par=1-(t-0.24)/0.18;else IN.hh=-1;}
@@ -917,7 +958,7 @@ function startaRidP3(){
   const id=RittLektion.start();
   FriPass.nyttPass();
   Lektionsmeny.start(id,()=>FriPass.nyttPass());
-  G.p3CueTid=G.ride?G.ride.cueTid:null;G.p3Parad=0;G.p3Fore=null;
+  G.p3CueTid=G.ride?G.ride.cueTid:null;G.p3Parad=0;G.p3Fore=null;G.p3BromsN=IN.bromsN;G.p3DrivN=IN.drivN;
   if(typeof RIDPANEL!=="undefined"){RIDPANEL.hjalpUt=false;RIDPANEL.installOppen=false;RIDPANEL.radLage=null;}
   if(typeof vyEfterFlytt==="function")vyEfterFlytt("lektion");
   overlay(false);document.getElementById("viewToggle").hidden=false;
@@ -939,8 +980,9 @@ function stegaP3(dt){
   const cue=G.ride?G.ride.cueTid:null;
   const parad=RIDIN.parad||0, sk=RIDIN.skankel||0, skF=G.p3Sk||0;
   const hjalp=(cue!==G.p3CueTid)||(parad>0.05&&G.p3Parad<=0.05)
-    ||(sk>0.5&&skF<=0.5)||(sk<-0.5&&skF>=-0.5);
-  G.p3CueTid=cue;G.p3Parad=parad;G.p3Sk=sk;
+    ||(sk>0.5&&skF<=0.5)||(sk<-0.5&&skF>=-0.5)
+    ||(IN.bromsN!==G.p3BromsN)||(IN.drivN!==G.p3DrivN);
+  G.p3CueTid=cue;G.p3Parad=parad;G.p3Sk=sk;G.p3BromsN=IN.bromsN;G.p3DrivN=IN.drivN;
   /* Över ett av ridhusets stående hinder hoppar hästen — bara bilden
      (samma G.luft som banans hopp). Passagen bedöms av HinderObs, inte här. */
   /* En flytt (ny ritt, teleport) är inget hopp: bara en bildrutas verkliga
@@ -975,6 +1017,8 @@ function ridAvsittning(){
      uppflyttningsrad för moment som inte längre finns (P3 § 9). */
   dom.p3=true;
   G.moment=null;G.momentKlart=false;
+  /* #273 S3 (T1): efter avsittningen väntar VALET — stallet eller själv. */
+  G.efter=(typeof Efter!=="undefined")?Efter.nyState(G.hastId):null;
   avslutaBana(dom);
   return true;
 }
