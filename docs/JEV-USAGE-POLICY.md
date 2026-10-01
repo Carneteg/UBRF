@@ -234,6 +234,43 @@ Shadow/pilot ska logga sanitiserat:
 
 Logga aldrig secret eller rå auth-header.
 
+## Obligatorisk Jev-beslutspunkt i varje jobb
+
+Jev får inte bli något som en builder antingen glömmer eller lägger in slentrianmässigt. Därför ska **varje icke-trivialt gameplay-, integration-, QA- eller produktionsjobb** göra ett uttryckligt Jev-beslut innan implementationen expanderar.
+
+Tillåtna klassificeringar:
+
+- `JEV_NOT_NEEDED` — vanlig deterministisk kod är rätt lösning för uppgiften.
+- `JEV_OFFLINE_QA_CANDIDATE` — Jev kan ge värde i offline-analys/QA men ska inte kopplas till runtime i jobbet.
+- `JEV_SHADOW_CANDIDATE` — det finns ett avgränsat runtime-val som kan vara värt att jämföra i default-OFF, player-invisible shadow innan något pilotbeslut.
+- `JEV_FUTURE_PILOT_CANDIDATE` — ett framtida låg-risk-case kan vara intressant efter separat PoC/shadow/review, men **får inte implementeras som pilot eller player-visible inom den aktuella uppgiften**.
+
+Klassificeringen är en **analys och scope-markör, inte ett tillstånd att aktivera Jev**. Ny runtime-användning måste fortfarande följa rollout-gaterna i denna policy.
+
+### Beslutsregel
+
+Buildern ska fråga:
+
+1. Är beslutet en deterministisk regel/sanning/konsekvens? Då är det `JEV_NOT_NEEDED`.
+2. Finns flera fördefinierade säkra alternativ där prioriteringen faktiskt är mjuk eller tvetydig?
+3. Finns verklig, validerbar evidens/telemetri?
+4. Kan Jev isoleras från core state och alltid falla tillbaka deterministiskt?
+5. Går nyttan att mäta mot nuvarande deterministiska baseline?
+
+Om 2–5 inte har tydliga ja-svar ska klassificeringen vara `JEV_NOT_NEEDED`.
+
+Typiska `JEV_NOT_NEEDED`-områden är kontrollscheman, input, broms/gångart, care-flow, safety/welfare, fysik, pass/fail, progression, persistence och andra exakta spelregler.
+
+Ett typiskt kandidatfall är däremot prioritering av **vilket tillåtet Ugneta-coachingfokus** som är mest relevant utifrån redan validerad telemetri.
+
+### Krav i brief och leverans
+
+Varje sådan uppgift ska innehålla eller själv lägga till en rad:
+
+`JEV_DECISION: <klassificering> — <kort motivering>`
+
+Samma rad ska återkomma i builderns slutrapport. Om buildern under arbetet hittar ett nytt möjligt Jev-case utanför scope får det bara noteras som framtida kandidat; det får inte smygimplementeras.
+
 ## Acceptance för varje nytt Jev-case
 
 Varje nytt användningsfall kräver ett Acceptance Contract som minst svarar på:
