@@ -12,6 +12,11 @@
      3. En genomförd ritt får inte radera en skada. Skador läker på vila,
         ett pass i taget, aldrig på att hästen arbetar.
 
+     4. (#274) Hästbytet hos ridläraren sätter ingen vilande häst i
+        arbete — två oberoende lås: listan och `sattAktivHast`.
+     5. (#274) Rätt svar på ett fynd sparar vilan FÖRST och räknar sedan
+        dagen en gång, som Roblox `svara`. Nästa session ger en annan häst.
+
    Provet SÄTTER upp ett sparläge (skadade hästar) — det är en
    förutsättning en spelare når på riktigt, inte ett hoppat spelarsteg.
    Därefter läses spelets egna funktioner utan att skrivas i.
@@ -166,6 +171,188 @@ console.log("\n── Skadan överlever ett genomfört pass ──");
   prova("och den läks inte snabbare än vilan medger",
     !!d.efter && d.efter.passKvar >= d.fore.passKvar - 1,
     d.efter ? `${d.fore.passKvar} → ${d.efter.passKvar}` : "n/a");
+}
+
+/* ══ #274 — SPELARENS VÄG, i egna webbläsarkontexter ══════════════
+   Varje fall startar genom menyns egen knapp med ett sparläge en spelare
+   når på riktigt (en vilande häst = en sparad skada) och går sedan genom
+   spelets egna knappar och E-prompten. Molnet avbryts innan det lämnar
+   maskinen. Varje localStorage-skrivning av profilen loggas, så att
+   ORDNINGEN mellan vilan och passet går att läsa. */
+const NYCKEL = "ubrf-ridskolan-v1";
+async function medProfil(profil) {
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 }, locale: "sv-SE" });
+  await ctx.route(/supabase\.co/, r => r.abort());
+  await ctx.addInitScript(([v, nyckel]) => {
+    try { if (!sessionStorage.getItem("valfard274")) {
+      localStorage.setItem(nyckel, v); sessionStorage.setItem("valfard274", "1"); } } catch (_) {}
+    window.__skriv = [];
+    const orig = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (k, v) {
+      if (k === nyckel) window.__skriv.push(v);
+      return orig.call(this, k, v);
+    };
+  }, [JSON.stringify(profil), NYCKEL]);
+  const p = await ctx.newPage();
+  p.on("pageerror", e => { console.error("PAGEERROR", e.message); fel++; });
+  await p.goto(`http://localhost:${PORT}/`, { waitUntil: "load" });
+  await p.waitForTimeout(600);
+  await starta(p);
+  return { ctx, p };
+}
+async function starta(p) {
+  await p.evaluate(() => { const b = document.getElementById("bSkapHoppa"); if (b) b.click(); });
+  await p.waitForTimeout(400);
+  await p.evaluate(() => { const b = document.getElementById("bStart"); if (b) b.click(); });
+  await p.waitForTimeout(900);
+}
+const ramar = p => p.evaluate(() => new Promise(k => requestAnimationFrame(() => requestAnimationFrame(k))));
+async function tillRidlararen(p) {
+  await p.evaluate(() => { const r = STALLINNE.ridlarare.pos; gaTill("stallinne", { x: r[0], y: r[1] + 1.0, rikt: -Math.PI / 2 }); });
+  await ramar(p); await p.waitForTimeout(300);
+  await p.keyboard.down("KeyE"); await p.waitForTimeout(120); await p.keyboard.up("KeyE");
+  await p.waitForTimeout(400);
+}
+async function tillBoxen(p) {
+  await p.evaluate(() => { const b = hittaBox(G.hastId); gaTill("stallinne", { x: b.dorr[0], y: b.dorr[1], rikt: 0 }); });
+  await ramar(p); await p.waitForTimeout(300);
+}
+async function kortKlick(p, id) {
+  const ok = await p.evaluate(id => { const b = [...document.querySelectorAll("#stegkort button")].find(x => x.dataset.id === id);
+    if (b) b.click(); return !!b; }, id);
+  await p.waitForTimeout(300);
+  return ok;
+}
+const bytesLista = p => p.evaluate(() => [...document.querySelectorAll(".hb-val")].map(b => b.dataset.id));
+const bas274 = { grupp: "ledlektion", pass: 3, spelarId: 12345, fortroende: {}, historik: [], rosetter: [], jag: { namn: "Prov" } };
+
+/* Hästen rotationen ger den här profilen — den som sedan får vila. */
+let vilande;
+{
+  const { ctx, p } = await medProfil(bas274);
+  vilande = await p.evaluate(() => G.hastId);
+  await ctx.close();
+}
+const medVila = { ...bas274, fortroende: { [vilande]: { rang: .5, pass: 2, skada: { namn: "känning efter sten i hoven", passKvar: 2 } } } };
+
+/* ── 5. #274: HÄSTBYTET HOS RIDLÄRAREN ─────────────────────────── */
+console.log("\n── #274: hästbytet sätter ingen vilande häst i arbete ──");
+{
+  const { ctx, p } = await medProfil(medVila);
+  const start = await p.evaluate(() => G.hastId);
+  prova("normal tilldelning går förbi den vilande hästen (oförändrat)", !!start && start !== vilande, `${vilande} vilar → ${start}`);
+  await tillRidlararen(p);
+  const lista = await bytesLista(p);
+  prova("bytet listar INTE den vilande hästen (lås 1, valbaraHastar)", lista.length > 0 && !lista.includes(vilande),
+    `${lista.length} hästar · ${vilande} listad: ${lista.includes(vilande)}`);
+  /* Lås 2, oberoende av listan: anroparen går förbi den. */
+  const direkt = await p.evaluate(id => { const f = G.hastId; const r = sattAktivHast(id); return { r, f, e: G.hastId }; }, vilande);
+  prova("sattAktivHast(vilande) nekar och lämnar hästen orörd (lås 2)", direkt.r === false && direkt.e === direkt.f,
+    `svar ${direkt.r} · ${direkt.f} → ${direkt.e}`);
+  /* Lås 2 i spelarens väg: en knapp som ritades innan vilan kom. */
+  await p.evaluate(() => overlay(false));
+  const unna = await p.evaluate(id => { const v = SPAR.fortroende[id]; const sk = v.skada; delete v.skada; return sk; }, vilande);
+  await tillRidlararen(p);
+  const fanns = (await bytesLista(p)).includes(vilande);
+  await p.evaluate(([id, sk]) => { SPAR.fortroende[id].skada = sk; }, [vilande, unna]);
+  await p.evaluate(id => { const b = [...document.querySelectorAll(".hb-val")].find(x => x.dataset.id === id); if (b) b.click(); }, vilande);
+  await p.waitForTimeout(400);
+  const efterKlick = await p.evaluate(() => G.hastId);
+  prova("en gammal knapp i bytet ger inte heller den vilande hästen", fanns && efterKlick === start, `knapp fanns ${fanns} · aktiv ${efterKlick}`);
+  /* Och spelaren når ingen ritt med henne: «Rida nu» och E på «Sitt upp». */
+  await tillBoxen(p);
+  await kortKlick(p, "start:rida_nu");
+  await p.keyboard.down("KeyE"); await p.waitForTimeout(900); await p.keyboard.up("KeyE");
+  await p.waitForTimeout(600);
+  const ritt = await p.evaluate(() => ({ scen: G.scen, hast: G.hastId }));
+  prova("ingen ritt på den vilande hästen genom bytesvägen", !(ritt.scen === "lektion" && ritt.hast === vilande), `${ritt.scen} · ${ritt.hast}`);
+  await ctx.close();
+}
+{
+  /* Ett friskt byte fungerar som förut. */
+  const { ctx, p } = await medProfil(bas274);
+  const fore = await p.evaluate(() => G.hastId);
+  await tillRidlararen(p);
+  const lista = await bytesLista(p);
+  const ny = lista.find(id => id !== fore);
+  await p.evaluate(id => { const b = [...document.querySelectorAll(".hb-val")].find(x => x.dataset.id === id); if (b) b.click(); }, ny);
+  await p.waitForTimeout(400);
+  await tillBoxen(p);
+  const k = await p.evaluate(() => ({ hast: G.hastId, kort: document.getElementById("stegkort").dataset.kort,
+    knappar: [...document.querySelectorAll("#stegkort button")].map(b => b.dataset.id) }));
+  prova("friskt byte: den nya hästen blir spelarens, med «Rida nu»", k.hast === ny && k.knappar.includes("start:rida_nu"),
+    `${fore} → ${k.hast} · ${k.kort}`);
+  await ctx.close();
+}
+
+/* ── 6. #274: VÄLFÄRDSSTOPPET RÄKNAR DAGEN, som Roblox `svara` ───── */
+console.log("\n── #274: rätt svar sparar vilan först och räknar dagen en gång ──");
+{
+  /* En fynddag för den tilldelade hästen, ur samma regel som Roblox. En
+     annan häst vilar redan (2 pass) — dagen ska räkna ned även hennes. */
+  const probe = await medProfil(bas274);
+  const fyndPass = await probe.p.evaluate(id => { for (let q = 2; q < 60; q++) if (Forb.fyndFor(id, q + 1)) return q; return -1; }, vilande);
+  const annan = await probe.p.evaluate(id => valbaraHastar().find(x => x !== id), vilande);
+  await probe.ctx.close();
+  const profil = { ...bas274, pass: fyndPass,
+    fortroende: { [annan]: { rang: .5, pass: 1, skada: { namn: "skav", passKvar: 2 } } } };
+  const { ctx, p } = await medProfil(profil);
+  const h = await p.evaluate(() => G.hastId);
+  await tillBoxen(p);
+  await kortKlick(p, "start:rida_nu");
+  const fyndKort = await p.evaluate(() => document.getElementById("stegkort").dataset.kort);
+  prova("förutsättning: fynddagen frågar", h === vilande && fyndKort === "fynd", `${h} · pass ${fyndPass} · ${fyndKort}`);
+  const mark = await p.evaluate(() => window.__skriv.length);
+  await kortKlick(p, "svar:1");
+  const d = await p.evaluate(([mark, nyckel, h, annan]) => {
+    const skr = window.__skriv.slice(mark).map(s => JSON.parse(s));
+    const el = document.getElementById("stegkort");
+    return {
+      skr: skr.map(s => ({ pass: s.pass, kvar: s.fortroende[h] && s.fortroende[h].skada ? s.fortroende[h].skada.passKvar : null })),
+      kort: el.dataset.kort,
+      knappar: [...el.querySelectorAll("button")].map(b => b.dataset.id || b.textContent.trim()),
+      pass: SPAR.pass, skada: SPAR.fortroende[h].skada || null,
+      annan: SPAR.fortroende[annan].skada ? SPAR.fortroende[annan].skada.passKvar : 0,
+      sparat: JSON.parse(localStorage.getItem(nyckel)), stoppad: G.forb ? G.forb.stoppad : null,
+      igen: registreraValfardsstopp(G.forb), passIgen: SPAR.pass,
+    };
+  }, [mark, NYCKEL, h, annan]);
+  prova("stoppkortet: «Ridläraren tar över», ingen ny handlingsknapp (paritet med Roblox)",
+    d.kort === "stopp" && d.knappar.every(k => !/^(start|svar|rad|byt)/.test(k)), `${d.kort} · ${JSON.stringify(d.knappar)}`);
+  prova("första skrivningen bär vilan, med passet orört (vilan sparas först)",
+    d.skr.length >= 2 && d.skr[0].kvar === 2 && d.skr[0].pass === fyndPass, JSON.stringify(d.skr));
+  prova("sista skrivningen har dagen räknad", d.skr.length >= 2 && d.skr[d.skr.length - 1].pass === fyndPass + 1, JSON.stringify(d.skr));
+  prova("passet ökar exakt en gång, och ett andra anrop räknar inte igen",
+    d.pass === fyndPass + 1 && d.igen === false && d.passIgen === fyndPass + 1, `${fyndPass} → ${d.pass} · igen ${d.igen} → ${d.passIgen}`);
+  prova("hon vilar: 2 pass sparade, nedräknat ett av dagen (Roblox raknaNerVila), fyndet bokfört",
+    !!d.skada && d.skada.passKvar === 1 && d.skada.vad === d.stoppad && typeof d.skada.namn === "string" && d.skada.namn.length > 0,
+    `${JSON.stringify(d.skada)} · stoppad ${d.stoppad}`);
+  prova("dagen räknar ned de andra hästarnas vila också", d.annan === 1, `${annan}: 2 → ${d.annan}`);
+  prova("profilen är sparad med vila och räknat pass",
+    d.sparat.pass === fyndPass + 1 && !!(d.sparat.fortroende[h].skada && d.sparat.fortroende[h].skada.passKvar === 1),
+    `pass ${d.sparat.pass} · ${JSON.stringify(d.sparat.fortroende[h].skada)}`);
+  /* Bytet tar inte tillbaka henne samma dag. */
+  await tillRidlararen(p);
+  const lista = await bytesLista(p);
+  prova("samma dag: den stoppade hästen finns inte i bytet", lista.length > 0 && !lista.includes(h), `${lista.length} hästar`);
+  await p.evaluate(() => overlay(false));
+  /* Ny session: nästa häst, inte samma fynd igen. */
+  await p.reload({ waitUntil: "load" }); await p.waitForTimeout(600);
+  await starta(p);
+  const n = await p.evaluate(h => ({ hast: G.hastId, pass: SPAR.pass, vilar: hastVilarForSkada(h),
+    vald: G.hastId ? hastVilarForSkada(G.hastId) : null, direkt: sattAktivHast(h), efter: G.hastId }), h);
+  prova("ny session: en annan, frisk häst — slingan är bruten",
+    !!n.hast && n.hast !== h && n.vald === false && n.pass === fyndPass + 1, `${n.hast} · pass ${n.pass}`);
+  prova("den stoppade hästen vilar fortfarande och kan inte sättas", n.vilar && n.direkt === false && n.efter === n.hast,
+    `vilar ${n.vilar} · sattAktivHast ${n.direkt}`);
+  /* Tills vilan är slut: ett ridet pass till räknar ned henne till noll. */
+  const t = await p.evaluate(h => {
+    G.betyg = { a: .8 }; G.bedomda = 1; G.klarade = 1; G.dagsform = .7; G.skotselRes = { risker: [] };
+    registreraPass({ totalfel: 0, utesluten: false });
+    return { vilar: hastVilarForSkada(h), listad: valbaraHastar().includes(h) };
+  }, h);
+  prova("när vilan är slut är hon valbar igen", !t.vilar && t.listad, `vilar ${t.vilar} · listad ${t.listad}`);
+  await ctx.close();
 }
 
 console.log(fel ? `\n${fel} FEL` : "\nALLA VÄLFÄRDSKONTROLLER OK");

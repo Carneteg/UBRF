@@ -54,6 +54,12 @@ function hastNamn(id){
    handen medan uppdraget pekar på en annan häst. */
 function sattAktivHast(id){
   if(typeof HORSES==="undefined"||!HORSES[id])return false;
+  /* #274: EN VILANDE HÄST BLIR ALDRIG SPELARENS — på någon väg. Listan i
+     bytet filtrerar också (`valbaraHastar`), men det här är det andra,
+     oberoende låset: en anropare som går förbi listan ska inte heller
+     kunna sätta en häst med aktiv skada i arbete. Samma regel som
+     tilldelningen (`tilldelaDagensHast`) och Roblox `tilldelaLedig`. */
+  if(typeof hastVilarForSkada==="function"&&hastVilarForSkada(id))return false;
   G.hastId=id;
   G.hastPlats="box";          // hästen står i sin box när dagen börjar
   G.hastMott=false;
@@ -128,13 +134,18 @@ function tilldelaDagensHast(){
 
 /* Hästar som går att välja: de som FAKTISKT står uppstallade i en box.
    Utan box finns ingen punkt att peka på, och då kan vägledningen inte
-   svara på "var är det". Ingen häst hittas på. */
+   svara på "var är det". Ingen häst hittas på.
+
+   #274: och som inte vilar för en skada. Bytet hos ridläraren listade
+   förut varje boxad häst, och en vilande häst gick att välja och rida —
+   den enda vägen runt välfärdsregeln. */
 function valbaraHastar(){
   if(typeof STALLINNE==="undefined")return [];
   const ut=[];
   for(const rad of STALLINNE.rader)
     for(const id of (STALLINNE.boxar[rad.id]||[]))
-      if(id&&HORSES[id]&&!ut.includes(id))ut.push(id);
+      if(id&&HORSES[id]&&!ut.includes(id)
+        &&!(typeof hastVilarForSkada==="function"&&hastVilarForSkada(id)))ut.push(id);
   return ut;
 }
 

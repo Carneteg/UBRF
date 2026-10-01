@@ -218,7 +218,12 @@ function stegkortKort(antaNara) {
   if (s.fyndSett && !s.fyndRapporterat)
     return { id: "fynd", rubrik: tSpr("hud.du_hittade_nagot"), text: skFyndText(s.fynd),
       val: Forb.fyndSvar().map(v => ({ id: v.id, text: skKanon(v, "namn"), primar: false,
-        gor() { const r = Forb.svaraFynd(s, v.id); skAterkoppla(r[0] ? "" : skAvslag(r)); } })) };
+        gor() {
+          const r = Forb.svaraFynd(s, v.id);
+          /* #274: rätt svar sparar vilan och räknar dagen, som Roblox `svara`. */
+          if (r[0] && typeof registreraValfardsstopp === "function") registreraValfardsstopp(s);
+          skAterkoppla(r[0] ? "" : skAvslag(r));
+        } })) };
 
   if (G.hastPlats === "leds") {
     if (Forb.redo(s))

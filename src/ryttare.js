@@ -284,6 +284,46 @@ function registreraPass(dom){
     rangFore:clamp(m.rang??0.45,0,1), rangEfter:rangEfterRitt};
 }
 
+/* ── VÄLFÄRDSSTOPPET RÄKNAR DAGEN (#274) ───────────────────────────
+   Port av Roblox `GameplayService.svara` → `avslutaPass`. Rätt svar på ett
+   fynd stoppade förut bara förberedelsen i minnet: ingen vila sparades,
+   inget pass räknades, och nästa session gav samma häst, samma pass och
+   samma fynd — en slinga för den spelare som gjorde precis rätt.
+
+   Ordningen är Roblox, och den är avsiktlig:
+     1. VILAN SPARAS FÖRST (`Sparning.satSkada`, `VILA_PASS = 2`). Faller
+        nästa steg har vi hellre en sparad vila utan pass än ett pass utan
+        vila — det första kostar en dag, det andra sätter en sjuk häst i
+        arbete i morgon.
+     2. DAGEN RÄKNAS EN GÅNG (`Sparning.registreraPass`), utan ritt: inget
+        betyg, ingen historikrad, ingen poäng. Det är inte en ridd dag.
+     3. VILAN RÄKNAS NED FÖR ALLA (`Sparning.raknaNerVila`) — också för den
+        stoppade hästen, som i Roblox. Hon vilar alltså nästa pass.
+   Kvittot `s.dagRaknad` gör anropet idempotent per förberedelse. */
+const VALFARD_VILA_PASS=2;    // Roblox GameplayService VILA_PASS
+function registreraValfardsstopp(s){
+  if(!s||!s.stoppad||s.dagRaknad||!SPAR||typeof HORSES==="undefined"||!HORSES[s.hastId])return false;
+  s.dagRaknad=true;
+  const id=s.hastId;
+  const m=SPAR.fortroende[id]||(SPAR.fortroende[id]={rang:0.45, pass:0});
+  if(!(m.skada&&m.skada.passKvar>=VALFARD_VILA_PASS)){
+    const namn=(typeof VISITFYND!=="undefined"&&VISITFYND[s.stoppad])||"fynd vid kollen";
+    m.skada={namn:namn.replace(/\.$/,"").replace(/^./,c=>c.toLowerCase()),
+      passKvar:VALFARD_VILA_PASS, vad:s.stoppad};
+  }
+  sparaRyttare();                               // 1. vilan
+  SPAR.pass++;                                  // 2. dagen
+  for(const h in SPAR.fortroende){              // 3. nedräkningen
+    const f=SPAR.fortroende[h];
+    if(f.skada&&f.skada.passKvar>0){
+      f.skada.passKvar--;
+      if(f.skada.passKvar<=0){delete f.skada; f.rehab=true;}
+    }
+  }
+  sparaRyttare();
+  return true;
+}
+
 /* Profilrutan i menyn. */
 function profilHTML(){
   const m=SPAR.historik[0];
