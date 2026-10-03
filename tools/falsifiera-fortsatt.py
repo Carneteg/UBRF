@@ -31,6 +31,9 @@ provet inte det den säger sig vakta.
   F3  valfärdsfokus ignorerar det öppna fyndet
   F4  valfärdsfokus är alltid av
   Webb
+  D1  dörren får lägsta rang i ledsteget
+  D2  ledsteget känns inte igen (ingen omrankning)
+  D3  dörren rankas som en vanlig handling
   W1  «fortsätt» går att köra utan stopp (båda vakterna borta)
   W2  tilldelningen ignorerar undantaget
   W3  stoppkortet visar en knapp även utan frisk häst
@@ -64,6 +67,7 @@ FILER = {
     "ss": "roblox/src/server/StallService.luau",
     "pc": "roblox/src/client/PreparationController.luau",
     "ic": "roblox/src/client/init.client.luau",
+    "nm": "roblox/src/client/Naromrade.luau",
     "stegkort": "src/stegkort.js",
     "uppdrag": "src/uppdrag.js",
 }
@@ -197,6 +201,18 @@ MUTATIONER = [
      "\tif type(vy) ~= \"table\" then return false end\n\tif vy.stoppad ~= nil then return true end\n",
      "\tdo return false end\n\tif vy.stoppad ~= nil then return true end\n",
      FOKUS, "valfardsfokus ar alltid av"),
+    ("D1", "nm",
+     "\t\t\tthen { DorrPrompt = 1, LedPrompt = 2 }\n",
+     "\t\t\tthen { DorrPrompt = 3, LedPrompt = 2 }\n",
+     FOKUS, "dorren far lagsta rang i ledsteget"),
+    ("D2", "nm",
+     "\t\tif v.paTur and v.id == \"leda\" then ledaPaTur = true end\n",
+     "\t\tif v.paTur and v.id == \"leda_x\" then ledaPaTur = true end\n",
+     FOKUS, "ledsteget kanns inte igen, ingen omrankning"),
+    ("D3", "nm",
+     "\t\t\tif arDorr(p) then return k end\n",
+     "\t\t\tif arDorr(p) then return 3 end\n",
+     FOKUS, "dorren rankas som en vanlig handling"),
     ("W1", "stegkort",
      "  if (!s || !s.stoppad || typeof tilldelaDagensHast !== \"function\") return null;\n"
      "  return tilldelaDagensHast(s.hastId) || null;\n}\n"
