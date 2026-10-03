@@ -57,6 +57,8 @@ SPECAR="$SPECAR integration-forenkling"
 SPECAR="$SPECAR klient-forenkling"
 # #274: fortsattningen efter valfardsstoppet (Rida nu ar ingen atervandsgrand).
 SPECAR="$SPECAR ridefirst-fortsatt klient-fortsatt klient-rida-fokus"
+# #279: R/Y stanger efter-ritten-kortet nar hon inte rider.
+SPECAR="$SPECAR klient-efterritt-tangent"
 # #252 DEL B: banken provar SIG SJALV forst, i bada riktningarna. En
 # require av en modul som inte ligger i bunten ska falla bygget — inte
 # bli ett tyst nil (DEL A). Faller provet bygger vi inte en enda spec.

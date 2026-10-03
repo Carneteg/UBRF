@@ -1066,6 +1066,24 @@ UserInputService.InputBegan:Connect(function(input, processed)
 		return
 	end
 
+	--[[ #279: «Done (R)» efter avsittningen.
+
+	     Efter-ritten-kortet visas först när ritten är riven (`ride = nil`,
+	     `pass = nil`), så R-blocket längre ned — bakom `not ride` — nådde
+	     det aldrig: etiketten lovade en tangent som inte fanns, medan
+	     panelknappen gick rakt till `UgnetaController.fortsatt()`.
+
+	     Samma handling som knappen, ingen ny: `fortsatt` returnerar false
+	     när inget kort väntar, så R/Y stjäl ingenting till fots. Bara när
+	     hon INTE rider — under ridningen äger R-blocket nedan tangenten
+	     oförändrat, och `LektionController.fortsatt` har kvar sin
+	     `pass`-vakt. ]]
+	if not ride
+		and (input.KeyCode == Enum.KeyCode.R or input.KeyCode == Enum.KeyCode.ButtonY)
+		and UgnetaController.fortsatt() then
+		return
+	end
+
 	if not ride then return end
 	--[[ G02-C: spelaren går vidare i lektionen. R och gamepadens Y är
 	     valda för att de INTE är bundna i ridningen — Input.luau tar
