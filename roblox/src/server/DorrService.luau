@@ -43,6 +43,7 @@ local M = 3                     -- studs per meter, som BuildKit.M
 	som sanning. ]]
 local stangt: { [BasePart]: CFrame } = {}
 local oppna: { [BasePart]: boolean } = {}
+local dekor: { [BasePart]: { [BasePart]: { lokal: CFrame, stangd: CFrame } } } = {}
 
 local function anlaggning(): Instance?
 	local folder = workspace:FindFirstChild("Anläggning")
@@ -65,6 +66,9 @@ local function satt(blad: BasePart, vidoppen: boolean)
 		blad.CFrame = gang * CFrame.Angles(0, math.rad(OPPEN_VINKEL), 0) * CFrame.new(-lokal)
 	else
 		blad.CFrame = stangt[blad]
+	end
+	for del, lage in pairs(dekor[blad]) do
+		del.CFrame = if vidoppen then blad.CFrame * lage.lokal else lage.stangd
 	end
 	--[[ Kollisionen är hela poängen: en öppen dörr man inte kan gå igenom är
 		samma fel som förut, bara med en animation på. ]]
@@ -97,6 +101,12 @@ end
 local function rustaDorr(blad: BasePart)
 	if stangt[blad] then return end
 	stangt[blad] = blad.CFrame
+	dekor[blad] = {}
+	for _, del in ipairs(blad:GetChildren()) do
+		if del:IsA("BasePart") and del:GetAttribute("UBRFDorrDekor") == true then
+			dekor[blad][del] = { lokal = blad.CFrame:ToObjectSpace(del.CFrame), stangd = del.CFrame }
+		end
+	end
 	oppna[blad] = false
 	blad.CanCollide = true
 

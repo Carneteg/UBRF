@@ -54,6 +54,12 @@ function hastNamn(id){
    handen medan uppdraget pekar på en annan häst. */
 function sattAktivHast(id){
   if(typeof HORSES==="undefined"||!HORSES[id])return false;
+  /* #274: EN VILANDE HÄST BLIR ALDRIG SPELARENS — på någon väg. Listan i
+     bytet filtrerar också (`valbaraHastar`), men det här är det andra,
+     oberoende låset: en anropare som går förbi listan ska inte heller
+     kunna sätta en häst med aktiv skada i arbete. Samma regel som
+     tilldelningen (`tilldelaDagensHast`) och Roblox `tilldelaLedig`. */
+  if(typeof hastVilarForSkada==="function"&&hastVilarForSkada(id))return false;
   G.hastId=id;
   G.hastPlats="box";          // hästen står i sin box när dagen börjar
   G.hastMott=false;
@@ -61,18 +67,92 @@ function sattAktivHast(id){
   G.skotselRes=null; G.sysslor={mockat:0,fodrat:0};
   G.tackePa=false; G.fangstForsok=false; G.lerig=false; G.spolad=0;
   if(typeof VD!=="undefined"&&VD.spår)VD.spår.length=0;
+  /* Paritetspasset: förberedelsen är Roblox regler (src/forberedelse.js),
+     född med hästen. Passet räknas som i Roblox: webbens SPAR.pass 0 är
+     Roblox pass 1 — och första passet är alltid utan fynd. */
+  if(typeof Forb!=="undefined")
+    G.forb=Forb.nyState(id,((typeof SPAR!=="undefined"&&SPAR)?SPAR.pass:0)+1);
+  if(typeof STEGKORT!=="undefined")STEGKORT.ridaNu=false;
   return true;
+}
+
+/* ── TILLDELNINGEN — port av Roblox Stallet.tilldelaLedig ─────────
+   Paritetspasset P1b (docs/WEB-P1B-ASSIGNMENT-FIRST-RIDE-CONTRACT.md).
+   Roblox delar ut hästen AUTOMATISKT: önskan (Blackrock Jack första dagen)
+   om hon varken är upptagen eller vilar; vilar hon blir svaret nil — ingen
+   ersättare bakom välfärdsregelns rygg; annars rotationen
+   `ordning[(uid % n + steg) % n]` förbi upptagna och vilande. Ordningen är
+   `Object.keys(HORSES)`, samma lista som exporten ger Roblox. */
+const FORSTA_DAGEN_HAST_ID="blackrock_jack";   // Stallet.FORSTA_DAGEN_HAST
+function tilldelaLedig(uid, upptagna, vilande, onskad){
+  const ordning=(typeof HORSES!=="undefined")?Object.keys(HORSES):[];
+  const n=ordning.length;
+  if(!n)return null;
+  const taget=upptagna||{}, vilar=vilande||{};
+  if(onskad!=null){
+    if(HORSES[onskad]&&!taget[onskad]&&!vilar[onskad])return onskad;
+    if(!HORSES[onskad]||vilar[onskad])return null;
+  }
+  const start=((uid%n)+n)%n;
+  for(let steg=0;steg<n;steg++){
+    const id=ordning[(start+steg)%n];
+    if(!taget[id]&&!vilar[id])return id;
+  }
+  return null;
+}
+/* SPELARENS NUMMER FÖR ROTATIONEN — webbens Roblox UserId.
+
+   Roblox UserId följer KONTOT: samma häst på datorn och på iPaden. En
+   inloggad spelare får därför sitt nummer ur Supabase-kontots id (P1b R1,
+   #266 M1), inte ur den här enhetens profil — annars fick samma konto en
+   häst per enhet. Talet räknas fram, det sparas inte: ingen ny kolumn,
+   och två enheter kan aldrig komma i otakt. FNV-1a över id-strängen ger
+   ett stabilt 32-bitars heltal ≥ 0, samma på varje enhet.
+
+   Utan inloggning gäller profilens `SPAR.spelarId` (src/ryttare.js), som
+   förut: stabil på den här enheten. */
+function kontoTilldelningsId(kontoId){
+  let h=0x811c9dc5;
+  for(let i=0;i<kontoId.length;i++){ h^=kontoId.charCodeAt(i); h=Math.imul(h,0x01000193); }
+  return h>>>0;
+}
+function tilldelningsId(){
+  const konto=(typeof SYNK!=="undefined"&&SYNK&&SYNK.session&&SYNK.session.user)
+    ?SYNK.session.user.id:null;
+  if(typeof konto==="string"&&konto)return kontoTilldelningsId(konto);
+  return (typeof SPAR!=="undefined"&&SPAR&&Number.isInteger(SPAR.spelarId))?SPAR.spelarId:0;
+}
+/* Dagens häst för den här spelaren. Webben har en spelare, så ingen häst
+   är upptagen av någon annan; vilande är webbens välfärdsspärr.
+
+   #274: `undanta` är en häst som INTE får väljas, oavsett vad profilen
+   säger — den som just stoppats av välfärdsregeln. Port av Roblox
+   `StallService.tilldela(player, undanta)`: vilan är redan sparad, men en
+   ersättare ska aldrig kunna bli samma häst, och med ett undantag gäller
+   ingen önskad första-dagen-häst (den som stoppats har haft sin dag). */
+function tilldelaDagensHast(undanta){
+  const vilande={};
+  for(const id of Object.keys(HORSES))
+    if(typeof hastVilarForSkada==="function"&&hastVilarForSkada(id))vilande[id]=true;
+  if(undanta)vilande[undanta]=true;
+  const forsta=!undanta&&typeof SPAR!=="undefined"&&SPAR&&SPAR.pass===0;
+  return tilldelaLedig(tilldelningsId(), {}, vilande, forsta?FORSTA_DAGEN_HAST_ID:null);
 }
 
 /* Hästar som går att välja: de som FAKTISKT står uppstallade i en box.
    Utan box finns ingen punkt att peka på, och då kan vägledningen inte
-   svara på "var är det". Ingen häst hittas på. */
+   svara på "var är det". Ingen häst hittas på.
+
+   #274: och som inte vilar för en skada. Bytet hos ridläraren listade
+   förut varje boxad häst, och en vilande häst gick att välja och rida —
+   den enda vägen runt välfärdsregeln. */
 function valbaraHastar(){
   if(typeof STALLINNE==="undefined")return [];
   const ut=[];
   for(const rad of STALLINNE.rader)
     for(const id of (STALLINNE.boxar[rad.id]||[]))
-      if(id&&HORSES[id]&&!ut.includes(id))ut.push(id);
+      if(id&&HORSES[id]&&!ut.includes(id)
+        &&!(typeof hastVilarForSkada==="function"&&hastVilarForSkada(id)))ut.push(id);
   return ut;
 }
 
@@ -105,6 +185,11 @@ function uppdragMal(){
   if(G.scen!=="gard"&&G.scen!=="stallinne"&&G.scen!=="ridhusinne")return null;
   const n=hastNamn();
   if(!G.hastId){
+    /* En vanlig dag delas hästen ut automatiskt (P1b). Finns ingen — alla
+       vilar — väntar spelaren, som i Roblox; inget mål att gå till.
+       Tävlingsdagen är en sidoaktivitet och fördelas fortfarande av
+       ridläraren. */
+    if(!G.tavling)return null;
     const p=(typeof STALLINNE!=="undefined")&&STALLINNE.ridlarare;
     return {id:"ridlarare", rubrik:"Prata med ridläraren",
       punkter:["Stallgången, rakt in genom entrén"],
@@ -121,23 +206,17 @@ function uppdragMal(){
         "Släpp in i boxen med E"],
       mal:(typeof hittaBox==="function"&&hittaBox(G.hastId))
         ?{scen:"stallinne", pos:hittaBox(G.hastId).dorr, var:"Boxen i stallet"}:null};
+  /* Paritetspasset 2026-09-28: kedjan är Roblox stegkort. Förberedelsen
+     sker VID hästen (src/stegkort.js) — målet är hästen tills hon leds,
+     sedan sargporten. Sadelkammaren är en sidoaktivitet och aldrig ett
+     steg här. Texterna är stegkortets, i spelarens språk. */
   if(!G.skotselRes){
-    if(!G.hastMott)
-      return {id:"hitta_hast", rubrik:`Hitta ${n}`,
-        punkter:["Boxen i stallet — namnskylten på dörren","Följ den gula vägvisaren"],
-        mal:hast, hastId:G.hastId};
-    if(!G.utrustning)
-      return {id:"utrustning", rubrik:"Hämta sadel + träns",
-        punkter:["Sadelkammaren, innanför uppehållsrummet",
-          `Ta ${hastPron(G.hastId,"poss")} egen bygel — namnskylten`],
-        mal:uppdragSadelkammare()};
-    return {id:"skotsel", rubrik:`Sköt om och sadla ${n}`,
-      punkter:["Tillbaka till boxen","Mocka, fodra, visitera, sadla (E)"],
+    return {id:"hitta_hast", rubrik:tSpr("guide.ga_till_rubrik",n),
+      punkter:[tSpr("guide.ga_till_text")],
       mal:hast, hastId:G.hastId};
   }
-  return {id:"sitt_upp", rubrik:`Sitt upp på ${n}`,
-    punkter:["Led hästen till sargporten i ridhuset",
-      "När “Sitt upp” visas: tryck E / Interagera"],
+  return {id:"sitt_upp", rubrik:tSpr("guide.leder_rubrik",n),
+    punkter:[tSpr("guide.leder_text",n)],
     mal:uppdragUppsittning()};
 }
 
@@ -155,6 +234,10 @@ function uppdragDorrMot(malScen){
 function uppdragVagvisare(){
   const u=uppdragMal();
   if(!u||!u.mal)return null;
+  /* Paritetspasset P1a R1 (Tobias 2026-09-28): när hon leds finns ingen
+     markör — Roblox DinHast döljer sig under ledning och har ingen pil
+     till ridhuset. Stegkortet «Led … till ridhuset» är instruktionen. */
+  if(G.hastPlats==="leds")return null;
   let pos=u.mal.pos, iScen=(u.mal.scen===G.scen), viaDorr=null;
   if(!iScen){
     viaDorr=uppdragDorrMot(u.mal.scen);
@@ -314,8 +397,12 @@ function installeraTydligVagvisare(){
     rot.classList.toggle("nara",!!v.nara);
     const av=Math.max(0,Math.round(v.avstand));
     const namn=(u.hastId&&typeof HORSES!=="undefined"&&HORSES[u.hastId])?HORSES[u.hastId].namn:null;
-    etikett.textContent=v.nara
-      ? (namn?`HÄR · ${namn}`:`HÄR · ${u.rubrik}`)
+    /* Paritetspasset: hästens markör är Roblox DinHast — «DIN HÄST», namnet
+       och ▼ — och den försvinner när spelaren är framme, där stegkortet tar
+       över (DinHast döljer sig inom NARA). Andra mål behåller avståndet. */
+    if(namn&&v.nara){rot.style.display="none";requestAnimationFrame(tick);return;}
+    etikett.textContent=namn
+      ? `${tSpr("stall.din_hast")} · ${namn}`
       : `${u.rubrik} · ${av} m`;
 
     const p=skarmPos(v);

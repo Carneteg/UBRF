@@ -95,6 +95,8 @@ local KNAPP_B = 300
 local PANEL_MIN = 260
 local PANEL_MAX = 320
 local LUFT = 6
+--[[ #274: luften mellan Ugnetas kort och statuskortet. ]]
+local KORTLUFT = 8
 local KANT = 16
 
 --[[ EN PRIMÄR HANDLING OCH HÖGST TVÅ SEKUNDÄRA (#264 kontraktet). Fler
@@ -157,6 +159,9 @@ local aterEtikett: TextLabel? = nil
 local hjalpKnapp: TextButton? = nil
 local hjalpText: TextLabel? = nil
 local hjalpUt = false
+--[[ Alternativ 3: står bara sekundära val i valsektionen ritas den EFTER
+	handlingsraderna (prompterna är primära). ]]
+local valEfter = false
 local valRader: { [number]: any } = {}
 local valKnappar: { TextButton } = {}
 local valYta: ScrollingFrame? = nil
@@ -1151,6 +1156,10 @@ local function bygg()
 	tak.Name = "Tak"
 	tak.Parent = pn
 	panelRam = pn
+	--[[ UI-2 (docs/P2-UGNETA-INSTRUCTION-CONTRACT.md § 3): Ugneta överst —
+	     hennes yta (titel, Text, flagga, instruktion) är panelens första
+	     block, handlingarna står under. Ytan ägs av UgnetaController. ]]
+	UgnetaController.dockaLarare(pn, 0)
 
 	local function etikettYta(namn: string, ordning: number, storlek: number,
 		fet: boolean): TextLabel
@@ -1334,6 +1343,48 @@ local function bygg()
 	hjalpText.Visible = false
 	hjalpText.LayoutOrder = 3
 	hjalpText.Parent = kr
+
+	--[[ #274 (Tobias speltest 2026-10-03): UGNETA OCH STATUSPANELEN ÄR TVÅ
+	     KORT. Förut låg de som ett enda block i samma ruta och coachning,
+	     läge och val läste som en tät massa. Nu är `Panel` bara en genomskinlig
+	     behållare med två tydliga kort: Ugneta överst (bara coachning, eget
+	     guldkantat kort — se `UgnetaController.dockaLarare`) och `StatusKort`
+	     under (häst, gångart, sits, läge, val). Allt som låg direkt i
+	     panelen utom Ugnetas kort flyttas in i `StatusKort`; ordning och
+	     radbudget är oförändrade. ]]
+	local st = Instance.new("Frame")
+	st.Name = "StatusKort"
+	st.LayoutOrder = 1
+	st.Size = UDim2.new(1, 0, 0, 0)
+	st.AutomaticSize = Enum.AutomaticSize.Y
+	st.BackgroundColor3 = pn.BackgroundColor3
+	st.BackgroundTransparency = pn.BackgroundTransparency
+	st.BorderSizePixel = 0
+	local stHorn = Instance.new("UICorner")
+	stHorn.CornerRadius = UDim.new(0, 8)
+	stHorn.Parent = st
+	local stPad = Instance.new("UIPadding")
+	stPad.PaddingLeft = UDim.new(0, 10)
+	stPad.PaddingRight = UDim.new(0, 10)
+	stPad.PaddingTop = UDim.new(0, 10)
+	stPad.PaddingBottom = UDim.new(0, 10)
+	stPad.Parent = st
+	local stLista = Instance.new("UIListLayout")
+	stLista.FillDirection = Enum.FillDirection.Vertical
+	stLista.SortOrder = Enum.SortOrder.LayoutOrder
+	stLista.Padding = UDim.new(0, LUFT)
+	stLista.Parent = st
+	for _, barn in ipairs(pn:GetChildren()) do
+		if barn ~= UgnetaController.lararRam() and not (barn:IsA("UIListLayout") or barn:IsA("UIPadding")
+			or barn:IsA("UICorner") or barn:IsA("UISizeConstraint")) then
+			barn.Parent = st
+		end
+	end
+	st.Parent = pn
+	pn.BackgroundTransparency = 1
+	pad.PaddingLeft, pad.PaddingRight, pad.PaddingTop, pad.PaddingBottom =
+		UDim.new(0, 0), UDim.new(0, 0), UDim.new(0, 0), UDim.new(0, 0)
+	lista.Padding = UDim.new(0, KORTLUFT)
 end
 
 --[[ ── HUR MÅNGA RADER RYMS? (#246 E) ──────────────────────────────────
@@ -1677,7 +1728,14 @@ local function placera(pn: Frame)
 		end
 		return if t.AbsoluteSize then t.AbsoluteSize.Y else 0
 	end
-	local tak = math.max(0, math.min(math.max(0, ovanfor) - KANT, hojd * 0.4))
+	--[[ #274: UGNETAS KORT ÄR SKILT FRÅN STATUSKORTET. Taket på 40 % gäller
+	     statuskortet; Ugnetas kort läggs ovanpå och får bara inte skjuta
+	     stapeln ur bild (taket krymper med dess höjd mot skärmens överkant).
+	     Förut åt Ugnetas kort av statuskortets budget, och startvalet fick
+	     bara en del av sin plats när dörren fick en rad. ]]
+	local ug = UgnetaController.lararRam()
+	local ugH = if ug and ug.Parent == pn then h(ug) else 0
+	local tak = math.max(0, math.min(math.max(0, ovanfor) - KANT - ugH, hojd * 0.4))
 	local rr = rubrikEtikett and rubrikEtikett.Parent
 	local fast = 20 + h(rr) + h(ram)
 	local vl = valYta
@@ -1759,11 +1817,129 @@ local function visaAterkoppling(text: string?)
 	a.Visible = text ~= nil and text ~= ""
 end
 
+--[[ ── ONBOARDINGENS STEGKORT (docs/ONBOARDING-STEP-CARD-CONTRACT.md) ────
+
+	Tobias i Play (2026-09-28): rutan sa fasens NAMN, inte vad han skulle göra
+	härnäst — dörren, att hämta sadeln, att «Rida nu» fanns. Tobias val C: två
+	vägar. «Rida nu» (stallet gör i ordning henne rätt och leder henne till
+	ridhuset) eller «Gör i ordning själv»: spelets egen ordning. Samma ruta,
+	samma knappar — bara rubriken och instruktionen säger nu ETT steg i taget,
+	härlett ur spelets läge (`guide`) och ur en STÄNGD dörr inom räckhåll.
+	Nil = gäller inte (welfare-stopp, rättelse, eftervård, ritten …): då
+	står de gamla texterna kvar. ]]
+--[[ UI-1: har spelaren valt «Gör i ordning … själv» för den här hästen? Sessionslokalt;
+	nollställs när hästen är redo eller man sitter upp. ]]
+local startvalSjalv: { [string]: boolean } = {}
+
+--[[ UI-1: startskärmen — vid hästen, inget gjort, och inget val än. ]]
+local function arStartskarm(g: any, minHast: string?, lage: string?): boolean
+	return type(g) == "table" and not g.rattelse and not g.fynd and lage ~= "fynd"
+		and not g.utomRackhall and g.status == "preparing"
+		and g.nasta == "halsa" and (g.klaraFaser or 0) == 0 and minHast ~= nil and not startvalSjalv[minHast]
+		and PreparationController.kontext() ~= "ledning"
+end
+
+--[[ UI-3: VARJE KORTRUBRIK ÄR EN LITERAL NYCKEL. Förut sattes nyckeln
+     ihop (`"guide." .. nyckel .. "_rubrik"`) och språkgrinden kunde inte
+     se den; nu står varje nyckel utskriven, och ett okänt kort felar högt
+     i stället för att visa en rå nyckel. ]]
+local GUIDE_RUBRIK: { [string]: (string) -> string } = {
+	leder = function(n) return Sprak.t("guide.leder_rubrik", n) end,
+	dorr = function(n) return Sprak.t("guide.dorr_rubrik", n) end,
+	ga_till = function(n) return Sprak.t("guide.ga_till_rubrik", n) end,
+	sittupp = function(n) return Sprak.t("guide.sittupp_rubrik", n) end,
+	valj = function(n) return Sprak.t("guide.valj_rubrik", n) end,
+	halsa = function(n) return Sprak.t("guide.halsa_rubrik", n) end,
+	visitera = function(n) return Sprak.t("guide.visitera_rubrik", n) end,
+	rykta = function(n) return Sprak.t("guide.rykta_rubrik", n) end,
+	hovar = function(n) return Sprak.t("guide.hovar_rubrik", n) end,
+	hamta_sadel = function(n) return Sprak.t("guide.hamta_sadel_rubrik", n) end,
+	hamta_trans = function(n) return Sprak.t("guide.hamta_trans_rubrik", n) end,
+	sadla = function(n) return Sprak.t("guide.sadla_rubrik", n) end,
+	transa = function(n) return Sprak.t("guide.transa_rubrik", n) end,
+	leda = function(n) return Sprak.t("guide.leda_rubrik", n) end,
+}
+
+local function guideSteg(g: any, lage: string?, text: string?, hastnamn: string?, stangdDorr: boolean,
+	valtSjalv: boolean?): any
+	if type(g) ~= "table" then return nil end
+	if g.rattelse or g.fynd or g.status == "welfare_stop" or g.status == "waiting_model" or g.status == "riding" then
+		return nil
+	end
+	if lage == "eftervard" or lage == "raknat" or lage == "fynd" then return nil end
+	local namn = if hastnamn and hastnamn ~= "" then hastnamn else Sprak.t("guide.din_hast")
+	local function kort(nyckel: string, instr: string?, raknare: boolean?)
+		return { rubrik = GUIDE_RUBRIK[nyckel](namn), text = instr or "", raknare = raknare == true }
+	end
+	if PreparationController.kontext() == "ledning" then
+		return kort("leder", Sprak.t("guide.leder_text", namn))
+	end
+	if g.utomRackhall then
+		if stangdDorr then return kort("dorr", Sprak.t("guide.dorr_text", namn)) end
+		return kort("ga_till", Sprak.t("guide.ga_till_text"))
+	end
+	if g.redo or g.status == "ready_to_mount" then
+		return kort("sittupp", Sprak.t("guide.sittupp_text"))
+	end
+	if g.status ~= "preparing" then return nil end
+	local m = if type(g.nastaMoment) == "string" then g.nastaMoment else ""
+	local buren = g.buren or {}
+	if g.nasta == "halsa" and (g.klaraFaser or 0) == 0 then
+		-- UI-1: startskärmen bär bara de två vägarna; hälsningen kommer först efter «själv».
+		if not valtSjalv then return kort("valj", Sprak.t("guide.valj_kort", namn)) end
+		return kort("halsa", text)
+	elseif g.nasta == "visitera" then
+		return kort("visitera", text, true)
+	elseif g.nasta == "rykta" then
+		return kort("rykta", text, true)
+	elseif g.nasta == "iordning" then
+		if string.sub(m, 1, 4) == "hov:" then return kort("hovar", text) end
+		local sadelPa = m == "utr:3" or m == "utr:4" or m == "utr:5"
+		if not sadelPa and not buren.sadel then return kort("hamta_sadel", Sprak.t("guide.hamta_sadel_text", namn)) end
+		if not sadelPa and not buren.trans then return kort("hamta_trans", Sprak.t("guide.hamta_trans_text")) end
+		if not sadelPa then return kort("sadla", text) end
+		if m == "utr:5" and not buren.trans then return kort("hamta_trans", Sprak.t("guide.hamta_trans_text")) end
+		if m == "utr:5" then return kort("transa", text) end
+		return kort("sadla", text)
+	elseif g.nasta == "leda" then
+		return kort("leda", Sprak.t("guide.leda_text"))
+	end
+	return nil
+end
+
+--[[ Provkrok: stegkortet för ett givet läge (samma funktion som panelen). ]]
+function Naromrade._guideFor(g: any, lage: string?, text: string?, hastnamn: string?, stangdDorr: boolean,
+	valtSjalv: boolean?): any
+	return guideSteg(g, lage, text, hastnamn, stangdDorr, valtSjalv)
+end
+
+--[[ Finns en STÄNGD dörr bland prompterna inom räckhåll? (`SprakNyckel`
+	"dorr.oppna" = stängd; `ActionText` skrivs om av Prompttext.) ]]
+local function stangdDorrNara(): boolean
+	for _, p in ipairs(relevanta) do
+		if arDorr(p) and p:GetAttribute("SprakNyckel") == "dorr.oppna" then return true end
+	end
+	return false
+end
+
 --[[ ── RUBRIK, NÄSTA STEG, ÅTERKOPPLING ──────────────────────────────────
 
 	Ur skötselns adapter (`PreparationController.panel`). En kvittens eller
 	ett nej står i återkopplingsfältet; nästa steg står kvar ovanför i
 	stället för att skrivas över. Utan tilldelning: ett ärligt besked. ]]
+--[[ UI-2: instruktionen till fots är UGNETAS. Den skrivs till hennes yta;
+     panelens egen rad bär den bara när ytan inte visar den (ej byggd, en
+     lektion talar, bänken) — så att den aldrig står två gånger och aldrig
+     försvinner. ]]
+local function visaInstruktion(text: string)
+	UgnetaController.satInstruktion(if text ~= "" then text else nil)
+	local hosUgneta = text ~= "" and UgnetaController.visarInstruktion()
+	if stegEtikett then
+		stegEtikett.Text = text
+		stegEtikett.Visible = text ~= "" and not hosUgneta
+	end
+end
+
 local function fyllText(data: any, minHast: string?, hastnamn: string?)
 	local lage: string
 	local steg = ""
@@ -1785,14 +1961,54 @@ local function fyllText(data: any, minHast: string?, hastnamn: string?)
 			steg = data.text or ""
 			sistaInstruktion = steg
 		end
+		--[[ ONBOARDING: ett steg i taget. Instruktionen ur guiden; en kvittens
+			eller ett nej står kvar i återkopplingsfältet som förut. ]]
+		local g = data.guide
+		if type(g) == "table" and minHast and (g.redo or g.status == "riding" or g.status == "ready_to_mount") then
+			startvalSjalv[minHast] = nil -- nästa gång börjar med valet igen
+		end
+		local gs = guideSteg(g, data.lage, if data.aterkoppling then nil else data.text, hastnamn,
+			stangdDorrNara(), minHast ~= nil and startvalSjalv[minHast] == true)
+		if gs then
+			local r = gs.rubrik
+			if gs.raknare and data.totalt and data.totalt > 0 then
+				r ..= ("  ·  %d/%d"):format(data.klara or 0, data.totalt)
+			end
+			if rubrikEtikett then rubrikEtikett.Text = r end
+			if not data.aterkoppling then
+				steg = gs.text
+				sistaInstruktion = steg
+			end
+			visaInstruktion(steg)
+			visaAterkoppling(ater)
+			local hjalpG = stegLista(data.steg or {})
+			--[[ #273 S2: kunskapslagret — «Så gör man» — för handlingen på
+				tur. Frivilligt: det står bakom Hjälp, aldrig i kortet. ]]
+			if type(data.kunskap) == "string" and data.kunskap ~= "" then
+				local k = Sprak.t("handling.kunskap") .. "\n" .. data.kunskap
+				hjalpG = if hjalpG ~= "" then (hjalpG .. "\n\n" .. k) else k
+			end
+			if type(data.historik) == "string" and data.historik ~= "" then
+				hjalpG = if hjalpG ~= "" then (hjalpG .. "\n\n" .. data.historik) else data.historik
+			end
+			visaHjalp(hjalpG)
+			return
+		end
 	end
 	if rubrikEtikett then rubrikEtikett.Text = rubrikFor(hastnamn, lage) end
-	if stegEtikett then
-		stegEtikett.Text = steg
-		stegEtikett.Visible = steg ~= ""
-	end
+	visaInstruktion(steg)
 	visaAterkoppling(ater)
-	visaHjalp(if data then stegLista(data.steg or {}) else "")
+	--[[ C: skötselminnets avsnitt EFTER dagens steg, åtskilt — samma
+		valfria hjälplista, ingen rad och ingen fråga. ]]
+	local hjalp = if data then stegLista(data.steg or {}) else ""
+	if data and type(data.kunskap) == "string" and data.kunskap ~= "" then
+		local k = Sprak.t("handling.kunskap") .. "\n" .. data.kunskap
+		hjalp = if hjalp ~= "" then (hjalp .. "\n\n" .. k) else k
+	end
+	if data and type(data.historik) == "string" and data.historik ~= "" then
+		hjalp = if hjalp ~= "" then (hjalp .. "\n\n" .. data.historik) else data.historik
+	end
+	visaHjalp(hjalp)
 end
 
 rita = function()
@@ -1814,6 +2030,7 @@ rita = function()
 		panelen säger bara vilka. Motorns bubblor får tillbaka sin bild, men
 		ridningens prompter är av när man sitter upp. ]]
 	if rider then
+		UgnetaController.satInstruktion(nil)
 		slappHall()
 		senaste = {}
 		table.clear(valRader)
@@ -1873,10 +2090,13 @@ rita = function()
 			stegEtikett.Text = kropp
 			stegEtikett.Visible = kropp ~= ""
 		end
-		local ug = UgnetaController.panel()
+		local ug = UgnetaController.panel(MAX_VAL)
 		visaAterkoppling(nil)
-		for j, k in ipairs(ug.knappar) do
-			if j <= MAX_VAL then valRader[j] = k end
+		--[[ Ledningens ingång TILL FOTS (sekundär) hör aldrig till ridningens
+			rader, även om ingen ridlektionspanel råkar vara installerad. ]]
+		local ridVal = 0
+		for _, k in ipairs(ug.knappar) do
+			if not k.sekundar and ridVal < MAX_VAL then ridVal += 1; valRader[ridVal] = k end
 		end
 		for j, vb in ipairs(valKnappar) do
 			local k = valRader[j]
@@ -1887,10 +2107,13 @@ rita = function()
 					else Color3.fromRGB(38, 41, 47)
 			end
 		end
-		if valYta then valYta.Visible = #ug.knappar > 0 end
+		valEfter = false
+		if valYta then valYta.LayoutOrder = 3; valYta.Visible = ridVal > 0 end
 		local alla = {}
-		for _, r in ipairs(KontrollHjalp.rader()) do
-			table.insert(alla, r.vad .. "  [" .. r.reglage .. "]")
+		--[[ #273 S1: kärnan först, hjälperna under «Avancerat». ]]
+		for _, r in ipairs(KontrollHjalp.listrader()) do
+			table.insert(alla, if r.rubrik then "— " .. r.vad .. " —"
+				else r.vad .. "  [" .. r.reglage .. "]")
 		end
 		visaHjalp(table.concat(alla, "\n"))
 		placera(pn)
@@ -1973,9 +2196,15 @@ rita = function()
 	local valen: { any } = {}
 	--[[ EN GILTIG EFTERRITT GÅR FÖRE: den läses i panelen och avfärdas där,
 	     och först sedan tar skötselns eftervård över (kontraktet). ]]
-	local ug = UgnetaController.panel()
-	if #ug.knappar > 0 then
-		for _, k in ipairs(ug.knappar) do
+	local ug = UgnetaController.panel(MAX_VAL)
+	--[[ Ledningslektionens ingång till fots är SEKUNDÄR: har skötseln en
+		öppen fråga går den före, och ingången visas inte (kontraktet). ]]
+	local ugVal = {}
+	for _, k in ipairs(ug.knappar) do
+		if not (k.sekundar and data and data.harVal) then table.insert(ugVal, k) end
+	end
+	if #ugVal > 0 then
+		for _, k in ipairs(ugVal) do
 			if #valen < MAX_VAL then table.insert(valen, k) end
 		end
 	elseif data and data.harVal then
@@ -1983,9 +2212,46 @@ rita = function()
 			if v.aktiv and #valen < MAX_VAL then table.insert(valen, v) end
 		end
 	end
+	--[[ UI-1: STARTSKÄRMEN. Exakt två val — «Rida nu — {häst}» (primärt, samma
+	     funktion som prompten) och «Gör i ordning {häst} själv». Inga
+	     hälsningssvar, inga promptrader, inget «Fler». ]]
+	if data and arStartskarm(data.guide, minHast, data.lage) then
+		local namn = if hastnamn and hastnamn ~= "" then hastnamn else Sprak.t("guide.din_hast")
+		local hast = minHast :: string
+		valen = {
+			{ id = "start:rida_nu", text = Sprak.t("guide.val_rida_nu", namn), aktiv = true, paTur = true, klar = false,
+				skicka = function() task.spawn(InteractionController.ridaNu) end },
+			{ id = "start:sjalv", text = Sprak.t("guide.val_sjalv", namn), aktiv = true, paTur = false, klar = false,
+				skicka = function()
+					startvalSjalv[hast] = true
+					if rita then rita() end
+				end },
+		}
+		--[[ #274: STÄNGD BOX = «ÖPPNA DÖRREN» SYNS PÅ STARTVÄGEN. Spelaren ska
+		     aldrig behöva gissa att nästa fysiska steg är dörren. Då får den
+		     stängda dörren prompt-platsen under de två valen (`promptPlatser`
+		     är 1 när ett primärt val finns); är dörren öppen eller utom
+		     räckhåll är startskärmen oförändrad, exakt två val. ]]
+		ordnade = {}
+		for _, p in ipairs(relevanta) do
+			if arDorr(p) and p:GetAttribute("SprakNyckel") == "dorr.oppna" then
+				ordnade = { p }
+				break
+			end
+		end
+	end
 	--[[ Under en fråga står EN sekundär handling fast — Rida nu, enligt
 	     produktordningen — så att frågans alternativ får plats att synas. ]]
-	local promptPlatser = if #valen > 0 then 1 else platser
+	--[[ CHATGPT_UX_DECISION_NEAR_AREA (alternativ 3): ett SEKUNDÄRT val
+		(ledningens ingång till fots) tar högst sin egen rad och krymper aldrig
+		de närliggande prompterna till en; bara ett primärt val gör det. ]]
+	local primara, sekundara = 0, 0
+	for _, k in ipairs(valen) do
+		if k.sekundar then sekundara += 1 else primara += 1 end
+	end
+	local promptPlatser = if primara > 0 then 1 else platser
+	valEfter = primara == 0 and sekundara > 0
+	if valYta then valYta.LayoutOrder = if valEfter then 5 else 3 end
 	--[[ ── UTRUSTNINGSSTEGET BEHÖVER SIN VERKLIGA HANDLING ────────────────
 
 		Mätt i Studio: momentet «Tacking up 1/5» stod på tur, servern sa
@@ -2011,6 +2277,15 @@ rita = function()
 		if type(v.id) == "string" and string.sub(v.id, 1, 4) == "utr:" then
 			utrustningAntal += 1
 			if v.paTur then utrustningNr = tonumber(string.sub(v.id, 5)) end
+		end
+		--[[ #273 S2: utrustningssteget är numera en HANDLING — «Sadla» eller
+		     «Tränsa» — och känns igen på handlingens id. Regeln är densamma:
+		     sadelns handlingar först när sadeln står på tur, tränsets när
+		     tränset gör det. ]]
+		if v.paTur and v.id == "handling:sadla" then
+			utrustningNr, utrustningAntal = 1, math.max(utrustningAntal, 2)
+		elseif v.paTur and v.id == "handling:transa" then
+			utrustningNr, utrustningAntal = math.max(utrustningAntal, 2), math.max(utrustningAntal, 2)
 		end
 		if v.paTur and v.id == "leda" then ledaPaTur = true end
 	end
@@ -2046,13 +2321,22 @@ rita = function()
 	if sida > sidor then sida = sidor end
 	if sida < 1 then sida = 1 end
 	senaste = {}
-	table.clear(valRader)
-	for i, v in ipairs(valen) do valRader[i] = v end
 	for j = 1, promptPlatser do
 		local p = ordnade[(sida - 1) * promptPlatser + j]
 		if p == nil then break end
 		senaste[j] = p
 	end
+	--[[ Alternativ 3: det sekundära valet tar bara en rad som prompterna inte
+		behöver. Fyller prompterna listan står det inte med (det kommer tillbaka
+		så snart en rad blir ledig); prompterna krymps aldrig för dess skull.
+		Räknat på DEN HÄR SIDANS rader, inte på alla prompter (CHATGPT_REVIEW_R1):
+		med overflow har en ofullständig sista sida en ledig rad. ]]
+	if valEfter and #senaste >= promptPlatser then
+		valen = {}
+		valEfter = false
+	end
+	table.clear(valRader)
+	for i, v in ipairs(valen) do valRader[i] = v end
 	--[[ Först av allt: höll hon i något som inte längre finns i panelen? ]]
 	provaHallet()
 
@@ -2194,7 +2478,14 @@ function Naromrade._panel(): { [string]: any }
 	return {
 		synlig = pn ~= nil and pn.Visible,
 		rubrik = if rubrikEtikett then rubrikEtikett.Text else "",
-		steg = if stegEtikett and stegEtikett.Visible then stegEtikett.Text else "",
+		--[[ UI-2: `steg` är instruktionen SOM SPELAREN SER DEN — i Ugnetas
+		     dockade yta eller på panelens egen rad. `stegHos` säger var, så
+		     att ett prov kan kräva att den står på exakt ett ställe. ]]
+		steg = if stegEtikett and stegEtikett.Visible then stegEtikett.Text
+			elseif UgnetaController.visarInstruktion() then (UgnetaController._larare().text or "")
+			else "",
+		stegHos = if stegEtikett and stegEtikett.Visible and stegEtikett.Text ~= "" then "panel"
+			elseif UgnetaController.visarInstruktion() then "ugneta" else nil,
 		ater = if aterEtikett and aterEtikett.Visible then aterEtikett.Text else "",
 		hjalp = if hjalpText and hjalpText.Visible then hjalpText.Text else "",
 		hjalpKnapp = hjalpKnapp,
@@ -2205,14 +2496,18 @@ end
 function Naromrade._rader(): { string }
 	--[[ I skärmens ordning: skötselns alternativ först, sedan handlingarna. ]]
 	local ut = {}
-	if valYta and valYta.Visible then
-		for _, b in ipairs(valKnappar) do
-			if b.Visible then table.insert(ut, b.Text) end
+	local function valen()
+		if valYta and valYta.Visible then
+			for _, b in ipairs(valKnappar) do
+				if b.Visible then table.insert(ut, b.Text) end
+			end
 		end
 	end
+	if not valEfter then valen() end
 	for _, b in ipairs(rader) do
 		if b.Visible then table.insert(ut, b.Text) end
 	end
+	if valEfter then valen() end
 	return ut
 end
 

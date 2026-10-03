@@ -1,0 +1,552 @@
+--!nostrict
+-- BANK_ONLY: actual HorseService and built arena, no live save/engine.
+local fails, total = 0, 0
+local function check(name, yes)
+	total += 1
+	if not yes then fails += 1 end
+	print((if yes then "  OK   " else "  FEL  ") .. name)
+end
+local Players = game:GetService("Players")
+local Run = game:GetService("RunService")
+local Tags = game:GetService("CollectionService")
+local vec = Vector3.new
+local RP = assert(Ridhusplats.los(workspace:FindFirstChild("Anläggning"):FindFirstChild("UBRF")))
+Tags:nollstall(); Run._server = true; Run.Heartbeat:nollstall()
+HorseService.setMountGate(nil); HorseService.start()
+local writes = __datastore.forsok and __datastore.forsok.skriv or 0
+local function player(id)
+	local c = Instance.new("Model")
+	local root = Instance.new("Part"); root.Name = "HumanoidRootPart"; root.Size = vec(2,2,1); root.Parent = c
+	local h = Instance.new("Humanoid"); h.Name = "Humanoid"; h.Parent = c
+	return { UserId = id, Name = "Tester" .. id, Character = c,
+		CharacterAdded = __signal_ny(), CharacterRemoving = __signal_ny() }
+end
+local p, other = Players.LocalPlayer, player(912)
+p.Character = player(911).Character
+Players._spelare = {p, other}
+local horse = HastRigg.bygg("circle_test", "Circle test", CFrame.new(Ridhusplats.tillVarld(RP, vec(0, 0, 2))))
+horse.Parent = workspace; Tags:AddTag(horse, "Horse")
+local s = HorseService.sessionFor(horse)
+local function point(u,v)
+	local a = Ridhusplats.tillVarld(RP, vec(u,0,v))
+	return vec(a.X,s.rig.root.Position.Y,a.Z)
+end
+local function step(u,v,dt)
+	local a = point(u,v); s.rig.root.CFrame = CFrame.new(a); s.rig.root.Position = a
+	s.energi = 1; Run.Heartbeat:Fire(dt or 0.25)
+end
+local function mount()
+	step(0,2)
+	local a = point(0,2) + vec(6,0,0)
+	local root = p.Character:FindFirstChild("HumanoidRootPart")
+	root.CFrame = CFrame.new(a); root.Position = a
+	local ok, reason, id = HorseService.tryMount(p,horse)
+	assert(ok, tostring(reason)); step(0,2); step(0,2)
+	return id
+end
+local id = mount()
+local function request(op, seq) return HorseService.voltLektionsBegaran(p,id,op,seq) end
+local function image() local ok,_,b = request("sync"); assert(ok); return b end
+local function approach()
+	for v=3,20 do step(0,v) end
+	step(0,20); step(0,20); step(0,20)
+end
+local function circle(sign, radius)
+	for i=1,76 do
+		local a = -math.pi/2 + sign*2*math.pi*i/72
+		step(radius*math.cos(a),30+radius*math.sin(a))
+	end
+end
+check("no attempt on mounting", RidForsok.aktivt(id)==nil)
+check("wrong player rejected", HorseService.voltLektionsBegaran(other,id,"start",1)==false)
+check("unknown operation rejected", request("award",1)==false)
+local ok,_,b = request("start",1)
+check("start at A accepted in approach", ok and b.lage=="approach")
+local first = b.forsokId
+local before = HorseService.volt(id)
+local _,_,dup = request("start",1)
+check("duplicate start same id and no split", dup.forsokId==first and HorseService.volt(id)==before)
+check("same sequence different operation rejected", request("finish",1)==false)
+approach()
+check("arrival arms once and reaches riding", image().lage=="riding")
+circle(1,9)
+local done = image()
+check("approach then circle succeeds", done.lage=="complete")
+check("completion not cancellation", HorseService.forsok(first).orsak=="slutford")
+check("lifecycle is not judgement", HorseService.forsok(first).bedomning=="ingen")
+local frozen = done.resultat
+circle(1,9)
+check("outcome immutable after later riding", image().resultat==frozen)
+check("retry creates new attempt", select(3,request("retry",2)).forsokId~=first)
+-- Recover at a known point without borrowing the previous turn.
+step(0,20,5); step(0,20); step(0,20); step(0,20)
+for i=1,25 do local a=-math.pi/2-2*math.pi*i/72; step(9*math.cos(a),30+9*math.sin(a)) end
+check("partial circle never passes", image().lage~="complete")
+for i=26,76 do local a=-math.pi/2-2*math.pi*i/72; step(9*math.cos(a),30+9*math.sin(a)) end
+check("opposite direction succeeds", image().lage=="complete")
+request("retry",3)
+for i=1,12 do
+	step(0,30,5); step(0,30); step(0,20,5); step(0,20); step(0,20)
+end
+step(0,20); step(0,20); step(0,20)
+circle(1,9)
+check("fresh circle after more than8 discarded sections succeeds", image().lage=="complete")
+request("retry",4)
+local active = image().forsokId
+request("finish",5)
+check("finish cancels active attempt", HorseService.forsok(active).orsak=="avbrutet")
+check("finish exits lesson", image().lage=="closed")
+circle(1,9)
+check("cancelled attempt never upgraded", HorseService.forsok(active).orsak=="avbrutet")
+check("stale ride rejected", HorseService.voltLektionsBegaran(p,"wrong","start",9)==false)
+for _, seq in ipairs({0, -1, 1.5, math.huge, 0/0, 2147483648}) do
+	check("invalid sequence rejected", request("start",seq)==false)
+end
+check("malformed ride rejected", HorseService.voltLektionsBegaran(p,{},"start",9)==false)
+check("oversized ride rejected", HorseService.voltLektionsBegaran(p,string.rep("x",129),"start",9)==false)
+
+step(0,20,5); step(0,20)
+request("start",6)
+step(0,20); step(0,20); step(0,20)
+local armed = HorseService.volt(id)
+check("active start rejected", request("start",7)==false)
+check("rejected start does not split current arm", HorseService.volt(id)==armed)
+for i=1,36 do local a=-math.pi/2+2*math.pi*i/72; step(9*math.cos(a),30+9*math.sin(a)) end
+request("finish",8)
+request("start",9)
+for i=37,76 do local a=-math.pi/2+2*math.pi*i/72; step(9*math.cos(a),30+9*math.sin(a)) end
+check("pre-start half circle plus remainder cannot pass", image().lage~="complete")
+for _=1,100 do step(0,20) end
+check("stationary and legacy22 seconds cannot pass", image().lage~="complete")
+local timed = image().forsokId
+-- Supply exact wall-clock boundary to the actual evaluator, not an artificial sleep.
+VoltLektion.steg(s.voltLektion,s.voltLektion.deadline)
+check("deadline equality times out", image().lage=="timeout" and HorseService.forsok(timed).orsak=="tidsgrans")
+request("retry",10)
+check("retry deadline reset only for new attempt", image().lage=="approach")
+local deadline = s.voltLektion.deadline
+step(0,30,5); step(0,20,5); step(0,20); step(0,20)
+check("recovery preserves deadline", s.voltLektion.deadline==deadline)
+local _,_,original = request("finish",11)
+for seq=12,32 do request("finish",seq) end
+check("request response retention bounded", #s.voltLektion.ordning==16)
+check("evicted old request rejected", request("start",6)==false)
+check("retained duplicate still exact response", select(3,request("finish",32))==s.voltLektion.svar[32].bild)
+
+local sequence=32
+local function beginAt(v)
+	sequence+=1; request("finish",sequence)
+	step(0,v,5); step(0,v)
+	sequence+=1; assert(request("start",sequence))
+	step(0,v)
+end
+beginAt(22.001)
+check("outside arming band does not arm", image().lage=="approach")
+step(0,22)
+check("arming band equality arms", image().lage=="baseline")
+step(0,22)
+check("next fresh sample only establishes baseline", image().lage=="riding" and HorseService.volt(id).pagar==nil)
+step(0,22)
+check("insufficient aggregates are not perfect metrics", HorseService.volt(id).pagar.medelAvvikelse==nil
+	and image().lage~="complete")
+step(0,23); step(0,24)
+check("point deviation equality4 remains armed", image().lage=="riding")
+-- A separate short section prevents the aggregate guard from masking this guard.
+beginAt(22)
+step(0,22); step(0,22)
+check("endpoint probe has no aggregate metrics", HorseService.volt(id).pagar.maxAvvikelse==nil)
+step(0,24.001)
+check("outward endpoint invalidates even with insufficient midpoint metrics", image().lage=="approach")
+step(0,20); step(0,20); step(0,20)
+circle(1,9)
+check("endpoint excursion recovers without Retry", image().lage=="complete")
+beginAt(20)
+step(0,20); step(0,20)
+for i=1,30 do local a=-math.pi/2+2*math.pi*i/72; step(9*math.cos(a),30+9*math.sin(a)) end
+local reverseArm=s.voltLektion.armAfter
+for i=29,15,-1 do local a=-math.pi/2+2*math.pi*i/72; step(9*math.cos(a),30+9*math.sin(a)) end
+check("reverse arc clears original arm", s.voltLektion.armAfter==nil or s.voltLektion.armAfter>reverseArm)
+check("reverse arc not completion", image().lage~="complete")
+beginAt(20)
+step(0,20); step(0,20)
+for i=1,36 do local a=-math.pi/2+2*math.pi*i/72; step(9*math.cos(a),30+9*math.sin(a)) end
+for v=38,21,-1 do step(0,v) end
+for i=1,36 do local a=-math.pi/2+2*math.pi*i/72; step(9*math.cos(a),30+9*math.sin(a)) end
+check("half circles joined through centre never complete", image().lage~="complete")
+beginAt(20)
+step(0,20); step(0,20)
+local beforeGap=s.voltLektion.armAfter
+step(0,20,5)
+check("sample gap disarms current section", image().lage=="approach")
+step(0,20); step(0,20); step(0,20)
+check("recovered gap gets newer boundary", s.voltLektion.armAfter>beforeGap)
+circle(-1,9)
+local preserved=image().resultat
+for _=1,12 do step(0,30,5); step(0,20,5); step(0,20) end
+check("lesson result survives observation history pruning", image().resultat==preserved and preserved~=nil)
+
+-- Consumer-boundary unit cases: the real lifecycle and evaluator receive a
+-- substituted immutable observation snapshot. These are NOT geometry/engine evidence.
+local realVolt=VoltObservation.ogonblick
+local function metricCase(field,value,expected,label)
+	beginAt(20); step(0,20); step(0,20)
+	for i=1,18 do local a=-math.pi/2+2*math.pi*i/72; step(9*math.cos(a),30+9*math.sin(a)) end
+	local source=realVolt(id)
+	local section=table.clone(source.pagar)
+	section.underlag="tillrackligt"; section.varv=1; section.netto=2*math.pi
+	section.medelAvvikelse=1; section.maxAvvikelse=2; section.motriktning=0; section.aterkomst=1
+	local candidate=table.clone(source)
+	if string.sub(field,1,5)=="meta:" then candidate[string.sub(field,6)]=value else section[field]=value end
+	candidate.pagar=table.freeze(section)
+	candidate=table.freeze(candidate)
+	VoltObservation.ogonblick=function(rid) return if rid==id then candidate else realVolt(rid) end
+	s.voltLektion.sistaP=nil
+	VoltLektion.steg(s.voltLektion,s.voltLektion.deadline-1)
+	VoltObservation.ogonblick=realVolt
+	check(label,(s.voltLektion.lage=="complete")==expected)
+end
+for _, limit in ipairs({{"medelAvvikelse",2},{"maxAvvikelse",4},{"motriktning",math.pi/4},{"aterkomst",3}}) do
+	metricCase(limit[1],limit[2]-1e-6,true,limit[1].." below threshold")
+	metricCase(limit[1],limit[2],true,limit[1].." equality")
+	metricCase(limit[1],limit[2]+1e-6,false,limit[1].." beyond threshold")
+end
+metricCase("underlag","otillrackligt",false,"insufficient evidence cannot complete")
+metricCase("underlag","okant",false,"unknown evidence cannot complete")
+metricCase("varv",0,false,"no completed turn cannot complete")
+metricCase("meta:version","legacy-1",false,"old observation version rejected")
+metricCase("meta:userId",-100,false,"wrong observation owner rejected")
+metricCase("meta:rittId","old-ride",false,"wrong observation ride rejected")
+metricCase("meta:hastId","another-horse",false,"wrong observation horse rejected")
+
+-- Baseline is consumed even when the first fresh source is a break.
+VoltObservation.starta("baseline-probe","probe",123)
+VoltObservation.lektionsGrans("baseline-probe")
+VoltObservation.sampla("baseline-probe",{rittId="baseline-probe",t=1,status="brott"})
+VoltObservation.sampla("baseline-probe",{rittId="baseline-probe",t=2,status="segment",ramId=1,
+	dressyrMitt={u=0,v=30},segment={fran={u=0,v=20},till={u=1,v=20}}})
+check("break consumes baseline without swallowing later valid segment", VoltObservation.ogonblick("baseline-probe").pagar~=nil)
+VoltObservation.avsluta("baseline-probe","test")
+beginAt(20)
+local mountAttempt=RidForsok.aktivt(id)
+for _=1,Skopa.GRANSER.DismountRequest.tak do Skopa.slapp(p,"DismountRequest") end
+check("denied real dismount keeps lesson attempt", Networking.get("DismountRequest").OnServerInvoke(p)==false
+	and RidForsok.aktivt(id)==mountAttempt)
+check("accepted real dismount closes lesson attempt", HorseService.dismount(p)==true
+	and HorseService.forsok(mountAttempt.forsokId).orsak=="ritt_slut:avsittning")
+check("old lesson request denied after dismount", request("start",999)==false)
+local previousRide=id
+id=mount()
+check("new mount has fresh lesson state", id~=previousRide and image().lage=="ready"
+	and RidForsok.aktivt(id)==nil)
+
+-- Actual client -> bounded remote -> HorseService -> owner event -> Ugneta surface.
+local Net, V = Networking, VoltLektionController
+local nu = 1000
+Skopa._satKlockaForProv(function() return nu end)
+Input._klocka = function() return nu end
+local function render() for _=1,8 do Run.RenderStepped:Fire(1/30) end end
+local function button(key)
+	for _, k in ipairs(UgnetaController.panel().knappar) do
+		if k.text==Sprak.t("voltlektion."..key) then return k end
+	end
+	return nil
+end
+local function click(key)
+	nu+=2
+	render()
+	local panel=Naromrade._panel()
+	assert(panel.synlig,"actual action panel hidden")
+	local found
+	for _, b in ipairs(panel.ram:GetDescendants()) do
+		if b:IsA("TextButton") and b.Visible and b.Text==Sprak.t("voltlektion."..key) then found=b; break end
+	end
+	assert(found,"missing rendered button "..key)
+	found.Activated:Fire()
+	render()
+end
+render()
+check("circle choice reachable without legacy lesson prerequisite", button("choose")~=nil)
+click("choose")
+check("choosing is not starting", button("start")~=nil and RidForsok.aktivt(id)==nil)
+local remote=Net.get("VoltLektion")
+local n=#remote._skickat
+local cas=game:GetService("ContextActionService")
+cas._bound[Input.DRIV](Input.DRIV,Enum.UserInputState.Begin,{})
+render()
+check("drive aid cannot start circle", #remote._skickat==n and button("start")~=nil)
+check("circle disables legacy pause/advance/replay", not LektionController.vantar()
+	and not LektionController.fortsatt() and not LektionController.gaVidare() and not LektionController.replay())
+Sprak.satVal("en")
+check("intro language changes", UgnetaController.panel().text==Sprak.t("voltlektion.intro"))
+step(0,20,5); step(0,20)
+click("start")
+check("explicit start reaches actual server", RidForsok.aktivt(id)~=nil)
+check("noncolliding local guide is created", workspace:FindFirstChild("Voltguide")~=nil)
+local safeGuide=true
+for _, part in ipairs(workspace:FindFirstChild("Voltguide"):GetChildren()) do
+	safeGuide=safeGuide and part.Anchored and not part.CanCollide and not part.CanTouch and not part.CanQuery
+end
+check("every guide part is nonphysical", safeGuide)
+step(0,20); step(0,20); step(0,20)
+circle(1,9)
+render()
+--[[ C1 (5878f03): klar-sidan bär den konkreta återkopplingen ur det frysta
+	resultatet i stället för den allmänna klartexten. ]]
+local completedAttempt
+do -- Egen räckvidd: huvudchunken har högst 200 lokala register.
+local function klarText() return LektionsAterkoppling.text(image(), { typ = "volt", ritt = id }) end
+local klarEn = klarText()
+check("KONTROLL: the frozen result gives concrete feedback", type(klarEn) == "string" and klarEn ~= "")
+check("server completion visibly reaches Ugneta", UgnetaController.panel().text==klarEn
+	and button("retry")~=nil)
+check("real teacher label renders completion", UgnetaController._larare().synlig
+	and UgnetaController._larare().text==klarEn)
+completedAttempt=image().forsokId
+check("guide removed on completion", workspace:FindFirstChild("Voltguide")==nil)
+n=#remote._skickat; nu+=2
+cas._bound[Input.DRIV](Input.DRIV,Enum.UserInputState.Begin,{})
+render()
+check("drive aid cannot retry or finish", #remote._skickat==n and button("retry")~=nil)
+Sprak.satVal("sv")
+check("result changes language without recomputation", UgnetaController.panel().text==klarText()
+	and klarText() ~= klarEn)
+end
+click("retry")
+local current=RidForsok.aktivt(id)
+check("explicit retry creates actual new attempt", current~=nil and current.forsokId~=completedAttempt)
+local oldButton=button("finish")
+LektionController.avbryt("nekad")
+check("detached UI has no actions or guide", V.panel()==nil and workspace:FindFirstChild("Voltguide")==nil)
+LektionController.start(nil,id)
+check("same ride reattachment preserves attempt", RidForsok.aktivt(id)==current and V.lektion())
+n=#remote._skickat; oldButton.skicka()
+check("old detached button ignored", #remote._skickat==n)
+click("finish")
+check("explicit finish returns to free riding", not LektionController.pagar() and button("fri_traning")~=nil)
+-- C3 alternativ A (docs/FREE-PRACTICE-FRAMING-CONTRACT.md): the way back is labelled free practice.
+check("C3 A: the free-riding button says free practice with replay, not other exercises",
+	button("fri_traning")~=nil and button("lessons")==nil)
+click("fri_traning")
+check("legacy lessons still reachable", not V.tarOver() and LektionController.vantar())
+
+-- Delay only the transport; production client owns pending/late response logic.
+local handler=remote.OnServerInvoke
+local held
+remote.OnServerInvoke=function(_,rid,op,seq)
+	held={rid=rid,op=op,seq=seq}
+	coroutine.yield()
+	return true,nil,{rittId=rid,revision=999,sekvens=seq,lage="complete",tips="complete",progress=100}
+end
+local originalSpawn=task.spawn
+local suspended
+task.spawn=function(fn) suspended=coroutine.create(fn); assert(coroutine.resume(suspended)) end
+click("choose")
+check("pending request is not optimistic success", UgnetaController.panel().text==Sprak.t("voltlektion.pending"))
+V.steg(10)
+check("lost response offers bounded resync and finish", button("sync")~=nil and button("finish")~=nil)
+local late=suspended
+V.avbryt(); V.start("another-ride",nil)
+assert(coroutine.resume(late))
+check("late response cannot contaminate new ride", not V.lektion() and V.panel().text==nil)
+task.spawn=originalSpawn; remote.OnServerInvoke=handler
+
+-- A declared client-less actor (Aktor, harKlient=false) is how the engine runtime
+-- smoke drives server paths. The lesson must progress for it without addressing
+-- an owner event to it: in the engine, FireClient on a non-Player throws inside
+-- the shared Heartbeat loop and would skip every later session that frame.
+-- Egen funktion: huvudchunken har högst 200 lokala register (bunten växer med modulerna).
+;(function()
+local actor=player(913); actor.harKlient=false
+Players._spelare={p,other,actor}
+local horse2=HastRigg.bygg("circle_actor","Circle actor",CFrame.new(Ridhusplats.tillVarld(RP,vec(4,0,2))))
+horse2.Parent=workspace; Tags:AddTag(horse2,"Horse")
+local s2=HorseService.sessionFor(horse2)
+local function step2(u,v,dt)
+	local a=Ridhusplats.tillVarld(RP,vec(u,0,v)); a=vec(a.X,s2.rig.root.Position.Y,a.Z)
+	s2.rig.root.CFrame=CFrame.new(a); s2.rig.root.Position=a
+	s2.energi=1; Run.Heartbeat:Fire(dt or 0.25)
+end
+step2(4,2)
+local aRoot=actor.Character:FindFirstChild("HumanoidRootPart")
+local aPos=s2.rig.root.Position+vec(6,0,0); aRoot.CFrame=CFrame.new(aPos); aRoot.Position=aPos
+local okA,_,actorRide=HorseService.tryMount(actor,horse2)
+step2(4,2); step2(4,2)
+local sync=Net.get("VoltLektionSync")
+local sentBefore=#sync._skickat
+local okStart,_,startImage=HorseService.voltLektionsBegaran(actor,actorRide,"start",1)
+for v=3,20 do step2(4,v) end
+for i=0,12 do local a=-math.pi/2+2*math.pi*i/72; step2(10*math.cos(a),30+10*math.sin(a)) end
+local _,_,actorImage=HorseService.voltLektionsBegaran(actor,actorRide,"sync")
+local toActor=0
+for n=sentBefore+1,#sync._skickat do if sync._skickat[n][1]==actor then toActor+=1 end end
+check("client-less actor lesson progresses server-side", okA and okStart and startImage.lage=="approach"
+	and actorImage.lage=="riding")
+check("client-less actor receives no owner event", toActor==0)
+HorseService.voltLektionsBegaran(actor,actorRide,"finish",2)
+HorseService.dismount(actor)
+end)()
+
+-- C1 (docs/CIRCLE-COMPARISON-CONTRACT.md): the comparison with the previous DISTINCT
+-- completion in the same lesson object, on a fresh ride with its own request sequence.
+-- Its own function: the main chunk has at most 200 local registers.
+;(function()
+	HorseService.dismount(p)
+	id=mount()
+	local q=0
+	local function r(op) q+=1; return request(op,q) end
+	local function recover() step(0,20,5); step(0,20); step(0,20); step(0,20) end
+	local function text() return LektionsAterkoppling.text(image(),{typ="volt",ritt=id}) end
+	local NARMARE, FORRA = "Närmare linjen än förra volten", "Förra volten"
+	Sprak.satVal("sv")
+	step(0,20,5); step(0,20)
+	r("start"); step(0,20); step(0,20); step(0,20)
+	circle(1,9)
+	local c1=image()
+	check("C1: first completion on a fresh ride has no comparison", c1.lage=="complete" and c1.jamforelse==nil
+		and not string.find(text(),FORRA,1,true))
+	local _,_,retried=r("retry")
+	check("C1: a retry snapshot carries no comparison", retried.lage=="approach" and retried.jamforelse==nil)
+	recover(); circle(1,9.5)
+	local c2=image(); local j2=c2.jamforelse
+	local a1, a2 = c1.resultat.avsnitt.medelAvvikelse, c2.resultat and c2.resultat.avsnitt.medelAvvikelse
+	check("C1: a closer circle compares with the first", c2.lage=="complete" and j2~=nil
+		and j2.forsokId==c2.forsokId and j2.forraForsokId==c1.forsokId
+		and j2.forraAvvikelse==a1 and j2.avvikelse==a2 and a2<a1,
+		("%s -> %s"):format(tostring(a1),tostring(a2)))
+	check("C1: the panel text confirms it", string.find(text(),NARMARE,1,true)~=nil, text())
+	check("C1: a duplicate read keeps the same frozen comparison", image().jamforelse==j2)
+	r("retry"); recover(); circle(1,9.5)
+	local c3=image(); local j3=c3.jamforelse
+	check("C1: the third completion compares with the second, not the first", c3.lage=="complete" and j3~=nil
+		and j3.forraForsokId==c2.forsokId)
+	check("C1: an equal circle is neutral", string.find(text(),FORRA,1,true)~=nil
+		and not string.find(text(),NARMARE,1,true), text())
+	r("retry"); recover()
+	VoltLektion.steg(s.voltLektion,s.voltLektion.deadline)
+	local to=image()
+	check("C1: a timeout carries no comparison and keeps the baseline", to.lage=="timeout" and to.jamforelse==nil
+		and s.voltLektion.forraKlar~=nil and s.voltLektion.forraKlar.forsokId==c3.forsokId)
+	r("retry"); recover(); circle(1,10)
+	local c5=image()
+	check("C1: after a timeout the comparison is with the last completion", c5.lage=="complete"
+		and c5.jamforelse~=nil and c5.jamforelse.forraForsokId==c3.forsokId)
+	-- KONTROLL (declared state injection): a baseline with another radius or version is not comparable.
+	for _, fall in ipairs({{"radie",9,"another radius"},{"version","legacy-1","another version"},
+		{"hastId","another-horse","another horse"}}) do
+		r("retry"); recover()
+		local b=table.clone(s.voltLektion.forraKlar); b[fall[1]]=fall[2]
+		s.voltLektion.forraKlar=table.freeze(b)
+		circle(1,10)
+		local c=image()
+		check("C1: "..fall[3].." is never compared", c.lage=="complete" and c.jamforelse==nil)
+	end
+	r("finish")
+	check("C1: closed carries no comparison", image().lage=="closed" and image().jamforelse==nil)
+	HorseService.dismount(p)
+	id=mount()
+	q=0
+	step(0,20,5); step(0,20)
+	r("start"); step(0,20); step(0,20); step(0,20)
+	circle(1,9)
+	check("C1: a new ride has no baseline", image().lage=="complete" and image().jamforelse==nil)
+	r("finish")
+end)()
+
+-- C1 (docs/CIRCLE-LINE-ADVICE-CONTRACT.md): the advice when a point leaves the line,
+-- through the real HorseService and the real VoltLektionController panel, on a fresh ride.
+;(function()
+	HorseService.dismount(p)
+	id=mount()
+	local q=0
+	local function r(op) q+=1; return request(op,q) end
+	local VC=VoltLektionController
+	local syncC=Networking.get("VoltLektionSync")
+	local function leverera(b) syncC.OnClientEvent:Fire(b) end
+	local function panelText() leverera(image()); local sida=VC.panel(); return sida and sida.text end
+	-- The panel appends the attempt's progress ("… 0%") in approach, as for every text there.
+	local function borjar(t, x) return type(t)=="string" and string.sub(t,1,#x)==x end
+	Sprak.satVal("sv")
+	VC.avbryt(); VC.start(id,nil)
+	UgnetaController.satLektionsVal(VC.panel)
+	VC.valj("volt")
+	local UT, IN, LINE = Sprak.t("voltlektion.line_ut"), Sprak.t("voltlektion.line_in"), Sprak.t("voltlektion.line")
+	local function armed()
+		for _=1,6 do step(0,20) end
+		return image().lage=="riding"
+	end
+	step(0,20,5); step(0,20)
+	r("start")
+	check("KONTROLL C1 line: armed and riding at the band", armed())
+	-- Outward: 1 m per 0.25 s from radius 10 to 14.5 (a jump would be an observation break).
+	for _, v in ipairs({19,18,17,16,15.5}) do step(0,v) end
+	local ut=image()
+	check("C1 line: a point 4.5 m outside the line resets with side ut", ut.lage=="approach"
+		and ut.tips=="line" and ut.linjeSida=="ut")
+	check("C1 line: the real panel shows the outward advice", borjar(panelText(),UT))
+	Sprak.satVal("en")
+	check("C1 line: the locale changes the words", borjar(panelText(),Sprak.t("voltlektion.line_ut")) and not borjar(panelText(),UT))
+	Sprak.satVal("sv")
+	-- Back to the band: arming clears the side.
+	for _, v in ipairs({16,17,18,19,20}) do step(0,v) end
+	check("C1 line: finding the band again clears the side", armed() and image().linjeSida==nil
+		and not borjar(panelText(),UT))
+	-- A delayed older snapshot with the side is not shown (the client's revision guard).
+	leverera(ut)
+	check("C1 line: a delayed older snapshot with a side is not shown", not borjar(VC.panel().text,UT))
+	-- Inward: from radius 10 to 5.5.
+	for _, v in ipairs({21,22,23,24,24.5}) do step(0,v) end
+	local inn=image()
+	check("C1 line: a point 4.5 m inside the line resets with side in", inn.lage=="approach"
+		and inn.tips=="line" and inn.linjeSida=="in")
+	check("C1 line: the real panel shows the inward advice", borjar(panelText(),IN))
+	for _, v in ipairs({23,22,21,20}) do step(0,v) end
+	check("KONTROLL C1 line: armed again", armed())
+	-- KONTROLL (declared snapshot substitution, as metricCase above): an aggregate reset
+	-- (the section's maxAvvikelse) has NO side, and the generic text stays.
+	step(0,20); step(0,20)
+	for i=1,18 do local a=-math.pi/2+2*math.pi*i/72; step(9*math.cos(a),30+9*math.sin(a)) end
+	local real=VoltObservation.ogonblick
+	local source=real(id)
+	local section=table.clone(source.pagar)
+	section.underlag="tillrackligt"; section.varv=0; section.netto=math.pi
+	section.medelAvvikelse=1; section.maxAvvikelse=4.5; section.motriktning=0; section.aterkomst=1
+	local candidate=table.clone(source); candidate.pagar=table.freeze(section); candidate=table.freeze(candidate)
+	VoltObservation.ogonblick=function(rid) return if rid==id then candidate else real(rid) end
+	s.voltLektion.sistaP=nil
+	VoltLektion.steg(s.voltLektion,s.voltLektion.deadline-1)
+	VoltObservation.ogonblick=real
+	local agg=image()
+	check("C1 line: an aggregate reset is line with NO side", agg.lage=="approach" and agg.tips=="line"
+		and agg.linjeSida==nil)
+	check("C1 line: and the panel shows the generic line text", borjar(panelText(),LINE))
+	-- Another reset kind clears a side: out, then an observation gap (unknown/approach).
+	for _, v in ipairs({20,19,18,17,16,15.5}) do step(0,v) end
+	armed()
+	for _, v in ipairs({19,18,17,16,15.5}) do step(0,v) end
+	check("KONTROLL C1 line: outward again", image().linjeSida=="ut")
+	r("finish")
+	check("C1 line: finish carries no side", image().lage=="closed" and image().linjeSida==nil)
+	step(0,20,5); step(0,20)
+	r("start")
+	check("C1 line: a new attempt starts without a side", image().lage=="approach" and image().linjeSida==nil)
+	-- KONTROLL (declared client-side snapshot): the client's own rule — a side is advice only
+	-- with the key "line". The server never sends one elsewhere, so this is the only way to reach it.
+	do
+		local cur=image(); local fake=table.clone(cur)
+		fake.revision=cur.revision+1000; fake.lage="riding"; fake.tips="ride"; fake.linjeSida="ut"
+		leverera(table.freeze(fake))
+		local t=VC.panel().text
+		check("C1 line: the client never shows the advice outside the line reset", not borjar(t,UT)
+			and borjar(t,Sprak.t("voltlektion.ride")))
+	end
+	r("finish")
+	VC.avbryt()
+	UgnetaController.satLektionsVal(nil)
+	for _, n in ipairs({"voltlektion.line_ut","voltlektion.line_in"}) do
+		check("C1 line: "..n.." exists in SV and EN", Sprak.iSprak("sv",n)~=n and Sprak.iSprak("en",n)~=n)
+	end
+end)()
+
+check("lesson never writes persistent data", (__datastore.forsok and __datastore.forsok.skriv or 0)==writes)
+if fails>0 then error(tostring(fails).." FEL") end
+print(string.format("\nVOLTLEKTION: %d prov, alla gröna",total))

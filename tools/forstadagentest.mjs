@@ -71,10 +71,12 @@ const browser = await chromium.launch({ headless: true,
    pekknappen ANVÄND (src/mobil.js), som är spelarens enda väg att
    interagera utan tangentbord. */
 const MOBIL = process.env.MOBIL === "1";
+/* Språket låses: provet läser svenska texter, och utan locale följer
+   webbläsaren maskinens språk (engelsk Windows gav engelska och rött). */
 const page = await browser.newPage(MOBIL
-  ? { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true,
+  ? { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, locale: "sv-SE",
       userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1" }
-  : { viewport: { width: 1280, height: 720 } });
+  : { viewport: { width: 1280, height: 720 }, locale: "sv-SE" });
 const sidfel = [];
 page.on("pageerror", e => sidfel.push(e.message));
 await page.goto(`http://localhost:${PORT}/`, { waitUntil: "load" });
@@ -278,9 +280,30 @@ prova("en ren gäst möts av karaktärsskaparen", await knappFinns("bSkapHoppa")
 await klicka("bSkapHoppa");
 prova("och kommer till menyn", await knappFinns("bStart"), "bStart");
 await klicka("bStart");
+/* Paritetspasset P1b (docs/WEB-P1B-ASSIGNMENT-FIRST-RIDE-CONTRACT.md):
+   en ny gäst får First Ride som i Roblox — uppsutten på Blackrock Jack i
+   ridhuset, förberedelsen orörd. */
+let fr = await vantaPa(() => ({ scen: G.scen, hastId: G.hastId,
+  forbOrord: !!G.forb && Object.keys(G.forb.gjorda).length === 0,
+  forstaRitten: !!(G.skotselRes && G.skotselRes.forstaRitten) }),
+  null, v => v.scen === "lektion", 15000);
+prova("Rid nu: First Ride — den nya gästen sitter upp på Blackrock Jack i ridhuset",
+  fr.scen === "lektion" && fr.hastId === "blackrock_jack" && fr.forstaRitten, `scen ${fr.scen} · häst ${fr.hastId}`);
+prova("First Ride markerar ingen skötsel", fr.forbOrord === true, String(fr.forbOrord));
+
+/* Stallvägen gäller en ÅTERVÄNDANDE spelare (pass ≥ 1): samma sida,
+   nästa dag. Passnumret är ett sparläge en spelare når på riktigt. */
+await ev(() => {
+  SPAR.pass = 1; startaVandring();
+  /* Ett pass utan fynd för den tilldelade hästen: med ett fynd stannar
+     förberedelsen helt riktigt vid välfärdsfrågan, och det flödet provas
+     i tools/stegkorttest.mjs. */
+  let p = 1; while (Forb.fyndFor(G.hastId, p + 1)) p++;
+  if (p !== 1) { SPAR.pass = p; sattAktivHast(G.hastId); }
+});
 let s = await vantaPa(() => ({ scen: G.scen, ov: !document.getElementById("ov").classList.contains("hide") }),
   null, v => v.scen === "gard" && !v.ov, 15000);
-prova("Rid nu släpper ut spelaren på gården", s.scen === "gard" && !s.ov,
+prova("nästa dag släpps spelaren ut på gården", s.scen === "gard" && !s.ov,
   `scen ${s.scen} · overlay ${s.ov}`);
 
 /* Bildrutetakten i GÅ-SCENEN, mätt i samma körning som lektionens
@@ -299,12 +322,13 @@ s = await station("in i stallet", "stalldörren", v => v.scen === "stallinne") |
 prova("E tar spelaren in i stallet", s.scen === "stallinne", `scen ${s.scen}`);
 
 /* ══ 3. RIDLÄRAREN ══════════════════════════════════════════════════ */
-s = await station("ridläraren", "ridläraren", v => v.ov === true) || s;
-prova("tilldelningspanelen öppnas", s.ov === true && await knappFinns("bGroom"), `overlay ${s.ov}`);
-await klicka("bGroom");
+/* P1b: hästen är redan tilldelad när dagen börjar — ingen panel hos
+   ridläraren. Rotationen är Roblox (Stallet.tilldelaLedig). */
 s = await las();
-prova("spelaren får Blackrock Jack på sin första dag",
-  s.hastId === "blackrock_jack", `hastId ${s.hastId}`);
+const vantat = await ev(() => { const vil = {}; for (const id of Object.keys(HORSES)) if (hastVilarForSkada(id)) vil[id] = true;
+  return tilldelaLedig(SPAR.spelarId, {}, vil, null); });
+prova("hästen är tilldelad automatiskt, utan ridläraren", !!s.hastId && s.hastId === vantat && !s.ov,
+  `hastId ${s.hastId} · rotationen ger ${vantat}`);
 prova("och hästen står i sin box", s.plats === "box", `plats ${s.plats}`);
 
 /* ══ 4. SADELKAMMAREN — ett pussel, inte en knapp ═══════════════════ */
@@ -324,24 +348,51 @@ await klicka("bSkKlar");
 s = await las();
 prova("rätt sadel och träns ger utrustningen", s.utrustning === true, `utrustning ${s.utrustning}`);
 
-/* ══ 5. BOXEN ═══════════════════════════════════════════════════════ */
-s = await station("sköt om|släpp in", "boxen", v => v.ov === true) || s;
-prova("boxmenyn öppnas", s.ov === true && await knappFinns("bSkots"), `overlay ${s.ov}`);
-if (await knappFinns("bTacke")) await klicka("bTacke");
-await klicka("bMocka"); await klicka("bMockKlar");
-await klicka("bFodra"); await klicka("bFodraKlar");
-await klicka("bSkots");
-for (const id of ["bVisit", "bRykt", "bKrats", "bSadla", "bSkotKlar", "bKlar"]) await klicka(id);
+/* ══ 5. BOXEN — STEGKORTET ═══════════════════════════════════════
+   Paritetspasset (#264, docs/WEB-P1A-STABLE-FLOW-CONTRACT.md): vid hästen
+   tar Roblox stegkort över. Spelaren väljer «Gör i ordning … själv» och
+   gör varje kort med panelens egna knappar — hälsa, kolla, rykta, hovar,
+   sadel och träns från boxfronten — till «Led …». Boxmenyn (mockning,
+   fodring) är en sidoaktivitet och prövas inte som en del av vägen. */
+const gBox = await stallDigVid("rida nu");
+prova("boxen: spelets egen E-prompt står där", gBox.framme === true,
+  gBox.mal ? `"${gBox.dom || gBox.prompt || "INGEN PROMPT"}" · ${gBox.avst} m` : "INGEN sådan interaktion");
+const kortet = () => ev(() => ({ id: document.getElementById("stegkort").dataset.kort,
+  synlig: !document.getElementById("stegkort").hidden,
+  knappar: [...document.querySelectorAll("#stegkort .skV button")].map(b => b.dataset.id),
+  primar: ([...document.querySelectorAll("#stegkort .skV button.primar")][0] || { dataset: {} }).dataset.id,
+  rader: [...document.querySelectorAll("#stegkort .skRader button")].map(b => b.dataset.id) }));
+/* En promptrad hålls som en Roblox-prompt (P1a R1). */
+const kortHall = async id => {
+  const sel = `#stegkort .skRader button[data-id="${id}"]`;
+  await page.dispatchEvent(sel, "pointerdown"); await page.waitForTimeout(500);
+  /* En omedelbar rad (hålltid 0) utlöses redan på pointerdown och kortet
+     byts — släppet får då inte vänta på en knapp som inte finns kvar. */
+  await ev(s => { const b = document.querySelector(s); if (b) b.dispatchEvent(new PointerEvent("pointerup", { bubbles: true })); }, sel); await page.waitForTimeout(250); };
+const kortKlick = async id => { await page.click(`#stegkort button[data-id="${id}"]`); await page.waitForTimeout(250); };
+let k = await kortet();
+prova("vid hästen: startvalet med exakt två val (Rida nu / själv)",
+  k.synlig && k.id === "valj" && k.knappar.join(",") === "start:rida_nu,start:sjalv", `${k.id} · ${k.knappar.join(",")}`);
+await kortKlick("start:sjalv");
+const korten = [];
+for (let i = 0; i < 40; i++) {
+  k = await kortet();
+  korten.push(k.id);
+  // Hälsningen är handlingar i ordning (UI-2): den primära är nästa, som överallt.
+  if (k.primar) { await kortKlick(k.primar); continue; }
+  const rad = k.rader.find(r => r !== "rad:rida_nu");
+  if (!rad) break;
+  await kortHall(rad);
+  if (rad === "leda") break;
+}
 s = await las();
-prova("skötseln ger ett resultat", s.skotsel === true, `skotselRes ${s.skotsel}`);
+prova("förberedelsen genom alla Roblox-kort", ["halsa", "visitera", "rykta", "hovar", "hamta_sadel", "sadla",
+  "hamta_trans", "transa", "leda"].every(id => korten.includes(id)), [...new Set(korten)].join(" → "));
 
-/* ══ 6. LED UT — övergången spelaren fastnade i ════════════════════ */
-prova("knappen 'Led ut till lektionen' finns efter skötseln",
-  await knappFinns("bLek"), "bLek");
-await klicka("bLek");
-s = await las();
+/* ══ 6. LED UT ═════════════════════════════════════════════════════ */
 prova("hästen leds — G.leder blir sann genom spelarens knapp",
-  s.plats === "leds" && s.leder === true, `plats ${s.plats} · leder ${s.leder}`);
+  s.skotsel === true && s.plats === "leds" && s.leder === true, `plats ${s.plats} · leder ${s.leder}`);
+
 
 /* ══ 7. VIDARE TILL RIDHUSET ═══════════════════════════════════════
    Sargporten ligger i ridhuset, inte i stallet. Utan det här steget
@@ -371,12 +422,22 @@ prova("uppsittningen startar lektionen — spelaren sitter upp",
    för hand har inget `G.ride` — den byggs av skötseln — och sittUpp()
    sprack då på `null.gangart`. Det hade sagt något om mitt
    konstruerade tillstånd, inte om spelet. */
-const eft1 = await ev(() => ({ scen: G.scen, ix: G.momentIx, forsok: G.momentForsok }));
+/* P3 § 3: i sadeln är E «sitt av» (Roblox binder E till avsittningen,
+   utan spärr). Ett andra, NYTT tryck efter uppsittningen startar därför
+   aldrig om ritten eller hoppar ett försök — det avslutar ritten, och
+   ingen ny ritt (nytt rittId) börjar av sig själv. */
+const eft1 = await ev(() => ({ scen: G.scen, ritt: typeof RittLektion !== "undefined" ? RittLektion.rittId() : null }));
 await tryckE(null);
-const eft2 = await ev(() => ({ scen: G.scen, ix: G.momentIx, forsok: G.momentForsok }));
-prova("ett andra tryck startar inte om lektionen",
-  eft2.scen === "lektion" && eft2.ix === eft1.ix && eft2.forsok === eft1.forsok,
-  `moment ${eft1.ix}/${eft1.forsok} → ${eft2.ix}/${eft2.forsok}`);
+const eft2 = await ev(() => ({ scen: G.scen, ritt: typeof RittLektion !== "undefined" ? RittLektion.rittId() : null,
+  p3: G.p3 }));
+prova("ett andra tryck startar inte om lektionen — det sitter av (Roblox E)",
+  eft1.scen === "lektion" && !!eft1.ritt && eft2.scen === "resultat" && eft2.ritt === null && eft2.p3 === false,
+  `${eft1.scen} ${eft1.ritt} → ${eft2.scen} ${eft2.ritt}`);
+/* Den valfria ritten nedan (RITT=1) mäter momentseriens livscykel (N,
+   moment, Ugnetas försök). Den serien är inte längre huvudvägen (P3 § 9)
+   men finns kvar; provet sitter upp igen i den, uttryckligen. */
+if (process.env.RITT === "1")
+  await ev(() => { overlay(false); G.stege = true; G.scen = "ridhusinne"; sittUppDirekt("ridhus"); G.stege = false; });
 
 /* ══ 10. RITTEN (RITT=1) ══════════════════════════════════════════
    Sista delen av P0-ordern: styrning, gångarter och Ugneta — genom

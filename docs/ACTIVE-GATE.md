@@ -1,273 +1,81 @@
-# Active Gate
+# Active gate
 
-**Aktiv plan: issue #259 — UBRF Roblox Completion Plan, vägen till First Playable.**
+Read [WORKING-AGREEMENT](WORKING-AGREEMENT.md) for roles, permissions and test policy.
 
-| | |
-|---|---|
-| Aktiv gate | **First Playable — human final QA / product-owner acceptance** |
-| Aktiv gren | `claude/gate2a-first-ride-20260919`, **PR #264** |
-| Head | se senaste leveranskommentaren i PR #264 (undviker sjalvrefererande SHA) |
-| Aktiv order | **HUMAN_FINAL_QA / PRODUCT_OWNER_ACCEPTANCE** — ingen ny implementation; maskinlagret är stängt |
-| Senaste produktbeslut | **Webb + Roblox, ingenting annat**, PR #264 kommentar `5806972193` |
-| Bas | `9c1ebeae7337bbfa138016811d9e380aad4ef3eb` (merge av Gate 1A / PR #262) |
-| Överordnad plan | issue #259 |
-| Builder | **Claude** |
-| Review | **ChatGPT** |
-| Acceptans | **Tobias** |
+Status date: 2026-09-28. This document records the current delivery gate. It is **not** product acceptance.
 
-Issue #259 är den överordnade produkt- och leveransplanen. `docs/PRODUCT-CANON.md`
-är fortfarande produktens högsta källa. Den här filen registrerar vad som är
-aktivt — den uppfinner inga krav.
+## Current active work
 
-**Maskinlagret för First Playable är stängt.** Sista kod-/verktygshuvudet är
-`16b91c0`; den här doc-only-stängningen ändrar ingen kod eller test. Alla 19
-review-trådar i PR #264 är resolverade. Kvar före produktacceptans är enbart
-mänsklig slut-QA: PC First Ride, riktig tangentbords-/mus-/touch-input, de 7
-KTX/fysikpunkterna, fysisk iPad/iPhone, kamera- och ridkänsla samt visuell
-review. Ingen av dessa poster är godkänd ännu, och `PRODUCT_ACCEPTED` sätts
-endast av Tobias.
+- Active issue: **#266** — riding quality, constructive teaching and competition-day progression.
+- Active branch: **`codex/circle-lesson-20260926`**.
+- PR #264 is merged at `7922d70090f3b968af23a9e080c0e5df1cfcb59a` and is historical.
+- Review model: **CLAUDE BUILDS → CHATGPT REVIEWS → TOBIAS ACCEPTS**.
+- Standing delivery rule: **BUILD NOW / PHYSICAL TEST LAST**.
+- Coordination source of truth: GitHub issue #266 + the remote branch.
+- Claude review handoff marker: **`HANDOFF_READY_FOR_CHATGPT`**.
 
-**Runtime-evidens.** Senaste automatiska `runtime-grind` på `16b91c0` föll
-innan mätning med Open Cloud HTTP 500 (`INTERNAL`, 0 mätningar). Det är
-klassat som infra, inte produktfel: committen ändrade inga mappade Roblox-
-källor och kallhashen är fortfarande `b9e778c7…`, samma kallhash som redan
-har `PASS — 176 matningar` i riktig motor på PR #264.
+## Locked physical-test candidate
 
-> **Tidsbegränsat produktbeslut 2026-09-22 — Roblox först.** Fram till
-> verifierad First Playable är Roblox enda aktiva leveransmålet; PC och iPad är
-> två kontrollsätt i samma Roblox-spel. Nya webbfeatures och kravet på samtidig
-> webbimplementation är pausade, webben bevaras i befintligt skick, och
-> befintliga tester och regressionsskydd behålls. Beslutet gäller framför
-> paritetskravet i styrningen (#261) och i completion-planen (#259) under den
-> här etappen — utan att skriva om deras historiska evidens och utan att någon
-> gate markeras som klar av det. Fullständig text: `docs/PRODUCT-CANON.md`,
-> «Tidsbegränsat produktbeslut 2026-09-22». Källa: PR #264, kommentar
-> `5779749429`. Återstart av webbfeatures kräver ett nytt produktägarbeslut.
+The current runtime candidate is re-locked after the assigned-horse guide fix.
 
-**Den här filen pekade fram till 2026-09-20 ut Gate 0 som aktiv gate.** Det var
-inaktuellt: G0 är levererad, och grenen har sedan dess kört sex gates till.
-CLAUDE.md kräver att dokumentet uppdateras innan motstridig implementation
-fortsätter, och det är vad den här revideringen gör. Allt nedan är knutet till
-evidens i PR #264.
+- Runtime HEAD: **`7fdee3061898456631a914c9902e2363c6fd33a1`**.
+- Checklist: [FINAL-PLAYTEST-CHECKLIST.md](FINAL-PLAYTEST-CHECKLIST.md).
+- Roblox build identity `kallhash`: **`0ce4b14c93e2e7ef15e082c5dfd89120c010fa719099356f99b5c5a1f99540f7`**.
+- In-game diagnostics must show prefix **`0ce4b14c93e2`**.
+- Any later mapped Roblox-source change invalidates this lock and requires a new identity/checklist lock.
 
-## Vägen till First Playable
+The candidate includes the reviewed lesson/teaching work, D1, D2a, D2b, D2c, D5 Option A/R1, B4a knockdown evidence, B4b R1 neutral disobedience evidence, B4c course-aware shadow judgment, D4a prize persistence foundation and the assigned-horse guide. Physical rows remain **NOT_TESTED** except where Tobias explicitly reports them.
 
-| Gate | Innehåll | Läge |
-|---|---|---|
-| **G0** | Gemensam sanning: den här filen, och `tools/kolla-generisk-hast.py` plattformsoberoende | **klar** — `0bf1ef6`; grinden passerar på Windows med separatornormalisering och en vakt mot undantag som inte pekar på någon fil |
-| **G1** | Säker interaktionsgrund: rate limiting (#258 P1-2), cleanup- och felvägar | **klar** — `Skopa` grindar tretton fjärranrop med deklarerade tak; merge av PR #262 |
-| **G2** | Golden path till uppsittning, provad som en kedja | **klar** — ledsträckan stall → ridhus körd i ett svep, 94/94 vägpunkter, dörrarna öppnade av spelaren själv; se M3.2 |
-| **G3** | Uppsutten ridning och game feel | **mekaniken klar** — skritt 4,35 · trav 9,6 · galopp 16,8 studs/s mätt mot `Gaits`; game feel är Tobias bedömning och är **uppskjuten**, inte godkänd |
-| **G4** | Ride First-pedagogik och UI | **klar i det maskinellt mätbara** — coach banner, Ugneta-feedback och `efterForsok` verifierade i runtime |
-| **G5** | Roblox runtime och enheter | **delvis** — Studio-QA gjord maskinellt; **fysisk iPad och iPhone uppskjutna av produktbeslut**, inte godkända |
-| **G6** | Release candidate | **human final QA / product-owner acceptance pågår** — inget mer maskinarbete återstår före denna kontroll |
+## Physical gate A3
 
-En implementations-PR åt gången. Små gates. Ingen självacceptans.
+A3 is now in progress with Tobias.
 
-## Levererat på den aktiva grenen
+Use only [FINAL-PLAYTEST-CHECKLIST.md](FINAL-PLAYTEST-CHECKLIST.md). PC, physical iPad and physical iPhone remain separate evidence. Local tests, source review and emulator evidence do not mark physical rows PASS.
 
-Varje rad har evidens i PR #264. Ingen av dem är `PRODUCT_ACCEPTED`.
+## Current #266 package status
 
-| Gate | Markör | Kort |
-|---|---|---|
-| Gate 2A — First Ride | `READY_FOR_CHATGPT_REVIEW` | häst i rörelse utan stallkedjan före |
-| Runtime routing | ChatGPT-review klar | två defekter rättade: `MinHast` fanns i två exemplar och hängde varje anropare; en varning som fyrade vid varje uppsittning |
-| Lektionskortet och styrningen | `READY_FOR_CHATGPT_REVIEW` | ett kort som syns är inget rörelselås; bara replayen stoppar hästen |
-| Full world performance | `DESKTOP_PERFORMANCE_BASELINE_ACCEPTED` | se noten nedan — talen gäller ett litet Studio-fönster, och läckfrihet är **inte** verifierad |
-| Multi-horse leading | `CHATGPT_MULTI_HORSE_REVIEW_PASS_WITH_LIMITS` | två riktiga klienter, två boxrader, noll överhörning |
-| Camera feel | `CAMERA_FEEL_READY_FOR_HUMAN_REVIEW` | mekaniken mätt; känslan **uppskjuten av Tobias** |
-| Visuellt paket | `VISUAL_PACK_READY` | preview verifierad mot head; `CHATGPT_VISUAL_PASS` ej utfärdad |
-| M1 — lokala grindkedjan | pushad | `PRE_TOBIAS_FIRST_PLAYABLE_GATE: PASS` lokalt efter två verktygsfel |
-| M3 — hela ledrutten stall → ridhus | `READY_FOR_CHATGPT_REVIEW` | 94/94 vägpunkter, kopplet aldrig släppt, `malNatt` och målzon |
-| M3.1 — hörnet vid Tvärvägg 1:2 | `READY_FOR_CHATGPT_REVIEW` | planeraren löste det sex gånger; alla sex revs bildrutan efter |
-| M3.2 — spelarens egen dörrväg | `READY_FOR_CHATGPT_REVIEW` | 13 av 13 stängda vid start, två öppnade med X på riktig prompt |
-| M3.3 — uppsittning, ritt, avsittning | `READY_FOR_CHATGPT_REVIEW` | samma session: skritt 4,35, galopp 16,81 studs/s, styrning, efterritt |
-| Ridhusets avgränsning | `READY_FOR_CHATGPT_REVIEW` | **ingen defekt** — utgången skedde genom den kontraktsenliga norra porten; fyra stängda sargsektioner höll vid 40 studs/s |
-| Efterrittens omdöme | `LOGIC_PASS` | `"TRY AGAIN"` / `"Good the softness. Work on the timing."` blev `Visible` efter ett riktigt lektionsförsök |
+### A — first pass
+- A2 candidate lock: current and re-locked through assigned-horse guide.
+- A3 physical PC/iPad/iPhone test: **IN PROGRESS**.
 
-### Prestandaraden, utskriven
+### B — riding feel and measurement
+- **B4a knockdown event: CHATGPT_REVIEW_ACCEPTED.**
+- **B4b R1 neutral disobedience evidence: CHATGPT_REVIEW_ACCEPTED.**
+- **B4c course-aware shadow consumer: CHATGPT_REVIEW_ACCEPTED.**
+- Remaining B4 gaps are physical or later-scope: real pole behaviour/replication/calibration, circle/track logic and any balking decision.
+- Shadow judgment remains non-official until a separate reviewed promotion after physical evidence.
 
-Raden stod förut som «60 FPS i sex av sju scenarier; ingen tillväxt över
-11 min». Det övertolkade evidensen på två sätt, och rättas här.
+### C — teaching and learning
+- Concrete feedback, selected comparisons, event-bound advice, free-practice framing and multiple task lessons are built.
+- Less-guidance is built where source geometry supports it.
+- Remaining gaps require product choice, persistence/schema work, new measurement or final physical judgment.
 
-**Mätvillkoren.** Desktop Studio, AMD Ryzen 5 5600X, GTX 1080 Ti,
-`Rendering.QualityLevel` på Automatic. Play-fönstrets viewport var
-**727 × 533** — 0,39 MP mot skrivbordets 5,0. Varje renderrelaterat tal
-gäller det lilla fönstret och är inget hårdvarubetyg.
+### D — competition day
+- **D1 A: Clear Round base rule profile: CHATGPT_REVIEW_ACCEPTED.**
+- **D2a clear-round training ride: CHATGPT_REVIEW_ACCEPTED through R2.**
+- **D2b pre-ride flow: CHATGPT_REVIEW_ACCEPTED.**
+- **D2c aftercare handoff: CHATGPT_REVIEW_ACCEPTED.**
+- **D5 Option A competition clothing: CHATGPT_REVIEW_ACCEPTED through R1.**
+- **D4a prize/trophy persistence foundation: CHATGPT_REVIEW_ACCEPTED.**
+- Warm-up remains blocked on verified mapping of UBRF's real "Lilla utebanan" or an explicit Tobias game-simplification decision.
+- Real Clear Round rosette award remains blocked until physical knockdown/refusal evidence is verified and D2 is explicitly promoted from shadow to official.
 
-**Bildfrekvensen.** Uppmätt ur `RenderStepped`, 48 810 ramar över 814 s:
-medel 16,68 ms, 334 ramar ≥ 33 ms (0,68 %), en ram ≥ 50 ms. **Fem av sju
-scenarier** har uppmätt FPS; scenario 1 och 3 har det inte — deras rader
-är `ej uppmätt`.
+### Runtime blocker fixes during Tobias QA
+- **Assigned-horse guide: CHATGPT_REVIEW_ACCEPTED.**
+  - one local marker only, on the assigned horse;
+  - large gold ▼ plus horse name;
+  - visible from spawn, hidden close/leading/mounted;
+  - survives respawn and delayed/replaced horse model;
+  - Studio engine properties verified; human visual quality still requires Tobias.
 
-**Minnet — och det här är rättelsen.** Två punkter över 645 s oavbruten
-ridning:
+## Limits
 
-```
-medelramtid    16,66 ms  ->  16,68 ms
-bildfrekvens   60,0      ->  59,9
-totalminne     2 114 MB  ->  2 003 MB
-instanser      54 527    ->  54 635      (+108)
-```
+- No merge, publication or product acceptance is implied by source review.
+- Do not award an official Clear Round rosette while knockdowns/refusals are not truthfully established.
+- Do not let HinderObservation make course-aware sporting judgments.
+- Do not promote B4c shadow output to official D2 judging without a separate review/decision.
+- Do not silently map `UTEBANA` or `PADDOCK` to UBRF's "Lilla utebanan".
+- Prize persistence may exist before awarding; no source path currently awards a real Clear Round prize.
+- Competition results must stay deterministic, versioned and source-backed.
 
-Två punkter är **inte en kurva**. Det som faktiskt visats är att ingen
-tillväxt i ramtid eller instansantal observerades i just det fönstret.
-**Frånvaro av minnesläcka är inte verifierad**, och en trend går inte att
-skilja från en svängning på två mätpunkter.
-
-## Uppskjutet — inte godkänt
-
-Ingen av posterna nedan får läsas som grön.
-
-| Post | Status |
-|---|---|
-| PC First Ride mot aktuell canonical artefakt | `HUMAN_QA_ONLY` — full kedja med riktig hand/input återstår |
-| Riktig tangentbords-/mus-/touch-input | `HUMAN_QA_ONLY` — kräver faktisk klient/OS-fokus |
-| 7 KTX/fysikpunkter | `HUMAN_QA_ONLY` — kräver Studio/fysik, t.ex. att ledda hästar faktiskt rör sig |
-| Tobias kamerakänsla i Studio | `CAMERA_HUMAN_FEEL_REVIEW_DEFERRED_BY_PRODUCT_OWNER` |
-| Fysisk iPad och iPhone | `PHYSICAL_DEVICE_DEFERRED` — `TouchControls.luau:614` bär själv noten |
-| Om prompter, HUD och Ugneta-ytan **syns** | `HUMAN_VISUAL_DEFERRED` — `capture_screenshot` ger svart 3D-fält. Logiken är mätt: ytan blir `Visible` med rätt text |
-| Om utrustningen **ser rätt ut** på modellen | `HUMAN_VISUAL_DEFERRED` — 19 delar sitter fast och är icke-transparenta; utseendet avgör Tobias |
-| Visuell fidelity side-by-side | `HUMAN_QA_ONLY` — paketet är klart, bedömningen återstår |
-| `PRODUCT_ACCEPTED` | endast Tobias |
-
-## Backlog — inte First Playable
-
-Rörs inte utan färskt bevis att de blockerar något:
-
-- 33 hästriggar simuleras alltid (1 564 oankrade delar),
-- `Markkontakt` strålar mot alla hästar två gånger i sekunden,
-- ~~`PathfindingService` ger `NoPath` över långa sträckor i den här världen~~
-  — **förklarad 2026-09-20, inte ett fel i tjänsten.** Mätt under M3.2:
-  med de två `portbla (intern)` öppna ger den `Success` och 94 vägpunkter
-  hela vägen stall → ridhus. Med endera stängd: `NoPath`. Det var
-  stängda dörrar, inte sträckan,
-- `TavlingskladerService` startas aldrig av någon,
-- bomkameran (`Kameralage`, feedbackvinkeln) har ingen anropare i produktionskoden,
-- `REFERENCE GAP` i byggnaderna — kräver foto, inte kod.
-
-## First Playable — vad som ska gå att göra
-
-En ny spelare ska utan utvecklarhjälp klara hela kedjan på **både PC och
-iPad**: förstå vilken häst som är hennes, gå fram och interagera utan att
-kontrollerna slåss om skärmen, hämta och **synligt bära** sadel och träns,
-utrusta hästen och se utrustningen på modellen, leda henne mjukt ur boxen
-till ridhuset med tydligt tillstånd, använda `RIDE NOW` på en förberedd häst
-utan att solospel kan blockeras av en trasig turordning, rida responsivt på
-servervaliderade avsikter i skritt, trav, galopp och inbromsning, sitta av,
-och få kort begriplig återkoppling.
-
-Ingen rå felkod, mallsträng, tangentbordsinstruktion på touch eller
-blockerande panel får bryta kedjan.
-
-Utomhusridning, hela tävlingsloopen och lång progression ligger **efter**
-den här gaten. Den fullständiga definitionen står i #259.
-
-## Icke förhandlingsbara kvalitetskrav
-
-- Servern äger spelstatus, ägarskap, tillåtna övergångar och beständiga värden.
-- Klienten skickar avsikt, aldrig betrodd position eller slutstatus.
-- Lokal presentation får predikteras för respons, men korrigeras mot serverns sanning.
-- Touch är en förstaklassplattform. Kritiska kontroller får inte ligga under
-  CoreGui eller kräva tangentbord.
-- "Show, don't tell": animation, ljud, hästens kropp och diskret coachning
-  före stora HUD-paneler.
-- Inga klientägda CFrame-loopar för locomotion, inga deprecated body movers,
-  ingen parallell gångarts- eller hastighetssanning.
-- Varje rättelse ska ha ett test som **kan bli rött** av den defekt den
-  påstår sig stoppa. Studio- och enhetsberoende påståenden märks
-  `NOT_TESTED` tills mänsklig runtime-QA finns.
-
-## Claudes ändringsmandat i den här planen
-
-Product Owner har i #259 gett uttryckligt mandat att **ändra, refaktorera,
-ersätta eller ta bort** befintlig kod, tester och konfiguration — även
-korsmodulärt — när det krävs för att nå First Playable. Att en lösning redan
-finns är inte i sig ett skäl att behålla den.
-
-Mandatet omfattar **inte** att merga själv, sätta `PRODUCT_ACCEPTED`, kringgå
-CI eller branch protection, ändra sparad spelardata utan explicit
-migrationsplan, eller expandera First Playable innan kärnloopen är accepterad.
-
-Vid konflikt gäller: Product Owner-beslut i aktuell arbetsorder →
-`docs/PRODUCT-CANON.md` → completion-planen i #259 → verifierat beteende på
-`origin/main` → äldre roadmap-, gate- och PR-text.
-
-## Required builder handshake
-
-En GitHub-mention är inte i sig bevis för att en builder-session tagit emot
-uppgiften. Innan implementation börjar ska tilldelad builder posta:
-
-`CLAUDE_ACK #<nr> — base/head <SHA> — scope: <avgränsning>`
-
-(motsvarande för Replit). Först efter den kvittensen räknas handoffen som
-levererad.
-
-När leveransen är klar ska builder posta exakt HEAD-SHA, Changed, Tested,
-Falsified, Not tested, Remaining risk, human-test requirements och
-`READY_FOR_CHATGPT_REVIEW`.
-
-Ingen merge före ChatGPT-review och Tobias produkttest.
-
-## Bindande lärdomar som överlever gateskiftet
-
-Från den accepterade läktaren (#81 / PR #114). De gäller **allt** kommande
-arbete som rör rendering, kollision, kamera och avatarhöjd:
-
-1. `v3dFigurKloss` måste använda samma vertikala spelartillstånd som kollision
-   och kamera (`o.y` / `VD.pz`), inte hårdkodad Y=0.
-2. Review- och debuggeometri ska vara dev-only och aldrig synlig i produktvyn.
-3. Kanonisk trapp- och däckgeometri hör hemma i den kanoniska
-   site-/världsmodellen, inte som en sen runtime-patch.
-4. Rendering, kollision, kamera och avatarhöjd verifieras tillsammans i den
-   faktiska spelarvägen.
-5. Webb och Roblox delar samma avsikts- och geometrikontrakt i stället för att
-   hålla parallella sanningar.
-
-Läktarens produktkrav är accepterade och skyddas av `laktartest`. De får inte
-regrera.
-
-## Historik och backlog
-
-Inget av det här är aktiv gate. Raderna finns kvar för att spåren ska gå att
-följa, inte för att de ska plockas upp utan ett nytt Tobias-beslut.
-
-### Landat på `main`
-
-| Spår | PR | Not |
-|---|---|---|
-| Tävlingskläder Fas A och Fas B (#248) | #250, #257 | Fas B `CHATGPT_CODE_REVIEW_PASS` på `9328365`, mergad i `ab0d662` |
-| Coach Banner (#244) | #245 | Nederpanelen riven; hålls av `tools/kolla-nederpanel.py` |
-| Touch-interaktion och ridavsikt (#246, #17) | #243, #249, #251 | |
-| Serverauktoritativ ridinput (#233) | #238, #241, #242 | Gångarten är serverns; `StateSync` bär bara fart |
-| Bänkens självprov fail closed (#252 del A/B) | #255 | |
-| Studio- och Rojo-integritet (#171) | — | `UBRFBuild.luau` och `Integritet.luau` finns på `main`; policy i `docs/STUDIO-PLACE-INTEGRITY.md` |
-| G02-D ridanalys och replay | — | `ReplayController.luau` och `Inspelning.luau` finns på `main` |
-
-### Öppna spår som inte är aktiv gate
-
-| Spår | PR | Läge |
-|---|---|---|
-| UgnetaController Ride First (#234) | **#253**, draft | Öppen draft från `2026-09-19 06:31`, före `ab0d662`. **Rör `docs/ACTIVE-GATE.md`** och registrerade sig själv här som aktivt spår; den registreringen är ersatt av den här filen. Innehållet hör tematiskt till **Gate 4**. |
-| Runtime-grind i riktig motor (#252 del C) | **#256**, draft | Öppen draft från `2026-09-19 07:51`, före `ab0d662`. Hör tematiskt till **Gate 5**. |
-| First Playable Candidate (#161) | — | Målbilden är uppgången i #259. Gren `claude/first-playable-20260910`. |
-| Produktprovsbaseline (#135) och G02-D-integration | #138, #151 m.fl. | Tidigare aktiv gate-bild. Ersatt av #259. |
-| Lydia-pronomenet | #116 | Separat språkbeslut. Inga aktiva cykler utan omprioritering. |
-| Äldre `chatgpt/`- och `replit/`-drafts | #132–#149 m.fl. | Ej triagerade mot #259. |
-
-Både #253 och #256 är äldre än basen och kan inte rebasas in utan ett
-uttryckligt beslut om var i gate-ordningen de hör hemma. Att stänga, rebasa
-eller lyfta in dem som egna gates är Tobias beslut, inte en builders.
-
-## Vercel
-
-Vercel är den enda UBRF-preview- och deployvägen.
-
-## Source-of-truth rule
-
-Står den här filen i konflikt med en nyare uttrycklig instruktion från Tobias
-vinner Tobias, och filen ska uppdateras omedelbart.
-
-Säger PR-kommentarer och den här filen emot varandra utan att det finns någon
-nyare Tobias-instruktion: stoppa implementationen och red ut uppgiften innan
-du kodar.
+Historical gate material from #264 is preserved in [history/ACTIVE-GATE-20260926](history/ACTIVE-GATE-20260926.md).
