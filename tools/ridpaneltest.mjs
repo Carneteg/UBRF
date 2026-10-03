@@ -84,6 +84,16 @@ const panel = page => page.evaluate(() => {
     fraga: !!el.querySelector("button[data-hjalp]"),
     hud: ["pyr", "aids", "gait", "moment"].map(id => getComputedStyle(document.getElementById(id).closest(".hudh")).display),
     rect: el.getBoundingClientRect().toJSON(), vp: { w: innerWidth, h: innerHeight },
+    kort: (() => {
+      const u = el.querySelector(".skU"), s = el.querySelector(".rpS");
+      if (!u || !s) return null;
+      const bg = x => getComputedStyle(x).backgroundColor;
+      const ru = u.getBoundingClientRect(), rs = s.getBoundingClientRect();
+      return { bgU: bg(u), bgS: bg(s), bgPanel: bg(el), isar: ru.bottom <= rs.top || rs.bottom <= ru.top,
+        ugnetaISt: !!s.querySelector(".skUt, button[data-sprak], button[data-text], .skUi"),
+        statusIU: !!u.querySelector(".rpH, .rpK, .skV"),
+        meddISt: !!(u.querySelector(".skUi") && s.innerText.includes(u.querySelector(".skUi").textContent.trim())) };
+    })(),
   };
 });
 const klick = (page, borjar) => page.evaluate(t => {
@@ -101,8 +111,15 @@ const klick = (page, borjar) => page.evaluate(t => {
     karnaKalla: kontrollRidrader().map(r => `${r.vad} [${r.reglage}]`), namn: HORSES[G.hastId].namn }));
   prova("uppsutten i huvudvägen (P3)", scen.scen === "lektion" && scen.p3 === true, JSON.stringify(scen).slice(0, 80));
   prova("ridpanelen syns", p.synlig);
-  prova("blockordningen är Naromrades: Ugneta → rubrik → kärna → val",
-    JSON.stringify(p.block.slice(0, 4)) === JSON.stringify(["skU", "rpH", "rpK", "skV"]), p.block.join(" → "));
+  /* #274: två kort — Ugneta (coachning) och statuskortet (rubrik → kärna → val). */
+  prova("två kort: Ugneta → status",
+    JSON.stringify(p.block) === JSON.stringify(["skU", "rpS"]), p.block.join(" → "));
+  prova("korten har vart sitt fält och panelen är bara behållare",
+    !!p.kort && p.kort.bgU !== "rgba(0, 0, 0, 0)" && p.kort.bgS !== "rgba(0, 0, 0, 0)" && p.kort.bgPanel === "rgba(0, 0, 0, 0)",
+    JSON.stringify(p.kort));
+  prova("korten ligger isär, utan överlapp", !!p.kort && p.kort.isar);
+  prova("ingen dubbelrad: Ugnetas titel, Text, flagga och meddelande står inte i statuskortet, och status inte i Ugnetas",
+    !!p.kort && !p.kort.ugnetaISt && !p.kort.statusIU && !p.kort.meddISt, JSON.stringify(p.kort));
   prova("Ugnetas ruta: titeln, Text och flaggan", p.titel === "Ugneta · Ridinstruktör" && p.text && p.flagga, p.titel);
   prova("ETT meddelande i Ugnetas ruta", !!p.medd, p.medd);
   prova("rubriken bär hästens namn och gångarten, med `?`", p.rubrik.startsWith(scen.namn + "  ·  ") && p.fraga, p.rubrik);

@@ -139,12 +139,15 @@ function ridpanelInstallera() {
   #ridpanel{position:fixed;left:max(14px,env(safe-area-inset-left,0px));bottom:calc(14px + env(safe-area-inset-bottom,0px));
     width:300px;max-width:min(34vw,300px);min-width:220px;z-index:14;box-sizing:border-box;
     max-height:calc(100vh - 28px);overflow:auto;
-    background:rgba(24,27,33,.88);color:#EDEAE3;border-radius:8px;padding:12px 12px 10px;
-    font:14px/1.35 system-ui,-apple-system,"Segoe UI",sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.35)}
+    color:#EDEAE3;display:flex;flex-direction:column;gap:8px;
+    font:14px/1.35 system-ui,-apple-system,"Segoe UI",sans-serif}
+  /* #274: TVÅ KORT — Ugneta (bara coachning) och statuskortet (häst, läge, val),
+     vart och ett med eget fält. Förut var de ett block i samma ruta. */
+  #ridpanel .skU,#ridpanel .rpS{background:rgba(24,27,33,.88);border-radius:8px;padding:10px 12px;
+    box-shadow:0 6px 24px rgba(0,0,0,.35)}
   #ridpanel[hidden]{display:none!important}
   .pek #ridpanel{bottom:calc(172px + env(safe-area-inset-bottom,0px));max-height:calc(100vh - 190px)}
-  #ridpanel .skU{margin:-4px -4px 10px;padding:6px 8px 8px;border-radius:6px;background:rgba(255,255,255,.06);
-    border-left:3px solid rgb(236,196,92)}
+  #ridpanel .skU{border:1px solid rgba(236,196,92,.45);border-left:3px solid rgb(236,196,92)}
   #ridpanel .skUh{display:flex;align-items:center;gap:6px;min-height:32px}
   #ridpanel .skUt{flex:1;font-weight:650;font-size:13px;color:rgb(236,196,92);letter-spacing:.01em}
   #ridpanel button.skSmal{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:6px;cursor:pointer;
@@ -240,7 +243,7 @@ function ridpanelRita(tvinga) {
     + `<button class="skSmal" data-sprak="1" aria-label="${esc(rpT("sprak.byt"))}" title="${esc(rpT("sprak.byt"))}">`
     + `<span class="skFl ${sv ? "sv" : "en"}"></span>${esc(rpT("sprak.nuvarande"))}</button></div>`
     + (medd ? `<div class="skUi">${esc(medd)}</div>` : "") + inst + `</div>`
-    + `<div class="rpH"><span class="rpHt">${esc(rubrik)}</span>`
+    + `<div class="rpS"><div class="rpH"><span class="rpHt">${esc(rubrik)}</span>`
     + `<button class="rpQ${RIDPANEL.hjalpUt ? " pa" : ""}" data-hjalp="1" aria-label="${esc(rpT("panel.hjalp"))}" title="${esc(rpT("panel.hjalp"))}">?</button></div>`
     + `<div class="rpK">${karna.map(r => `<div class="rpRad"><span>${esc(r.vad)}</span><b>[${esc(r.reglage)}]</b></div>`).join("")}`
     + (RIDPANEL.hjalpUt ? `<div class="rpAlla">${alla.map(r => r.rubrik
@@ -249,7 +252,8 @@ function ridpanelRita(tvinga) {
       + matare.map(m => `<div class="rpM"><span>${esc(rpT(m[0]))}</span><i><s style="width:${Math.round(Math.max(0, Math.min(1, m[1])) * 100)}%"></s></i></div>`).join("")
       + `</div>` : "") + `</div>`
     + (knappar.length ? `<div class="skV">${knappar.map((k, i) =>
-        `<button data-i="${i}" class="${k.paTur ? "primar" : ""}">${esc(k.text)}</button>`).join("")}</div>` : "");
+        `<button data-i="${i}" class="${k.paTur ? "primar" : ""}">${esc(k.text)}</button>`).join("")}</div>` : "")
+    + `</div>`;
   for (const b of el.querySelectorAll("button[data-i]"))
     b.onclick = () => { const k = knappar[+b.dataset.i]; if (k && k.gor) k.gor(); ridpanelRita(true); };
   const q = el.querySelector("button[data-hjalp]");
