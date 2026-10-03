@@ -1481,8 +1481,26 @@ do
 			run(mc, 12, { forward = 0.5, rein = rein }, 1 / 60)
 			return balansISvang, radie, stodISvang, mc.loco.balans
 		end
+		--[[ #273 T4: I GRUNDRIDNINGEN ÄR YTTERTYGELN INTE ETT KRAV.
+		     `RidKanon.SVAR.HJALP_KRAV` är 0, och då ska samma två volter
+		     ge samma balans och samma båge — en spelare som bara styr får
+		     ingen dold straffavgift. Mekaniken finns kvar och provas
+		     direkt efter, med kravet påslaget. ]]
+		local kravFore = RidKanon.SVAR.HJALP_KRAV
+		do
+			local gB, gR, gStod = volt(0)
+			local hB, hR, hStod = volt(1)
+			check("#273 T4: utan tygel ingen balansförlust och inget infall i grundridningen",
+				kravFore == 0 and gStod < hStod and gB > 0.95 and math.abs(gB - hB) < 1e-6
+					and math.abs(gR - hR) < 1e-6,
+				string.format("(krav %s · lös tygel: stöd %.2f, balans %.3f, radie %.2f m ·"
+					.. " kontakten kvar: stöd %.2f, balans %.3f, radie %.2f m)",
+					tostring(kravFore), gStod, gB, gR, hStod, hB, hR))
+		end
+		RidKanon.SVAR.HJALP_KRAV = 1
 		local losB, losR, losStod = volt(0)
 		local burenB, burenR, burenStod, burenEfter = volt(1)
+		RidKanon.SVAR.HJALP_KRAV = kravFore
 		check("yttertygeln bär svängen: utan kontakt tappas balansen och hästen faller in",
 			losB < burenB - 0.03 and losR < burenR and losStod < burenStod
 				and burenEfter > burenB - 1e-9,
@@ -1504,8 +1522,20 @@ do
 			run(mc, 25, { forward = 0.5, steer = 1, rein = 1, seat = seat }, 1 / 60)
 			return mc.loco.balans, mc.hjalper.sits, Svar.sitsStod(mc.hjalper.sits)
 		end
+		--[[ #273 T4: samma sak för sitsen — neutral i grundridningen,
+		     verksam när kravet är påslaget. ]]
+		local kravFore = RidKanon.SVAR.HJALP_KRAV
+		do
+			local gB = voltMedSits(-1)
+			local hB = voltMedSits(1)
+			check("#273 T4: lätt sits kostar ingen balans i grundridningen",
+				kravFore == 0 and gB > 0.95 and math.abs(gB - hB) < 1e-6,
+				string.format("(lätt sits → balans %.3f · djup sits → balans %.3f)", gB, hB))
+		end
+		RidKanon.SVAR.HJALP_KRAV = 1
 		local lattB, lattS, lattStod = voltMedSits(-1)
 		local djupB, djupS, djupStod = voltMedSits(1)
+		RidKanon.SVAR.HJALP_KRAV = kravFore
 		check("sätet är en balansmodifierare: djup sits bär bågen, lätt sits gör det inte",
 			djupB > lattB + 0.03 and djupStod > lattStod,
 			string.format("lätt sits %.2f (stöd %.2f) → balans %.3f · djup sits %.2f"

@@ -1,18 +1,17 @@
 # UBRF Delivery Protocol
 
-Detta dokument är **bindande governance** för allt arbete i UBRF-repot.
+Detta dokument styr evidens och acceptans för allt arbete i UBRF-repot.
+Aktuella roller, behörigheter och stegvis testpolicy har en huvudkälla:
+[WORKING-AGREEMENT](WORKING-AGREEMENT.md). Äldre personnamn/statusmarkörer
+får inte återaktivera historiska uppdrag eller ge självacceptans.
 
 Syftet är att förhindra att en AI-agent kan kalla sitt eget arbete "klart" utan oberoende granskning, spårbar evidens och — när upplevelsen är visuell eller spelbar — mänsklig acceptance i den verkliga målmiljön.
 
 ## Grundregel
 
-> **CLAUDE BUILDS → CHATGPT REVIEWS → TOBIAS ACCEPTS**
-
-Rollerna är separerade med avsikt:
-
-- **Claude** implementerar, testar, falsifierar och lämnar bevis.
-- **ChatGPT** gör oberoende senior review av faktisk diff, källor, tester, risker och regressionsyta.
-- **Tobias** är Product Owner och ensam slutlig acceptansauktoritet för produkt, game feel och visuell fidelity.
+Implementeraren bygger, den oberoende granskaren granskar och Tobias accepterar.
+Rolltilldelningen finns endast i arbetsöverenskommelsen, inte i denna mall.
+Tobias är ensam slutlig acceptansauktoritet för produkt, game feel och fidelity.
 
 Ingen agent får både införa en större förändring och ensam slutgodkänna den.
 
@@ -20,7 +19,7 @@ Ingen agent får både införa en större förändring och ensam slutgodkänna d
 
 ## 1. Obligatoriskt Acceptance Contract före implementation
 
-Innan Claude börjar en icke-trivial ändring ska PR, issue eller gate innehålla ett kort acceptance contract med:
+Innan Implementeraren börjar en icke-trivial ändring ska PR, issue eller gate innehålla ett kort acceptance contract med:
 
 1. **Goal** — vilken konkret spelar-/produktupplevelse som ska uppnås.
 2. **Observed state** — vad som faktiskt är fel eller saknas i aktuell branch.
@@ -31,13 +30,13 @@ Innan Claude börjar en icke-trivial ändring ska PR, issue eller gate innehåll
 7. **Human gate** — om Studio-/gameplay-/visuell acceptans krävs.
 8. **Known uncertainty** — `VERIFIED`, `PLAN`, `FOTO`, `DERIVED`, `ASSUMPTION`, `REFERENCE GAP` där relevant.
 
-Om något av ovan är oklart ska Claude stoppa scope-expansion och dokumentera luckan i stället för att fylla den med egna antaganden.
+Om något av ovan är oklart ska Implementeraren stoppa scope-expansion och dokumentera luckan i stället för att fylla den med egna antaganden.
 
 ---
 
 ## 2. Tillåtna leveransstatusar
 
-Claude får **inte** använda `APPROVED`, `ACCEPTED`, `DONE`, `CLOSED`, `FINAL` eller liknande som slutstatus för sitt eget arbete.
+Implementeraren får **inte** använda `APPROVED`, `ACCEPTED`, `DONE`, `CLOSED`, `FINAL` eller liknande som slutstatus för sitt eget arbete.
 
 Tillåtna statusar är:
 
@@ -45,15 +44,15 @@ Tillåtna statusar är:
 - `IMPLEMENTING`
 - `IMPLEMENTED`
 - `AUTOMATED_GREEN`
-- `READY_FOR_CHATGPT_REVIEW`
+- `READY_FOR_REVIEW`
 - `CHANGES_REQUESTED`
 - `READY_FOR_PRODUCT_ACCEPTANCE`
 - `PRODUCT_ACCEPTED`
 
 Regel:
 
-- Claude får sätta status t.o.m. `READY_FOR_CHATGPT_REVIEW`.
-- ChatGPT kan efter review sätta `READY_FOR_PRODUCT_ACCEPTANCE`.
+- Implementeraren får sätta status t.o.m. `READY_FOR_REVIEW`.
+- Granskaren kan efter review sätta `READY_FOR_PRODUCT_ACCEPTANCE`.
 - **Endast Tobias får sätta `PRODUCT_ACCEPTED`.**
 
 En merge får inte användas som bevis på produktacceptans. En PR kan vara tekniskt mergebar men fortfarande sakna Studio-/gameplay-/fidelity-pass.
@@ -64,9 +63,9 @@ För F02 (interiörer) gäller dessutom den visuella kedjan i `docs/VISUAL-FIDEL
 
 ## 3. Evidence-first, aldrig summary-first
 
-En leverans bedöms på faktisk evidens, inte på Claudes sammanfattning.
+En leverans bedöms på faktisk evidens, inte på implementerarens sammanfattning.
 
-Claude ska länka eller namnge:
+Implementeraren ska länka eller namnge:
 
 - aktuell branch och exakt commit-SHA,
 - ändrade kärnfiler,
@@ -75,13 +74,13 @@ Claude ska länka eller namnge:
 - kända fel och vad som **inte** har testats,
 - källor som styr varje betydande fidelity-/produktbeslut.
 
-ChatGPT ska vid review läsa faktisk diff och relevanta källor. En sammanfattning från Claude är en handoff, inte ett bevis.
+Granskaren ska vid review läsa faktisk diff och relevanta källor. En sammanfattning från Implementeraren är en handoff, inte ett bevis.
 
 ---
 
 ## 4. Obligatorisk falsifiering
 
-Claude ska inte bara visa att tester går grönt. För varje icke-trivial gate ska han aktivt visa att centrala tester **kan bli röda** när skyddet bryts.
+Implementeraren ska inte bara visa att tester går grönt. För varje icke-trivial gate ska centrala tester visas **kunna bli röda** när skyddet bryts. Mutationer körs endast i isolerade kopior med exakt ankarkontroll; missade prov är fel, inte PASS.
 
 Exempel:
 
@@ -117,7 +116,7 @@ En större ändring är inte färdig förrän alla relevanta lager är gröna:
 
 ### Lager C — Independent review
 
-- ChatGPT granskar faktisk diff och källor,
+- Granskaren granskar faktisk diff och källor,
 - letar efter dubbla sanningar, hårdkodade koordinater, falsk precision, scope creep, generiska placeholders och tester som testar sig själva,
 - begär ändringar om beviset inte håller.
 
@@ -142,7 +141,7 @@ För byggnader, interiörer, tomt och visuella detaljer gäller följande källo
 
 ### Innan `REFERENCE GAP`
 
-Claude måste kontrollera relevant:
+Implementeraren måste kontrollera relevant:
 
 - `references/buildings/`,
 - `references/plans/`,
@@ -169,7 +168,7 @@ Relativ topologi, absolut meterskala och perspektivhärledning ska klassas separ
 
 ## 7. Human review modes före permanent implementation
 
-När en stor visuell eller spatial förändring är osäker ska Claude först bygga en **review-only representation** innan produktionsgeometrin låses.
+När en stor visuell eller spatial förändring är osäker ska Implementeraren först bygga en **review-only representation** innan produktionsgeometrin låses.
 
 Exempel för F02:
 
@@ -207,52 +206,31 @@ PR:n ska innehålla:
 
 Om en ändring kräver mänsklig acceptans ska PR:n vara draft eller explicit markerad som väntande tills den är utförd.
 
-### 8.1 Kontinuerlig push / senaste preview-regeln
+### 8.1 Publicering och lokal review
 
-Tobias produktbeslut 2026-09-04 (PR #76): **allt meningsfullt
-implementationsframsteg ska pushas löpande så att Tobias alltid ser den
-senaste versionen i PR:ns live-preview.** Det är en del av
-leveranskontraktet, inte processpolish.
+Den äldre regeln från 2026-09-04 (PR #76) om automatisk löpande push är
+ersatt för aktuellt arbete av [WORKING-AGREEMENT](WORKING-AGREEMENT.md).
+Granskning av en exakt lokal commit är tillåten; kalla den inte publicerad
+eller spelbar preview. Framtida push, merge och publicering kräver separat
+godkännande, även när en push normalt startar automatiska publiceringar.
 
-1. Arbete får ske lokalt, men **ingen meningsfull checkpoint får förbli
-   lokal** när den är granskningsbar.
-2. Efter varje sammanhängande rättelse/pass som ändrar det Tobias kan se
-   eller testa: committa, pusha till den aktiva feature-branchen, invänta
-   att PR-previewn/deployen uppdaterats, kontrollera att previewn är byggd
-   från PR:ns aktuella head, och posta **exakt head-SHA + previewlänk** i
-   PR:n.
-3. Säg aldrig till Tobias eller ChatGPT att något är "klart", "fixat",
-   "redo" eller "tillgängligt" om koden inte är pushad och synlig i den
-   senaste previewn.
-4. Är previewn föråldrad, trasig eller byggd från en annan SHA är status
-   **NOT READY FOR REVIEW** tills det är rättat.
-5. Den användarvända previewn ska alltid motsvara branchens senaste
-   pushade granskningsbara läge.
-6. Samla inte flera visuellt viktiga fixar lokalt under lång tid: pusha i
-   små sammanhängande checkpoints så att Tobias kan följa arbetet.
-7. GitHub är utvecklingens source of truth; previewn är den användarvända
-   vyn av branchen.
-
-**Definition of Done för regeln:**
-
-- senaste granskningsbara arbete är pushat,
-- PR:ns head-SHA är uttryckligt angiven,
-- previewn är bekräftad mot den SHA:n (deploykommentarens "Latest commit"
-  eller `pack.json.head` = head),
-- inga lokala visuella fixar presenteras som klara,
-- `READY_FOR_CHATGPT_REVIEW` och `READY_FOR_PRODUCT_ACCEPTANCE` är
-  **förbjudna** om preview ≠ aktuell head.
+När en preview uttryckligen är godkänd och ingår i leveransen ska dess
+identitet verifieras mot rätt publicerad SHA. En gammal preview får inte
+användas som bevis för ny kod. Saknad preview är en redovisad begränsning,
+inte skäl att publicera utan tillstånd.
 
 ---
 
 ## 9. Stop-the-line triggers
 
-Claude ska stoppa implementation eller mergeförberedelse när något av följande inträffar:
+Implementeraren ska stoppa implementation eller mergeförberedelse när något av följande inträffar:
 
 - källor motsäger varandra,
 - en build-kritisk referens finns endast i Drive,
 - verklig skala/placering saknar evidens men implementationen kräver ett exakt värde,
-- Studio-/runtime-test krävs men har inte körts,
+- ett för den aktuella tekniska leveransen obligatoriskt test saknas; stoppa
+  det berörda anspråket, men återstarta inte uppskjutet slutspeltest i strid
+  med arbetsöverenskommelsen,
 - en regression i tidigare accepterad vy eller gameplay-loop upptäcks,
 - PR:n börjar expandera utanför aktiv gate,
 - samma domänfakta definieras på flera ställen utan tydlig canonical owner,
@@ -272,12 +250,12 @@ En ändring får inte kallas levererad om den bryter den aktiva plattformens huv
 
 ---
 
-## 11. Standardiserad Claude-handoff
+## 11. Standardiserad implementerar-handoff
 
-Varje större Claude-leverans ska avslutas med:
+Varje större Implementeraren-leverans ska avslutas med:
 
 ### Status
-`IMPLEMENTED` / `AUTOMATED_GREEN` / `READY_FOR_CHATGPT_REVIEW`
+`IMPLEMENTED` / `AUTOMATED_GREEN` / `READY_FOR_REVIEW`
 
 ### Changed
 Exakta filer och ansvar.
@@ -292,7 +270,7 @@ Exakta kommandon, Studio-/runtime-observationer och exitkoder.
 Vilka mutationer som medvetet gjordes och hur testen föll.
 
 ### Not tested
-Sådant Claude inte faktiskt har kunnat verifiera.
+Sådant Implementeraren inte faktiskt har kunnat verifiera.
 
 ### Remaining risk
 Kända osäkerheter med rätt evidensklass.
@@ -305,9 +283,9 @@ Exakt head-SHA.
 
 ---
 
-## 12. Standardiserad ChatGPT-review
+## 12. Standardiserad oberoende review
 
-ChatGPT ska vid större review kontrollera minst:
+Granskaren ska vid större review kontrollera minst:
 
 - att acceptance contract fortfarande matchar implementerad scope,
 - att källhierarkin följts,
@@ -318,7 +296,7 @@ ChatGPT ska vid större review kontrollera minst:
 - att Roblox/webb-paritet hanterats där relevant,
 - att human gate är tydlig och inte förklarats "pass" utan Tobias.
 
-ChatGPT kan rekommendera `READY_FOR_PRODUCT_ACCEPTANCE`, men inte ersätta Tobias visuella/game-feel-bedömning.
+Granskaren kan rekommendera `READY_FOR_PRODUCT_ACCEPTANCE`, men inte ersätta Tobias visuella/game-feel-bedömning.
 
 ---
 

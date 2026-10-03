@@ -674,6 +674,125 @@ do
 			Input.IMPULS_SPARR, Config.RIDINPUT.ImpulsSparr))
 end
 
+print("\n── 4. Hoppet på pekskärm (#276) ──")
+do
+	--[[ Hoppet var Space/ButtonA i "HorseControl", utan pekknapp. Här mäts
+	     att `ActionHopp` finns BARA när hopp är relevant, att den klär den
+	     tomma rutan i 2×2, att ett finger är en impuls som släpper sig
+	     själv, och att alla ytor går genom samma `intent.jump` in i
+	     `MovementController`s villkor. ]]
+	UIS.TouchEnabled = true
+	Input.unbind()
+	check("till fots kan hoppet inte bindas", Input.satHopp(true) == false
+		and CAS._bound[Input.HOPP] == nil)
+	Input.bind()
+	TouchControls.unmount()
+	TouchControls.mount(Input, { dismount = function() end })
+	check("grundridning: ingen hopphandling, ingen hoppknapp",
+		CAS._bound[Input.HOPP] == nil and CAS:GetButton(Input.HOPP) == nil)
+
+	check("relevant: handlingen binds", Input.satHopp(true) == true
+		and Input.hoppBunden() and CAS._bound[Input.HOPP] ~= nil)
+	check("samma läge en gång till är ingen ändring", Input.satHopp(true) == false)
+	check("den ritar en pekknapp som CAS äger", CAS:GetButton(Input.HOPP) ~= nil)
+	local tg = {}
+	for _, t in ipairs(CAS._bound[Input.HOPP .. "@tangenter"] or {}) do tg[t] = true end
+	check("samma tangenter som förut: Space och ButtonA",
+		tg[Enum.KeyCode.Space] == true and tg[Enum.KeyCode.ButtonA] == true)
+
+	TouchControls.klaHopp()
+	check("knappen heter HOPP", CAS._titel[Input.HOPP] == Sprak.t("touch.hopp"),
+		tostring(CAS._titel[Input.HOPP]))
+	--[[ Platsen: den tomma rutan — samma rad som BROMS, samma kolumn som
+	     SITT AV. Då kan den inte ligga över någon av de tre. ]]
+	local h, br, av, dr = CAS._plats[Input.HOPP], CAS._plats[Input.BROMS],
+		CAS._plats[Input.AVSITT], CAS._plats[Input.DRIV]
+	check("i nedre högra hörnet, på BROMS rad och SITT AV:s kolumn",
+		h ~= nil and h.X.Scale == 1 and h.Y.Scale == 1
+			and h.Y.Offset == br.Y.Offset and h.X.Offset == av.X.Offset,
+		h and ("hopp (%d,%d) broms (%d,%d) sitt av (%d,%d)"):format(h.X.Offset, h.Y.Offset,
+			br.X.Offset, br.Y.Offset, av.X.Offset, av.Y.Offset) or "ingen plats")
+	local kb = CAS:GetButton(Input.HOPP)
+	local sida = kb and kb.Size.X.Offset or 0
+	local function isar(a, b)
+		return math.abs(a.X.Offset - b.X.Offset) >= sida or math.abs(a.Y.Offset - b.Y.Offset) >= sida
+	end
+	check("ingen överlapp med DRIV, BROMS eller SITT AV",
+		sida > 0 and h ~= nil and isar(h, br) and isar(h, av) and isar(h, dr), ("sida %d"):format(sida))
+	check("innanför reglagens reserv — inget annat behöver flytta",
+		h ~= nil and -h.X.Offset + sida <= TouchControls.reglageBredd(),
+		h and ("%d + %d mot %d"):format(-h.X.Offset, sida, TouchControls.reglageBredd()) or "")
+
+	--[[ FINGRET ÄR EN IMPULS. Begin utan End: hoppet släpper ändå. ]]
+	local fn = CAS._bound[Input.HOPP]
+	Input.consume()
+	__senasteDelay = nil
+	fn(Input.HOPP, Enum.UserInputState.Begin,
+		{ UserInputType = Enum.UserInputType.Touch, KeyCode = Enum.KeyCode.Unknown })
+	check("ett tryck: avsikten hoppa", Input.consume().jump == true)
+	check("släppet är schemalagt", type(__senasteDelay) == "function")
+	if __senasteDelay then __senasteDelay() end
+	check("FINGRET LYFT UTANFÖR KNAPPEN (inget End): hoppet släpper ändå",
+		Input.consume().jump == false)
+	--[[ Två snabba tryck: det första trycket släpper inte det andra. ]]
+	fn(Input.HOPP, Enum.UserInputState.Begin, { UserInputType = Enum.UserInputType.Touch })
+	local forsta = __senasteDelay
+	fn(Input.HOPP, Enum.UserInputState.Begin, { UserInputType = Enum.UserInputType.Touch })
+	local andra = __senasteDelay
+	if forsta then forsta() end
+	check("två tryck: det förstas släpp river inte det andra", Input.consume().jump == true)
+	if andra then andra() end
+	check("…men det andras gör det", Input.consume().jump == false)
+	--[[ Ett End från fingret ignoreras — det får inte ta ett hopp som ännu
+	     inte hunnit verka. ]]
+	fn(Input.HOPP, Enum.UserInputState.Begin, { UserInputType = Enum.UserInputType.Touch })
+	fn(Input.HOPP, Enum.UserInputState.End, { UserInputType = Enum.UserInputType.Touch })
+	check("fingrets End tar inte tillbaka impulsen", Input.consume().jump == true)
+	if __senasteDelay then __senasteDelay() end
+
+	--[[ TANGENTEN ÄR HÅLLEN, som förut. ]]
+	fn(Input.HOPP, Enum.UserInputState.Begin,
+		{ UserInputType = Enum.UserInputType.Keyboard, KeyCode = Enum.KeyCode.Space })
+	check("Space nere: hoppa", Input.consume().jump == true)
+	check("Space fortfarande nere: fortfarande hoppa", Input.consume().jump == true)
+	fn(Input.HOPP, Enum.UserInputState.End,
+		{ UserInputType = Enum.UserInputType.Keyboard, KeyCode = Enum.KeyCode.Space })
+	check("Space släppt: inte hoppa", Input.consume().jump == false)
+
+	--[[ SAMMA GAMEPLAYREGEL. Pekimpulsen går genom `consume` in i
+	     `MovementController`, och villkoren där (mark, fart, nedkylning)
+	     avgör. I halt: inget hopp. I fart: hopp. ]]
+	local mc = nyttEkipage()
+	Input.satHopp(true)
+	fn = CAS._bound[Input.HOPP]
+	fn(Input.HOPP, Enum.UserInputState.Begin, { UserInputType = Enum.UserInputType.Touch })
+	mc:step(Input.consume(), 1 / 60)
+	check("i halt: regeln nekar hoppet (för lite fart)", mc.jumpReady == 0,
+		("jumpReady %.2f"):format(mc.jumpReady))
+	if __senasteDelay then __senasteDelay() end
+	driv(mc, 2); driv(mc, 3)
+	check("i fart inför provet", math.abs(mc.loco.speed) >= Config.MOVEMENT.JumpMinSpeed,
+		("%.2f"):format(mc.loco.speed))
+	fn(Input.HOPP, Enum.UserInputState.Begin, { UserInputType = Enum.UserInputType.Touch })
+	mc:step(Input.consume(), 1 / 60)
+	check("i fart: pektrycket ger hoppet", mc.jumpReady > 0, ("jumpReady %.2f"):format(mc.jumpReady))
+	if __senasteDelay then __senasteDelay() end
+
+	--[[ RIVNINGEN. ]]
+	fn(Input.HOPP, Enum.UserInputState.Begin,
+		{ UserInputType = Enum.UserInputType.Keyboard, KeyCode = Enum.KeyCode.Space })
+	check("inte relevant längre: handlingen rivs", Input.satHopp(false) == true
+		and CAS._bound[Input.HOPP] == nil and CAS:GetButton(Input.HOPP) == nil)
+	check("och en hållen tangent lämnar inget hopp kvar", Input.consume().jump == false)
+	Input.satHopp(true)
+	Input.unbind()
+	check("avsittning river hopphandlingen", CAS._bound[Input.HOPP] == nil
+		and not Input.hoppBunden())
+	TouchControls.unmount()
+	check("klaHopp utan pekyta gör ingenting", pcall(TouchControls.klaHopp))
+	UIS.TouchEnabled = false
+end
+
 if fel > 0 then
 	print(("\n%d mätningar föll."):format(fel))
 else

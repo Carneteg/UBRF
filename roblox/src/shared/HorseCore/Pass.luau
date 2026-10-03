@@ -75,7 +75,9 @@ export type State = {
 	hastId: string,
 	passId: string,
 	lage: string,
-	gjorda: { [string]: boolean },
+	--[[ `true` när spelaren gjorde momentet själv, `"auto"` när stallet
+		gjorde det åt henne (#273 S3) — samma märkning som `Preparation`. ]]
+	gjorda: { [string]: any },
 	--[[ Sant när passet stoppats av välfärdsskäl i stället för ritt.
 		Ett stoppat pass räknas ändå som en dag — spelaren gjorde rätt —
 		men det får aldrig se ut som en genomförd ritt. ]]
@@ -119,6 +121,68 @@ function Pass.nastaMoment(state: State)
 		if not state.gjorda[m.id] then return m end
 	end
 	return nil
+end
+
+--[[ ══ #273 S3 (T1): EFTERVÅRDEN ÄR ETT VAL, INTE FEM KLICK ═══════════
+
+	Tobias beslut 2026-10-01. Efter avsittningen får spelaren ett enkelt val:
+
+	  «Stallet tar hand om henne»  passet räknas, ingen straffavgift
+	  «Ta hand om henne själv»     frivillig egen eftervård, liten positiv effekt
+
+	Momenten och deras ordning är kanonens och oförändrade. Det som ändras
+	är VEM som gör dem (`gjorda[id]` är `true` eller `"auto"`) och att
+	spelarens egen väg är tre handlingar i stället för fem kvittenser:
+
+	  sadla_av   lossa gjorden + ta av sadeln      (fysiskt: sadel, underlägg)
+	  transa_av  ta av tränset                     (fysiskt: träns, tyglar)
+	  ta_hand    känn igenom benen + vatten och hö
+
+	Gruppen slås upp på momentets id. Ett moment kanonen lägger till senare
+	hamnar i den sista handlingen i stället för att försvinna. ]]
+local HANDLING_FOR: { [string]: string } = {
+	gjord = "sadla_av", sadel = "sadla_av", trans = "transa_av",
+	ben = "ta_hand", vatten = "ta_hand",
+}
+local HANDLINGSORDNING = { "sadla_av", "transa_av", "ta_hand" }
+
+function Pass.handlingar(): { { id: string, moment: { any } } }
+	local per: { [string]: { any } } = {}
+	for _, m in ipairs(Pass.moment()) do
+		local id = HANDLING_FOR[m.id] or "ta_hand"
+		per[id] = per[id] or {}
+		table.insert(per[id], m)
+	end
+	local ut = {}
+	for _, id in ipairs(HANDLINGSORDNING) do
+		if per[id] then table.insert(ut, { id = id, moment = per[id] }) end
+	end
+	return ut
+end
+
+function Pass.nastaHandling(state: State)
+	local n = Pass.nastaMoment(state)
+	if not n then return nil end
+	for _, h in ipairs(Pass.handlingar()) do
+		for _, m in ipairs(h.moment) do
+			if m.id == n.id then return h end
+		end
+	end
+	return nil
+end
+
+--[[ Hur stor del av eftervården spelaren gjorde SJÄLV, 0–1. Driver den
+	lilla relationsbonusen i `GameplayService.avslutaPass`. Stallets hand
+	ger 0 — och det är golvet, inte ett avdrag. ]]
+function Pass.egenAndel(state: State?): number
+	if not state then return 0 end
+	local totalt, egna = 0, 0
+	for _, m in ipairs(Pass.moment()) do
+		totalt += 1
+		if state.gjorda[m.id] == true then egna += 1 end
+	end
+	if totalt == 0 then return 0 end
+	return egna / totalt
 end
 
 --[[ ── ÖVERGÅNGARNA ──────────────────────────────────────────────── ]]
@@ -250,13 +314,14 @@ function Pass.farUtfora(state: State, momentId: string): (boolean, string?, stri
 	return true, nil
 end
 
---[[ Ett eftervårdsmoment. Prövar genom `farUtfora` och bockar av. ]]
-function Pass.utfor(state: State, momentId: string): (boolean, string?, string?)
+--[[ Ett eftervårdsmoment. Prövar genom `farUtfora` och bockar av.
+	`utforare == "auto"` är stallets hand; allt annat är spelarens. ]]
+function Pass.utfor(state: State, momentId: string, utforare: string?): (boolean, string?, string?)
 	local far, skal, arg = Pass.farUtfora(state, momentId)
 	if not far then
 		return false, skal, arg
 	end
-	state.gjorda[momentId] = true
+	state.gjorda[momentId] = if utforare == "auto" then "auto" else true
 	if Pass.nastaMoment(state) == nil then
 		state.lage = Pass.LAGE.KLART
 	end
@@ -299,7 +364,8 @@ end
 	inget själv. ]]
 function Pass.vy(state: State?, rev: number?)
 	if not state then
-		return { lage = nil, moment = {}, nastaMoment = nil, klar = false,
+		return { lage = nil, moment = {}, nastaMoment = nil, handlingar = {}, nastaHandling = nil,
+			borjad = false, klar = false,
 			stoppad = false, rev = rev or 0 }
 	end
 	local moment = {}
@@ -308,15 +374,30 @@ function Pass.vy(state: State?, rev: number?)
 			id = m.id,
 			namn = m.namn,
 			text = m.text,
-			klar = state.gjorda[m.id] == true,
+			klar = state.gjorda[m.id] ~= nil and state.gjorda[m.id] ~= false,
 		})
 	end
 	local pa_tur = Pass.nastaMoment(state)
+	--[[ #273 S3: handlingarna, och om eftervården börjat — panelen visar
+		valet «stallet / själv» bara innan något är gjort. ]]
+	local handlingar = {}
+	for _, h in ipairs(Pass.handlingar()) do
+		local klar, kunskap = true, {}
+		for _, m in ipairs(h.moment) do
+			if not state.gjorda[m.id] then klar = false end
+			table.insert(kunskap, { id = m.id, namn = m.namn, text = m.text })
+		end
+		table.insert(handlingar, { id = h.id, klar = klar, kunskap = kunskap })
+	end
+	local paTurH = Pass.nastaHandling(state)
 	return {
 		lage = state.lage,
 		hastId = state.hastId,
 		moment = moment,
 		nastaMoment = pa_tur and pa_tur.id or nil,
+		handlingar = handlingar,
+		nastaHandling = paTurH and paTurH.id or nil,
+		borjad = Pass.eftervardBorjad(state),
 		klar = state.lage == Pass.LAGE.KLART or state.lage == Pass.LAGE.RAKNAT,
 		stoppad = state.stoppad,
 		rev = rev or 0,

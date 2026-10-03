@@ -87,6 +87,23 @@ function visaTavlingsval(){
 
 /* ── Uppsittning — ett ställe för alla tre platserna ──────────── */
 function sittUpp(plats){
+  /* Paritetspasset: samma grind som Roblox provaUppsittning. Leds hon
+     fram till uteridbanan eller stigen kvitteras ledningen där — hon ÄR
+     framme. Ett välfärdsstopp stoppar uppsittningen på alla ställen. */
+  if(G.forb&&typeof Forb!=="undefined"){
+    const n=Forb.nasta(G.forb);
+    if(G.hastPlats==="leds"&&n&&n.id==="leda"&&Forb.utforMoment(G.forb,"leda","leda",G.hastId)[0]
+      &&typeof stegkortDagsform==="function")stegkortDagsform();
+    const r=Forb.provaUppsittning(G.forb,G.hastId);
+    if(!r[0]){ saga(typeof skAvslag==="function"?skAvslag(r):r[1],4); return; }
+  }
+  sittUppDirekt(plats);
+}
+/* Själva uppsittningen, efter grinden. First Ride (src/stegkort.js) går
+   hit direkt — som Roblox ForstaRitten, där stallets fysiska utrustning
+   och `tryMount` sätter upp spelaren medan skötselchecklistan står kvar
+   ogjord. Ingen annan väg får gå förbi grinden. */
+function sittUppDirekt(plats){
   if(G.tavling){
     const ratt=G.tavling.typ==="hoppning"?"ridhus":"utebana";
     if(plats!==ratt){
@@ -106,11 +123,8 @@ function sittUpp(plats){
   }
   G.plats=plats;hudLage("ritt");
   ridSittUpp(G.hastId,plats);          // G02-A: tillståndet FÖRE lektionen, se ovan
-  /* G02-D: reglagen en gång, vid FÖRSTA uppsittningen. Ligger efter
-     ridSittUpp så att hjälpen aldrig står uppe över en ritt som inte
-     hann börja, och den visar sig bara en gång per session — vid varje
-     uppsittning hade det blivit en ruta att stänga bort. */
-  if(typeof kontrollHjalpVidUppsittning==="function")kontrollHjalpVidUppsittning();
+  /* #273 S1: kontrollistan öppnas ALDRIG av sig själv. Ridpanelens fyra
+     kärnrader bär det som behövs; resten ligger bakom H / ?. */
   startaLektion();
 }
 

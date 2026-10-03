@@ -722,7 +722,10 @@ function MovementController:step(intent: Types.Intent, dt: number)
 					* paradLyft * 0.55), 0, 1)
 		end
 		local bMal = Svar.balansMal(self.stats, stats.Agility or 0.5, bojkrav,
-			hj.ytterstod, fartkrav, self._ov ~= nil, loco.spanning or 0, hj.sits)
+			hj.ytterstod, fartkrav, self._ov ~= nil, loco.spanning or 0, hj.sits,
+			--[[ #273 T4: i grundridningen är yttertygel och sits inte
+			     ett krav — pekytan har inget reglage för någon av dem. ]]
+			S.HJALP_KRAV)
 		local bTau = if bMal < (loco.balans or 1) then S.BALANS_TAU_NER else S.BALANS_TAU_UPP
 		loco.balans = smooth(loco.balans or 1, bMal, bTau, dt)
 

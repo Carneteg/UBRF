@@ -172,14 +172,22 @@ function kontrolleraSkotsel() {
     process.exit(2);
   }
 
-  /* HÄLSNINGEN. Exakt ETT fel alternativ, och det är det pedagogiska
-     innehållet: det finns mer än ett sätt att göra rätt (framifrån, eller
-     från sidan vid bogen) men bara ett som gör ont. Blir alla rätta går
-     momentet inte att misslyckas med och lär inte ut någonting; blir fler
-     fel blir det en gissningslek. */
+  /* HÄLSNINGEN — instruktion, inte frågesport (UI-2,
+     docs/P2-UGNETA-INSTRUCTION-CONTRACT.md). Förut var det pedagogiska
+     innehållet ett felaktigt SVAR («rakt bakifrån»); nu är hälsningen
+     handlingar i ordning, och säkerhetsläran står i Ugnetas instruktion.
+     Grinden vaktar därför två saker: att ingen handling i en guidad följd
+     är fel (då vore det en frågesport igen), och att instruktionen på
+     BÅDA språken fortfarande säger «aldrig bakifrån» — försvinner den
+     meningen försvinner det enda i hälsningen som kan sluta illa. */
   const halsFel = HALSNING.filter(h => !h.ratt).length;
-  if (halsFel !== 1) {
-    console.error(`FEL  HALSNING har ${halsFel} felaktiga alternativ, ska ha exakt 1.`);
+  if (halsFel !== 0 || HALSNING.length < 2) {
+    console.error(`FEL  HALSNING ska vara minst två handlingar i ordning, alla rätta; har ${HALSNING.length} varav ${halsFel} fel.`);
+    process.exit(2);
+  }
+  const halsFas = FASER.find(f => f.id === "halsa");
+  if (!halsFas || !/bakifrån/.test(halsFas.text) || !/behind/.test(halsFas.textEn || "")) {
+    console.error("FEL  hälsningens instruktion måste säga «aldrig rakt bakifrån» på båda språken.");
     process.exit(2);
   }
   if (HALSNING.some(h => !h.t || !h.svar)) {

@@ -368,30 +368,45 @@ function TavlingskladerService.nya(adaptrar: Adaptrar?): Tjanst
 		alla fyra. Att `PlayerRemoving` är en av dem, och inte en
 		modulglobal lyssnare som lever för evigt, är samma beslut som att
 		tjänsten inte startas vid boot. ]]
-	local function bindVakter(player: Player, character: Instance): { RBXScriptConnection }
+	--[[ D5 R1 (CHATGPT_REVIEW_D5_CHANGES_REQUESTED): bindningen är FAIL CLOSED.
+		Den körs efter att kläderna skrivits, och ett kast här lämnade förut en
+		avatar i tävlingskläder utan session — ingen `avsluta` kunde då lägga
+		tillbaka något. Nu binds alla under `pcall`; faller en enda tas varje
+		redan skapad koppling bort och svaret är nil. Anroparen återställer då
+		avataren och registrerar ingen session. ]]
+	local function bindVakter(player: Player, character: Instance): { RBXScriptConnection }?
 		local k: { RBXScriptConnection } = {}
-		table.insert(k, player.CharacterAdded:Connect(function()
-			tjanst.avsluta(player, "respawn")
-		end))
-		table.insert(k, player.CharacterRemoving:Connect(function()
-			tjanst.avsluta(player, "karaktar_borta")
-		end))
-		local humanoid = character:FindFirstChildOfClass("Humanoid")
-		if humanoid then
-			table.insert(k, (humanoid :: any).Died:Connect(function()
-				tjanst.avsluta(player, "dod")
+		local ok = pcall(function()
+			table.insert(k, player.CharacterAdded:Connect(function()
+				tjanst.avsluta(player, "respawn")
 			end))
-		end
-		table.insert(k, Players.PlayerRemoving:Connect(function(lamnade)
-			if lamnade == player then
-				--[[ Spelaren är borta för gott, och generationen ska bort
-					med henne — men `avsluta` städar den redan, och gör det
-					med räknaren i handen. En ovillkorlig nollning här hade
-					nollat talet mitt under ett pågående uppslag och därmed
-					öppnat återanvändningen som invarianten finns för. ]]
-				tjanst.avsluta(player, "lamnade")
+			table.insert(k, player.CharacterRemoving:Connect(function()
+				tjanst.avsluta(player, "karaktar_borta")
+			end))
+			local humanoid = character:FindFirstChildOfClass("Humanoid")
+			if humanoid then
+				table.insert(k, (humanoid :: any).Died:Connect(function()
+					tjanst.avsluta(player, "dod")
+				end))
 			end
-		end))
+			table.insert(k, Players.PlayerRemoving:Connect(function(lamnade)
+				if lamnade == player then
+					--[[ Spelaren är borta för gott, och generationen ska bort
+						med henne — men `avsluta` städar den redan, och gör det
+						med räknaren i handen. En ovillkorlig nollning här hade
+						nollat talet mitt under ett pågående uppslag och därmed
+						öppnat återanvändningen som invarianten finns för. ]]
+					tjanst.avsluta(player, "lamnade")
+				end
+			end))
+		end)
+		if not ok then
+			for _, c in ipairs(k) do
+				pcall(function() c:Disconnect() end)
+			end
+			table.clear(k)
+			return nil
+		end
 		return k
 	end
 
@@ -454,7 +469,7 @@ function TavlingskladerService.nya(adaptrar: Adaptrar?): Tjanst
 			generationstalet: hade starten hunnit bli en session finns en
 			sessionsvakt som städar, men en NEKAD start lämnar ingen —
 			varken vid `uppslag_nekade`, `fel_assettype`, `lage_olasbart`
-			eller `skrivning_foll`. Räknaren ned först, sedan städningen,
+			`skrivning_foll` eller `vakter_foll`. Räknaren ned först, sedan städningen,
 			för städaren frågar just räknaren om någon annan tråd
 			fortfarande läser talet. ]]
 		local function slut(ok: boolean, utfall: string): (boolean, string)
@@ -548,11 +563,19 @@ function TavlingskladerService.nya(adaptrar: Adaptrar?): Tjanst
 		if befintlig then
 			befintlig.setId = set.id
 		else
+			--[[ D5 R1: ingen session utan ALLA vakter. Föll bindningen efter
+				skrivningen läggs det exakta läget före skrivningen tillbaka,
+				och starten är ett vanligt nej — aldrig ett kast. ]]
+			local kopplingar = bindVakter(player, character)
+			if not kopplingar then
+				aterstall(character, fore)
+				return slut(false, "vakter_foll")
+			end
 			sessioner[player] = {
 				setId = set.id,
 				character = character,
 				ursprung = fore,
-				kopplingar = bindVakter(player, character),
+				kopplingar = kopplingar,
 			}
 		end
 		return slut(true, "applicerat")
