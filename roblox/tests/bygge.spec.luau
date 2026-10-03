@@ -1114,6 +1114,22 @@ do
 		raknaNamn("Hinderbom") == #(R2.hinder or {}) and raknaNamn("Kon ") == #(R2.koner or {})
 			and (R2.pall == nil or raknaNamn("Uppsittningspall") == 1) and #(R2.hinder or {}) > 0,
 		string.format("%d bommar, %d koner", raknaNamn("Hinderbom"), raknaNamn("Kon ")))
+	--[[ #278: hästen stod still på fart 0 mot ett kollisionsaktivt stöd.
+		Båda stöden, V och H, för VARJE hinder ska finnas och sakna kollision. ]]
+	do
+		local antalHinder = #(R2.hinder or {})
+		local stod, kolliderande = 0, {}
+		for _, d in ipairs(delar) do
+			if string.find(d.Name, "Hinderstöd ", 1, true) == 1 then
+				stod += 1
+				if d.CanCollide ~= false then table.insert(kolliderande, d.Name) end
+			end
+		end
+		check("varje hinder har två stöd (V och H)", antalHinder > 0 and stod == 2 * antalHinder,
+			string.format("%d stöd för %d hinder", stod, antalHinder))
+		check("hinderstöden saknar kollision så att hästen inte stannar mot dem",
+			#kolliderande == 0, "kolliderar: " .. table.concat(kolliderande, ", "))
+	end
 	check("lysrörsraderna byggs ur RIDHUSINNE.lysror", R2.lysror ~= nil and raknaNamn("Lysrör") >= 2 * #(R2.lysror and R2.lysror.andelar or {}),
 		raknaNamn("Lysrör") .. " lysrör")
 end

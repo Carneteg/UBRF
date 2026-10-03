@@ -2787,9 +2787,12 @@ local function byggRidhusInre(model: Model, base: CFrame)
 		local bx, bz = o.x + R.bana.x + h.x, o.y + R.bana.y + h.y
 		local bomFarg = if h.farg == "bla" then Color3.fromRGB(58, 110, 165) else Color3.fromRGB(192, 57, 43)
 		for _, s in ipairs({ -1, 1 }) do
+			--[[ #278: stödet är som bommen och konerna ett visuellt hinder.
+				Med kollision på stod hästen still på fart 0 i trav när hennes
+				kollisionsbox träffade ett stöd mitt på banan. ]]
 			BK.box(model, base, "Hinderstöd " .. i .. (if s < 0 then " V" else " H"),
 				bx + s * h.b / 2 - 0.05, 0, bz - 0.05, 0.10, 1.5, 0.10,
-				Color3.fromRGB(240, 237, 230), Enum.Material.SmoothPlastic)
+				Color3.fromRGB(240, 237, 230), Enum.Material.SmoothPlastic).CanCollide = false
 		end
 		local bom = BK.box(model, base, "Hinderbom " .. i,
 			bx - h.b / 2, math.max(0.02, h.h), bz - 0.045, h.b, 0.09, 0.09,
