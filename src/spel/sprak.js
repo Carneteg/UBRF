@@ -210,6 +210,13 @@ const SPRAK = {
   "hud.gor_i_ordning": { sv: "Gör i ordning din häst", en: "Get your horse ready" },
   "hud.lararen_tar_over": { sv: "Ridläraren tar över", en: "The instructor takes over" },
   "hud.du_hittade_nagot": { sv: "Du hittade något", en: "You found something" },
+  /* #274: efter ett välfärdsstopp får spelaren en väg vidare. Knappen bär den friska
+     hästens namn; finns ingen frisk häst är det ett besked, inte en tom knapp. */
+  "hud.fortsatt_med": { sv: "Fortsätt med %s", en: "Continue with %s" },
+  "spel.ingen_frisk_hast": { sv: "Det finns ingen frisk häst åt dig just nu", en: "There is no healthy horse for you right now" },
+  "forb.inget_stopp": { sv: "Det finns inget stopp att fortsätta från", en: "There is no stop to continue from" },
+  "forb.stopp_ingen_frisk": { sv: "Ridläraren har ingen frisk häst åt dig just nu. Kom tillbaka nästa dag — du kan fortfarande sköta om hästarna i stallet.",
+    en: "The instructor has no healthy horse for you right now. Come back tomorrow — you can still look after the horses in the stable." },
   "hud.ta_hand_om_henne": { sv: "Ta hand om henne", en: "Take care of her" },
   "hud.passet_sparat": { sv: "Passet är klart och sparat", en: "The session is done and saved" },
   "hud.bra_jobbat": { sv: "Bra jobbat. Du har ridit ditt pass idag.",

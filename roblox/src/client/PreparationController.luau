@@ -439,6 +439,11 @@ local panelVal: { any } = {}
 	det skickades för — ett sent svar skriver aldrig över nyare återkoppling. ]]
 local rattelseGen = 0
 local rattelseAktiv = false
+--[[ #274: sant medan stoppkortet bär vägen vidare. Knappen är inget moment
+	vid hästen utan ett byte AV henne, så den hänger inte på räckvidden:
+	spelaren som gått ifrån den stoppade hästen ska ändå se den. ]]
+local fortsattNu = false
+local FORTSATT_ID = "fortsatt"
 --[[ R1: EN väntande återlämning i taget, med eget nummer. Ett svar gäller
 	bara sin egen begäran; ett äldre svar kastas. Kommer den lyckade vyn
 	FÖRE svaret är delen redan borta — då visas inget nej, och kvittensen
@@ -1413,6 +1418,7 @@ end
 	skötselmoment, fyndsvar och eftervård, men RADEN är densamma. ]]
 local function momentRad(m: any, ordning: number, paTur: boolean, skicka: () -> ())
 	if fragaNu then paTur = false end
+	local utomRackhall = utomRackhall and m.id ~= FORTSATT_ID
 	local knapp = momentRader[m.id]
 	if not knapp then
 		knapp = Instance.new("TextButton")
@@ -1666,7 +1672,7 @@ end
 local function interaktionPagar(antalVal: number): boolean
 	--[[ En rättelse gäller vid den ANDRA hästens front, alltså ofta utom
 		räckhåll för den egna hästen; räckvidden prövas då av servern. ]]
-	return antalVal > 0 and (not utomRackhall or rattelseAktiv)
+	return antalVal > 0 and (not utomRackhall or rattelseAktiv or fortsattNu)
 end
 
 --[[ R1: rättelserna läses ur `burnaDelar` — det som FYSISKT bärs, per typ,
@@ -1927,6 +1933,7 @@ function rita(vy: any)
 	bygg()
 	senasteVy = vy
 	rattelseAktiv = false
+	fortsattNu = false
 	--[[ R1: VARJE ritning — också de tidiga grenarna (välfärdsstopp, fynd,
 		eftervård, räknat pass) — gör äldre återlämningsval döda. ]]
 	rattelseGen += 1
@@ -1967,7 +1974,23 @@ function rita(vy: any)
 		for _, r in pairs(rader) do r.ram.Visible = false end
 		doljOanvanda(anvanda)
 		if rubrik then rubrik.Text = Sprak.t("hud.lararen_tar_over") end
-		avsluta("stoppad", 0, lokalKanon(vy.stoppad), true)
+		--[[ #274: stoppet är ingen återvändsgränd. Servern har pekat ut en frisk
+			häst (`vy.ersattare`), och knappen bär hennes namn — den är det enda
+			som går att trycka på, som svaren på ett fynd. Saknas ersättare står
+			beskedet i klartext i stället för en tom knapp. ]]
+		local stoppText = lokalKanon(vy.stoppad)
+		if type(vy.ersattare) == "string" and vy.ersattare ~= "" then
+			arValNu, allaNu = true, true
+			fortsattNu = true
+			anvanda[FORTSATT_ID] = true
+			momentRad({ id = FORTSATT_ID, namn = Sprak.t("hud.fortsatt_med", vy.ersattare),
+				klar = false }, 1, true, function() PreparationController.fortsatt() end)
+			doljOanvanda(anvanda)
+			avsluta("stoppad", 1, stoppText, true)
+			return
+		end
+		doljOanvanda(anvanda)
+		avsluta("stoppad", 0, stoppText .. " " .. Sprak.t("forb.stopp_ingen_frisk"), true)
 		return
 	end
 
@@ -2448,6 +2471,13 @@ end
 function PreparationController.eftervardStallet()
 	skicka("efter:stallet", "PassHandling",
 		"\u{2713}  " .. Sprak.t("eftervard.stallet_klar"), "stallet")
+end
+
+--[[ #274: vägen vidare efter ett välfärdsstopp. Ingen parameter: klienten
+	pekar inte ut en häst — servern väljer den friska, och nästa vy bär
+	henne. Kvittensen är tom med flit: den nya vyn är beskedet. ]]
+function PreparationController.fortsatt()
+	skicka(FORTSATT_ID, "FortsattHast", nil)
 end
 
 function PreparationController.svara(svarId: string)

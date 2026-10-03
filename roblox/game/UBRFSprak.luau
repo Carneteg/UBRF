@@ -433,6 +433,22 @@ Sprak.text = {
 		sv = "Du hittade något",
 		en = "You found something",
 	},
+	["hud.fortsatt_med"] = {
+		sv = "Fortsätt med %s",
+		en = "Continue with %s",
+	},
+	["spel.ingen_frisk_hast"] = {
+		sv = "Det finns ingen frisk häst åt dig just nu",
+		en = "There is no healthy horse for you right now",
+	},
+	["forb.inget_stopp"] = {
+		sv = "Det finns inget stopp att fortsätta från",
+		en = "There is no stop to continue from",
+	},
+	["forb.stopp_ingen_frisk"] = {
+		sv = "Ridläraren har ingen frisk häst åt dig just nu. Kom tillbaka nästa dag — du kan fortfarande sköta om hästarna i stallet.",
+		en = "The instructor has no healthy horse for you right now. Come back tomorrow — you can still look after the horses in the stable.",
+	},
 	["hud.ta_hand_om_henne"] = {
 		sv = "Ta hand om henne",
 		en = "Take care of her",
