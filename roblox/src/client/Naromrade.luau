@@ -1728,11 +1728,16 @@ local function placera(pn: Frame)
 		end
 		return if t.AbsoluteSize then t.AbsoluteSize.Y else 0
 	end
-	local tak = math.max(0, math.min(math.max(0, ovanfor) - KANT, hojd * 0.4))
-	local rr = rubrikEtikett and rubrikEtikett.Parent
-	--[[ UI-2: Ugnetas dockade yta står fast överst, som rubriken. ]]
+	--[[ #274: UGNETAS KORT ÄR SKILT FRÅN STATUSKORTET. Taket på 40 % gäller
+	     statuskortet; Ugnetas kort läggs ovanpå och får bara inte skjuta
+	     stapeln ur bild (taket krymper med dess höjd mot skärmens överkant).
+	     Förut åt Ugnetas kort av statuskortets budget, och startvalet fick
+	     bara en del av sin plats när dörren fick en rad. ]]
 	local ug = UgnetaController.lararRam()
-	local fast = 20 + h(rr) + h(ram) + (if ug and ug.Parent == pn then h(ug) else 0)
+	local ugH = if ug and ug.Parent == pn then h(ug) else 0
+	local tak = math.max(0, math.min(math.max(0, ovanfor) - KANT - ugH, hojd * 0.4))
+	local rr = rubrikEtikett and rubrikEtikett.Parent
+	local fast = 20 + h(rr) + h(ram)
 	local vl = valYta
 	local fragaBehov, fragaGolv = 0, 0
 	if vl and vl.Visible then
