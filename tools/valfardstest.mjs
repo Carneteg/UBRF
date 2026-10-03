@@ -463,8 +463,15 @@ console.log("\n── #274: finns ingen frisk häst blir stoppet ett besked, int
   await tillBoxen(p);
   await kortKlick(p, "start:rida_nu");
   await vantaPa(p, () => document.getElementById("stegkort").dataset.kort === "fynd");
+  /* #274 paritet med Roblox: «Rida nu» är ingen handling medan fyndet väntar
+     på sitt svar eller hästen är stoppad — varken som knapp, promptrad eller världsprompt. */
+  const ridaIKort = () => p.evaluate(() => { const k = stegkortKort(); if (!k) return "inget kort";
+    const ider = [...(k.val || []), ...(k.rader || []), ...(k.varld || [])].map(x => x.id);
+    return ider.filter(i => /rida_nu/.test(i)).join(",") || "ingen"; });
+  prova("öppet fynd: «Rida nu» finns inte i kortet", (await ridaIKort()) === "ingen", await ridaIKort());
   await kortKlick(p, "svar:1");
   await vantaPa(p, () => document.getElementById("stegkort").dataset.kort === "stopp");
+  prova("stoppad häst: «Rida nu» finns inte i kortet", (await ridaIKort()) === "ingen", await ridaIKort());
   const d = await p.evaluate(() => ({ knappar: [...document.querySelectorAll("#stegkort button")].map(b => b.dataset.id),
     hast: G.hastId, pass: SPAR.pass }));
   prova("ingen frisk häst: ingen fortsättningsknapp, och ingen vilande häst delas ut",

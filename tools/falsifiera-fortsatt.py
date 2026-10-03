@@ -36,6 +36,8 @@ provet inte det den säger sig vakta.
   W3  stoppkortet visar en knapp även utan frisk häst
   W4  fortsättningen räknar dagen en gång till
   W5  ersättaren väljs ur rotationen utan undantag och utan vilande
+  W6  öppet fynd bär en Rida nu-handling
+  W7  stopp utan ersättare bär en Rida nu-handling
 
 KÖR DEN INTE MED OCOMMITTAT ARBETE. Originalen hålls i minnet och skrivs
 tillbaka i `finally`; skriptet slutar med att kontrollera att arbetsträdet
@@ -215,6 +217,14 @@ MUTATIONER = [
      "  if (!ny || ny === s.hastId || !sattAktivHast(ny)) return false;\n  skAterkoppla(\"\");",
      "  if (!ny || ny === s.hastId || !sattAktivHast(ny)) return false;\n  SPAR.pass++;\n  skAterkoppla(\"\");",
      kor_webb, "fortsattningen raknar dagen en gang till"),
+    ("W6", "stegkort",
+     "    return { id: \"fynd\", rubrik: tSpr(\"hud.du_hittade_nagot\"), text: skFyndText(s.fynd),",
+     "    return { id: \"fynd\", varld: [{ id: \"rad:rida_nu\" }], rubrik: tSpr(\"hud.du_hittade_nagot\"), text: skFyndText(s.fynd),",
+     kor_webb, "oppet fynd bar en Rida nu-handling"),
+    ("W7", "stegkort",
+     "      text: text + \" \" + tSpr(\"forb.stopp_ingen_frisk\"), val: [] };",
+     "      text: text + \" \" + tSpr(\"forb.stopp_ingen_frisk\"), val: [], varld: [{ id: \"rad:rida_nu\" }] };",
+     kor_webb, "stopp utan ersattare bar en Rida nu-handling"),
     ("W5", "stegkort",
      "  return tilldelaDagensHast(s.hastId) || null;\n}\nfunction stegkortFortsatt",
      "  return tilldelaLedig(tilldelningsId(), {}, {}, null) || null;\n}\nfunction stegkortFortsatt",
