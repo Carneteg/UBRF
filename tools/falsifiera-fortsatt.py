@@ -25,6 +25,11 @@ provet inte det den säger sig vakta.
   C2  panelen göms utom räckhåll trots knappen
   C3  knapp ritas även när ingen ersättare finns
   C4  klienten skickar med en egen hästpekare
+  Rida nu-fokus (klient-rida-fokus.spec)
+  F1  init.client frågar inte om valfärden äger fokus
+  F2  valfärdsfokus ignorerar stoppet
+  F3  valfärdsfokus ignorerar det öppna fyndet
+  F4  valfärdsfokus är alltid av
   Webb
   W1  «fortsätt» går att köra utan stopp (båda vakterna borta)
   W2  tilldelningen ignorerar undantaget
@@ -56,6 +61,7 @@ FILER = {
     "gs": "roblox/src/server/GameplayService.luau",
     "ss": "roblox/src/server/StallService.luau",
     "pc": "roblox/src/client/PreparationController.luau",
+    "ic": "roblox/src/client/init.client.luau",
     "stegkort": "src/stegkort.js",
     "uppdrag": "src/uppdrag.js",
 }
@@ -116,6 +122,7 @@ def kor_luau(spec):
 
 SERVER = kor_luau("ridefirst-fortsatt")
 KLIENT = kor_luau("klient-fortsatt")
+FOKUS = kor_luau("klient-rida-fokus")
 
 # (namn, fil, gammalt, nytt, korning, beskrivning)
 MUTATIONER = [
@@ -172,6 +179,22 @@ MUTATIONER = [
      '	skicka(FORTSATT_ID, "FortsattHast", nil)',
      '	skicka(FORTSATT_ID, "FortsattHast", nil, "annan_hast")',
      KLIENT, "klienten skickar med en egen hastpekare"),
+    ("F1", "ic",
+     "\tif PreparationController.valfardAgerFokus() then return false end\n",
+     "",
+     FOKUS, "Rida nu-kollen i init.client fragar inte om valfarden ager fokus"),
+    ("F2", "pc",
+     "\tif vy.stoppad ~= nil then return true end\n",
+     "",
+     FOKUS, "valfardsfokus ignorerar stoppet"),
+    ("F3", "pc",
+     "\treturn type(vy.svar) == \"table\" and #vy.svar > 0\nend\n\nfunction PreparationController.hastId",
+     "\treturn false\nend\n\nfunction PreparationController.hastId",
+     FOKUS, "valfardsfokus ignorerar det oppna fyndet"),
+    ("F4", "pc",
+     "\tif type(vy) ~= \"table\" then return false end\n\tif vy.stoppad ~= nil then return true end\n",
+     "\tdo return false end\n\tif vy.stoppad ~= nil then return true end\n",
+     FOKUS, "valfardsfokus ar alltid av"),
     ("W1", "stegkort",
      "  if (!s || !s.stoppad || typeof tilldelaDagensHast !== \"function\") return null;\n"
      "  return tilldelaDagensHast(s.hastId) || null;\n}\n"
