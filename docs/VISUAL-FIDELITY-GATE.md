@@ -104,8 +104,10 @@ var rent. Skiljer något sig är jobbet rött — paketet är då inte evidens.
 CI (`.github/workflows/visuell-grind.yml`) kör på varje PR från exakt headen:
 kameralista + Roblox-paritet, spatiala ankare, siktgrinden med negativ
 kontroll, screenshot-packet som artifact `screenshot-pack-<sha>`, och skriver
-EN PR-kommentar (uppdateras vid varje push) med **head-SHA, Netlify-preview
-för just den PR:n och länk till paketet**.
+EN PR-kommentar (uppdateras vid varje push) med **head-SHA, previewraden och
+länk till paketet**. Previewraden skriver ut att Vercel-previewn «saknas i
+automatiken» tills leverantören klistrar in den faktiska Vercel-URL:en för
+exakt den headen (§7) — automatiken konstruerar aldrig en länk.
 
 ## 3. Navigation / wall-occlusion gate
 
