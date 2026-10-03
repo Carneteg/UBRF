@@ -162,6 +162,9 @@ do
 	local ersId, ersNamn = GameplayService.ersattareFor(sp)
 	check("spelaren erbjuds en ersättare med namn", ersId ~= nil and ersNamn ~= nil,
 		tostring(ersId) .. " / " .. tostring(ersNamn))
+	check("och vyn till klienten bär hennes namn, så knappen kan heta något",
+		GameplayService._vyForProv(sp).ersattare == ersNamn,
+		tostring(GameplayService._vyForProv(sp).ersattare))
 	check("ersättaren är en annan häst än den stoppade", ersId ~= nil and ersId ~= JACK)
 	check("ersättaren är rotationens friska häst", ersId == FORVANTAD,
 		tostring(ersId) .. " förväntad " .. tostring(FORVANTAD))
@@ -236,6 +239,59 @@ do
 		StallService.hastIdFor(sp2) ~= JACK)
 end
 
+--[[ ══ 2b. UNDANTAGET HÅLLER ÄVEN UTAN SPARNING ══════════════════════
+	Vilan är sparad i fallen ovan, så provet kan inte skilja minnet från det
+	uttryckliga undantaget. Här vilar ingen: en NY spelare, och hästen hon har
+	är den som undantas. Faller sparningen efter ett stopp ser stallet ingen
+	vila — och ändå ska hon inte komma tillbaka. ]]
+print("\n── Undantaget håller även när ingen vila är sparad ──")
+
+do
+	local sp5, _, h5 = nySession("Undantag", UID + 4)
+	local ers = StallService.ersattare(sp5, h5)
+	check("ersättarfrågan ger en annan häst än den undantagna",
+		ers ~= nil and ers.id ~= h5, ers and ers.id or "nil")
+	for i = 1, 3 do
+		local d = StallService.tilldela(sp5, h5)
+		check(("tilldelning %d med undantag ger aldrig den undantagna"):format(i),
+			d ~= nil and d.id ~= h5, d and d.id or "nil")
+	end
+end
+
+--[[ ══ 2c. FORTSÄTTNINGEN SJÄLV HÅLLER UNDANTAGET ═══════════════════
+	Samma krav, men genom `fortsattMedAnnanHast` och med en rotation som
+	PEKAR på den stoppade: vilan hinner försvinna ur minnet (utlupen, eller
+	en sparning som föll) och Jack är då frisk i stallets ögon. Anropet ska
+	ändå inte ge honom tillbaka — det är `tilldela(player, undanta)` på
+	anropsplatsen som håller, inte bara minnet. ]]
+print("\n── Fortsättningen ger inte den stoppade tillbaka ens utan synlig vila ──")
+
+do
+	local UID6 = nil
+	for uid = 9600, 9900 do
+		local start = Stallet.dagensHast(uid, {}, {}, nil)
+		local rep = Stallet.dagensHast(uid, {}, { [JACK] = true }, nil)
+		if start and start.id == JACK and rep and Preparation.fyndFor(rep.id, 2) == nil then
+			UID6 = uid
+			break
+		end
+	end
+	check("förutsättning: en spelare vars rotation pekar på Jack finns", UID6 ~= nil)
+	local sp6 = nySession("Minnet", UID6)
+	local st6 = GameplayService.stateFor(sp6)
+	st6.fynd = fyndFor(JACK)
+	GameplayService.ridaNu(sp6)
+	GameplayService.svara(sp6, svar())
+	local save = SparService.save(sp6)
+	Sparning.raknaNerVila(save)
+	check("förutsättning: vilan syns inte längre i minnet",
+		not Stallet.vilarForSkada(Sparning.hastminnen(save)[JACK]))
+	local ok, skal, nyId = GameplayService.fortsattMedAnnanHast(sp6)
+	check("fortsättningen lyckas", ok == true, tostring(skal))
+	check("men den stoppade kommer inte tillbaka", nyId ~= nil and nyId ~= JACK
+		and StallService.hastIdFor(sp6) ~= JACK, tostring(nyId))
+end
+
 --[[ ══ 3. UTAN STOPP FINNS INGET ATT FORTSÄTTA FRÅN ══════════════════ ]]
 print("\n── Ingen fortsättning utan ett stopp ──")
 
@@ -263,6 +319,8 @@ do
 	local pass = Sparning.aktuelltPass(save)
 	check("hästen är stoppad", st.stoppad ~= nil)
 	check("ingen ersättare finns att erbjuda", GameplayService.ersattareFor(sp4) == nil)
+	check("och vyn bär inget `ersattare`-fält — ingen tom knapp",
+		GameplayService._vyForProv(sp4).ersattare == nil)
 	local ok, skal = GameplayService.fortsattMedAnnanHast(sp4)
 	check("fortsättningen nekar, och ingen vilande häst delas ut",
 		ok == false and StallService.hastIdFor(sp4) == h4 and skal ~= nil, tostring(skal))

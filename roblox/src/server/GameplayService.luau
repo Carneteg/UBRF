@@ -1725,6 +1725,12 @@ function GameplayService._stoppaForProv(player: Player, text: string)
 	if s then (s :: any).stoppad = text end
 end
 
+--[[ Provkrok (#274): vyn som klienten får, så att fältet `ersattare` — det
+	som bär namnet på stoppkortets knapp — kan mätas utan en riktig klient. ]]
+function GameplayService._vyForProv(player: Player)
+	return vyFor(player)
+end
+
 function GameplayService.farSittaUpp(player: Player, modell: Model): (boolean, string?, string?)
 	local s = state[player]
 	--[[ Krav 6 och 7 avgörs av regeln, inte här. Kvar i tjänsten är bara

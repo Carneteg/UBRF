@@ -396,6 +396,15 @@ console.log("\n── #274: efter stoppet får spelaren en frisk häst och kan r
   prova("förutsättning: ett fynddagspass med fyndfri ersättare finns", !!f, JSON.stringify(f));
   const { ctx, p } = await medProfil({ ...bas274, pass: f.q });
   const h = await p.evaluate(() => G.hastId);
+  /* Utan stopp finns inget att fortsätta från: ingen ersättare, inget byte —
+     och undantaget håller utan att någon vila är sparad. */
+  const utanStopp = await p.evaluate(() => ({ svar: stegkortFortsatt(), hast: G.hastId, pass: SPAR.pass,
+    ers: stegkortErsattare(), annan: tilldelaDagensHast(G.hastId) }));
+  prova("utan stopp byter «fortsätt» ingen häst och räknar ingen dag",
+    utanStopp.svar === false && utanStopp.hast === h && utanStopp.pass === f.q && utanStopp.ers === null,
+    JSON.stringify(utanStopp));
+  prova("undantaget håller utan sparad vila: tilldelningen ger aldrig den undantagna",
+    !!utanStopp.annan && utanStopp.annan !== h, `${h} → ${utanStopp.annan}`);
   await tillBoxen(p);
   await kortKlick(p, "start:rida_nu");
   await vantaPa(p, () => document.getElementById("stegkort").dataset.kort === "fynd");
