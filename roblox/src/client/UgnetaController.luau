@@ -59,8 +59,28 @@ local TouchControls = require(script.Parent.TouchControls)
 --[[ #244: undervisningens text bor här numera. Modulen ritar bara det den
      får — orden kommer fortfarande ur katalogen och kanonen. ]]
 local CoachBanner = require(script.Parent.CoachBanner)
+--[[ C2: spelarens textinställningar (docs/INSTRUCTOR-TEXT-CONTROLS-CONTRACT.md). ]]
+local Installning = require(script.Parent.LararInstallning)
 
 local UgnetaController = {}
+local lektionsVal: (() -> any)? = nil
+
+-- Explicit panel choices do not participate in help-to-continue or vantarPa.
+--[[ Val TILL FOTS (ledningslektionen): används bara när ingen ridlektions-
+	panel är installerad. Samma sammansättning som ridlektionens val. ]]
+local fotVal: (() -> any)? = nil
+function UgnetaController.satFotVal(fn: (() -> any)?)
+	fotVal = fn
+end
+local function lektionsExtra(): any
+	if lektionsVal then return lektionsVal() end
+	if fotVal then return fotVal() end
+	return nil
+end
+
+function UgnetaController.satLektionsVal(fn: (() -> any)?)
+	lektionsVal = fn
+end
 
 local player = Players.LocalPlayer
 
@@ -168,6 +188,26 @@ local flaggSv: Frame? = nil
 local flaggEn: Frame? = nil
 local flaggNamn: TextLabel? = nil
 local sprakKoppling: (() -> ())? = nil
+--[[ C2: inställningarnas prenumeration (en, som språkets) och ytan för dem. ]]
+local installKoppling: (() -> ())? = nil
+local installKnapp: TextButton? = nil
+local installYta: Frame? = nil
+local installOppen = false
+local installRubriker: { { etikett: TextLabel, nyckel: string } } = {}
+local installVal: { { knapp: TextButton, grupp: string, varde: string, nyckel: string } } = {}
+local installKlar: TextButton? = nil
+--[[ "Färre": var ANDRA kommentar som når `live` släpps. Räknaren börjar om
+     när valet ändras. Ingen kö — en släppt kommentar är borta. ]]
+local farreRaknare = 0
+--[[ R1: räknaren börjar om bara när KOMMENTARSVALET ändras — de två valen
+     är oberoende, så ett byte av textdetalj rör den inte. ]]
+local senasteKommentarer = Installning.kommentarer()
+--[[ R1: TIPSRADEN ÄR BUNDEN TILL SIN KONTROLL. Flaggan och textknappen
+     delar raden; `tipsKalla` säger vems den är ("sprak" | "installning"),
+     och ritningen skriver den kontrollens text på det språk som gäller.
+     En kontroll som lämnas döljer bara raden om den fortfarande är dess. ]]
+local tipsKalla: string? = nil
+local TIPS_NYCKEL = { sprak = "sprak.byt", installning = "installning.tips" }
 local ritKoppling: RBXScriptConnection? = nil
 --[[ Senaste beskedets BYGGARE: den ger rubrik, punkter och knapptext på
      det språk som gäller när den körs. Nil när inget besked finns. ]]
@@ -182,6 +222,15 @@ local lektionSteg = -math.huge
 
 local LARARE_BREDD = 280
 local LARARE_TOPP = 8
+--[[ UI-2 (docs/P2-UGNETA-INSTRUCTION-CONTRACT.md § 3): med en värd bor
+     ytan ÖVERST I VÄRDENS PANEL — Ugneta instruerar, handlingarna står
+     under. Ägarskapet stannar här (titel, flagga, Text, meddelande); bara
+     platsen flyttar. `dockMal` minns värden även om ytan byggs senare. ]]
+local dockMal: Instance? = nil
+local dockOrdning = 0
+--[[ Ugnetas instruktion till fots, från värden. Sist i meddelandets
+     ordning: lektion, kommentar och coachning går före. ]]
+local instruktion: string? = nil
 --[[ Spelarlistan i Roblox högra hörn: ytan lägger sig till vänster om den
      när den är på, i stället för att täcka den. ]]
 local SPELARLISTA_B = 190
@@ -357,6 +406,133 @@ local function vaxlaSprak()
 	end)
 end
 
+local vaxlaInstallning: () -> ()
+
+--[[ ── C2: TEXTINSTÄLLNINGARNA, INNE I UGNETAS YTA ──────────────────────
+	Ingen ny HUD och ingen panelrad: ett litet område under meddelandet,
+	öppnat av textknappen i huvudet. Två grupper vanliga knappar; det valda
+	är fyllt guld. `ritaInstallning` skriver texter och valt läge på det
+	språk som gäller. ]]
+local FARG_KNAPP = Color3.fromRGB(38, 41, 47)
+local FARG_MORKTEXT = Color3.fromRGB(23, 20, 10)
+
+local function ritaInstallning()
+	local ik = installKnapp
+	if ik then
+		ik.Text = Sprak.t("installning.knapp")
+		ik.BackgroundColor3 = if installOppen then FARG_GULD else FARG_KNAPP
+		ik.TextColor3 = if installOppen then FARG_MORKTEXT else FARG_TEXT
+	end
+	local y = installYta
+	if y then y.Visible = installOppen end
+	for _, r in installRubriker do r.etikett.Text = Sprak.t(r.nyckel) end
+	for _, v in installVal do
+		local nu = if v.grupp == "kommentarer" then Installning.kommentarer() else Installning.detalj()
+		local vald = nu == v.varde
+		v.knapp.Text = Sprak.t(v.nyckel)
+		v.knapp.BackgroundColor3 = if vald then FARG_GULD else FARG_KNAPP
+		v.knapp.TextColor3 = if vald then FARG_MORKTEXT else FARG_TEXT
+		v.knapp.Font = if vald then Enum.Font.GothamBold else Enum.Font.GothamMedium
+		v.knapp:SetAttribute("Vald", vald)
+	end
+	local kl = installKlar
+	if kl then kl.Text = Sprak.t("installning.klar") end
+end
+
+vaxlaInstallning = function()
+	installOppen = not installOppen
+	ritaInstallning()
+end
+
+local function byggInstallning(l: Frame)
+	local y = Instance.new("Frame")
+	y.Name = "Installningar"
+	y.BackgroundTransparency = 1
+	y.Size = UDim2.new(1, -4, 0, 0)
+	y.AutomaticSize = Enum.AutomaticSize.Y
+	y.LayoutOrder = 4
+	y.Visible = false
+	local lista = Instance.new("UIListLayout")
+	lista.FillDirection = Enum.FillDirection.Vertical
+	lista.SortOrder = Enum.SortOrder.LayoutOrder
+	lista.Padding = UDim.new(0, 4)
+	lista.Parent = y
+	installRubriker, installVal = {}, {}
+	local ordning = 0
+	local function rubrik(nyckel: string)
+		ordning += 1
+		local e = Instance.new("TextLabel")
+		-- Inte "Rubrik": det namnet hör till den rivna nederpanelen (kolla-nederpanel.py).
+		e.Name = "InstallRubrik"
+		e.BackgroundTransparency = 1
+		e.Size = UDim2.new(1, 0, 0, 18)
+		e.Font = Enum.Font.GothamBold
+		e.TextSize = 13
+		e.TextColor3 = FARG_GULD
+		e.TextXAlignment = Enum.TextXAlignment.Left
+		e.LayoutOrder = ordning
+		e.Parent = y
+		table.insert(installRubriker, { etikett = e, nyckel = nyckel })
+	end
+	local function grupp(namn: string, varden: { string }, satt: (string) -> boolean)
+		ordning += 1
+		local rad = Instance.new("Frame")
+		rad.Name = "Grupp_" .. namn
+		rad.BackgroundTransparency = 1
+		rad.Size = UDim2.new(1, 0, 0, 44)
+		rad.LayoutOrder = ordning
+		local rl = Instance.new("UIListLayout")
+		rl.FillDirection = Enum.FillDirection.Horizontal
+		rl.SortOrder = Enum.SortOrder.LayoutOrder
+		rl.Padding = UDim.new(0, 4)
+		rl.Parent = rad
+		for i, varde in varden do
+			local k = Instance.new("TextButton")
+			k.Name = "Val_" .. varde
+			k.LayoutOrder = i
+			k.Size = UDim2.new(1 / #varden, -4, 0, 44)
+			k.AutoButtonColor = true
+			k.Selectable = true
+			k.TextSize = 13
+			k.TextWrapped = true
+			k.ZIndex = 6
+			local h = Instance.new("UICorner")
+			h.CornerRadius = UDim.new(0, 6)
+			h.Parent = k
+			k.Parent = rad
+			k.Activated:Connect(function() satt(varde) end)
+			table.insert(installVal, { knapp = k, grupp = namn, varde = varde,
+				nyckel = "installning." .. namn .. "." .. varde })
+		end
+		rad.Parent = y
+	end
+	rubrik("installning.rubrik_kommentarer")
+	grupp("kommentarer", { "normal", "farre", "inga" }, Installning.satKommentarer)
+	rubrik("installning.rubrik_detalj")
+	grupp("detalj", { "detaljerad", "kort" }, Installning.satDetalj)
+	ordning += 1
+	local kl = Instance.new("TextButton")
+	kl.Name = "Klar"
+	kl.LayoutOrder = ordning
+	kl.Size = UDim2.new(1, 0, 0, 44)
+	kl.AutoButtonColor = true
+	kl.Selectable = true
+	kl.BackgroundColor3 = Color3.fromRGB(60, 72, 68)
+	kl.TextColor3 = FARG_TEXT
+	kl.Font = Enum.Font.GothamBold
+	kl.TextSize = 13
+	kl.ZIndex = 6
+	local klh = Instance.new("UICorner")
+	klh.CornerRadius = UDim.new(0, 6)
+	klh.Parent = kl
+	kl.Parent = y
+	kl.Activated:Connect(function() installOppen = false; ritaInstallning() end)
+	installKlar = kl
+	y.Parent = l
+	installYta = y
+	ritaInstallning()
+end
+
 local function byggLarare(g: ScreenGui)
 	local d = Instance.new("Frame")
 	d.Name = "Dolt"
@@ -402,9 +578,16 @@ local function byggLarare(g: ScreenGui)
 	local t = Instance.new("TextLabel")
 	t.Name = "Titel"
 	t.BackgroundTransparency = 1
-	t.Size = UDim2.new(1, -118, 1, 0)
+	--[[ C2: huvudet bär nu också textknappen (52 px) bredvid flaggan; titeln
+	     skalas ner hellre än att knuffa någon av dem. ]]
+	t.Size = UDim2.new(1, -176, 1, 0)
 	t.Font = Enum.Font.GothamBold
 	t.TextSize = 14
+	t.TextScaled = true
+	local tStorlek = Instance.new("UITextSizeConstraint")
+	tStorlek.MaxTextSize = 14
+	tStorlek.MinTextSize = 9
+	tStorlek.Parent = t
 	t.TextColor3 = FARG_GULD
 	t.TextXAlignment = Enum.TextXAlignment.Left
 	t.TextWrapped = true
@@ -469,10 +652,47 @@ local function byggLarare(g: ScreenGui)
 	tips.LayoutOrder = 2
 	tips.Parent = l
 	lararTips = tips
-	k.MouseEnter:Connect(function() tips.Text = Sprak.t("sprak.byt"); tips.Visible = true end)
-	k.MouseLeave:Connect(function() tips.Visible = false end)
-	k.SelectionGained:Connect(function() tips.Text = Sprak.t("sprak.byt"); tips.Visible = true end)
-	k.SelectionLost:Connect(function() tips.Visible = false end)
+	local function visaTips(kalla: string)
+		tipsKalla = kalla
+		tips.Text = Sprak.t(TIPS_NYCKEL[kalla])
+		tips.Visible = true
+	end
+	local function doljTips(kalla: string)
+		if tipsKalla ~= kalla then return end
+		tipsKalla = nil
+		tips.Visible = false
+	end
+	k.MouseEnter:Connect(function() visaTips("sprak") end)
+	k.MouseLeave:Connect(function() doljTips("sprak") end)
+	k.SelectionGained:Connect(function() visaTips("sprak") end)
+	k.SelectionLost:Connect(function() doljTips("sprak") end)
+
+	--[[ C2: TEXTKNAPPEN, till vänster om flaggan. Samma träffyta (44 px hög),
+	     fokuserbar, och samma tipsrad som flaggan. ]]
+	local ik = Instance.new("TextButton")
+	ik.Name = "TextInstallning"
+	ik.AnchorPoint = Vector2.new(1, 0)
+	ik.Position = UDim2.new(1, -118, 0, 0)
+	ik.Size = UDim2.fromOffset(52, 44)
+	ik.BackgroundColor3 = Color3.fromRGB(38, 41, 47)
+	ik.BackgroundTransparency = 0.2
+	ik.AutoButtonColor = true
+	ik.Selectable = true
+	ik.Font = Enum.Font.GothamMedium
+	ik.TextSize = 14
+	ik.TextColor3 = FARG_TEXT
+	ik.Text = Sprak.t("installning.knapp")
+	ik.ZIndex = 6
+	local ikh = Instance.new("UICorner")
+	ikh.CornerRadius = UDim.new(0, 6)
+	ikh.Parent = ik
+	ik.Parent = huvud
+	ik.Activated:Connect(function() vaxlaInstallning() end)
+	ik.MouseEnter:Connect(function() visaTips("installning") end)
+	ik.MouseLeave:Connect(function() doljTips("installning") end)
+	ik.SelectionGained:Connect(function() visaTips("installning") end)
+	ik.SelectionLost:Connect(function() doljTips("installning") end)
+	installKnapp = ik
 
 	local m = Instance.new("TextLabel")
 	m.Name = "Meddelande"
@@ -490,13 +710,19 @@ local function byggLarare(g: ScreenGui)
 	m.Parent = l
 	lararText = m
 
+	byggInstallning(l)
+
 	l.Parent = g
 	larare = l
+	if dockMal then UgnetaController.dockaLarare(dockMal, dockOrdning) end
 end
+
+
 
 --[[ Framåtdeklarerade: bygget kopplar dem, de definieras nedanför. ]]
 local sprakBytt: () -> ()
 local vardLage: () -> ()
+local installningBytt: () -> ()
 
 local function bygg()
 	if gui then return end
@@ -678,6 +904,10 @@ local function bygg()
 	     här och rivs i `Destroy`-vägen nedan. ]]
 	if sprakKoppling then sprakKoppling() end
 	sprakKoppling = Sprak.vidByte(function() sprakBytt() end)
+	--[[ C2: EN prenumeration på inställningarna, som språkets: kopplas från
+	     innan den kopplas igen, så ett nytt bygge aldrig lägger till en. ]]
+	if installKoppling then installKoppling() end
+	installKoppling = Installning.vidByte(function() installningBytt() end)
 	vardLage()
 end
 
@@ -750,11 +980,31 @@ local function liveTextNu(): string?
 	return nil
 end
 
+--[[ C2: SAMMA BESLUT för varje valfri kommentar (live-chipet och lektionens
+	starthälsning): Normalt släpper igenom, Färre släpper var andra (den
+	delade räknaren), Inga släpper ingenting. Anropas EN gång per kommentar
+	som annars hade visats; ett nej är en förbrukad kommentar, ingen kö. ]]
+function UgnetaController.valfriKommentar(): boolean
+	local lage = Installning.kommentarer()
+	if lage == "inga" then return false end
+	if lage == "farre" then
+		farreRaknare += 1
+		if farreRaknare % 2 == 0 then return false end
+	end
+	return true
+end
+
 function UgnetaController.live(txt: string, bra: boolean, nyckel: string?, args: { any }?)
+	local visad = if nyckel then Sprak.t(nyckel, table.unpack(args or {})) else txt
+	if visad == "" then return end
+	--[[ C2: spelarens val för de VALFRIA kommentarerna. Grinden sitter här,
+	     vid visningen: `UgnetaTema` har redan valt tema, räknat mönstret och
+	     satt sin spärr — inget av det ändras. En släppt kommentar köas inte
+	     och visas aldrig senare. ]]
+	if not UgnetaController.valfriKommentar() then return end
 	liveNyckelNu = nyckel
 	liveArgsNu = args or {}
-	if nyckel then txt = liveTextNu() or txt end
-	if txt == "" then return end
+	txt = visad
 	bygg()
 	local c = chip
 	if not c then return end
@@ -905,7 +1155,7 @@ end
 --[[ Efter ett försök. `fore` är nil på första försöket. Observationerna
 	kommer ur HorseCore/Ugneta — samma rangordning som webben. ]]
 function UgnetaController.efterForsok(ovningId: string, nu: { [string]: number },
-	fore: { [string]: number }?, forsokNr: number, kanSeRitten: boolean?)
+	fore: { [string]: number }?, forsokNr: number, kanSeRitten: boolean?, sekunder: number?)
 	local obs = Ugneta.observationer(ovningId, nu, fore)
 	local forsta = fore == nil
 	--[[ #264: beskedet är en BYGGARE, så att ett språkbyte kan skriva om det
@@ -929,7 +1179,14 @@ function UgnetaController.efterForsok(ovningId: string, nu: { [string]: number }
 		--[[ "Se ritten" bara när det FINNS en inspelning av försöket, och
 		     "Gå vidare" bara efter första försöket — efter det sista är
 		     huvudknappen redan vägen vidare. ]]
-		return (if forsta then Sprak.t("ugneta.prova_igen") else Sprak.t("ugneta.forsok", forsokNr)),
+		--[[ C3 alternativ A (docs/FREE-PRACTICE-FRAMING-CONTRACT.md): rubriken säger vad
+			som hände — rundan tog slut på tiden — i stället för "Prova igen"/"Försök N",
+			som läste som ett besked om övningen. Sekunderna kommer från passets klocka
+			(`Lektion.FORSOK_SEK`, via anroparen); saknas de hittas inget tal på. ]]
+		local rubrik = if type(sekunder) == "number" and sekunder == sekunder and sekunder > 0
+			then Sprak.t("ugneta.runda_slut", forsokNr, sekunder)
+			else Sprak.t("ugneta.runda_slut_kort", forsokNr)
+		return rubrik,
 			punkter, true,
 			(if forsta then Sprak.t("ugneta.prova_igen") else Sprak.t("ugneta.nasta_ovning")),
 			kanSeRitten == true, forsta
@@ -1050,6 +1307,8 @@ end
 	  4. ridraden utanför lektionen (nyckel + argument, översätts vid ritning).
 	Uppgiftens nej står INTE här: det hör till handlingen, i panelen. ]]
 local function lararMeddelande(): string?
+	local extra = lektionsExtra()
+	if extra and extra.ersatt then return extra.text end
 	local c = chip
 	--[[ Kommentaren slogs upp ur sin nyckel när den kom, på det språk som
 	     gällde då; ett språkbyte släcker den (`sprakBytt`), så den står
@@ -1074,6 +1333,9 @@ local function lararMeddelande(): string?
 	if radNyckel and os.clock() - radTid < RAD_FARSK then
 		return Sprak.t(radNyckel, table.unpack(radArgs))
 	end
+	--[[ UI-2: till fots står värdens instruktion för steget här — sist,
+	     så att en lektion, en kommentar eller coachningen alltid går före. ]]
+	if instruktion and dockMal then return instruktion end
 	return nil
 end
 
@@ -1086,8 +1348,14 @@ local function ritaLarare()
 	if flaggSv then flaggSv.Visible = sv end
 	if flaggEn then flaggEn.Visible = not sv end
 	if flaggNamn then flaggNamn.Text = Sprak.t("sprak.nuvarande") end
+	ritaInstallning()
 	local tips = lararTips
-	if tips and tips.Visible then tips.Text = Sprak.t("sprak.byt") end
+	--[[ R1: raden skrivs om för den kontroll den hör till, aldrig som
+	     flaggans text av bara farten. ]]
+	if tips and tips.Visible then
+		local n = tipsKalla and TIPS_NYCKEL[tipsKalla]
+		if n then tips.Text = Sprak.t(n) end
+	end
 	--[[ Spelarlistan i högra hörnet: lägg ytan till vänster om den. ]]
 	local hoger = 16
 	pcall(function()
@@ -1100,7 +1368,8 @@ local function ritaLarare()
 		local inset = game:GetService("GuiService"):GetGuiInset()
 		topp = inset.Y + LARARE_TOPP
 	end)
-	l.Position = UDim2.new(1, -hoger, 0, topp)
+	--[[ Dockad (UI-2) äger panelen placeringen. ]]
+	if not dockMal then l.Position = UDim2.new(1, -hoger, 0, topp) end
 	local m = lararText
 	if m then
 		local txt = lararMeddelande()
@@ -1128,6 +1397,63 @@ vardLage = function()
 	ritaLarare()
 end
 
+--[[ UI-2: lägg Ugnetas yta överst i värdens panel (`forälder` med en
+     UIListLayout), eller — med nil — tillbaka uppe till höger. Dockad tar
+     panelen hela bredden och placeringen; `ritaLarare` rör då inte
+     positionen. ]]
+function UgnetaController.dockaLarare(foralder: Instance?, ordning: number?)
+	dockMal = foralder
+	dockOrdning = ordning or 0
+	local l = larare
+	if not l then return end
+	if foralder then
+		l.AnchorPoint = Vector2.new(0, 0)
+		l.Position = UDim2.new(0, 0, 0, 0)
+		l.Size = UDim2.new(1, 0, 0, 0)
+		l.LayoutOrder = dockOrdning
+		l.BackgroundTransparency = 0.15
+		--[[ #274: ett eget, guldkantat kort — skilt från statuskortet under. ]]
+		local ram = l:FindFirstChild("KortKant")
+		if not ram then
+			ram = Instance.new("UIStroke")
+			ram.Name = "KortKant"
+			ram.Color = FARG_GULD
+			ram.Thickness = 1.5
+			ram.Transparency = 0.35
+		end
+		ram.Parent = l
+		l.Parent = foralder
+	else
+		l.AnchorPoint = Vector2.new(1, 0)
+		l.Size = UDim2.fromOffset(LARARE_BREDD, 0)
+		l.BackgroundTransparency = 0.3
+		local kant = l:FindFirstChild("KortKant")
+		if kant then kant.Parent = nil end
+		if gui then l.Parent = gui end
+	end
+	ritaLarare()
+end
+
+--[[ UI-2: ytan själv, för värdens platsbudget (nil innan den byggts). ]]
+function UgnetaController.lararRam(): Frame?
+	return larare
+end
+
+--[[ UI-2: värdens instruktion för steget till fots (nil släcker). ]]
+function UgnetaController.satInstruktion(text: string?)
+	instruktion = if text ~= nil and text ~= "" then text else nil
+	ritaLarare()
+end
+
+--[[ Står värdens instruktion i Ugnetas yta just nu? Då ska värden inte
+     visa den en gång till. Falskt när ytan inte är byggd eller synlig, när
+     den inte är dockad, och när något högre i ordningen talar. ]]
+function UgnetaController.visarInstruktion(): boolean
+	local l, m = larare, lararText
+	return instruktion ~= nil and l ~= nil and l.Visible and dockMal ~= nil
+		and m ~= nil and m.Visible and m.Text == instruktion
+end
+
 --[[ SPRÅKET BYTTES: skriv om det som står, på plats.
 	  · chipet är en kortlivad kommentar på det gamla språket — släcks,
 	  · knapparnas egna texter skrivs om,
@@ -1136,6 +1462,26 @@ end
 	    kvar (bannern uppe eller övningen i etiketterna) skrivs den om utan
 	    att visas igen eller få ny tid — inget går vidare, inget visas två
 	    gånger. ]]
+--[[ C2: EN INSTÄLLNING ÄNDRADES. "Inga" släcker ett synligt chip (och
+	därmed dess spegling i ytan och panelen). Allt ritas om på plats; inget
+	besked visas igen, inget val väcks och ingenting spelas upp i efterhand. ]]
+installningBytt = function()
+	local nu = Installning.kommentarer()
+	if nu ~= senasteKommentarer then
+		senasteKommentarer = nu
+		farreRaknare = 0
+	end
+	if Installning.kommentarer() == "inga" then
+		local c = chip
+		if c then c.Visible = false end
+		liveTid = 0
+		liveSagt = ""
+	end
+	ritaInstallning()
+	ritaLarare()
+	if vard then vard() end
+end
+
 sprakBytt = function()
 	local c = chip
 	if c then c.Visible = false end
@@ -1180,7 +1526,31 @@ function UgnetaController._larare(): { [string]: any }
 		en = flaggEn ~= nil and flaggEn.Visible,
 		knapp = flaggKnapp,
 		ram = l,
+		dockad = dockMal ~= nil,
+		instruktion = instruktion,
 	}
+end
+
+--[[ Provets fönster in: textinställningarnas yta och deras valda läge. ]]
+function UgnetaController._installning(): { [string]: any }
+	local val = {}
+	for _, v in installVal do
+		table.insert(val, { grupp = v.grupp, varde = v.varde, text = v.knapp.Text,
+			vald = v.knapp:GetAttribute("Vald") == true, knapp = v.knapp })
+	end
+	return { oppen = installOppen, synlig = installYta ~= nil and installYta.Visible,
+		knapp = installKnapp, klar = installKlar, val = val }
+end
+
+function UgnetaController._vaxlaInstallning()
+	vaxlaInstallning()
+end
+
+--[[ Provets fönster in: tipsraden och vems den är. ]]
+function UgnetaController._tips(): { [string]: any }
+	local t = lararTips
+	return { synlig = t ~= nil and t.Visible, text = if t then t.Text else "", kalla = tipsKalla,
+		flagga = flaggKnapp, installning = installKnapp }
 end
 
 function UgnetaController._vaxlaSprak()
@@ -1228,11 +1598,22 @@ end
 	(`satVard`) är den egna ytan släckt; elementens eget tillstånd, och alltså
 	varje prov som läser det, är orört. ]]
 function UgnetaController.satVard(fn: (() -> ())?)
+	--[[ UI-2: en värd som släpper (Naromrade.stopp) river sin panel strax
+	     efter. Ytan är dockad i den panelen och skulle rivas med — ta
+	     tillbaka den INNAN, så att nästa värd kan docka samma yta. ]]
+	if fn == nil and dockMal ~= nil then UgnetaController.dockaLarare(nil) end
 	vard = fn
 	vardLage()
 end
 
-function UgnetaController.panel(): any
+--[[ `kapacitet` (R1, #264): hur många val den som RENDERAR visar
+	(Naromrades MAX_VAL). Ryms inte Ugnetas egna kortknappar plus lektionens
+	val, och lektionen erbjuder en `kompakt` lista, används den i stället —
+	så att lektionsvalet alltid går att nå bredvid 0..3 kortknappar, utan att
+	kortknapparna trängs undan. Utan kapacitet: oförändrat. ]]
+function UgnetaController.panel(kapacitet: number?): any
+	local extra = lektionsExtra()
+	if extra and extra.ersatt then return extra end
 	local knappar = {}
 	local v = valrad
 	if v and v.Visible then
@@ -1265,6 +1646,11 @@ function UgnetaController.panel(): any
 	     visar den så länge lektionen pågår. ]]
 	local m, d = CoachBanner.text()
 	local ovning = if m ~= "" and d ~= "" then (m .. " — " .. d) else (m .. d)
+	if extra then
+		local lista = extra.knappar or {}
+		if kapacitet and extra.kompakt and #knappar + #lista > kapacitet then lista = extra.kompakt end
+		for _, k in ipairs(lista) do table.insert(knappar, k) end
+	end
 	return { text = text, knappar = knappar, vantar = vantarPa, ovning = ovning }
 end
 

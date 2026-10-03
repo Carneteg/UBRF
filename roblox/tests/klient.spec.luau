@@ -154,6 +154,27 @@ pass = LektionController.pass()
 prova("efter försök 1 kommer beskedet, utan att provet rört controllern",
 	CoachBanner.synlig() == true and hitta("Val").Visible == true,
 	("(%s)"):format(lararytaLage()))
+--[[ C3 alternativ A (docs/FREE-PRACTICE-FRAMING-CONTRACT.md): genom den RIKTIGA
+	controllern — rubriken säger att rundan tog slut på passets klocka. ]]
+do
+	local mal = CoachBanner.text()
+	prova("rundans rubrik säger runda 1 och passets sekunder, genom riktiga LektionController",
+		mal == CoachBanner.versaler(Sprak.t("ugneta.runda_slut", 1, Lektion.FORSOK_SEK)),
+		('("%s")'):format(mal))
+	--[[ CHATGPT_C3_OPTION_A_CONTRACT_ACCEPTED: rubriken får inte återanvända något
+		som kan läsas som klarad uppgift eller godkännande — inte heller den gamla
+		lektionsramen — på något av språken. ]]
+	local forbjudet = {}
+	for _, sprak in ipairs({ "sv", "en" }) do
+		local m = CoachBanner.versaler(Sprak.iSprak(sprak, "ugneta.runda_slut", 1, Lektion.FORSOK_SEK))
+		for _, ord in ipairs({ "KLAR", "GODK", "LEKTION", "PROVA IGEN", "FÖRSÖK", "DONE", "PASS",
+			"COMPLETE", "LESSON", "ATTEMPT", "TRY AGAIN" }) do
+			if string.find(m, ord, 1, true) then table.insert(forbjudet, sprak .. ":" .. ord) end
+		end
+	end
+	prova("rundans rubrik bär inga ord för klarad/godkänd eller den gamla lektionsramen (sv, en)",
+		#forbjudet == 0, ('(%s)'):format(table.concat(forbjudet, " ")))
+end
 prova("med en tryckbar Prova igen",
 	knapp ~= nil and knapp.Visible == true
 		and string.find(knapp.Text, "Prova igen", 1, true) ~= nil,
@@ -580,17 +601,21 @@ do
 		do
 			local kn = hitta("UgnetaKnapp") or hitta("Knapp")
 			local txt = kn and kn.Text or ""
-			prova("kortets knapp förklarar att den startar lektionen",
-				txt:find(Sprak.iSprak("sv", "ugneta.borja_lektionen"), 1, true) ~= nil,
+			--[[ C3 alternativ A (docs/FREE-PRACTICE-FRAMING-CONTRACT.md): passet är fri
+				träning i rundor på passets egen klocka — knappen säger det. ]]
+			prova("kortets knapp säger fri träning i rundor på passets klocka",
+				txt:find(Sprak.iSprak("sv", "ugneta.borja_fri_traning", Lektion.FORSOK_SEK), 1, true) ~= nil
+				and txt:find("22", 1, true) ~= nil and not txt:find("lektionen", 1, true),
 				('("%s")'):format(txt))
 
 			--[[ …och på engelska. Samma mätning, andra locale — annars är
 				det bara en svensk konstant som råkar stämma. ]]
 			local fore = Sprak.eget()
 			Sprak.satLocale("en-us")
-			local en = Sprak.t("ugneta.borja_lektionen")
+			local en = Sprak.t("ugneta.borja_fri_traning", Lektion.FORSOK_SEK)
 			prova("och samma knapp finns på engelska",
-				en == "Continue to start the lesson" and en ~= Sprak.iSprak("sv", "ugneta.borja_lektionen"),
+				en == "Start free practice – 22 s rounds"
+					and en ~= Sprak.iSprak("sv", "ugneta.borja_fri_traning", Lektion.FORSOK_SEK),
 				('("%s")'):format(en))
 			Sprak.satLocale(fore)
 		end

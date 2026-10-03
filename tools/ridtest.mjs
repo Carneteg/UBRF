@@ -299,8 +299,15 @@ const hj = await page.evaluate(() => {
       kontakt: G.ride.skala.kontakt, gangart: G.ride.gangart,
       stod: G.telemetri.hjalper.ytterstod,
       inner: G.telemetri.hjalper.innerTygel, ytter: G.telemetri.hjalper.ytterTygel }; };
+  /* #273 T4 (granskning R1): yttertygeln i rakriktningen är en AVANCERAD
+     hjälp. Mekaniken mäts med kravet påslaget; grundläget mäts för sig. */
+  const kravFore = SVAR_KANON.HJALP_KRAV;
+  ut.grundLos = volt(0); ut.grundBuren = volt(0.5);
+  SVAR_KANON.HJALP_KRAV = 1;
   ut.los = volt(0);
   ut.buren = volt(0.5);
+  SVAR_KANON.HJALP_KRAV = kravFore;
+  ut.krav = kravFore;
 
   ut.dublett = { kanon: HJALP_KANON.TYGEL_NEUTRAL, modell: K.TYGEL_NEUTRAL,
     styr: HJALP_KANON.STYR_FULLT, styrMal: (() => { RIDIN.styr = 1; ridAvsiktTillHjalp();
@@ -337,6 +344,14 @@ prova("yttertygeln bär svängen: buren volt ger bättre rakriktning än lös",
   `(+${((hj.buren.rak / hj.los.rak - 1) * 100).toFixed(1)} %) trots schvung ` +
   `${hj.los.schvung.toFixed(3)} → ${hj.buren.schvung.toFixed(3)} och kontakt ` +
   `${hj.los.kontakt.toFixed(3)} → ${hj.buren.kontakt.toFixed(3)}, båda i ${hj.buren.gangart}`);
+/* Med kravet 0 är stödtermen neutral. Då vänder ordningen, precis som
+   kommentaren ovan förutsäger: den lösa volten har högre schvung och
+   kontakt, och inget dras längre av för den utelämnade yttertygeln. */
+prova("#273 T4: i grundridningen sänks inte rakriktningen av utelämnad yttertygel",
+  hj.krav === 0 && hj.grundLos.rak >= hj.grundBuren.rak && hj.grundLos.rak > hj.los.rak + 0.02
+    && hj.grundLos.stod <= 0.45,
+  `lös tygel: ${hj.grundLos.rak.toFixed(3)} i grundläget mot ${hj.los.rak.toFixed(3)} med kravet påslaget ` +
+  `(stöd ${hj.grundLos.stod.toFixed(2)}) · kontakten kvar: ${hj.grundBuren.rak.toFixed(3)}`);
 prova("hjälpkanonen och modellen delar tal i stället för att spegla dem",
   hj.dublett.kanon === hj.dublett.modell &&
   Math.abs(hj.dublett.styr - hj.dublett.styrMal) < 1e-9,
@@ -464,10 +479,24 @@ const svar = await page.evaluate(() => {
     kor({ skankel: 0.55, tygel }, 12);
     iSvang.efterRakt = G.ride.balans;
     return iSvang; };
+  /* #273 T4: I GRUNDRIDNINGEN är yttertygeln inte ett krav (HJALP_KRAV 0).
+     Mekaniken finns kvar och mäts med kravet påslaget; grundläget mäts
+     för sig, och ska ge samma balans och samma båge med och utan tygel. */
+  ut.krav = SVAR_KANON.HJALP_KRAV;
+  ut.grundLos = volt(0);
+  ut.grundBuren = volt(0.5);
+  SVAR_KANON.HJALP_KRAV = 1;
   ut.los = volt(0);
   ut.buren = volt(0.5);
+  SVAR_KANON.HJALP_KRAV = ut.krav;
   return ut;
 });
+prova("#273 T4: utan tygel ingen balansförlust och inget infall i grundridningen",
+  svar.krav === 0 && svar.grundLos.balans > 0.95 &&
+  Math.abs(svar.grundLos.balans - svar.grundBuren.balans) < 1e-9 &&
+  Math.abs(svar.grundLos.radie - svar.grundBuren.radie) < 1e-9,
+  `krav ${svar.krav} · lös tygel: balans ${nf(svar.grundLos.balans)}, radie ${nf(svar.grundLos.radie, 2)} m · ` +
+  `kontakten kvar: balans ${nf(svar.grundBuren.balans)}, radie ${nf(svar.grundBuren.radie, 2)} m`);
 prova("kontroll först: fördröjningen skjuter svaret i tid, den tappar aldrig bort det",
   svar.aldrigTappad.bad >= 6 && svar.aldrigTappad.svarade === svar.aldrigTappad.bad &&
   svar.aldrigTappad.sagVantan === svar.aldrigTappad.bad &&
@@ -913,9 +942,19 @@ const sate = await page.evaluate(() => {
     kor({ tygel: 0.25, sits }, 2.0); kor({ skankel: 1, tygel: 0.25, sits }, 1.2);
     kor({ skankel: 0.55, tygel: 0.25, sits }, 20);
     return { balans: G.ride.balans, gang: G.ride.gangart }; };
-  return { latt: volt(-1), djup: volt(0.8),
-    raktLatt: rakt(-1), raktDjup: rakt(0.8) };
+  /* #273 T4: mekaniken mäts med kravet påslaget, grundläget för sig. */
+  const krav = SVAR_KANON.HJALP_KRAV;
+  const grund = { latt: volt(-1), djup: volt(0.8) };
+  SVAR_KANON.HJALP_KRAV = 1;
+  const ut = { latt: volt(-1), djup: volt(0.8),
+    raktLatt: rakt(-1), raktDjup: rakt(0.8), grund, krav };
+  SVAR_KANON.HJALP_KRAV = krav;
+  return ut;
 });
+prova("#273 T4: lätt sits kostar ingen balans i grundridningen",
+  sate.krav === 0 && sate.grund.latt.balans > 0.95 &&
+  Math.abs(sate.grund.latt.balans - sate.grund.djup.balans) < 1e-9 && sate.grund.latt.gang !== "halt",
+  `lätt sits → balans ${nf(sate.grund.latt.balans)} · djup sits → balans ${nf(sate.grund.djup.balans)} (${sate.grund.latt.gang})`);
 {
   const s2 = sate;
   prova("sätet är en balansmodifierare: djup sits bär bågen, lätt sits gör det inte",
@@ -1045,6 +1084,7 @@ const live = await page.evaluate(async () => {
      ett tillstånd som redan är false bevisar inget om startaVandring(). */
   ridSittUpp("bandit", "ridhus");
   const forevandring = RID_TILLSTAND.uppsutten;           // ska vara true
+  SPAR.pass = 1;                     // återvändande: på pass 0 tar First Ride över (P1b)
   startaVandring();
   await new Promise(r => setTimeout(r, 400));
   const eftervandring = RID_TILLSTAND.uppsutten;          // ska vara false
@@ -1052,6 +1092,16 @@ const live = await page.evaluate(async () => {
      vald häst och ett RideModel-tillstånd. Det som TESTAS är att den
      körande ridloopen följer gångarten och fyller G.telemetri. */
   G.hastId = G.hastId || Object.keys(HORSES)[0];
+  /* Uppsittningen prövas mot förberedelsen (Roblox provaUppsittning,
+     P1a). Hästen görs i ordning genom spelets riktiga väg — «Rida nu» —
+     i stället för att grinden kringgås med handsatt tillstånd. */
+  /* Ett pass där hästen inte har något fynd — annars stannar «Rida nu»
+     helt riktigt vid välfärdsfrågan och ingen uppsittning ska ske. */
+  if (typeof Forb !== "undefined") {
+    let p = 1; while (Forb.fyndFor(G.hastId, p + 1)) p++;
+    SPAR.pass = p; sattAktivHast(G.hastId);
+  }
+  if (typeof stegkortRidaNu === "function") stegkortRidaNu();
   G.hastPlats = "box";
   G.ride = nyState(G.dagsform, 0.5, G.sadellage);
   sittUpp("ridhus");

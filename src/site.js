@@ -1173,13 +1173,8 @@ const STALLINNE = {
      Han står i W[9], ett fack som redan fanns, redan ritades och redan
      var tomt — ingen geometri är flyttad och ingen häst är påhittad:
      Jack ligger i den verifierade kanonen som `blackrock-jack`. */
-  boxar:{
-    W: [ "lady","toblerone","westside","lydia","makadu","conor","mara","hamilton","husky",
-         "blackrock_jack",null ],
-    MA:[ "kennedy","cosmo","tina","air","chip","larry","crokino","dexter",null,null,null ],
-    MB:[ null,null,null,null,null,null,null,null,null,null,null ],
-    E: [ null,null,null,null,null,null,null,null,null,null,null ],
-  },
+  /* Fylls ur hästordningen nedan, efter facken — se «BOXARNA». */
+  boxar:{},
   /* `rum` var tre solida lådor som svävade i en "klubbhall": uppehållsrum
      och teorisal på var sin långsida, sadelkammaren i ett hörn. Ingen av
      rektanglarna var läst ur planen — de var `ASSUMPTION` och underkändes
@@ -1540,6 +1535,37 @@ STALLINNE.fack = (()=>{
 })();
 /* Boxar per obruten rad — tretton vid 69,95 m. Räknas, inte skrivs. */
 STALLINNE.antalBoxar = Math.floor((STALLINNE.klubbY-STALLINNE.boxStartY)/STALLINNE.boxB+0.001);
+
+/* BOXARNA — vilken häst som står var, EXAKT som Roblox (Tobias 2026-09-29,
+   #266 TOBIAS_DECISION_WEB_BOX_PLACEMENT_20260929).
+
+   Förut stod här en handskriven lista med ett femtontal hästar, flera med
+   namn som inte längre finns i hästkanonen (makadu, mara, husky, tina,
+   chip), medan tjugo av kanonens hästar — Troy bland dem — saknade box.
+   Roblox räknar i stället ut en box åt ALLA hästar ur samma ordning
+   (`Stallet.boxNummerFor` i roblox/game/Stallet.luau): häst k går till rad
+   `k % antal rader` och plats `floor(k / antal rader)`, och saknas facket
+   (brottet i rad W) finns ingen box. Samma regel här, ur samma ordning
+   (`Object.keys(HORSES)` är `Spel.ordning` i exporten), så att hästen står
+   i samma box på båda plattformarna och tilldelningen blir identisk.
+
+   Geometrin — facken, raderna, gångarna — rörs inte. Bara vem som står i
+   facket. Paritetsprovet mot Luau ligger i tools/forberedelsetest.mjs. */
+STALLINNE.boxar = (()=>{
+  const S=STALLINNE, ut={};
+  for(const r of S.rader) ut[r.id]=[];
+  const ordning=(typeof HORSES!=="undefined")?Object.keys(HORSES):[];
+  ordning.forEach((id,k)=>{
+    const rad=S.rader[k%S.rader.length], plats=Math.floor(k/S.rader.length);
+    if(!rad||plats>=S.antalBoxar)return;
+    const fack=(S.fack||{})[rad.id];
+    if(fack&&!fack[plats])return;
+    ut[rad.id][plats]=id;
+  });
+  for(const r of S.rader){ const a=ut[r.id];
+    for(let i=0;i<Math.max(a.length,(S.fack[r.id]||[]).length);i++) if(a[i]===undefined)a[i]=null; }
+  return ut;
+})();
 
 /* Stallets dörrmarkörer på gården härleds ur STALLINNE.dorrar, så att de
    två sidorna av samma dörr aldrig kan glida isär. Före 2026-08-30 fanns
