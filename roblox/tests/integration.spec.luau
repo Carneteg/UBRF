@@ -1099,6 +1099,126 @@ do
 	stadaSession(S3)
 end
 
+--[[ ══ PUNKT 13: EN VIKARIE SKRIVER INTE ÖVER SPARFILEN (#265 P5) ═════
+
+	Står spelarens kanoniska första-dagen-häst (Jack) upptagen av någon annan
+	i servern får hon en VIKARIE ur rotationen (`StallService.tilldela` →
+	`Stallet.dagensHast`, `dagens.vikarieFor`). Vikarien är SESSIONENS: den
+	hålls i `tilldelade[player]`, alltså i minnet. Skulle den skrivas in i
+	sparfilen har spelarens riktiga progression ändrats av vem som råkade
+	vara inloggad, och det syns först dagen efter.
+
+	Det här är ett TEST utan produktionsändring: beteendet var redan rätt på
+	78a74b2 och saknade ett fokuserat prov. Det mäter både tillståndet i
+	minnet (`SparService.save`) och det som FAKTISKT hamnar i datalagret
+	efter att båda lämnat — det senare är det som överlever en omstart.
+
+	FALSIFIERING (temporär mutation, återställd byte-exakt): låt
+	`StallService.tilldela` markera första dagen på vikarien
+	(`Sparning.markeraForstaDagen(SparService.save(player), dagens.id)` när
+	`dagens.vikarieFor` är satt) — raderna om `forstaDagen`, om den utskrivna
+	raden och om datalagret blir röda. ]]
+print("\n── Punkt 13: vikarien skriver inte över sparfilen ──")
+do
+	--[[ Alla strängar i en tabell, med sökväg — så att "nämner ingen häst"
+		går att svara på utan att känna till sparfilens form. ]]
+	local function strangar(t, ut, sokvag, djup)
+		djup = djup or 0
+		if djup > 8 then return ut end
+		for k, v in pairs(t) do
+			local sv = (sokvag or "") .. "/" .. tostring(k)
+			if type(v) == "string" then ut[#ut + 1] = { sv, v }
+			elseif type(v) == "table" then strangar(v, ut, sv, djup + 1) end
+		end
+		return ut
+	end
+	local function lika(a, b)
+		if type(a) ~= type(b) then return false end
+		if type(a) ~= "table" then return a == b end
+		for k, v in pairs(a) do if not lika(v, b[k]) then return false end end
+		for k in pairs(b) do if a[k] == nil then return false end end
+		return true
+	end
+	local function nammer(t, ...)
+		local id = { ... }
+		local traff = {}
+		if type(t) ~= "table" then return traff end
+		for _, p in ipairs(strangar(t, {})) do
+			for _, h in ipairs(id) do
+				if p[2] == h then traff[#traff + 1] = p[1] .. "=" .. p[2] end
+			end
+		end
+		return traff
+	end
+
+	local S1 = nySession("VikarieSpelare1", 9801)
+	check("P5: spelare 1 fick första dagens häst (Jack)",
+		S1.hastId == Stallet.FORSTA_DAGEN_HAST, tostring(S1.hastId))
+	local save1 = SparService.save(S1.spelare)
+	check("P5: spelare 1 har en sparfil att jämföra mot", save1 ~= nil)
+	local rad1Fore = save1 and Sparning.tillRad(save1)
+
+	--[[ Spelare 2 in i SAMMA server. Hon vill också ha Jack, men han är
+		tagen — alltså vikarie. ]]
+	local spelare2 = nySpelare("VikarieSpelare2", 9802, vec(9, 0, 0))
+	SparService._glomForProv(spelare2)
+	Players._spelare = { S1.spelare, spelare2 }
+	Players.PlayerAdded:Fire(spelare2)
+	Players.PlayerAdded:slutfor()
+
+	local dagens2 = StallService.hastFor(spelare2)
+	local id2 = StallService.hastIdFor(spelare2)
+	check("P5: spelare 2 fick också en häst", dagens2 ~= nil, tostring(id2))
+	check("P5: och det är INTE Jack — en vikarie",
+		id2 ~= nil and id2 ~= S1.hastId,
+		string.format("spelare 1 %s · spelare 2 %s", tostring(S1.hastId), tostring(id2)))
+	check("P5: tilldelningen bär vikarieFor = Jack",
+		dagens2 ~= nil and dagens2.vikarieFor == Stallet.FORSTA_DAGEN_HAST,
+		tostring(dagens2 and dagens2.vikarieFor))
+
+	-- Tillståndet i minnet, direkt efter tilldelningen.
+	local save2 = SparService.save(spelare2)
+	check("P5: spelare 2 har en sparfil", save2 ~= nil)
+	check("P5: spelare 1:s sparfil är OFÖRÄNDRAD av att spelare 2 kom in",
+		save1 ~= nil and lika(Sparning.tillRad(SparService.save(S1.spelare)), rad1Fore))
+	check("P5: spelare 2:s första dag är fortfarande ouppfylld (ingen vikarie inskriven)",
+		save2 ~= nil and save2.forstaDagen.klar ~= true and save2.forstaDagen.hastId == nil,
+		save2 and string.format("klar=%s hastId=%s", tostring(save2.forstaDagen.klar),
+			tostring(save2.forstaDagen.hastId)) or "-")
+	local rad2 = save2 and Sparning.tillRad(save2)
+	local iRad2 = nammer(rad2, id2, S1.hastId)
+	check("P5: spelare 2:s utskrivna rad nämner varken vikarien eller Jack som tilldelning",
+		save2 ~= nil and #iRad2 == 0, table.concat(iRad2, "; "))
+
+	--[[ Båda lämnar. Det som nu ligger i datalagret är det som överlever
+		en omstart. ]]
+	Players.PlayerRemoving:Fire(spelare2)
+	Players._spelare = { S1.spelare }
+	Players.PlayerRemoving:Fire(S1.spelare)
+	Players._spelare = {}
+
+	local lagrad1, lagrad2
+	for nyckel, v in pairs(__datastore._data) do
+		local sv = tostring(nyckel)
+		if sv:find("9801", 1, true) then lagrad1 = v end
+		if sv:find("9802", 1, true) then lagrad2 = v end
+	end
+	check("P5: datalagret har en post för spelare 1 efter att hon lämnat", lagrad1 ~= nil)
+	check("P5: datalagret har en post för spelare 2 efter att hon lämnat", lagrad2 ~= nil)
+	local lag2 = nammer(lagrad2, id2, S1.hastId)
+	local lag1 = nammer(lagrad1, id2)
+	check("P5: spelare 2:s LAGRADE post bär ingen tilldelning (varken vikarien eller Jack)",
+		lagrad2 ~= nil and #lag2 == 0, table.concat(lag2, "; "))
+	check("P5: spelare 1:s LAGRADE post bär inte spelare 2:s vikarie",
+		lagrad1 ~= nil and #lag1 == 0, table.concat(lag1, "; "))
+	check("P5: spelare 2:s lagrade första dag är ouppfylld",
+		type(lagrad2) == "table"
+			and not (type(lagrad2.forstaDagen) == "table" and lagrad2.forstaDagen.klar == true),
+		type(lagrad2) == "table" and type(lagrad2.forstaDagen) == "table"
+			and ("klar=" .. tostring(lagrad2.forstaDagen.klar)) or "(ingen forstaDagen-rad)")
+	stadaSession(S1)
+end
+
 --[[ `os.exit` finns INTE i luau-CLI:t (den är nil). Ett anrop rakt ut gav
 	en "attempt to call a nil value" i loggen i stället för ett läsbart
 	slut — rött blev det, men av fel anledning i texten. Här används den
