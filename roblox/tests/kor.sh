@@ -55,6 +55,8 @@ SPECAR="$SPECAR klient-blandning"
 # #273 SIMPLIFY: forenklingen genom tjansten (S2, S3) och pa klienten (S1-S3).
 SPECAR="$SPECAR integration-forenkling"
 SPECAR="$SPECAR klient-forenkling"
+# #274: fortsattningen efter valfardsstoppet (Rida nu ar ingen atervandsgrand).
+SPECAR="$SPECAR ridefirst-fortsatt"
 # #252 DEL B: banken provar SIG SJALV forst, i bada riktningarna. En
 # require av en modul som inte ligger i bunten ska falla bygget — inte
 # bli ett tyst nil (DEL A). Faller provet bygger vi inte en enda spec.

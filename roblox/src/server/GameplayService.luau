@@ -189,6 +189,11 @@ local function vyFor(player: Player)
 	local v = Preparation.vy(state[player], status(player), nastaRev(player),
 		if dagens then dagens.namn else nil, burenFor(player))
 	if burnaFor then v.burnaDelar = burnaFor(player) end
+	--[[ #274: efter ett välfärdsstopp vet klienten vem som väntar, så att
+		stoppkortet kan erbjuda en väg vidare med hästens namn. Utan stopp
+		och utan frisk häst finns inget fält — ingen tom knapp. ]]
+	local _, ersNamn = GameplayService.ersattareFor(player)
+	if ersNamn then v.ersattare = ersNamn end
 	return v
 end
 
@@ -1369,6 +1374,58 @@ function GameplayService.svara(player: Player, svarId: string): (boolean, string
 	return ok, avslag
 end
 
+--[[ ══ EFTER STOPPET: EN FRISK HÄST, SAMMA DAG (#274) ═══════════════════
+
+	Speltestet: "det går inte att rida direkt då ridläraren stoppar en".
+	Välfärdsstoppet står kvar — en häst med ett fynd rids inte — men det får
+	inte betyda att «Rida nu» tar slut. Spelaren får en frisk häst och går
+	tillbaka in i vanliga «Rida nu»-flödet för henne.
+
+	`ersattareFor` svarar på VEM som väntar, utan att ändra något; stoppkortet
+	använder den för att säga hästens namn på knappen. Den svarar bara medan
+	hästen är stoppad: utan stopp finns inget att fortsätta från.
+
+	`fortsattMedAnnanHast` genomför bytet. Dagen räknades redan när stoppet
+	svarades (`svara` → `avslutaPass`) och räknas ALDRIG här: ett andra
+	anrop kommer inte förbi `stoppad`-kravet, för den nya förberedelsen
+	saknar stopp. Den stoppade hästen är uttryckligen undantagen i valet
+	(`StallService.tilldela(player, undanta)`), inte bara vilande i minnet —
+	faller sparningen ska hon ändå inte komma tillbaka.
+
+	Det som hörde till den förra hästen släpps: en hämtad men ej påsatt
+	sadel och sadelvalet pekade på henne. Själva förberedelsen och passet
+	byggs om av `bind`, som gör det så snart tilldelningen pekar på en annan
+	häst — samma väg som när dagen börjar. ]]
+function GameplayService.ersattareFor(player: Player): (string?, string?)
+	local s = state[player]
+	if not s or not s.stoppad then return nil, nil end
+	local d = StallService.ersattare(player, s.hastId)
+	if not d then return nil, nil end
+	return d.id, d.namn
+end
+
+function GameplayService.fortsattMedAnnanHast(player: Player): (boolean, string?, string?)
+	local s = state[player]
+	if not s or not s.stoppad then
+		return false, "forb.inget_stopp"
+	end
+	--[[ Frågan först, ändringen sedan: `tilldela` river den gamla tilldelningen
+		när stallet saknar häst, och en spelare utan frisk häst ska stå kvar
+		med sin stoppade — inte utan någon alls. ]]
+	if not StallService.ersattare(player, s.hastId) then
+		return false, "spel.ingen_frisk_hast"
+	end
+	local dagens = StallService.tilldela(player, s.hastId)
+	if not dagens then
+		return false, "spel.ingen_frisk_hast"
+	end
+	GameplayService.slappBuret(player)
+	valdUtrustning[player] = nil
+	bunden[player] = nil
+	GameplayService.bind(player)
+	return true, nil, dagens.id
+end
+
 --[[ ── Passet ──────────────────────────────────────────────────────── ]]
 
 function GameplayService.eftervard(player: Player, momentId: string): (boolean, string?, string?)
@@ -1811,6 +1868,11 @@ function GameplayService.start()
 	HorseService.setLedareHook(LedService.ledsAv)
 	Net.get("RidaNu").OnServerInvoke = Skopa.grind("RidaNu", function(player)
 		return GameplayService.ridaNu(player)
+	end)
+	--[[ #274: vägen vidare efter ett välfärdsstopp. Ingen parameter —
+		klienten pekar inte ut vilken häst hon vill ha; servern väljer. ]]
+	Net.get("FortsattHast").OnServerInvoke = Skopa.grind("FortsattHast", function(player)
+		return GameplayService.fortsattMedAnnanHast(player)
 	end)
 
 	--[[ #264 GAIT_READABILITY_AND_UGNETA: språkflaggan. Bara "sv" eller

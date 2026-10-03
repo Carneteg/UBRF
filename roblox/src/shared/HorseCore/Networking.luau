@@ -78,6 +78,7 @@ local DEFINITIONS = {
 	--[[ RIDE FIRST: "Rida nu". Klienten skickar en avsikt; servern gör
 	     stallets förberedelse och svarar med hela sanningen. ]]
 	RidaNu = "RemoteFunction",             -- klient → server: låt stallet göra i ordning henne
+	FortsattHast = "RemoteFunction",       -- klient → server: #274 jag fortsätter med den friska hästen efter stoppet
 	--[[ #235 FAS 2: SADEL `HELD -> EQUIPPED`. Klienten pekar ut vilken
 		 häst hon står vid; servern äger allt annat — att hon verkligen bär
 		 sadeln, att den är RÄTT hästs, avståndet, ordningen och själva

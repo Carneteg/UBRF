@@ -226,7 +226,36 @@ function StallService.hastminnen(player: Player): { [string]: any }?
 	return save and Sparning.hastminnen(save) or nil
 end
 
-function StallService.tilldela(player: Player)
+--[[ ══ VEM SKULLE SPELAREN FÅ? (#274) ══════════════════════════════════
+
+	Själva valet, utan biverkningar: ingen reservation, inga markörer och
+	ingen ändrad tilldelning. `tilldela` gör valet OCH genomför det;
+	`ersattare` ställer bara frågan, så att stoppkortet kan säga vem som
+	väntar innan något ändras.
+
+	`undanta` är en häst som INTE får väljas, oavsett vad sparningen säger.
+	Efter ett välfärdsstopp är hon redan sparad som vilande — men sparningen
+	kan ha fallit, och en ersättare får aldrig bli samma häst som stoppades.
+	Därför är undantaget uttryckligt och inte bara en slutsats ur minnet.
+	Med ett undantag gäller heller ingen önskad häst: första dagens Jack är
+	en tilldelning för den som inte har ridit, och den som just stoppats har
+	redan haft sin dag. ]]
+local function dagensFor(player: Player, undanta: string?): (any?, string?)
+	local vilande = Stallet.vilandeHastar(StallService.hastminnen(player))
+	if undanta then vilande[undanta] = true end
+	local save = SparService.save(player)
+	local onskad = if undanta == nil and save ~= nil and Sparning.forstaDagen(save)
+		then Stallet.FORSTA_DAGEN_HAST else nil
+	return Stallet.dagensHast(player.UserId, upptagnaHastar(player), vilande, onskad), onskad
+end
+
+--[[ Den friska hästen spelaren skulle få i stället för `undanta`, eller
+	nil när stallet saknar en. Ändrar ingenting. ]]
+function StallService.ersattare(player: Player, undanta: string): any?
+	return (dagensFor(player, undanta))
+end
+
+function StallService.tilldela(player: Player, undanta: string?)
 	--[[ Reservationen görs HÄR och inte i Stallet: modulen äger regeln, den
 		här filen äger vem som faktiskt är inloggad. Skickas ingen upptagen-
 		lista får två spelare med UserId som skiljer 33 samma häst. ]]
@@ -246,7 +275,8 @@ function StallService.tilldela(player: Player)
 		Att mängden är riktig kräver att saven är LÄST när den här raden
 		körs. Det är vad barriären i `SparService.efterLaddning` finns för;
 		se `start()` längst ned. ]]
-	local vilande = Stallet.vilandeHastar(StallService.hastminnen(player))
+	--[[ (Valet — vilande hästar, undantaget och önskan — görs i `dagensFor`
+		ovan, så att `ersattare` ställer EXAKT samma fråga.) ]]
 
 	--[[ FÖRSTA DAGEN ÄR JACK (#162 blockerare 3). Regeln låg tidigare bara
 		i webbens `scenes.js`; på Roblox valde rotationen fritt, så en ny
@@ -263,12 +293,7 @@ function StallService.tilldela(player: Player)
 		hitta på progression. Följden är att en återvändande spelare med
 		trasigt datalager får Jack i stället för sin rotationshäst — sämre
 		än rätt, bättre än att hennes riktiga pass skrivs över. ]]
-	local save = SparService.save(player)
-	local onskad = if save ~= nil and Sparning.forstaDagen(save)
-		then Stallet.FORSTA_DAGEN_HAST else nil
-
-	local dagens = Stallet.dagensHast(player.UserId, upptagnaHastar(player),
-		vilande, onskad)
+	local dagens, onskad = dagensFor(player, undanta)
 	if not dagens then
 		if onskad then
 			--[[ Sedan vikariefixen betyder nil med en önskan EN sak: hästen
