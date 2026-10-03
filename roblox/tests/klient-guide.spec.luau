@@ -130,6 +130,20 @@ local harHalsning = false
 for _, v in ipairs(N._val()) do if v.fel ~= nil then harHalsning = true end end
 prova("inga hälsningssvar på startskärmen", not harHalsning)
 
+-- #274: hästen står bakom STÄNGD box och spelaren är vid den: dörren syns på startvägen.
+dorrDel.CFrame = CFrame.new(vidHasten + Vector3.new(0, 0, 3)) -- boxdörren vid hästen
+dorr:SetAttribute("SprakNyckel", "dorr.oppna")
+visa("preparing")
+local vt2 = valTexter()
+prova("stängd box vid hästen: de två valen finns kvar", #vt2 == 2 and vt2[1] == Sprak.t("guide.val_rida_nu", "Trixie"), table.concat(vt2, " / "))
+local syn2 = N._rader()
+prova("stängd box vid hästen: «Öppna dörren» är en synlig rad under valen", #syn2 == 3 and string.find(syn2[3], "Dörr", 1, true) ~= nil, table.concat(syn2, " / "))
+dorr:SetAttribute("SprakNyckel", "dorr.stang")
+visa("preparing")
+prova("öppen box vid hästen: åter exakt två val, ingen dörrrad", #N._rader() == 2, #N._rader())
+dorrDel.CFrame = CFrame.new(langtBort + Vector3.new(0, 0, 3))
+visa("preparing")
+
 print("\n── 3. Den manuella kedjan genom den riktiga Preparation ──")
 valMed("start:sjalv").skicka()
 N.satRider(false)

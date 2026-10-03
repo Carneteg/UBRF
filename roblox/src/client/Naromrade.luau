@@ -2178,7 +2178,18 @@ rita = function()
 					if rita then rita() end
 				end },
 		}
+		--[[ #274: STÄNGD BOX = «ÖPPNA DÖRREN» SYNS PÅ STARTVÄGEN. Spelaren ska
+		     aldrig behöva gissa att nästa fysiska steg är dörren. Då får den
+		     stängda dörren prompt-platsen under de två valen (`promptPlatser`
+		     är 1 när ett primärt val finns); är dörren öppen eller utom
+		     räckhåll är startskärmen oförändrad, exakt två val. ]]
 		ordnade = {}
+		for _, p in ipairs(relevanta) do
+			if arDorr(p) and p:GetAttribute("SprakNyckel") == "dorr.oppna" then
+				ordnade = { p }
+				break
+			end
+		end
 	end
 	--[[ Under en fråga står EN sekundär handling fast — Rida nu, enligt
 	     produktordningen — så att frågans alternativ får plats att synas. ]]
