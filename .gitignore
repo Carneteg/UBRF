@@ -26,3 +26,5 @@ __pycache__/
 
 # Screenshot-pack (Visual Fidelity Gate, #80) är CI-artifact, aldrig incheckat här
 qa/screenshot-pack/
+.vercel
+.env*

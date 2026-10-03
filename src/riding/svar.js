@@ -100,6 +100,24 @@ const SVAR_KANON = {
      balansmodifierare, och en `vikt` som bara härleds ur bågens tecken
      utan att göra något är dekoration. */
   BALANS_VIKT: 0.30,      // × böjkrav × (1 − sitsstöd)
+  /* ── GRUNDRIDNINGEN KRÄVER INTE DE AVANCERADE HJÄLPERNA (#273, T4) ──
+     Tobias beslut 2026-10-01: «En spelare ska inte få dold balans-/
+     styrningspenalty för att inte använda halvhalt, yttertygel, djup
+     sits, spö eller liknande.»
+
+     Uppmätt före: en ryttare som bara styr (ingen tygel, neutral sits)
+     tappade balansen till 0,49 i en full volt i skritt och trav och 0,42
+     i galopp, och hästen föll in — bågen blev omkring 15 % snävare än
+     hon bad om. På Roblox pekyta fanns inget reglage för någon av
+     hjälperna alls.
+
+     HJALP_KRAV skalar de två termerna ovan (yttertygelstöd och sitsstöd)
+     där balansen räknas i RIDNINGEN: 0 = hjälperna är neutrala, 1 = fullt
+     krav som före #273. Funktionen svarBalansMal är oförändrad för den
+     som inte skickar något krav — formlerna och paritetsraderna står
+     kvar, och en övning som faktiskt behöver hjälperna kan senare be om
+     dem. Fart i svängen, övergångar och spänning räknas som förut. */
+  HJALP_KRAV: 0,
   BALANS_TAU_NER: 1.1, BALANS_TAU_UPP: 2.2,   // faller fortare än den byggs
 
   /* ── ATT FALLA IN ───────────────────────────────────────────────
@@ -260,11 +278,14 @@ function svarSitsStod(sits) {
   return kl(((sits || 0) - neutral) / (djup - neutral), 0, 1);
 }
 
-function svarBalansMal(s, h, bojkrav, ytterstod, fartkrav, iOvergang, sits) {
+function svarBalansMal(s, h, bojkrav, ytterstod, fartkrav, iOvergang, sits, krav) {
   const S = SVAR_KANON;
   const kl = (v, lo, hi) => v < lo ? lo : v > hi ? hi : v;
-  const avdrag = S.BALANS_YTTER * kl(bojkrav, 0, 1) * (1 - kl(ytterstod, 0, 1))
-    + S.BALANS_VIKT * kl(bojkrav, 0, 1) * (1 - svarSitsStod(sits))
+  /* `krav` 0–1: hur mycket de avancerade hjälperna krävs (#273 T4).
+     Utelämnat = 1, alltså formeln som den alltid varit. */
+  const kr = (krav === undefined || krav === null) ? 1 : kl(krav, 0, 1);
+  const avdrag = S.BALANS_YTTER * kl(bojkrav, 0, 1) * (1 - kl(ytterstod, 0, 1)) * kr
+    + S.BALANS_VIKT * kl(bojkrav, 0, 1) * (1 - svarSitsStod(sits)) * kr
     + S.BALANS_FART * kl(fartkrav, 0, 1)
     + (iOvergang ? S.BALANS_OVERGANG : 0)
     + S.BALANS_SPANNING * kl(s.spanning, 0, 1);

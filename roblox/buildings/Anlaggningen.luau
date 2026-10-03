@@ -206,6 +206,8 @@ local function ickePassage(b, o): string?
 	return nil
 end
 
+local stallEntreBlad: BasePart? = nil
+
 local function byggOppning(model: Model, base: CFrame, b, o)
 	-- Var öppningen sitter är geometri och ligger därför i Geometri.luau, som
 	-- är mätt mot webbkoden. Hur den tecknas är rendering och ligger här.
@@ -233,6 +235,10 @@ local function byggOppning(model: Model, base: CFrame, b, o)
 			blad:SetAttribute("Sida", o.sida)
 			blad:SetAttribute("Oppningstyp", o.typ)
 		elseif garIgenom(o) then
+			if b.id == "stall" and o.sida == "N" and o.typ == "dorrgul" then
+				assert(stallEntreBlad == nil, "Flera blad for stallets nordentre")
+				stallEntreBlad = blad
+			end
 			blad:SetAttribute("UBRFDorr", true)
 			blad:SetAttribute("Byggnad", b.id)
 			blad:SetAttribute("Sida", o.sida)
@@ -2030,16 +2036,24 @@ local function byggStallInre(model: Model, base: CFrame)
 				local x0 = o.x + S.bredd - op.u - op.b
 				local zIn = o.y + S.langd
 				if op.typ == "dorrgul" then
-					BK.box(model, base, "Klubbentrén inifrån", x0, 0, zIn - 0.09, op.b, op.h, 0.06,
-						Color3.fromRGB(168, 118, 80), Enum.Material.Wood).CanCollide = false
+					assert(stallEntreBlad, "Stallets nordentre saknar rorligt blad")
+					-- Insidan och glaset foljer bladet; karmen stannar i vaggen.
+					local insida = BK.box(model, base, "Klubbentrén inifrån", x0, 0, zIn - 0.09, op.b, op.h, 0.06,
+						Color3.fromRGB(168, 118, 80), Enum.Material.Wood)
+					insida.CanCollide = false
+					insida:SetAttribute("UBRFDorrDekor", true)
+					insida.Parent = stallEntreBlad
 					BK.box(model, base, "Klubbentréns karm", x0 - 0.12, op.h, zIn - 0.10,
 						op.b + 0.24, 0.12, 0.07, V, Enum.Material.SmoothPlastic).CanCollide = false
 					for _, sx in ipairs({ x0 - 0.12, x0 + op.b }) do
 						BK.box(model, base, "Klubbentréns karm", sx, 0, zIn - 0.10,
 							0.12, op.h + 0.12, 0.07, V, Enum.Material.SmoothPlastic).CanCollide = false
 					end
-					BK.box(model, base, "Klubbentréns solfjäderfönster", x0 + op.b * 0.13, op.h * 0.64, zIn - 0.13,
-						op.b * 0.74, op.h * 0.30, 0.03, Color3.fromRGB(200, 214, 222), Enum.Material.Glass).CanCollide = false
+					local glas = BK.box(model, base, "Klubbentréns solfjäderfönster", x0 + op.b * 0.13, op.h * 0.64, zIn - 0.13,
+						op.b * 0.74, op.h * 0.30, 0.03, Color3.fromRGB(200, 214, 222), Enum.Material.Glass)
+					glas.CanCollide = false
+					glas:SetAttribute("UBRFDorrDekor", true)
+					glas.Parent = stallEntreBlad
 				else
 					BK.box(model, base, "Runt fönster inifrån, karm", x0 - 0.08, op.z0 - 0.08, zIn - 0.10,
 						op.b + 0.16, op.h + 0.16, 0.06, V, Enum.Material.SmoothPlastic).CanCollide = false
@@ -2773,9 +2787,12 @@ local function byggRidhusInre(model: Model, base: CFrame)
 		local bx, bz = o.x + R.bana.x + h.x, o.y + R.bana.y + h.y
 		local bomFarg = if h.farg == "bla" then Color3.fromRGB(58, 110, 165) else Color3.fromRGB(192, 57, 43)
 		for _, s in ipairs({ -1, 1 }) do
+			--[[ #278: stödet är som bommen och konerna ett visuellt hinder.
+				Med kollision på stod hästen still på fart 0 i trav när hennes
+				kollisionsbox träffade ett stöd mitt på banan. ]]
 			BK.box(model, base, "Hinderstöd " .. i .. (if s < 0 then " V" else " H"),
 				bx + s * h.b / 2 - 0.05, 0, bz - 0.05, 0.10, 1.5, 0.10,
-				Color3.fromRGB(240, 237, 230), Enum.Material.SmoothPlastic)
+				Color3.fromRGB(240, 237, 230), Enum.Material.SmoothPlastic).CanCollide = false
 		end
 		local bom = BK.box(model, base, "Hinderbom " .. i,
 			bx - h.b / 2, math.max(0.02, h.h), bz - 0.045, h.b, 0.09, 0.09,

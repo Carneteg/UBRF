@@ -97,6 +97,51 @@ local laddningar: { [Player]: {} } = {}
 --[[ Varför den senaste skrivningen nekades, eller nil. Läsbart så att en
 	anropare kan skilja "fullt" från "nätet föll" (granskning R1, fynd 1). ]]
 local senasteNej: { [Player]: string? } = {}
+--[[ D4a (D4-RÄTT): prisen som de ligger I LAGRET — ur en lyckad läsning eller
+	ur den rad en lyckad skrivning faktiskt committade. Aldrig ur det lokala
+	svaret från `Sparning.registreraPris`, och aldrig efter en nekad,
+	misslyckad eller tvetydig skrivning (den blir bekräftad först när en
+	senare lyckad läsning eller skrivning ser priset i lagret). ]]
+local bekraftade: { [Player]: { [string]: any } } = {}
+local function kopiaPriser(priser: any): { [string]: any }
+	local ut = {}
+	if type(priser) == "table" then
+		for id, p in pairs(priser) do
+			if type(p) == "table" then
+				local k = {}
+				for a, b in pairs(p) do k[a] = b end
+				ut[id] = k
+			end
+		end
+	end
+	return ut
+end
+--[[ C4 (docs/LESSON-MEMORY-CONTRACT.md): krokar som körs i BÖRJAN av varje
+	körning av `UpdateAsync`-transformatorn, med spelaren och den minnestabell
+	skrivningen utgår från. De får bara göra idempotenta, tak-respekterande
+	tillägg (LektionsMinne lägger in väntande markörer). Varje krok i egen
+	pcall; ett fel i en krok stoppar inte skrivningen. ]]
+local foreSkrivningKrokar: { (Player, Sparning.Save) -> () } = {}
+
+function SparService.foreSkrivning(fn: (Player, Sparning.Save) -> ())
+	table.insert(foreSkrivningKrokar, fn)
+end
+
+--[[ C4 R1: AVFÄRDEN I TRE STEG, för ett begränsat åtagande (LektionsMinne).
+	`foreAvfard(player)` körs FÖRST i avfärdshanteraren; sedan väntar
+	`stangningFor` ut en pågående skrivning (begränsat) och gör EN sista;
+	sist körs `efterAvfard(player, ok)` med den sista skrivningens svar, innan
+	spelaren glöms. Varje krok i egen pcall. ]]
+local foreAvfardKrokar: { (Player) -> () } = {}
+local efterAvfardKrokar: { (Player, boolean) -> () } = {}
+
+function SparService.foreAvfard(fn: (Player) -> ())
+	table.insert(foreAvfardKrokar, fn)
+end
+
+function SparService.efterAvfard(fn: (Player, boolean) -> ())
+	table.insert(efterAvfardKrokar, fn)
+end
 
 --[[ Studio utan API-åtkomst, och alla lokala prov, ska INTE krascha på
 	rad ett. `GetDataStore` kastar då, och resultatet är nil — vilket
@@ -173,6 +218,8 @@ function SparService.ladda(player: Player, fortfarandeAktuell: (() -> boolean)?)
 	local save, notering = Sparning.migrera(rad)
 	sparade[player] = save
 	laddadRev[player] = save.rev
+	-- D4a: det som lästes ur lagret är bekräftat (en framtida sparfil ger en tom karta).
+	bekraftade[player] = kopiaPriser(save.priser)
 	anmarkning[player] = notering
 
 	if notering == "spar.framtida_sparfil" then
@@ -286,6 +333,9 @@ function SparService.skriv(player: Player, andra: ((Sparning.Save) -> ())?): boo
 		så utan flaggan hade `skriv` svarat sant om en skrivning som aldrig
 		blev av. ]]
 	local konflikt: string? = nil
+	--[[ D4a: raden den SENASTE transformatorkörningen returnerade. Roblox får
+		köra om transformatorn; det är den sista körningens svar som committas. ]]
+	local committad: Sparning.Save? = nil
 
 	local ok = select(1, medRetry("skrivning för " .. player.Name, function()
 		return b:UpdateAsync(nyckelFor(player), function(gammal)
@@ -306,6 +356,14 @@ function SparService.skriv(player: Player, andra: ((Sparning.Save) -> ())?): boo
 			if notering == "spar.framtida_sparfil" then
 				konflikt = "framtida sparfil i lagret"
 				return nil
+			end
+
+			--[[ C4: väntande tillägg in i minnet INNAN taket prövas och
+				sammanslagningen görs, i VARJE körning (Roblox får köra om
+				transformatorn). Idempotent. ]]
+			for _, krok in ipairs(foreSkrivningKrokar) do
+				local okK, felK = pcall(krok, player, minnet)
+				if not okK then warn("[Spar] en foreSkrivning-krok föll: " .. tostring(felK)) end
 			end
 
 			--[[ REVISIONEN, OCH VAD DEN BETYDER FÖR VILAN.
@@ -431,12 +489,19 @@ function SparService.skriv(player: Player, andra: ((Sparning.Save) -> ())?): boo
 			--[[ Minnet uppdateras till det sammanslagna, så att nästa
 				skrivning utgår från samma sanning som lagret. ]]
 			sparade[player] = bas
+			committad = bas
 			return Sparning.tillRad(bas)
 		end)
 	end))
 
 	skriver[player] = false
 	if ok and not konflikt then senasteNej[player] = nil end
+	--[[ D4a: bara en lyckad skrivning utan konflikt bekräftar, och då med
+		exakt den rad som committades. Ett tvetydigt kast (landade men
+		svaret tappades) bekräftar ingenting här. ]]
+	if ok and not konflikt and committad then
+		bekraftade[player] = kopiaPriser((committad :: any).priser)
+	end
 	if konflikt then
 		--[[ Ingenting skrevs, och det var avsiktligt. Framstegen ligger kvar
 			i minnet. Den framtida sparfilen gör dessutom sessionen
@@ -625,6 +690,16 @@ local function glom(player: Player)
 	redo[player] = nil
 	laddadRev[player] = nil
 	senasteNej[player] = nil
+	bekraftade[player] = nil -- D4a
+end
+
+--[[ D4a: PRISSKÅPET — bara BEKRÄFTADE priser (D4-RÄTT), i läsmodellens form
+	(typ, källa och visning åtskilda). En framtida utdelningskonsument får
+	bygga på det här, aldrig på `registreraPris` lokala svar. Inert: ingen
+	anropare i spelet ännu. ]]
+function SparService.bekraftadePriser(player: Player): { any }
+	local minnet = sparade[player]
+	return Sparning.prisskap(bekraftade[player] or {}, minnet and minnet.resultat or {})
 end
 
 --[[ ── LIVSCYKEL ──────────────────────────────────────────────────── ]]
@@ -634,7 +709,18 @@ function SparService.start()
 	Players.PlayerRemoving:Connect(function(player)
 		laddningar[player] = nil
 		redo[player] = nil
-		SparService.skriv(player)
+		for _, krok in ipairs(foreAvfardKrokar) do
+			local okK, felK = pcall(krok, player)
+			if not okK then warn("[Spar] en foreAvfard-krok föll: " .. tostring(felK)) end
+		end
+		--[[ C4 R1: en pågående skrivning vänta ut (begränsat) i stället för
+			att få ett "upptaget"-nej och glömma cachen. Utan en pågående
+			skrivning är detta exakt det `skriv` som stod här förut. ]]
+		local ok = SparService.stangningFor(player)
+		for _, krok in ipairs(efterAvfardKrokar) do
+			local okK, felK = pcall(krok, player, ok)
+			if not okK then warn("[Spar] en efterAvfard-krok föll: " .. tostring(felK)) end
+		end
 		glom(player)
 	end)
 	--[[ DEN ENDA `PlayerAdded`-lyssnaren i servern. Se barriären ovan. ]]
@@ -679,6 +765,9 @@ end
 	påstår. ]]
 function SparService._glomHookarForProv()
 	efterLaddning = {}
+	foreSkrivningKrokar = {}
+	foreAvfardKrokar = {}
+	efterAvfardKrokar = {}
 end
 
 return SparService
