@@ -61,7 +61,8 @@ const kor = () => ev(() => {
   G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0;
   if (typeof ridNollstallHjalp === "function") ridNollstallHjalp();
   lararNollstall();
-  startaLektion();
+  /* P3 § 9: momentserien är inte längre huvudvägen, men motorn finns kvar (gruppstegen, tävlingen). Provet väljer den uttryckligen och mäter samma livscykel som förut. */ 
+  G.stege = true; startaLektion();
 
   /* Momentet ska vara en övning som HAR en versionerad definition —
      annars spelas den med flit inte in. Lektionens första G02-övning är
@@ -319,7 +320,7 @@ console.log("\n── ETT AVBRUTET MOMENT LÄMNAR INTE RITTEN OSTÄNGD ──");
     G.ride = nyState(G.dagsform, hastminne(G.hastId).rang, G.sadellage);
     G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0;
     if (typeof ridNollstallHjalp === "function") ridNollstallHjalp();
-    lararNollstall(); startaLektion();
+    lararNollstall(); G.stege = true; startaLektion();
     const ix = G.lektion.findIndex(m => { const o = ugnetaOvningFor(m);
       return o && typeof ovningsDef === "function" && ovningsDef(o.id); });
     if (ix < 0) return { fel: "ingen definierad övning" };
@@ -449,7 +450,7 @@ console.log("\n── AVBROTT LÄMNAR INGEN HALV POST ──");
   const d = await ev(() => {
     G.ride = nyState(G.dagsform, hastminne(G.hastId).rang, G.sadellage);
     lararNollstall();
-    startaLektion();
+    G.stege = true; startaLektion();
     /* Samma urval som ovan: bara en övning med definition spelas in. */
     const ix = G.lektion.findIndex(m => {
       const o = ugnetaOvningFor(m);

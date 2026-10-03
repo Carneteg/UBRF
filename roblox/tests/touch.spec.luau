@@ -789,6 +789,156 @@ do
 	kam.ViewportSize = foreVy2
 end
 
+--[[ ══ SPAKENS RITADE KANT ÄR FULLT UTSLAG (#265 P2) ═════════════════
+
+	Ringen ritas med `px(RADIE)`, och `px` skalar med skärmhöjden (0,62–1).
+	`kopplaSpak` klampade och normaliserade däremot mot den OSKALADE
+	konstanten `RADIE` (66 px). På en låg yta gav alltså det fingret nådde
+	den ritade kanten bara en bråkdel av full styrning — uppmätt på 78a74b2:
+	0,55 / 0,57 (upp / höger) vid 749×345 och 0,32 / 0,34 vid skala 0,62 —
+	och fullt utslag krävde att tummen drogs 14–25 px utanför ringen.
+
+	Provet monterar de RIKTIGA reglagen och trycker där spelaren trycker:
+	på spakens ram, med fingret på ringens ritade kant. Styrningen läses
+	genom `Input.consume()`, som övriga touch-prov.
+
+	Bänkens `AbsoluteSize`/`AbsolutePosition` är råa fält (motorn räknar ut
+	dem ur `Size`/`Position`), så provet sätter dem som motorn skulle: ramens
+	mått ur dess egen `Size`, mitten på en fast punkt. Det enda som mäts är
+	AVSTÅNDET från mitten, och det är ritad radie som avgör vad som är "kanten".
+
+	FALSIFIERING: sätt tillbaka `local r = TouchControls.RADIE` i `flytta`
+	(och `kopplaSpak(bas, knop)` utan radie) — raderna för 749×345 och skala
+	0,62 blir röda, raden för skala 1,0 förblir grön. ]]
+do
+	print("")
+	print("-- Spakens ritade kant är fullt utslag --")
+	local UIS = game:GetService("UserInputService")
+	local spelare = game:GetService("Players").LocalPlayer
+	local kam = workspace.CurrentCamera
+	local foreTouch3 = UIS.TouchEnabled
+	local foreVy3 = kam.ViewportSize
+	UIS.TouchEnabled = true
+	spelare:WaitForChild("PlayerGui")
+	TouchControls.unmount()
+
+	local function finger(x, y)
+		return { UserInputType = Enum.UserInputType.Touch,
+			Position = { X = x, Y = y } }
+	end
+	local function sok(nod, namn)
+		for _, b in ipairs(nod._barn or {}) do
+			if b.Name == namn then return b end
+			local t = sok(b, namn)
+			if t then return t end
+		end
+		return nil
+	end
+	local function styrning()
+		local i = Input.consume()
+		return i.forward, i.steer
+	end
+
+	--[[ Monterar på en viewport och drar fingret till ritade kanten åt
+		fyra håll. Returnerar ritad radie, knoppens bredd och axelstorleken
+		per riktning. `inset` är 36 px (samma som provet ovan). ]]
+	local function mata(bredd, hojd)
+		kam.ViewportSize = { _typ = "Vector2", X = bredd, Y = hojd }
+		TouchControls.mount(Input, { dismount = function() end })
+		local pg = spelare:FindFirstChildOfClass("PlayerGui")
+		local ht
+		for _, g in ipairs(pg._barn or {}) do
+			if g.Name == "HorseTouch" then ht = g end
+		end
+		local spak = ht and sok(ht, "Spak")
+		local knop = spak and sok(spak, "Knop")
+		if not (spak and knop) then return nil end
+		local ritad = spak.Size.X.Offset / 2
+		local cx, cy = 200, 200
+		spak.AbsoluteSize = Vector2.new(spak.Size.X.Offset, spak.Size.Y.Offset)
+		spak.AbsolutePosition = Vector2.new(cx - ritad, cy - ritad)
+
+		local function dra(dx, dy)
+			local f = finger(cx + dx, cy + dy)
+			spak.InputBegan:Fire(f)
+			UIS.InputChanged:Fire(f)
+			local fram, sid = styrning()
+			UIS.InputEnded:Fire(f)
+			local nollFram, nollSid = styrning()
+			return fram, sid, nollFram, nollSid
+		end
+		local upp, _, uppNF, uppNS = dra(0, -ritad)
+		local _, hoger, hogNF, hogNS = dra(ritad, 0)
+		local _, vanster = dra(-ritad, 0)
+		local ner = dra(0, ritad)
+		local _, langtSid = dra(ritad * 3, 0)
+		local halvFram = dra(0, -ritad * 0.5)
+		return {
+			ritad = ritad, knopBredd = knop.Size.X.Offset,
+			upp = upp, hoger = hoger, vanster = vanster, ner = ner,
+			uppNF = uppNF, uppNS = uppNS, hogNF = hogNF, hogNS = hogNS,
+			langt = langtSid,
+			halv = halvFram,
+		}
+	end
+	local function nara(a, b) return math.abs(a - b) < 0.001 end
+
+	-- Surfplatta: skala 1,0 ska vara EXAKT som förut (ritad radie = RADIE).
+	local plat = mata(1180, 1000)
+	check("skala 1,0: ritad radie = RADIE (66 px) och knoppen oskalad (56 px)",
+		plat ~= nil and plat.ritad == TouchControls.RADIE and plat.knopBredd == TouchControls.KNAPP,
+		plat and ("ritad %d, knopp %d"):format(plat.ritad, plat.knopBredd) or "ingen spak")
+	check("skala 1,0: ritade kanten ger full axel åt alla fyra håll",
+		plat ~= nil and nara(plat.upp, 1) and nara(plat.hoger, 1)
+			and nara(plat.vanster, -1) and nara(plat.ner, -1),
+		plat and ("upp %.3f · höger %.3f · vänster %.3f · ner %.3f"):format(
+			plat.upp, plat.hoger, plat.vanster, plat.ner) or "-")
+	check("skala 1,0: ett drag långt utanför ger exakt 1 (klampat)",
+		plat ~= nil and nara(plat.langt, 1), plat and ("%.3f"):format(plat.langt) or "-")
+	TouchControls.unmount()
+
+	-- 749×345 → 309 px yta → skala ≈ 0,79 → ritad radie 52 px (mätt på 78a74b2: 0,55 / 0,57).
+	local tel = mata(749, 345)
+	check("749×345: spaken ritas mindre än RADIE (skalad)",
+		tel ~= nil and tel.ritad < TouchControls.RADIE,
+		tel and ("ritad %d px mot RADIE %d"):format(tel.ritad, TouchControls.RADIE) or "-")
+	check("749×345: ritade kanten ger FULL axel åt alla fyra håll",
+		tel ~= nil and nara(tel.upp, 1) and nara(tel.hoger, 1)
+			and nara(tel.vanster, -1) and nara(tel.ner, -1),
+		tel and ("upp %.3f · höger %.3f · vänster %.3f · ner %.3f  (före fixen: 0,550 / 0,569)"):format(
+			tel.upp, tel.hoger, tel.vanster, tel.ner) or "-")
+	check("749×345: ett drag långt utanför ger exakt 1 (klampat)",
+		tel ~= nil and nara(tel.langt, 1), tel and ("%.3f"):format(tel.langt) or "-")
+	check("749×345: halva vägen ger mindre än fullt (kurvan är kvar, spaken är analog)",
+		tel ~= nil and tel.halv > 0.01 and tel.halv < 0.9,
+		tel and ("%.3f"):format(tel.halv) or "-")
+	check("749×345: knoppen skalas med ringen (mindre än 56 px, ryms i ringen)",
+		tel ~= nil and tel.knopBredd < TouchControls.KNAPP and tel.knopBredd < tel.ritad * 2,
+		tel and ("knopp %d px, ring %d px"):format(tel.knopBredd, tel.ritad * 2) or "-")
+	check("749×345: att släppa nollar BÅDA axlarna",
+		tel ~= nil and tel.uppNF == 0 and tel.uppNS == 0 and tel.hogNF == 0 and tel.hogNS == 0,
+		tel and ("efter släpp: %.3f/%.3f och %.3f/%.3f"):format(
+			tel.uppNF, tel.uppNS, tel.hogNF, tel.hogNS) or "-")
+	TouchControls.unmount()
+
+	-- Lägsta skala: 667×280 → 244 px yta → klampad nära 0,62 → ritad radie 41 px (mätt på 78a74b2: 0,32 / 0,34).
+	local lag = mata(667, 280)
+	check("667×280 (lägsta skala): ritade kanten ger FULL axel åt alla fyra håll",
+		lag ~= nil and nara(lag.upp, 1) and nara(lag.hoger, 1)
+			and nara(lag.vanster, -1) and nara(lag.ner, -1),
+		lag and ("ritad %d px · upp %.3f · höger %.3f  (före fixen: 0,319 / 0,343)"):format(
+			lag.ritad, lag.upp, lag.hoger) or "-")
+	check("667×280: ritad radie är lägre än på 749×345 (skalan följer höjden)",
+		lag ~= nil and tel ~= nil and lag.ritad < tel.ritad,
+		lag and tel and ("%d < %d"):format(lag.ritad, tel.ritad) or "-")
+	check("667×280: att släppa nollar BÅDA axlarna",
+		lag ~= nil and lag.uppNF == 0 and lag.uppNS == 0 and lag.hogNF == 0 and lag.hogNS == 0)
+	TouchControls.unmount()
+
+	UIS.TouchEnabled = foreTouch3
+	kam.ViewportSize = foreVy3
+end
+
 if fails > 0 then
 	print(string.format("%d mätning(ar) föll.", fails))
 else

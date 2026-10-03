@@ -49,7 +49,12 @@ const TANGENT = { N: "w", S: "s", O: "d", V: "a" };
    still mot en solid linje? Därför hålls tangenten tills målet är
    nått eller tills figuren har stått stilla i 0,6 s. */
 async function ga(scen, x, y, hall, framme, maxMs = 20000) {
-  await page.evaluate(({ scen, x, y }) => gaTill(scen, { x, y, rikt: 0 }), { scen, x, y });
+  /* P3 / Kimi Q4: en flytt till en annan scen ger 3D-vyn igen, om inte
+     kartan valts I DEN scenen. Provet väljer kartan där det går — samma
+     val en spelare gör med V efter dörren — så att tangenterna är
+     absoluta som provet förutsätter. */
+  await page.evaluate(({ scen, x, y }) => { gaTill(scen, { x, y, rikt: 0 });
+    if (G.vy !== "2d") vaxlaVy(); }, { scen, x, y });
   await page.waitForTimeout(250);
   for (const h of hall) await page.keyboard.down(TANGENT[h]);
   const las = () => page.evaluate(() => ({ x: +VD.px.toFixed(2), y: +VD.py.toFixed(2) }));
@@ -157,6 +162,8 @@ function prova(namn, ok, detalj) {
    Vägen ut till hagen var hela onboardingen innan man fick rida. */
 {
   const s = await page.evaluate(() => {
+    /* En återvändande spelare: på pass 0 tar First Ride över (P1b). */
+    SPAR.pass = 1;
     startaVandring();
     return { plats: G.hastPlats, leder: G.leder, hamtad: G.hamtad };
   });
@@ -322,8 +329,14 @@ function prova(namn, ok, detalj) {
      Gå-hit är dessutom vad en spelare faktiskt använder, så provet
      följer nu den riktiga vägen: samma A*-rutnät som frågar samma
      kollision. ]] */
+  /* KARTAN, som i `till()` ovan. Sedan P3 ger en flytt till en annan scen
+     3D-vyn igen, och i CI:s mjukvarurendering blir bildrutorna då så långa
+     att gå-hit inte hinner fram på provets 60 sekunder: på draft-PR #275
+     stannade hon vid y 52,67 av 68 → 30, och steget tog 138 s mot 65 s på
+     en main-baserad PR. Vägsökningen är densamma i båda vyerna; provet
+     mäter den, inte bildtakten. */
   await page.evaluate(({ x, y }) => { if (typeof slutaGa === "function") slutaGa();
-    gaTill("stallinne", { x, y, rikt: 0 }); }, { x: d.ankomst[0], y: d.ankomst[1] });
+    gaTill("stallinne", { x, y, rikt: 0 }); if (G.vy !== "2d") vaxlaVy(); }, { x: d.ankomst[0], y: d.ankomst[1] });
   await page.waitForTimeout(300);
   const vagIn = await page.evaluate(() => { satMal(5.6, 30.0); return VD.vag ? VD.vag.length : null; });
   let p, t0 = Date.now();
@@ -337,7 +350,7 @@ function prova(namn, ok, detalj) {
 
   /* Och tillbaka ut: norrut från tvärgången upp till dörrens rum. */
   await page.evaluate(() => { if (typeof slutaGa === "function") slutaGa();
-    gaTill("stallinne", { x: 5.6, y: 30.0, rikt: 0 }); });
+    gaTill("stallinne", { x: 5.6, y: 30.0, rikt: 0 }); if (G.vy !== "2d") vaxlaVy(); });
   await page.waitForTimeout(300);
   const vagUt = await page.evaluate(({ x, y }) => { satMal(x, y); return VD.vag ? VD.vag.length : null; },
     { x: d.ankomst[0], y: d.ankomst[1] });
@@ -456,9 +469,14 @@ function prova(namn, ok, detalj) {
     G.skotselRes = null; G.hastMott = false;
     return { utan, utrustning, leds, skott };
   });
+  /* Paritetspasset (#264, docs/WEB-P1A-STABLE-FLOW-CONTRACT.md): sadel och
+     träns hämtas vid boxfronten som i Roblox, så "hämta sadel" är inget
+     eget mål längre — uppgiften ÄR hästen tills hon leds. Markören ska
+     därför sitta kvar där; att den flyttade till sadelkammaren var den
+     gamla huvudvägen. */
   prova("markören sitter på hästen bara när uppgiften ÄR hästen",
-    v.utan === true && v.utrustning === false && v.leds === false && v.skott === false,
-    `hitta hästen ${v.utan} · hämta sadel ${v.utrustning} · leds ${v.leds} · skött ${v.skott}`);
+    v.utan === true && v.utrustning === true && v.leds === false && v.skott === false,
+    `hitta hästen ${v.utan} · vid hästen ${v.utrustning} · leds ${v.leds} · skött ${v.skott}`);
   await page.evaluate(() => { startaVandring(); G.vy = "2d"; });
 }
 

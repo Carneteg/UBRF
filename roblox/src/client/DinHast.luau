@@ -19,8 +19,24 @@
 	vore inte en hjälp utan en tapet.
 
 	SKYLTEN SKA TONA BORT. Den är ett svar på "vilken av dem?", och den
-	frågan är besvarad när man står framför henne. På nära håll bleknar
-	den därför nästan helt, och under ritten är den släckt. ]]
+	frågan är besvarad när man står framför henne. På nära håll släcks den
+	helt, och under ledningen och ritten är den släckt.
+
+	── EN TYDLIG VÄGVISARE FRÅN SPAWN (Tobias i Play, 2026-09-28) ─────
+	docs/ASSIGNED-HORSE-GUIDE-CONTRACT.md. Tobias såg inte vilken häst han
+	skulle gå till: skylten var 160×44 px utan pil och syntes bara inom 120
+	studs (hästen stod 97 studs från spawn). Nu bär samma skylt en stor
+	gyllene ▼-pil med en lugn gungning, ligger ALLTID ÖVERST (syns genom
+	stallets väggar), har fast pixelstorlek (lika tydlig på avstånd) och
+	ett avstånd som täcker hela anläggningen. Fortfarande lokal, och bara
+	för DEN tilldelade hästen (`PreparationController.hastId()`).
+
+	SJÄLVLÄKANDE. En BillboardGui direkt i PlayerGui har `ResetOnSpawn`
+	sann som standard: efter en respawn raderades skylten och kom aldrig
+	tillbaka, eftersom referensen låg kvar (uppmätt i Studio). Nu är
+	`ResetOnSpawn` falsk, och loopen bygger om skylten när den saknas, har
+	tappat sin förälder eller pekar på en annan modell än hästens nuvarande
+	— respawn, fördröjd strömning och en ersatt modell. ]]
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -94,10 +110,18 @@ local FARG_TEXT = Color3.fromRGB(236, 232, 222)
 	gjort sitt. ]]
 local NARA = 12
 local LANGT = 30
+--[[ Vägvisarens räckvidd och storlek. Räckvidden täcker hela anläggningen;
+	storleken är i pixlar, så att pilen är lika tydlig från spawn som nära. ]]
+local PIL_RACKVIDD = 3000
+local SKYLT_BREDD, SKYLT_HOJD = 220, 118
+local SKYLT_HOJD_OVER = 6.5
 
 local function hastModell(id: string): Model?
 	for _, m in ipairs(CollectionService:GetTagged("Horse")) do
-		if m:IsA("Model") and m:GetAttribute("HorseId") == id then
+		--[[ Bara en modell som FINNS i världen: en riven eller bortströmmad
+			modell får aldrig bära vägvisaren (och en ersättare med samma id
+			ska vinna över den gamla). ]]
+		if m:IsA("Model") and m:GetAttribute("HorseId") == id and m:IsDescendantOf(workspace) then
 			return m
 		end
 	end
@@ -242,10 +266,12 @@ local function byggSkylt(modell: Model)
 	local b = Instance.new("BillboardGui")
 	b.Name = "DinHastSkylt"
 	b.Adornee = rot
-	b.Size = UDim2.fromOffset(160, 44)
-	b.StudsOffsetWorldSpace = Vector3.new(0, 4.6, 0)
+	b.Size = UDim2.fromOffset(SKYLT_BREDD, SKYLT_HOJD)
+	b.StudsOffsetWorldSpace = Vector3.new(0, SKYLT_HOJD_OVER, 0)
 	b.AlwaysOnTop = true
-	b.MaxDistance = 120
+	b.MaxDistance = PIL_RACKVIDD
+	-- Överlev respawn: en BillboardGui i PlayerGui raderas annars vid varje ny kropp.
+	b.ResetOnSpawn = false
 	--[[ I spelarens EGEN PlayerGui, inte i världen: det är det som gör
 		skylten lokal utan en enda extra rad logik. ]]
 	b.Parent = spelare:WaitForChild("PlayerGui")
@@ -253,7 +279,7 @@ local function byggSkylt(modell: Model)
 
 	local ram = Instance.new("Frame")
 	ram.Name = "Ram"
-	ram.Size = UDim2.fromScale(1, 1)
+	ram.Size = UDim2.new(1, 0, 0, 56)
 	ram.BackgroundColor3 = Color3.fromRGB(8, 10, 14)
 	ram.BackgroundTransparency = 0.3
 	ram.Parent = b
@@ -263,30 +289,54 @@ local function byggSkylt(modell: Model)
 
 	local rubrik = Instance.new("TextLabel")
 	rubrik.Name = "Rubrik"
-	rubrik.Size = UDim2.new(1, -12, 0, 14)
+	rubrik.Size = UDim2.new(1, -12, 0, 18)
 	rubrik.Position = UDim2.fromOffset(6, 4)
 	rubrik.BackgroundTransparency = 1
 	rubrik.Text = Sprak.t("stall.din_hast")
 	rubrik.TextColor3 = FARG_GULD
 	rubrik.Font = Enum.Font.GothamBold
-	rubrik.TextSize = 11
+	rubrik.TextSize = 14
 	rubrik.Parent = ram
 
 	local namn = Instance.new("TextLabel")
 	namn.Name = "Namn"
-	namn.Size = UDim2.new(1, -12, 0, 20)
-	namn.Position = UDim2.fromOffset(6, 18)
+	namn.Size = UDim2.new(1, -12, 0, 28)
+	namn.Position = UDim2.fromOffset(6, 23)
 	namn.BackgroundTransparency = 1
 	namn.Text = tostring(dagens and dagens.namn or "")
 	namn.TextColor3 = FARG_TEXT
 	namn.Font = Enum.Font.GothamMedium
-	namn.TextSize = 14
+	namn.TextSize = 22
 	namn.TextScaled = true
 	namn.Parent = ram
 	local tak = Instance.new("UITextSizeConstraint")
-	tak.MaxTextSize = 14
-	tak.MinTextSize = 8
+	tak.MaxTextSize = 22
+	tak.MinTextSize = 10
 	tak.Parent = namn
+
+	-- Vägvisaren: en stor gyllene pil nedåt mot hästen, under namnet.
+	local pil = Instance.new("TextLabel")
+	pil.Name = "Pil"
+	pil.Size = UDim2.new(1, 0, 0, 60)
+	pil.Position = UDim2.fromOffset(0, 58)
+	pil.BackgroundTransparency = 1
+	pil.Text = "▼"
+	pil.TextColor3 = FARG_GULD
+	pil.TextStrokeColor3 = Color3.fromRGB(8, 10, 14)
+	pil.TextStrokeTransparency = 0.2
+	pil.Font = Enum.Font.GothamBlack
+	pil.TextSize = 54
+	pil.Parent = b
+end
+
+--[[ Är skylten fortfarande giltig för DEN här modellen? En raderad skylt
+	(respawn), en utan förälder, eller en som sitter på en gammal modell
+	byggs om. ]]
+local function skyltGiltig(modell: Model): boolean
+	local b = skylt
+	if not b or b.Parent == nil then return false end
+	local a = b.Adornee
+	return a ~= nil and a:IsDescendantOf(modell)
 end
 
 --[[ Tonandet. Ett tal mellan 0 och 1 där 1 är "syns fullt". ]]
@@ -327,7 +377,11 @@ local function steg()
 	local s = styrka(avstand)
 
 	if b then
-		b.Enabled = true
+		--[[ Framme: frågan är besvarad, och skylten släcks helt. Längre bort
+			tonar den upp, och bortom LANGT syns den fullt — med pilen
+			gungande lugnt så att ögat hittar den. ]]
+		b.Enabled = avstand > NARA
+		b.StudsOffsetWorldSpace = Vector3.new(0, SKYLT_HOJD_OVER + 0.35 * math.sin(os.clock() * 2.4), 0)
 		local ram = b:FindFirstChild("Ram") :: Frame?
 		if ram then ram.BackgroundTransparency = 1 - 0.7 * s end
 		for _, d in ipairs(b:GetDescendants()) do
@@ -447,9 +501,10 @@ function DinHast.start()
 			släckts av ett `return` som handlar om något helt annat. ]]
 		ritaBuren()
 		if not lasAssignment() then return end
-		if not skylt and dagens then
+		-- Självläkande: bygg om skylten om den saknas, raderats (respawn) eller sitter på fel modell.
+		if dagens then
 			local m = hastModell(dagens.id)
-			if m then byggSkylt(m) end
+			if m and not skyltGiltig(m) then byggSkylt(m) end
 		end
 		steg()
 	end)

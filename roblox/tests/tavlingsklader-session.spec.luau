@@ -1054,6 +1054,68 @@ do
 		("%s · %s"):format(tostring(s), tostring(p)))
 end
 
+--[[ ══ 16. D5 R1: VAKTERNA FALLER EFTER SKRIVNINGEN ══════════════
+	En bindning som kastar efter att kläderna skrivits lämnade förut en
+	avatar i tävlingskläder utan session. Nu: ett vanligt nej, exakt
+	återställning, ingen session och inga kvarlämnade kopplingar. ]]
+do
+	rent()
+	local function provSignal(karaktarFor)
+		--[[ En signal som kan fås att FALLA vid Connect, och som räknar sina
+			levande kopplingar. `karaktarFor` ger kroppen vars tröja noteras i
+			felögonblicket — beviset att felet kom EFTER skrivningen. ]]
+		local sig = { kopplingar = {}, fela = false, vidFel = nil }
+		function sig:Connect(fn)
+			if self.fela then
+				local k = karaktarFor and karaktarFor()
+				local sh = k and k:FindFirstChildOfClass("Shirt")
+				self.vidFel = sh and sh.ShirtTemplate or "ingen"
+				error("bindningen föll (prov)")
+			end
+			local c = { Connected = true, fn = fn }
+			function c:Disconnect() self.Connected = false end
+			table.insert(self.kopplingar, c)
+			return c
+		end
+		function sig:Fire(...)
+			for _, c in ipairs(self.kopplingar) do if c.Connected then c.fn(...) end end
+		end
+		function sig:anslutna()
+			local n = 0
+			for _, c in ipairs(self.kopplingar) do if c.Connected then n += 1 end end
+			return n
+		end
+		return sig
+	end
+	local tjanst = tjanstMedKatalog(allaRatta())
+	local spelare, karaktar = nySpelare("Vakt", "rbxassetid://888001", "rbxassetid://888002")
+	spelare.CharacterAdded = provSignal(nil)
+	spelare.CharacterRemoving = provSignal(function() return karaktar end)
+	spelare.CharacterRemoving.fela = true
+	local okK, ok, utfall = pcall(tjanst.starta, spelare, "white")
+	check("starta kastar inte när en vakt faller", okK == true, tostring(ok))
+	check("svaret är ett vanligt nej: vakter_foll", ok == false and utfall == "vakter_foll", tostring(utfall))
+	check("felet kom efter skrivningen", spelare.CharacterRemoving.vidFel
+		== S.mall(T.set("white").shirtAssetId), tostring(spelare.CharacterRemoving.vidFel))
+	local sh, pa = buren(karaktar)
+	check("originalet tillbaka, exakt", sh == "rbxassetid://888001" and pa == "rbxassetid://888002",
+		("%s · %s"):format(tostring(sh), tostring(pa)))
+	check("ingen session, inget kvar i registren", tjanst.aktivt(spelare) == nil and tjanst.kvarvarande() == 0)
+	check("den bundna vakten är bortkopplad, och ingen PlayerRemoving-lyssnare ligger kvar",
+		spelare.CharacterAdded:anslutna() == 0 and #Players.PlayerRemoving._lyssnare == 0,
+		("%d · %d"):format(spelare.CharacterAdded:anslutna(), #Players.PlayerRemoving._lyssnare))
+	-- Ett originalt SAKNAT lager tas bort igen, även på den här vägen.
+	local tjanst2 = tjanstMedKatalog(allaRatta())
+	local spelare2, karaktar2 = nySpelare("Vakt2", nil, "rbxassetid://888003")
+	spelare2.CharacterAdded = provSignal(nil)
+	spelare2.CharacterRemoving = provSignal(function() return karaktar2 end)
+	spelare2.CharacterRemoving.fela = true
+	local _, ok2 = pcall(tjanst2.starta, spelare2, "pink")
+	local sh2, pa2 = buren(karaktar2)
+	check("utan egen tröja: tröjan tas bort igen, byxan tillbaka", ok2 == false and sh2 == nil
+		and pa2 == "rbxassetid://888003", ("%s · %s"):format(tostring(sh2), tostring(pa2)))
+end
+
 print("")
 if fails > 0 then
 	print(string.format("%d mätning(ar) föll.", fails))

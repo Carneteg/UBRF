@@ -5,9 +5,13 @@ import assert from 'node:assert/strict';
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const game=read('src/game.js'),world=read('src/world.js'),scenes=read('src/scenes.js');
 function between(s,a,b){const i=s.indexOf(a),j=s.indexOf(b,i+a.length);assert(i>=0&&j>i,`missing ${a}`);return s.slice(i,j);}
-function mount(){
+function mount(hall){
   const events={};let calls=0,overlay=false,near=true;
-  const c={console,Math,InputFeel:{ride:x=>x},HJALP_KANON:{STYR_FULLT:.72},
+  /* Klockan styrs av provet: hållpromptens tid (P1a R1) mäts på
+     tangenthändelsernas tider, och provet ska kunna lägga ett helt håll
+     MELLAN två bildrutor. */
+  const klocka={T:0};
+  const c={console,Math,performance:{now:()=>klocka.T},InputFeel:{ride:x=>x},HJALP_KANON:{STYR_FULLT:.72},
     clamp:(x,a,b)=>Math.max(a,Math.min(b,x)),
     G:{scen:'gard',hastId:null,hastMott:false},
     addEventListener:(n,f)=>(events[n]??=[]).push(f),
@@ -21,7 +25,9 @@ function mount(){
     document:{getElementById:()=>({classList:{contains:()=>!overlay}}),
       addEventListener(){}},
     ov:{classList:{toggle:(_,hidden)=>{overlay=!hidden;}}},sheet:{innerHTML:''},
-    interaktioner:()=>near?[{pos:[0,0],text:'Dörr',gor(){calls++;}}]:[{pos:[20,0],text:'Dörr',gor(){calls++;}}],
+    interaktioner:()=>hall
+      ?(near?[{pos:[0,0],text:'Rida nu',tangent:'KeyR',hall:0.35,gor(){calls++;}}]:[])
+      :near?[{pos:[0,0],text:'Dörr',gor(){calls++;}}]:[{pos:[20,0],text:'Dörr',gor(){calls++;}}],
     overlayUppe:()=>overlay,navBygg(){},slutaGa(){},kameraNollstall(){},ridSittAv(){},hudLage(){},saga(){},
     nivaHojd:()=>0,ANL:{spawn:{x:0,y:0,rikt:0}},
     SPAR:{pass:0},vaxlaVy(){},ljudToggle(){},visaTraningsbok(){},
@@ -37,7 +43,7 @@ function mount(){
   vm.runInContext('this.IN=IN;this.RIDIN=RIDIN;this.VD=VD;this.interact=interagera;this.go=gaTill;this.start=startaVandring;this.show=overlay;this.rideStep=stegaInput;',c);
   c.key=(type,code='KeyE',repeat=false)=>{for(const f of events[type]||[])f({code,repeat,preventDefault(){}});};
   c.sample=()=>c.interact();
-  c.calls=()=>calls;c.near=x=>{near=x;};
+  c.calls=()=>calls;c.near=x=>{near=x;};c.tid=ms=>{klocka.T=ms;};
   return c;
 }
 let count=0;
@@ -67,9 +73,28 @@ test('scenbyte och hållen E skapar ingen ny handling förrän nytt tryck',()=>{
   const c=mount();c.key('keydown');c.sample();c.go('stallinne');c.sample();c.go('gard');c.sample();assert.equal(c.calls(),1);
   c.key('keyup');c.key('keydown');c.key('keyup');c.sample();assert.equal(c.calls(),2);
 });
+/* P3 § 3: i sadeln är F halvhalten (Roblox F) och E sitter av. Paraden är
+   samma kanal och samma nivåsemantik som förut — bara tangenten har bytts.
+   E i sadeln ger ingen parad och ingen gå-lägets interaktion. */
 test('ridningens parad och kontinuerliga nivå förblir oförändrade',()=>{
-  const c=mount();c.G.scen='lektion';c.key('keydown');assert.equal(c.RIDIN.parad,1);assert.equal(c.IN.ned.KeyE,true);
-  c.key('keyup');assert.equal(c.RIDIN.parad,0);assert.equal(c.IN.ned.KeyE,false);
+  const c=mount();c.G.scen='lektion';c.key('keydown','KeyF');assert.equal(c.RIDIN.parad,1);assert.equal(c.IN.ned.KeyF,true);
+  c.key('keyup','KeyF');assert.equal(c.RIDIN.parad,0);assert.equal(c.IN.ned.KeyF,false);
+  c.key('keydown');assert.equal(c.RIDIN.parad,0);c.key('keyup');
   c.G.scen='gard';c.sample();assert.equal(c.calls(),0);
+});
+/* ── Hållprompterna (paritetspasset P1a R1, Roblox HoldDuration) ── */
+test('håll: ett helt håll MELLAN två bildrutor räknas (låg bildtakt)',()=>{
+  const c=mount(true);c.tid(0);c.key('keydown','KeyR');c.tid(550);c.key('keyup','KeyR');
+  c.sample();c.sample();assert.equal(c.calls(),1);
+});
+test('håll: ett kort tryck mellan bildrutor räknas inte',()=>{
+  const c=mount(true);c.tid(0);c.key('keydown','KeyR');c.tid(100);c.key('keyup','KeyR');c.sample();assert.equal(c.calls(),0);
+});
+test('håll: fylls i verklig tid och utlöses EN gång medan tangenten hålls',()=>{
+  const c=mount(true);c.tid(0);c.key('keydown','KeyR');c.tid(200);c.sample();assert.equal(c.calls(),0);
+  c.tid(400);c.sample();assert.equal(c.calls(),1);c.tid(900);c.sample();c.key('keyup','KeyR');c.sample();assert.equal(c.calls(),1);
+});
+test('håll: E utlöser inte en R-prompt',()=>{
+  const c=mount(true);c.tid(0);c.key('keydown');c.tid(600);c.sample();c.key('keyup');c.sample();assert.equal(c.calls(),0);
 });
 console.log(`ALLA OK (${count} mätningar)`);

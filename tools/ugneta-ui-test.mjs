@@ -38,7 +38,10 @@ const vyer=[
 ];
 
 for(const vy of vyer){
-  const page=await browser.newPage({viewport:{width:vy.width,height:vy.height}});
+  /* Provet läser SVENSKA texter. Sedan P3 går kontrollhjälpen genom tSpr och
+     följer webbläsarens språk — utan angivet locale blev den engelsk i CI
+     (rött på f3a40bf, första gången provet kördes där). */
+  const page=await browser.newPage({viewport:{width:vy.width,height:vy.height},locale:"sv-SE"});
   page.on("pageerror",e=>console.error("PAGEERROR",vy.namn,e.message));
   await page.goto(`http://localhost:${PORT}/`,{waitUntil:"load"});
   await page.waitForTimeout(400);
@@ -110,14 +113,27 @@ for(const vy of vyer){
   if(!h.saknas){
     prova(h.synlig&&h.antal>=8,`${vy.namn}: hjälpen visar reglagen`,
       `${h.antal} rader`);
-    prova(h.karta["Sitt upp / använd"]==="E",
-      `${vy.namn}: hjälpen svarar hur man sitter upp`,h.karta["Sitt upp / använd"]);
-    prova(h.karta["Tygel (kontakt)"]==="Mellanslag",
+    /* P3 § 3 (docs/P3-RIDING-PANEL-LESSON-MENU-CONTRACT.md): samma rader
+       som ridpanelens kärna — «Sitt upp / sitt av» på E, som i Roblox. */
+    const sittUpp=h.inmatning==="touch"?"SITT AV":"E";
+    prova(h.karta["Sitt upp / sitt av"]===sittUpp,
+      `${vy.namn}: hjälpen svarar hur man sitter upp`,h.karta["Sitt upp / sitt av"]);
+    /* #273 T3: på pek har tygeln ingen knapp i standardläget — raden hoppas över. */
+    prova(h.karta["Tygel (kontakt)"]===(h.inmatning==="touch"?undefined:"Mellanslag"),
       `${vy.namn}: …och vad tygeln är`,h.karta["Tygel (kontakt)"]);
-    /* Gångart och hopp SKA sakna reglage på webben. */
-    prova(h.utan.includes("Gångart")&&h.utan.includes("Hoppa"),
-      `${vy.namn}: gångart och hopp anges utan uppfunnen tangent`,
-      h.utan.join(", "));
+    /* #273 S1: webben har nu ETT reglage för «ett steg upp» och ETT för
+       «ett steg ned», bundna på riktigt (W/↑ och S/↓, DRIV och BROMS på
+       pek) — samma två rader som Roblox. Hoppet har fortfarande ingen rad
+       alls (avsprånget kommer ur anridningen), och ingen rad står med tom
+       reglagekolumn. */
+    const namn=Object.keys(h.karta);
+    const upp=namn.find(n=>/steg upp/i.test(n)), ned=namn.find(n=>/steg ned/i.test(n));
+    prova(!namn.some(n=>/^Hoppa$/i.test(n))
+      &&h.karta[upp]===(h.inmatning==="touch"?"DRIV":"W / ↑")
+      &&h.karta[ned]===(h.inmatning==="touch"?"BROMS":"S / ↓")
+      &&h.utan.length===0,
+      `${vy.namn}: ett steg upp och ett steg ned har var sitt bundna reglage, hoppet ingen rad`,
+      namn.map(n=>n+" ["+h.karta[n]+"]").join(" | "));
     prova(h.box.l>=-1&&h.box.r<=h.inner.w+1&&h.box.t>=-1&&h.box.b<=h.inner.h+1,
       `${vy.namn}: hjälpen ryms i viewporten`,JSON.stringify(h.box));
     prova(!h.overflowX,`${vy.namn}: hjälpen ger ingen horisontell overflow`);
