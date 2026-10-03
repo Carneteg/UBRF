@@ -123,12 +123,19 @@ function tilldelningsId(){
   return (typeof SPAR!=="undefined"&&SPAR&&Number.isInteger(SPAR.spelarId))?SPAR.spelarId:0;
 }
 /* Dagens häst för den här spelaren. Webben har en spelare, så ingen häst
-   är upptagen av någon annan; vilande är webbens välfärdsspärr. */
-function tilldelaDagensHast(){
+   är upptagen av någon annan; vilande är webbens välfärdsspärr.
+
+   #274: `undanta` är en häst som INTE får väljas, oavsett vad profilen
+   säger — den som just stoppats av välfärdsregeln. Port av Roblox
+   `StallService.tilldela(player, undanta)`: vilan är redan sparad, men en
+   ersättare ska aldrig kunna bli samma häst, och med ett undantag gäller
+   ingen önskad första-dagen-häst (den som stoppats har haft sin dag). */
+function tilldelaDagensHast(undanta){
   const vilande={};
   for(const id of Object.keys(HORSES))
     if(typeof hastVilarForSkada==="function"&&hastVilarForSkada(id))vilande[id]=true;
-  const forsta=typeof SPAR!=="undefined"&&SPAR&&SPAR.pass===0;
+  if(undanta)vilande[undanta]=true;
+  const forsta=!undanta&&typeof SPAR!=="undefined"&&SPAR&&SPAR.pass===0;
   return tilldelaLedig(tilldelningsId(), {}, vilande, forsta?FORSTA_DAGEN_HAST_ID:null);
 }
 

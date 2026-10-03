@@ -324,15 +324,18 @@ console.log("\n── #274: rätt svar sparar vilan först och räknar dagen en 
     return {
       skr: skr.map(s => ({ pass: s.pass, kvar: s.fortroende[h] && s.fortroende[h].skada ? s.fortroende[h].skada.passKvar : null })),
       kort: el.dataset.kort,
-      knappar: [...el.querySelectorAll("button")].map(b => b.dataset.id || b.textContent.trim()),
+      knappar: [...el.querySelectorAll("button")].filter(b => b.dataset.id).map(b => b.dataset.id),
       pass: SPAR.pass, skada: (SPAR.fortroende[h] || {}).skada || null,
       annan: SPAR.fortroende[annan].skada ? SPAR.fortroende[annan].skada.passKvar : 0,
       sparat: JSON.parse(localStorage.getItem(nyckel)), stoppad: G.forb ? G.forb.stoppad : null,
       igen: registreraValfardsstopp(G.forb), passIgen: SPAR.pass,
     };
   }, [mark, NYCKEL, h, annan]);
-  prova("stoppkortet: «Ridläraren tar över», ingen ny handlingsknapp (paritet med Roblox)",
-    d.kort === "stopp" && d.knappar.every(k => !/^(start|svar|rad|byt)/.test(k)), `${d.kort} · ${JSON.stringify(d.knappar)}`);
+  /* Produktbeslut efter Tobias speltest (#274): stoppet står kvar, men det
+     får inte vara en återvändsgränd — kortet bär EN väg vidare, «fortsatt».
+     Själva fortsättningen mäts i avsnitt 7. */
+  prova("stoppkortet: «Ridläraren tar över», och dess enda handling är fortsättningen",
+    d.kort === "stopp" && d.knappar.every(k => k === "fortsatt"), `${d.kort} · ${JSON.stringify(d.knappar)}`);
   prova("första skrivningen bär vilan, med passet orört (vilan sparas först)",
     d.skr.length >= 2 && d.skr[0].kvar === 2 && d.skr[0].pass === fyndPass, JSON.stringify(d.skr));
   prova("sista skrivningen har dagen räknad", d.skr.length >= 2 && d.skr[d.skr.length - 1].pass === fyndPass + 1, JSON.stringify(d.skr));
@@ -366,6 +369,102 @@ console.log("\n── #274: rätt svar sparar vilan först och räknar dagen en 
     return { vilar: hastVilarForSkada(h), listad: valbaraHastar().includes(h) };
   }, h);
   prova("när vilan är slut är hon valbar igen", !t.vilar && t.listad, `vilar ${t.vilar} · listad ${t.listad}`);
+  await ctx.close();
+}
+
+/* ── 7. #274: «RIDA NU» ÄR INTE EN ÅTERVÄNDSGRÄND ───────────────────
+   Speltestet: "det går inte att rida direkt då ridläraren stoppar en".
+   Välfärdsstoppet ska stå kvar — en häst med ett fynd rids inte — men
+   spelaren ska få en frisk häst och kunna fortsätta samma dag:
+     fynd → hästen stoppas → frisk ersättare → «Rida nu» → uppsittning. */
+console.log("\n── #274: efter stoppet får spelaren en frisk häst och kan rida ──");
+{
+  /* Förutsättning ur samma regel som Roblox: ett pass där den tilldelade
+     hästen bär ett fynd, och där ersättaren (som får passet efter, eftersom
+     stoppet räknar dagen) inte gör det — annars stoppas hon i sin tur. */
+  const probe = await medProfil(bas274);
+  const f = await probe.p.evaluate(h => {
+    for (let q = 2; q < 80; q++) {
+      if (!Forb.fyndFor(h, q + 1)) continue;
+      const ersattare = tilldelaLedig(tilldelningsId(), {}, { [h]: true }, null);
+      if (ersattare && ersattare !== h && !Forb.fyndFor(ersattare, q + 2))
+        return { q, ersattare, namn: HORSES[ersattare].namn };
+    }
+    return null;
+  }, vilande);
+  await probe.ctx.close();
+  prova("förutsättning: ett fynddagspass med fyndfri ersättare finns", !!f, JSON.stringify(f));
+  const { ctx, p } = await medProfil({ ...bas274, pass: f.q });
+  const h = await p.evaluate(() => G.hastId);
+  await tillBoxen(p);
+  await kortKlick(p, "start:rida_nu");
+  await vantaPa(p, () => document.getElementById("stegkort").dataset.kort === "fynd");
+  await kortKlick(p, "svar:1");
+  await vantaPa(p, () => document.getElementById("stegkort").dataset.kort === "stopp");
+  const stopp = await p.evaluate(() => ({
+    knappar: [...document.querySelectorAll("#stegkort button")].map(b => ({ id: b.dataset.id, text: b.textContent.trim() })),
+    pass: SPAR.pass }));
+  const fortsatt = stopp.knappar.find(k => k.id === "fortsatt");
+  prova("stoppkortet erbjuder en väg vidare, med den friska hästens namn",
+    !!fortsatt && fortsatt.text.includes(f.namn), JSON.stringify(stopp.knappar));
+  await kortKlick(p, "fortsatt");
+  await vantaPa(p, h => G.hastId && G.hastId !== h, h);
+  const nu = await p.evaluate(h => ({ hast: G.hastId, vilar: hastVilarForSkada(G.hastId),
+    stoppad: G.forb ? G.forb.stoppad : "SAKNAS", forbHast: G.forb && G.forb.hastId,
+    pass: SPAR.pass, kort: document.getElementById("stegkort").dataset.kort,
+    knappar: [...document.querySelectorAll("#stegkort button")].map(b => b.dataset.id),
+    stoppadVilar: hastVilarForSkada(h), listad: valbaraHastar().includes(h),
+    satt: sattAktivHast(h), efterSatt: G.hastId }), h);
+  prova("den friska ersättaren är spelarens häst, inte vilande, och utan stopp",
+    nu.hast === f.ersattare && nu.vilar === false && !nu.stoppad && nu.forbHast === nu.hast,
+    `${h} → ${nu.hast} · vilar ${nu.vilar} · stoppad ${nu.stoppad}`);
+  /* Spelaren står kvar vid den stoppade hästens box. Kortet säger då «Gå till
+     <hästen>» — samma väg som när dagen börjar — och hon går dit. */
+  prova("kortet pekar mot den friska hästen tills hon står vid henne", nu.kort === "ga_till", `${nu.kort}`);
+  prova("den stoppade hästen vilar kvar och går inte att välja eller sätta",
+    nu.stoppadVilar === true && nu.listad === false && nu.satt === false && nu.efterSatt === nu.hast,
+    `vilar ${nu.stoppadVilar} · listad ${nu.listad} · sattAktivHast ${nu.satt}`);
+  prova("dagen är räknad EN gång — fortsättningen räknar inte igen",
+    stopp.pass === f.q + 1 && nu.pass === f.q + 1, `${f.q} → ${stopp.pass} → ${nu.pass}`);
+  await tillBoxen(p);
+  const vid = await p.evaluate(() => ({ kort: document.getElementById("stegkort").dataset.kort,
+    knappar: [...document.querySelectorAll("#stegkort button")].map(b => b.dataset.id) }));
+  prova("vid den friska hästen är hon tillbaka i vanliga «Rida nu»-valet", vid.knappar.includes("start:rida_nu"),
+    `${vid.kort} · ${JSON.stringify(vid.knappar)}`);
+  await kortKlick(p, "start:rida_nu");
+  await p.keyboard.down("KeyE"); await p.waitForTimeout(900); await p.keyboard.up("KeyE");
+  await vantaPa(p, () => G.scen === "lektion");
+  const ritt = await p.evaluate(() => ({ scen: G.scen, hast: G.hastId }));
+  prova("«Rida nu» på ersättaren leder till uppsittning och ritt",
+    ritt.scen === "lektion" && ritt.hast === f.ersattare, `${ritt.scen} · ${ritt.hast}`);
+  await ctx.close();
+}
+console.log("\n── #274: finns ingen frisk häst blir stoppet ett besked, inte en tom knapp ──");
+{
+  const probe = await medProfil(bas274);
+  const q = await probe.p.evaluate(h => { for (let q = 2; q < 80; q++) if (Forb.fyndFor(h, q + 1)) return q; return -1; }, vilande);
+  const alla = await probe.p.evaluate(() => Object.keys(HORSES));
+  const kanonVersion = await probe.p.evaluate(() => HASTKANON_VERSION);
+  await probe.ctx.close();
+  const fortroende = {};
+  for (const id of alla) if (id !== vilande)
+    fortroende[id] = { rang: .5, pass: 1, skada: { namn: "skav", passKvar: 5 } };
+  const { ctx, p } = await medProfil({ ...bas274, pass: q, fortroende, hastkanonVersion: kanonVersion });
+  const h = await p.evaluate(() => G.hastId);
+  await tillBoxen(p);
+  await kortKlick(p, "start:rida_nu");
+  await vantaPa(p, () => document.getElementById("stegkort").dataset.kort === "fynd");
+  await kortKlick(p, "svar:1");
+  await vantaPa(p, () => document.getElementById("stegkort").dataset.kort === "stopp");
+  const d = await p.evaluate(() => ({ knappar: [...document.querySelectorAll("#stegkort button")].map(b => b.dataset.id),
+    hast: G.hastId, pass: SPAR.pass }));
+  prova("ingen frisk häst: ingen fortsättningsknapp, och ingen vilande häst delas ut",
+    !d.knappar.includes("fortsatt") && d.hast === h, `${JSON.stringify(d.knappar)} · ${d.hast}`);
+  const tvang = await p.evaluate(() => { try { return typeof stegkortFortsatt === "function" ? stegkortFortsatt() : "SAKNAS"; } catch (e) { return "KAST"; } });
+  const efter = await p.evaluate(() => ({ hast: G.hastId, pass: SPAR.pass }));
+  prova("ett tvingat anrop byter inte häst och räknar inte dagen igen",
+    tvang === false && efter.hast === h && efter.pass === d.pass,
+    `svar ${tvang} · ${efter.hast} · pass ${d.pass} → ${efter.pass}`);
   await ctx.close();
 }
 

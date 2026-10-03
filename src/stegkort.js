@@ -205,15 +205,50 @@ function stegkortDagsform() {
   if (typeof ridNollstallHjalp === "function") ridNollstallHjalp();
 }
 
+/* ── EFTER STOPPET: EN FRISK HÄST, SAMMA DAG (#274) ──────────────────
+   Port av Roblox `GameplayService.fortsattMedAnnanHast` / `ersattareFor`.
+   Speltestet: "det går inte att rida direkt då ridläraren stoppar en".
+   Välfärdsstoppet står kvar — en häst med ett fynd rids inte — men det är
+   ingen återvändsgränd: spelaren får en frisk häst och går tillbaka in i
+   vanliga «Rida nu»-valet för henne.
+
+   Dagen räknades redan när stoppet svarades (`registreraValfardsstopp`) och
+   räknas ALDRIG här: ett andra anrop kommer inte förbi `stoppad`-kravet,
+   eftersom den nya förberedelsen saknar stopp. Den stoppade hästen är
+   uttryckligen undantagen i valet, inte bara vilande i profilen. */
+function stegkortErsattare() {
+  const s = G.forb;
+  if (!s || !s.stoppad || typeof tilldelaDagensHast !== "function") return null;
+  return tilldelaDagensHast(s.hastId) || null;
+}
+function stegkortFortsatt() {
+  const s = G.forb;
+  if (!s || !s.stoppad) return false;
+  const ny = stegkortErsattare();   // frågan först, ändringen sedan
+  if (!ny || ny === s.hastId || !sattAktivHast(ny)) return false;
+  skAterkoppla("");
+  return true;
+}
+
 /* ── Kortet ──────────────────────────────────────────────────────── */
 /* {id, rubrik, text, val:[{id,text,primar,gor}], fler:[…]} eller null. */
 function stegkortKort(antaNara) {
   if (!G.hastId || !G.forb || G.scen === "lektion" || G.scen === "meny" || G.scen === "resultat") return null;
   const s = G.forb, n = skNamn();
 
-  if (s.stoppad)
+  if (s.stoppad) {
+    /* #274: stoppet är ingen återvändsgränd. Finns en frisk häst bär kortet
+       EN knapp med hennes namn; annars står beskedet i klartext, aldrig en
+       tom knapp. */
+    const ers = stegkortErsattare();
+    const text = tSpr("forb.lararen_tar_over", skFyndText(s.stoppad));
+    if (ers)
+      return { id: "stopp", rubrik: tSpr("hud.lararen_tar_over"), text,
+        val: [{ id: "fortsatt", text: tSpr("hud.fortsatt_med", HORSES[ers].namn), primar: true,
+          gor() { stegkortFortsatt(); } }] };
     return { id: "stopp", rubrik: tSpr("hud.lararen_tar_over"),
-      text: tSpr("forb.lararen_tar_over", skFyndText(s.stoppad)), val: [] };
+      text: text + " " + tSpr("forb.stopp_ingen_frisk"), val: [] };
+  }
 
   if (s.fyndSett && !s.fyndRapporterat)
     return { id: "fynd", rubrik: tSpr("hud.du_hittade_nagot"), text: skFyndText(s.fynd),
