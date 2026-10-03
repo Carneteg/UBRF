@@ -22,6 +22,8 @@
 	     och servern nekar med `forb.lararen_tar_over`
 	  4  efter bytet till en frisk häst: «Rida nu» kommer tillbaka
 	  5  dörren: med «Rida nu» borta tar dörren prompt-platsen
+	  6  ledsteget med sadel och träns buret: dörren är första handlingen
+	     på sida 1, före «Led» — ingen bläddring
 
 	NOT TESTED: hur det ser ut och känns på en riktig skärm (Tobias speltest).
 
@@ -201,6 +203,52 @@ do
 	local forst = N._prompter()[1]
 	prova("«Rida nu» tar inte prompt-platsen medan fyndet är öppet",
 		forst == nil or forst.Name ~= "RidaNuPrompt", table.concat(namn, ", "))
+end
+
+--[[ ══ 6. LEDSTEGET I DEN TRÅNGA BOXEN: DÖRREN SYNS UTAN ATT BLÄDDRA ═══ ]]
+print("\n── 6. Ledsteget med sadel och träns buret: «Öppna — Dörr» står på första sidan ──")
+do
+	--[[ Tobias fynd i Studio: dörren försvann i boxen. Mätt på exakt-head: i
+		ledsteget är dörren rad 1 på första sidan och X öppnar den. Provet
+		kräver det UTTRYCKLIGEN, i det trängsta läget — sadel och träns buret,
+		så att `SadlaPrompt` och `TransaPrompt` också finns på hästen. ]]
+	local s = Preparation.nyState(HAST_ID, 1)
+	for _, f in ipairs(Preparation.stegFaser()) do
+		if f.id ~= "leda" then
+			while true do
+				local m = Preparation.nastaMoment(s, f.id)
+				if not m then break end
+				if not Preparation.utforMoment(s, f.id, m.id, HAST_ID) then break end
+			end
+		end
+	end
+	local nasta = Preparation.nasta(s)
+	prova("förutsättning: ledsteget står på tur", nasta ~= nil and nasta.id == "leda", nasta and nasta.id)
+	dorr:SetAttribute("SprakNyckel", "dorr.oppna")
+	rev += 1
+	local buren = { hastId = HAST_ID, hastnamn = "Trixie", delar = { "sadel", "trans" } }
+	visa(Preparation.vy(s, Preparation.STATUS.FORBEREDER, rev, "Trixie", buren))
+
+	local relevanta = {}
+	for _, p in ipairs(N._relevanta()) do relevanta[p.Name] = true end
+	prova("förutsättning: sadel- och tränsknapparna finns också på hästen (det trånga läget)",
+		relevanta.SadlaPrompt == true and relevanta.TransaPrompt == true,
+		(function() local t = {} for n in pairs(relevanta) do table.insert(t, n) end table.sort(t) return table.concat(t, ",") end)())
+
+	local forst = N._prompter()
+	local namn = {}
+	for _, p in ipairs(forst) do table.insert(namn, p.Name) end
+	prova("dörren är den FÖRSTA handlingen på skärmen", forst[1] ~= nil and forst[1].Name == "DorrPrompt",
+		table.concat(namn, ","))
+	local sida = N._sida()
+	prova("och den står på sida 1 — ingen bläddring", sida == 1, tostring(sida))
+	prova("sadla/tränsa trängde inte in före dörren",
+		forst[1] ~= nil and forst[1].Name == "DorrPrompt" and forst[2] ~= nil and forst[2].Name == "LedPrompt",
+		table.concat(namn, ","))
+	local rader = N._rader()
+	local harDorr = false
+	for _, t in ipairs(rader) do if string.find(t, "Dörr", 1, true) or string.find(t, "Öppna", 1, true) then harDorr = true end end
+	prova("och raden «Öppna — Dörr» ritas i panelen", harDorr, table.concat(rader, " | "))
 end
 
 print("")
