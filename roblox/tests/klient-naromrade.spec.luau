@@ -203,7 +203,8 @@ do
 		table.concat(allaRader, " | "))
 	do -- och i själva layouten: valsektionen (Fragan) ligger under listan när den bara bär ingången
 		local ram = N._panel().ram
-		local fr, li = ram and ram:FindFirstChild("Fragan"), ram and ram:FindFirstChild("Lista")
+		local sk = ram and ram:FindFirstChild("StatusKort") -- #274: Fragan/Lista bor i statuskortet
+		local fr, li = sk and sk:FindFirstChild("Fragan"), sk and sk:FindFirstChild("Lista")
 		check("i layouten ligger den sekundära ingången under handlingsraderna",
 			#allaRader == #synliga or (fr ~= nil and li ~= nil and fr.LayoutOrder > li.LayoutOrder),
 			("%s / %s"):format(tostring(fr and fr.LayoutOrder), tostring(li and li.LayoutOrder)))
@@ -1538,7 +1539,8 @@ do
 		s2.justerad and #s2.tangentFel == 0, table.concat(s2.tangentFel, " "))
 	do
 		local ram = N._panel().ram
-		local fr, li = ram and ram:FindFirstChild("Fragan"), ram and ram:FindFirstChild("Lista")
+		local sk = ram and ram:FindFirstChild("StatusKort") -- #274: Fragan/Lista bor i statuskortet
+		local fr, li = sk and sk:FindFirstChild("Fragan"), sk and sk:FindFirstChild("Lista")
 		check("sista sidan: i layouten ligger ingången under listan",
 			fr ~= nil and li ~= nil and fr.Visible and fr.LayoutOrder > li.LayoutOrder,
 			("%s / %s"):format(tostring(fr and fr.LayoutOrder), tostring(li and li.LayoutOrder)))
@@ -2219,7 +2221,7 @@ do
 	check("och panelen håller kontraktets bredd", bredd >= 120 and bredd <= 320,
 		("%d px"):format(bredd))
 	local knapp = nil
-	for _, b in ipairs((pnl.ram and pnl.ram:FindFirstChild("Lista") or {} :: any)._barn or {}) do
+	for _, b in ipairs((pnl.ram and pnl.ram:FindFirstChild("StatusKort") and pnl.ram:FindFirstChild("StatusKort"):FindFirstChild("Lista") or {} :: any)._barn or {}) do
 		if b.Visible and b.Text and string.find(b.Text, "numnah", 1, true) then knapp = b end
 	end
 	check("raden radbryter i fast storlek — ingen skalad text",

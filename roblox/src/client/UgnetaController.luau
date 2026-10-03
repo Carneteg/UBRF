@@ -1412,11 +1412,23 @@ function UgnetaController.dockaLarare(foralder: Instance?, ordning: number?)
 		l.Size = UDim2.new(1, 0, 0, 0)
 		l.LayoutOrder = dockOrdning
 		l.BackgroundTransparency = 0.15
+		--[[ #274: ett eget, guldkantat kort — skilt från statuskortet under. ]]
+		local ram = l:FindFirstChild("KortKant")
+		if not ram then
+			ram = Instance.new("UIStroke")
+			ram.Name = "KortKant"
+			ram.Color = FARG_GULD
+			ram.Thickness = 1.5
+			ram.Transparency = 0.35
+		end
+		ram.Parent = l
 		l.Parent = foralder
 	else
 		l.AnchorPoint = Vector2.new(1, 0)
 		l.Size = UDim2.fromOffset(LARARE_BREDD, 0)
 		l.BackgroundTransparency = 0.3
+		local kant = l:FindFirstChild("KortKant")
+		if kant then kant.Parent = nil end
 		if gui then l.Parent = gui end
 	end
 	ritaLarare()

@@ -113,6 +113,16 @@ do
 	UC.dockaLarare(pn, 0)
 	prova("och tillbaka i panelen", r.Parent == pn and UC._larare().dockad)
 
+	--[[ #274: TVÅ KORT, INTE ETT BLOCK. Ugneta (bara coachning) och statuskortet
+	     (häst, läge, val) är syskon i panelen, vart och ett med eget fält. ]]
+	local sk = pn:FindFirstChild("StatusKort")
+	prova("två kort: Ugneta och StatusKort är syskon i panelen", sk ~= nil and sk.Parent == pn and r.Parent == pn)
+	prova("statuskortet bär rubrik och handlingar, inte Ugnetas yta",
+		sk ~= nil and sk:FindFirstChild("RubrikRad") ~= nil and sk:FindFirstChild("Lista") ~= nil
+			and sk:FindFirstChild("Larare") == nil and sk:FindFirstChild("Titel", true) == nil)
+	prova("Ugnetas kort har egen kant när det är dockat", r:FindFirstChild("KortKant") ~= nil)
+	prova("och panelen själv är bara behållare — ingen gemensam bakgrund", pn.BackgroundTransparency == 1)
+
 	UC._vaxlaSprak()
 	local e = UC._larare()
 	prova("ETT TRYCK PÅ FLAGGAN: engelska, på plats",

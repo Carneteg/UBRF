@@ -95,6 +95,8 @@ local KNAPP_B = 300
 local PANEL_MIN = 260
 local PANEL_MAX = 320
 local LUFT = 6
+--[[ #274: luften mellan Ugnetas kort och statuskortet. ]]
+local KORTLUFT = 8
 local KANT = 16
 
 --[[ EN PRIMÄR HANDLING OCH HÖGST TVÅ SEKUNDÄRA (#264 kontraktet). Fler
@@ -1341,6 +1343,48 @@ local function bygg()
 	hjalpText.Visible = false
 	hjalpText.LayoutOrder = 3
 	hjalpText.Parent = kr
+
+	--[[ #274 (Tobias speltest 2026-10-03): UGNETA OCH STATUSPANELEN ÄR TVÅ
+	     KORT. Förut låg de som ett enda block i samma ruta och coachning,
+	     läge och val läste som en tät massa. Nu är `Panel` bara en genomskinlig
+	     behållare med två tydliga kort: Ugneta överst (bara coachning, eget
+	     guldkantat kort — se `UgnetaController.dockaLarare`) och `StatusKort`
+	     under (häst, gångart, sits, läge, val). Allt som låg direkt i
+	     panelen utom Ugnetas kort flyttas in i `StatusKort`; ordning och
+	     radbudget är oförändrade. ]]
+	local st = Instance.new("Frame")
+	st.Name = "StatusKort"
+	st.LayoutOrder = 1
+	st.Size = UDim2.new(1, 0, 0, 0)
+	st.AutomaticSize = Enum.AutomaticSize.Y
+	st.BackgroundColor3 = pn.BackgroundColor3
+	st.BackgroundTransparency = pn.BackgroundTransparency
+	st.BorderSizePixel = 0
+	local stHorn = Instance.new("UICorner")
+	stHorn.CornerRadius = UDim.new(0, 8)
+	stHorn.Parent = st
+	local stPad = Instance.new("UIPadding")
+	stPad.PaddingLeft = UDim.new(0, 10)
+	stPad.PaddingRight = UDim.new(0, 10)
+	stPad.PaddingTop = UDim.new(0, 10)
+	stPad.PaddingBottom = UDim.new(0, 10)
+	stPad.Parent = st
+	local stLista = Instance.new("UIListLayout")
+	stLista.FillDirection = Enum.FillDirection.Vertical
+	stLista.SortOrder = Enum.SortOrder.LayoutOrder
+	stLista.Padding = UDim.new(0, LUFT)
+	stLista.Parent = st
+	for _, barn in ipairs(pn:GetChildren()) do
+		if barn ~= UgnetaController.lararRam() and not (barn:IsA("UIListLayout") or barn:IsA("UIPadding")
+			or barn:IsA("UICorner") or barn:IsA("UISizeConstraint")) then
+			barn.Parent = st
+		end
+	end
+	st.Parent = pn
+	pn.BackgroundTransparency = 1
+	pad.PaddingLeft, pad.PaddingRight, pad.PaddingTop, pad.PaddingBottom =
+		UDim.new(0, 0), UDim.new(0, 0), UDim.new(0, 0), UDim.new(0, 0)
+	lista.Padding = UDim.new(0, KORTLUFT)
 end
 
 --[[ ── HUR MÅNGA RADER RYMS? (#246 E) ──────────────────────────────────
