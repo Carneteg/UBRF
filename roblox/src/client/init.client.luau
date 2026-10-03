@@ -743,6 +743,8 @@ InteractionController.setRidaCheck(function(model: Model): boolean
 	local id = PreparationController.hastId()
 	if not id then return false end
 	if model:GetAttribute("HorseId") ~= id then return false end
+	-- #274: ett öppet fynd eller ett stopp äger fokus; servern nekar «Rida nu» då.
+	if PreparationController.valfardAgerFokus() then return false end
 	return PreparationController.nastaFas() ~= nil
 end)
 

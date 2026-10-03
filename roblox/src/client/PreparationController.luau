@@ -2505,6 +2505,19 @@ function PreparationController.nastaFas(): string?
 	return senasteVy and senasteVy.nasta or nil
 end
 
+--[[ #274: HAR STALLET EN VÄLFÄRDSFRÅGA ELLER ETT STOPP SOM ÄGER FOKUS?
+	Sant medan fyndet väntar på sitt svar och medan hästen är stoppad. Då nekar
+	servern varje ridhandling (`forb.oppet_fynd`, `forb.lararen_tar_over`), så
+	den får inte stå kvar som en handling spelaren kan trycka på — den tog
+	promptplatsen och trängde ut dörren till överflödet. Det är bara VISNINGEN
+	som rättas; servern är fortfarande den som avgör. ]]
+function PreparationController.valfardAgerFokus(): boolean
+	local vy = senasteVy
+	if type(vy) ~= "table" then return false end
+	if vy.stoppad ~= nil then return true end
+	return type(vy.svar) == "table" and #vy.svar > 0
+end
+
 function PreparationController.hastId(): string?
 	return senasteVy and senasteVy.hastId or nil
 end
