@@ -1469,7 +1469,7 @@ print("\n── Alternativ 3 med overflow: ingången får den lediga raden på s
 	full och ingången får inte tränga undan någon; sida 2 har en prompt och två
 	lediga rader, och där ska ingången stå — efter prompten. Tangenterna följer
 	fortfarande bara promptraderna. Ingången kommer från den riktiga
-	`LedLektionController` (startad av klientens init), inte från en attrapp. ]]
+	(ledlektionen är borttagen 2026-10-04). ]]
 do
 	local UIS = game:GetService("UserInputService")
 	UIS.TouchEnabled = true

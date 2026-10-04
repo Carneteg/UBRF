@@ -25,8 +25,6 @@ local DEFINITIONS = {
 	MountChanged = "RemoteEvent",       -- server → alla: vem rider vad
 	VoltLektion = "RemoteFunction",     -- owner intent; no client verdict or coordinates
 	VoltLektionSync = "RemoteEvent",    -- server -> owner: session-local circle outcome
-	LedLektion = "RemoteFunction",      -- owner intent (on foot): sync/start/retry/finish + seq
-	LedLektionSync = "RemoteEvent",     -- server -> owner: session-local leading-lesson outcome
 	LektionsMinne = "RemoteFunction",   -- owner read only ("sync"): own completion memory projection
 	LektionsMinneSync = "RemoteEvent",  -- server -> owner: own completion memory projection
 	--[[ #233 FAS 4b. `StateSync` bar förut PARET (gångart, tempo), och

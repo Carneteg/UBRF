@@ -199,7 +199,6 @@ FORBEREDELSE = SPEL + [
     # C4: och FORE HorseService, som via LektionsMinne require:ar den.
     ("SparService",  "src/server/SparService.luau"),
     ("LedService",     "src/server/LedService.luau"),  # C4 ledning: fore LektionsMinne, som kraver LedLektion
-    ("LedLektion",     "src/server/LedLektion.luau"),  # ledningslektionen till fots
     ("LektionsMinne", "src/server/LektionsMinne.luau"),  # C4: forsta-klarad-minnet
     ("HorseService", "src/server/HorseService.luau"),
     ("StallService", "src/server/StallService.luau"),
@@ -400,7 +399,6 @@ KLIENT = SPEL + [
     ("LektionsAterkoppling", "src/client/LektionsAterkoppling.luau"),  # C1: aterkoppling efter ovningen
     ("VoltLektionController", "src/client/VoltLektionController.luau"),
     ("LektionController",   "src/client/LektionController.luau"),
-    ("LedLektionController", "src/client/LedLektionController.luau"),  # ledningslektionen till fots
     # Kontrollhjalpen: bara init.client.luau require:ar den, sa den behovs
     # bara i KLIENT. Star har och inte i PARITET av det skalet -- inte av
     # forbiseende. Jamfor noten vid Inspelning/ReplayController ovan.
@@ -482,7 +480,6 @@ KOHERENS = GEOMETRI + [
     ("Aktor",        "src/shared/HorseCore/Aktor.luau"),
     ("SparService",     "src/server/SparService.luau"),  # C4: fore HorseService (LektionsMinne)
     ("LedService",     "src/server/LedService.luau"),  # C4 ledning: fore LektionsMinne, som kraver LedLektion
-    ("LedLektion",      "src/server/LedLektion.luau"),  # ledningslektionen till fots
     ("LektionsMinne",   "src/server/LektionsMinne.luau"),  # C4: forsta-klarad-minnet
     ("HorseService",    "src/server/HorseService.luau"),
     ("StallService",    "src/server/StallService.luau"),

@@ -176,7 +176,7 @@ do
 		UC.vantar() == false and #NR._val() == 0)
 	UC.ridrad("ugneta.rad.borja_skritt", { "W" })
 	prova("ridraden står kvar under Inga", ytaText() == Sprak.t("ugneta.rad.borja_skritt", "W"))
-	UC.satFotVal(LedLektionController.panel)
+	UC.satFotVal(nil)
 	tryck("kommentarer", "normal")
 	UC.dolj()
 end

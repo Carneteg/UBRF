@@ -43,7 +43,6 @@ local InteractionController = require(script.InteractionController)
 local PreparationController = require(script.PreparationController)
 local UgnetaController = require(script.UgnetaController)
 local LektionController = require(script.LektionController)
-local LedLektionController = require(script.LedLektionController)
 local KontrollHjalp = require(script.KontrollHjalp)
 --[[ #264 GAIT_READABILITY_AND_UGNETA: Ugnetas ridrad utanför lektionen. ]]
 local UgnetaRad = require(script.UgnetaRad)

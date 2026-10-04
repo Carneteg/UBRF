@@ -46,7 +46,6 @@ local Sparning = require(ReplicatedStorage.HorseCore.Sparning)
 	genererade kanon som resten av spelet läser. ]]
 local Spel = require(ReplicatedStorage.UBRFSpel)
 local LedService = require(script.Parent.LedService)
-local LedLektion = require(script.Parent.LedLektion)
 --[[ #182: ledningen oppnar boxdorren i samma tryck. Se `satDorrKrok`.
 	`DorrService` ager dorrarna; den har raden ar bara kopplingen. ]]
 local DorrService = require(script.Parent.DorrService)
@@ -1954,18 +1953,6 @@ function GameplayService.start()
 	LedService.satRattHastKrok(function(player)
 		return bunden[player] or GameplayService.bind(player)
 	end)
-
-	--[[ Ledningslektionen till fots (docs/LEADING-LESSON-CONTRACT.md) OBSERVERAR
-		vanlig ledning. Den får samma svar om rätt häst som ledningen, men
-		frågar bara vad som redan är bundet (ingen ny bindning), och om
-		spelaren sitter upp. Ingen krok i LedService, ingen kvittering. ]]
-	LedLektion.start({
-		rattHast = function(player) return bunden[player] end,
-		rider = function(player) return HorseService.horseOf(player) ~= nil end,
-		--[[ C4 ledning: första genuina fullföljandet, prövat och noterat av
-			minnet. LedService:s egen målkrok för förberedelsen är orörd. ]]
-		klar = LektionsMinne.ledningKlar,
-	})
 
 	--[[ Uppsittningen och avsittningen driver passets läge. De hakas på
 		`HorseService` i stället för att `GameplayService` skulle lyssna på
