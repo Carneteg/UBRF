@@ -371,37 +371,24 @@ const kortHall = async id => {
   await ev(s => { const b = document.querySelector(s); if (b) b.dispatchEvent(new PointerEvent("pointerup", { bubbles: true })); }, sel); await page.waitForTimeout(250); };
 const kortKlick = async id => { await page.click(`#stegkort button[data-id="${id}"]`); await page.waitForTimeout(250); };
 let k = await kortet();
-prova("vid hästen: startvalet med exakt två val (Rida nu / själv)",
-  k.synlig && k.id === "valj" && k.knappar.join(",") === "start:rida_nu,start:sjalv", `${k.id} · ${k.knappar.join(",")}`);
-await kortKlick("start:sjalv");
-const korten = [];
-for (let i = 0; i < 40; i++) {
-  k = await kortet();
-  korten.push(k.id);
-  // Hälsningen är handlingar i ordning (UI-2): den primära är nästa, som överallt.
-  if (k.primar) { await kortKlick(k.primar); continue; }
-  const rad = k.rader.find(r => r !== "rad:rida_nu");
-  if (!rad) break;
-  await kortHall(rad);
-  if (rad === "leda") break;
-}
+prova("vid hästen: startvalet med exakt ETT val (Rida nu) — inget «själv»",
+  k.synlig && k.id === "valj" && k.knappar.join(",") === "start:rida_nu", `${k.id} · ${k.knappar.join(",")}`);
+await kortKlick("start:rida_nu");
+await page.waitForTimeout(500);
 s = await las();
-prova("förberedelsen genom alla Roblox-kort", ["halsa", "visitera", "rykta", "hovar", "hamta_sadel", "sadla",
-  "hamta_trans", "transa", "leda"].every(id => korten.includes(id)), [...new Set(korten)].join(" → "));
 
-/* ══ 6. LED UT ═════════════════════════════════════════════════════ */
-prova("hästen leds — G.leder blir sann genom spelarens knapp",
-  s.skotsel === true && s.plats === "leds" && s.leder === true, `plats ${s.plats} · leder ${s.leder}`);
+/* ══ 6. HÄSTEN STÅR I RIDHUSET ═════════════════════════════════════
+   Produktbeslut 2026-10-04: ingen ledning. «Rida nu» ställer henne vid
+   sargporten — spelaren leder henne inte dit och går inte genom gården. */
+prova("stallet har ställt henne i ridhuset — spelaren leder inte",
+  s.skotsel === true && s.plats === "leds" && s.scen === "ridhusinne",
+  `plats ${s.plats} · scen ${s.scen}`);
+prova("kortet säger «Sitt upp», inte «Led …»",
+  (await kortet()).id === "sittupp", (await kortet()).id);
 
-
-/* ══ 7. VIDARE TILL RIDHUSET ═══════════════════════════════════════
-   Sargporten ligger i ridhuset, inte i stallet. Utan det här steget
-   letade provet efter en interaktion i fel byggnad — och rapporterade
-   "INGEN sådan interaktion" som om uppsittningen saknades. */
-s = await station("hästgången|in i ridhuset|ridhuset", "vägen till ridhuset",
-  v => v.scen === "ridhusinne") || s;
-prova("spelaren kommer in i ridhuset med hästen vid handen",
-  s.scen === "ridhusinne" && s.leder === true, `scen ${s.scen} · leder ${s.leder}`);
+/* ══ 7. SARGPORTEN ═════════════════════════════════════════════════ */
+prova("spelaren är i ridhuset utan att ha lett henne dit",
+  s.scen === "ridhusinne", `scen ${s.scen}`);
 
 /* ══ 8. UPPSITTNINGEN — P0:ns kärna ════════════════════════════════
    Mätt på SCENEN, inte på G.ride. `G.ride` finns redan innan man sitter

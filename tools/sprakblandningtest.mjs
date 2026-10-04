@@ -133,48 +133,34 @@ async function halla(page, id, ms = 500) {
   }, id);
   await vanta(page);
 }
-/* Kedjan: den primära handlingen kort för kort, annars kortets egen prompt. */
+/* Kedjan efter beslutet 2026-10-04: startvalet (ett val) och, efter «Rida nu»,
+   uppsittningskortet. Det finns ingen skötsel- eller ledkedja att gå. */
 async function kedja(page, lage, granska) {
-  for (let i = 0; i < 80; i++) {
-    const k = await kort(page);
-    if (!k.synlig) return k;
-    granska(k, lage);
-    if (k.id === "leda") return k;
-    const v = k.knappar.find(b => b.primar);
-    if (v) { await klicka(page, `#stegkort .skV button[data-id="${v.id}"]`); continue; }
-    const r = k.prompt.find(x => x.id !== "rad:rida_nu");
-    if (!r) return k;
-    await halla(page, r.id);
-  }
-  return kort(page);
+  const k0 = await kort(page);
+  granska(k0, lage);
+  await klicka(page, `#stegkort .skV button[data-id="start:rida_nu"]`);
+  const k1 = await kort(page);
+  if (k1.synlig) granska(k1, lage);
+  return k1;
 }
 
-console.log("\n── A. Ugneta överst, hälsningen som handlingar ──");
+console.log("\n── A. Ugneta överst, startvalet med ett val ──");
 {
   const { page, h } = await oppna();
   let k = await kort(page);
   prova("Ugnetas ruta är kortets första block", k.ugnetaForst, k.id);
   prova("titeln är «Ugneta · Ridinstruktör» och flaggan «Svenska»", k.titel === "Ugneta · Ridinstruktör" && k.flagga === "Svenska",
     `${k.titel} · ${k.flagga}`);
-  await klicka(page, `#stegkort .skV button[data-id="start:sjalv"]`);
-  k = await kort(page);
-  /* #273 S2 (T2): hälsningen är EN handling. Ugneta säger handlingens
-     korta rad; de tre detaljmeningarna står i kunskapslagret. */
-  const forsta = await page.evaluate(() => { const m = Forb.nastaMoment(G.forb, "halsa"); return m && m.text; });
-  prova("«Hälsa på …»: EN handling, och den är primär",
-    k.id === "halsa" && k.knappar.length === 1 && k.knappar[0].primar && k.knappar[0].text === "Hälsa",
+  prova("startkortet: ETT val, «Rida nu», och det är primärt",
+    k.id === "valj" && k.knappar.length === 1 && k.knappar[0].primar && /^Rida nu/.test(k.knappar[0].text),
     k.knappar.map(b => b.text + (b.primar ? "*" : "")).join(" / "));
-  prova("Ugneta säger handlingens korta rad; instruktionen står EN gång",
-    k.instr === "Hon ska se och höra dig innan du rör henne." && k.instr !== forsta && !k.dubbel, k.instr);
-  prova("ingen frågesport: inget «bakifrån» bland handlingarna", !k.knappar.some(b => /bakifrån|Framifrån/.test(b.text)));
-  await klicka(page, `#stegkort .skV button[data-id="handling:halsa"]`);
-  k = await kort(page);
-  prova("handlingen gjord: kvittensen, och nästa fas", k.ater === "✓  Nu vet hon att du är där." && k.id === "visitera",
-    `${k.ater} · ${k.id}`);
+  prova("Ugneta säger kortets rad; instruktionen står EN gång", /^Rida nu: stallet gör/.test(k.instr) && !k.dubbel, k.instr);
+  prova("ingen «Gör i ordning själv», ingen hälsning, ingen frågesport",
+    !k.knappar.some(b => /själv|Hälsa|bakifrån|Framifrån/.test(b.text)));
   await page.close();
 }
 
-console.log("\n── B. Hela kedjan på svenska, sedan på engelska via Ugnetas flagga ──");
+console.log("\n── B. Startvalet och uppsittningen på svenska, sedan på engelska via Ugnetas flagga ──");
 for (const lage of ["sv", "en"]) {
   const { page, h } = await oppna();
   const arBlandat = detektor(h.katalog, h.namn2);
@@ -194,10 +180,9 @@ for (const lage of ["sv", "en"]) {
       k.sprak === "en" && k.flagga === "English" && k.titel === "Ugneta · Riding instructor", `${k.flagga} · ${k.titel}`);
   }
   granska(await kort(page), lage);
-  await klicka(page, `#stegkort .skV button[data-id="start:sjalv"]`);
   const slut = await kedja(page, lage, granska);
-  prova(`${lage}: kedjan når ledningen`, slut.id === "leda", slut.id);
-  prova(`${lage}: inget av andra språket i ${sedda} synliga rader`, blandat.length === 0 && sedda > 30,
+  prova(`${lage}: «Rida nu» ger uppsittningskortet`, slut.id === "sittupp", slut.id);
+  prova(`${lage}: inget av andra språket i ${sedda} synliga rader`, blandat.length === 0 && sedda >= 4,
     blandat.slice(0, 6).join(" ‖ "));
   if (lage === "en") {
     await klicka(page, "#stegkort button[data-sprak]");

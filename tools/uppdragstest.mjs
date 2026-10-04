@@ -423,41 +423,18 @@ sektion = "D: hela produktionsvägen";
   await gaHit(box, "boxen");
   steg.push(["boxen", await prompt()]);
 
-  /* Paritetspasset: förberedelsen sker vid boxen genom stegkortets egna
-     knappar — «Gör i ordning … själv», sedan varje kort — tills «Led …». */
+  /* PRODUKTBESLUT 2026-10-04: ingen manuell skötsel och ingen ledning.
+     Spelaren trycker «Rida nu» vid boxen; stallet gör henne redo och ställer
+     henne i ridhuset. Därifrån är det bara sargporten kvar. */
   const klickaKort = id => ev(id => {
     const b = [...document.querySelectorAll("#stegkort button")].find(x => x.dataset.id === id);
     if (b) b.click(); return !!b; }, id);
-  await klickaKort("start:sjalv");
-  for (let i = 0; i < 40; i++) {
-    const k = await ev(() => ({ id: document.getElementById("stegkort").dataset.kort,
-      primar: ([...document.querySelectorAll("#stegkort .skV button.primar")][0] || {}).dataset,
-      rader: [...document.querySelectorAll("#stegkort .skRader button")].map(b => b.dataset.id) }));
-    // Hälsningen är handlingar i ordning (UI-2): den primära är nästa, som överallt.
-    if (k.primar && k.primar.id) { await klickaKort(k.primar.id); await page.waitForTimeout(60); continue; }
-    const rad = k.rader.find(r => r !== "rad:rida_nu");
-    if (!rad) break;
-    const sel = `#stegkort .skRader button[data-id="${rad}"]`;
-    await page.dispatchEvent(sel, "pointerdown"); await page.waitForTimeout(500);
-    await ev(s => { const b = document.querySelector(s); if (b) b.dispatchEvent(new PointerEvent("pointerup", { bubbles: true })); }, sel); await page.waitForTimeout(150);
-    if (rad === "leda") break;
-  }
-  steg.push(["stegkortet", await ev(() => G.hastPlats === "leds" ? "Led" : null)]);
-  await page.waitForTimeout(300);
+  await klickaKort("start:rida_nu");
+  await page.waitForTimeout(500);
+  steg.push(["stegkortet", await ev(() => G.hastPlats === "leds" ? "Rida nu" : null)]);
+  prova("«Rida nu» ställer henne i ridhuset — spelaren leder henne inte genom gården",
+    await ev(() => G.scen === "ridhusinne"), `scen ${await ev(() => G.scen)}`);
 
-  await gaHit(await ev(() => STALLINNE.dorrar.find(d => d.mot === "gard").pos), "stallets utdörr");
-  const utPrompt = await prompt();
-  steg.push(["stallets utdörr", utPrompt]);
-  if (utPrompt) await tryckE();
-  prova("vägen UT ur stallet med hästen vid handen finns (root cause för uppsittningen)",
-    await ev(() => G.scen === "gard"),
-    `prompt vid utdörren: ${JSON.stringify(utPrompt)} · scen ${await ev(() => G.scen)}`);
-
-  if (await ev(() => G.scen === "gard")) {
-    await gaHit(await ev(() => ANL.dorrar.find(d => d.mot === "ridhusinne").pos), "ridhusdörren", 240000);
-    steg.push(["ridhusdörren", await prompt()]);
-    if (await prompt()) await tryckE();
-  }
   let sittUppPrompt = null;
   if (await ev(() => G.scen === "ridhusinne")) {
     await gaHit(await ev(() => { const sp = SPELABSTRAKTIONER.ridhus.sargport;

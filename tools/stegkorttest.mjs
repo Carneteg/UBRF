@@ -6,9 +6,9 @@
    och trycker sedan på panelens egna knappar. Det skriver aldrig i
    förberedelsens tillstånd.
 
-     A. startvalet: exakt två knappar, E = «Rida nu», ingen vänsterruta
-     B. «själv»: hela kedjan manuellt till «Sitt upp», dagsform 0,76
-     C. «Rida nu»: i ridhuset vid sargporten, dagsform 0,70, E sitter upp
+     A. startvalet: exakt ETT val, E = «Rida nu», ingen vänsterruta
+     B. ingen manuell skötsel och ingen ledning (beslut 2026-10-04)
+     C. «Rida nu»: i ridhuset vid sargporten, hon står kvar, E sitter upp
      D. fynddag: frågan, fel svar står kvar, rätt svar stoppar ritten
      E. engelska: ingen svenska i panelen genom hela kedjan
      F. layout: skrivbord 1600×900 och iPad liggande 1180×820
@@ -122,24 +122,6 @@ async function tangent(page, kod, ms) {
   await page.keyboard.down(kod); await page.waitForTimeout(ms); await page.keyboard.up(kod);
   await page.waitForTimeout(250);
 }
-/* Spelaren gör resten själv: den primära knappen, kort för kort, tills
-   kortet är `stopp` (ledningen). Hälsningen väljs med första rätta. */
-async function gorSjalv(page, stopp = "leda", texter = []) {
-  for (let i = 0; i < 60; i++) {
-    const k = await kort(page);
-    texter.push(k.text);
-    if (k.id === stopp || !k.synlig) return k;
-    // Hälsningen är handlingar i ordning (UI-2): den primära är nästa, som överallt.
-    const val = k.knappar.find(b => b.primar);
-    if (val) { await klicka(page, val.id); continue; }
-    /* Kort utan momentknapp (hämta sadel/träns): kortets egen prompt. */
-    const rad = k.rader.find(r => r.id !== "rad:rida_nu");
-    if (!rad) return k;
-    await halla(page, rad.id);
-  }
-  return kort(page);
-}
-
 /* ── A + B ───────────────────────────────────────────────────────── */
 console.log("\n── A. Startvalet vid hästen ──");
 {
@@ -149,97 +131,35 @@ console.log("\n── A. Startvalet vid hästen ──");
   let k = await kort(page);
   prova("panelen syns vid hästen", k.synlig && k.id === "valj", `kort ${k.id}`);
   prova("rubriken är «Välj hur du börjar»", k.rubrik === "Välj hur du börjar", k.rubrik);
-  prova("exakt två knappar: Rida nu / Gör i ordning själv",
-    k.knappar.length === 2 && k.knappar[0].text === `Rida nu — ${h.namn}` && k.knappar[1].text === `Gör i ordning ${h.namn} själv`,
+  prova("exakt EN knapp: Rida nu — inget «Gör i ordning … själv»",
+    k.knappar.length === 1 && k.knappar[0].text === `Rida nu — ${h.namn}`,
     k.knappar.map(b => b.text).join(" / "));
-  prova("bara «Rida nu» är primär", k.knappar[0].primar && !k.knappar[1].primar);
+  prova("«Rida nu» är primär", k.knappar[0].primar);
   prova("inget «Fler handlingar» på startvalet", !k.fler);
   prova("ingen hälsningsfråga på startvalet", !/bakifrån|Framifrån/.test(k.text));
   prova("E vid hästen är «Rida nu»", k.prompt === `Rida nu — ${h.namn}`, String(k.prompt));
   prova("den gamla vänsterrutan syns inte till fots", !k.vansterruta);
   if (BILDER) await page.screenshot({ path: path.join(BILDER, "startval-1600x900.png") });
 
-  console.log("\n── B. «Gör i ordning … själv» ──");
-  await klicka(page, "start:sjalv");
+  console.log("\n── B. Ingen manuell skötsel och ingen ledning ──");
+  const finns = await klicka(page, "start:sjalv");
+  prova("knappen «Gör i ordning … själv» finns inte och går inte att trycka", finns === false);
   k = await kort(page);
-  /* #273 S2 (T2): EN handling per fas — «Hälsa», inte tre knappar. */
-  prova("själv → «Hälsa på …» med EN handling, och den är primär (#273 S2)", k.id === "halsa"
-    && k.rubrik === `Hälsa på ${h.namn}` && k.knappar.length === 1 && k.knappar[0].primar
-    && k.knappar[0].id === "handling:halsa" && k.knappar[0].text === "Hälsa",
-    `${k.rubrik} · ${k.knappar.map(b => b.text).join(" / ")}`);
-  prova("boxen finns under «Fler handlingar»", k.fler);
-  prova("R1: «Rida nu» står som prompt med «[Håll inne R]», som i Roblox",
-    k.rader.some(r => r.id === "rad:rida_nu" && r.text.includes("[Håll inne R]")), k.rader.map(r => r.text).join(" / "));
-  /* Ordningsregeln finns kvar i regelmodulen — handen före namnet nekas —
-     men den är inte längre tre läs-och-klicka-stopp. Kortet bär EN kort
-     rad; de tre detaljmeningarna står ordagrant i kunskapslagret. */
-  const regel = await page.evaluate(() => ({
-    nej: Forb.provaMoment(G.forb, "halsa", "halsa3", G.hastId),
-    detalj: HALSNING.map(x => x.text) }));
-  prova("handen före namnet: regeln nekar fortfarande med «fel tur» (#273 S2)",
-    regel.nej[0] === false && regel.nej[1] === "forb.fel_tur", JSON.stringify(regel.nej));
-  prova("kortet: EN kort rad, ingen av hälsningens tre detaljmeningar (#273 S2)",
-    k.text.includes("Hon ska se och höra dig innan du rör henne.") && !regel.detalj.some(t => k.text.includes(t)),
-    k.text.replace(/\n/g, " ¦ ").slice(0, 160));
-  await page.evaluate(() => document.querySelector("#stegkort button[data-kunskap]").click());
-  await vanta(page);
-  k = await kort(page);
-  prova("«Så gör man» öppnar kunskapslagret med de tre meningarna ordagrant (#273 S2)",
-    regel.detalj.length === 3 && regel.detalj.every(t => k.text.includes(t)), k.text.replace(/\n/g, " ¦ ").slice(0, 200));
-  await klicka(page, "handling:halsa");
-  k = await kort(page);
-  const efterHalsa = await page.evaluate(() => ({ ...G.forb.gjorda.halsa }));
-  prova("ETT tryck gör hälsningens tre moment som spelarens egna, och kvitterar (#273 S2)",
-    efterHalsa.halsa1 === true && efterHalsa.halsa2 === true && efterHalsa.halsa3 === true
-      && k.aterkoppling === "✓  Nu vet hon att du är där.", `${JSON.stringify(efterHalsa)} · ${k.aterkoppling}`);
+  prova("kortet står kvar på startvalet", k.id === "valj", k.id);
+  const ingen = await page.evaluate(() => ({
+    gjorda: Object.keys(G.forb.gjorda).filter(f => Object.keys(G.forb.gjorda[f]).length > 0),
+    hand: { ...G.forb.hand },
+    knappar: [...document.querySelectorAll("#stegkort button")].map(b => b.dataset.id || "") }));
+  const FORBJUDET = /^(handling:|tack:|rad:sadla|rad:transa|leda$|start:sjalv)/;
+  prova("ingen skötselknapp, hämtprompt eller ledprompt någonstans i panelen",
+    !ingen.knappar.some(id => FORBJUDET.test(id)), ingen.knappar.join(","));
+  prova("inget skötselmoment är gjort, inte ens av stallet, före «Rida nu»",
+    ingen.gjorda.length === 0 && !ingen.hand.sadel && !ingen.hand.trans, JSON.stringify(ingen));
   const foreE = await kort(page);
   await tangent(page, "KeyE", 550);
   const efterE = await kort(page);
-  prova("R1: E gör inget skötselmoment — momenten är panelknappar, som i Roblox",
-    foreE.id === "visitera" && efterE.id === "visitera" && efterE.rubrik === foreE.rubrik, `${foreE.rubrik} → ${efterE.rubrik}`);
-  const texter = [];
-  const fore = await page.evaluate(() => ({ kolla: VISITPUNKT.map(p => p.ok), hov: HOVAR.map(x => x.text),
-    rykt: RYKTREDSKAP.map(x => x.text), sadel: SADELFAS.map(x => x.t) }));
-  k = await gorSjalv(page, "leda", texter);
-  const sagda = texter.join("\n");
-  /* #273 S2: sex handlingar och två hämtningar fram till ledningen — och
-     checklistan är densamma som de 23 klicken gav: varje moment gjort av
-     spelaren själv. */
-  const lista = await page.evaluate(() => {
-    const ut = { egna: 0, totalt: 0, auto: 0 };
-    for (const f of Forb.stegFaser()) { if (f.id === "leda") continue;
-      for (const m of Forb.moment(f.id)) { if (m.fel) continue; ut.totalt++;
-        const g = (G.forb.gjorda[f.id] || {})[m.id];
-        if (g === true) ut.egna++; else if (g === "auto") ut.auto++; } }
-    return ut; });
-  prova("hälsa → kolla → rykta → kratsa → sadla → tränsa: 23 moment gjorda, alla spelarens egna (#273 S2)",
-    lista.totalt === 23 && lista.egna === 23 && lista.auto === 0, JSON.stringify(lista));
-  /* Hälsningen är redan gjord ovan: kvar är kolla, rykta, kratsa, hämta
-     sadeln, sadla, hämta tränset och tränsa — sju kort, sedan ledningen. */
-  prova("efter hälsningen: fem handlingar och två hämtningar, sju kort före ledningen (#273 S2)",
-    texter.length === 8, `${texter.length - 1} kort före ledningen`);
-  prova("inget kort i huvudflödet bär en detaljmening om hovar, mungipor eller gjord (#273 S2)",
-    ![...fore.kolla, ...fore.hov, ...fore.rykt, ...fore.sadel].some(t => sagda.includes(t)),
-    [...fore.kolla, ...fore.hov, ...fore.rykt, ...fore.sadel].filter(t => sagda.includes(t)).join(" ¦ ") || "inga");
-  prova("kedjan går genom alla Roblox-kort i ordning",
-    ["Kolla ", "Rykta ", "Kratsa hovarna", "Hämta sadeln", "Lägg på sadeln", "Hämta tränset", "Sätt på tränset", "Led "]
-      .every((t, i, a) => sagda.indexOf(t) >= 0 && (i === 0 || sagda.indexOf(t) > sagda.indexOf(a[i - 1]))),
-    `sista kortet ${k.id}`);
-  prova("uppsittning nekas innan hon är ledd", !k.redo);
-  prova("R1: ledningen är en prompt «[Håll inne L]»", k.rader.some(r => r.id === "leda" && r.text.includes("[Håll inne L]")),
-    k.rader.map(r => r.text).join(" / "));
-  await halla(page, "leda", 400);
-  k = await kort(page);
-  prova("«Led …» → hon leds, kortet säger vart", k.plats === "leds" && k.id === "leder", `${k.plats} · ${k.id}`);
-  prova("R1: ingen vägvisare när hon leds (Roblox har ingen)", k.vagvisare === false, String(k.vagvisare));
-  const ut = await page.evaluate(() => {
-    const [x, y] = skSargport(); gaTill("ridhusinne", { x, y: y + 1.2, rikt: 0 });
-    VD.hastX = x + 1; VD.hastY = y + 1.6; return true; });
-  await vanta(page);
-  k = await kort(page);
-  prova("framme i ridhuset: ledningen kvitteras, «Sitt upp på …»",
-    ut && k.redo && k.id === "sittupp" && k.rubrik === `Sitt upp på ${h.namn}`, `${k.id} · ${k.rubrik}`);
-  prova("allt själv: dagsform 0,76 (0,70 + 0,06)", Math.abs(k.dagsform - 0.76) < 1e-9, String(k.dagsform));
+  prova("E vid boxen gör inget skötselmoment och leder ingen",
+    foreE.id === "valj" && efterE.id === "valj" && efterE.plats === "box", `${foreE.id} → ${efterE.id} · ${efterE.plats}`);
   await page.close();
 }
 
@@ -255,7 +175,15 @@ console.log("\n── C. «Rida nu» ──");
   await tangent(page, "KeyR", 550);
   await page.waitForTimeout(300);
   k = await kort(page);
-  prova("R hållen: «Rida nu» — stallet leder henne till ridhuset", k.scen === "ridhusinne" && k.plats === "leds", `${k.scen} · ${k.plats}`);
+  prova("R hållen: «Rida nu» — stallet ställer henne i ridhuset", k.scen === "ridhusinne" && k.plats === "leds", `${k.scen} · ${k.plats}`);
+  const hast0 = await page.evaluate(() => [VD.hastX, VD.hastY]);
+  await page.evaluate(() => { VD.px += 4; VD.py -= 3; VD.spår.push([VD.px, VD.py]); });
+  await page.waitForTimeout(400);
+  const hast1 = await page.evaluate(() => [VD.hastX, VD.hastY]);
+  prova("hästen står kvar när spelaren går — hon följer inte efter (ingen ledning)",
+    hast0[0] === hast1[0] && hast0[1] === hast1[1], `${hast0} → ${hast1}`);
+  await page.evaluate(() => { VD.px -= 4; VD.py += 3; });
+  await page.waitForTimeout(300);
   prova("hon är redo: «Sitt upp på …»", k.redo && k.id === "sittupp", k.id);
   prova("stallets hand ger ingen omsorgsbonus: dagsform 0,70", k.dagsform === 0.7, String(k.dagsform));
   prova("E vid sargporten är uppsittningen", /Sitt upp/.test(String(k.prompt)), String(k.prompt));
@@ -308,17 +236,15 @@ console.log("\n── E. Engelska ──");
   const h = await vidBoxen(page, { sprak: "en" });
   await vanta(page);
   let k = await kort(page);
-  prova("Choose how to start / Ride now / Get … ready myself",
-    k.rubrik === "Choose how to start" && k.knappar[0].text === `Ride now — ${h.namn}` && k.knappar[1].text === `Get ${h.namn} ready myself`,
+  prova("Choose how to start / Ride now (ett enda val)",
+    k.rubrik === "Choose how to start" && k.knappar.length === 1 && k.knappar[0].text === `Ride now — ${h.namn}`,
     k.knappar.map(b => b.text).join(" / "));
   const texter = [k.text];
-  await klicka(page, "start:sjalv");
-  k = await gorSjalv(page, "leda", texter);
-  await halla(page, "leda", 400);
+  await klicka(page, "start:rida_nu");
   texter.push((await kort(page)).text);
   const SVENSKA = /[åäöÅÄÖ]|\b(och|Välj|Rida|Gör|Hälsa|Rykta|Kratsa|sadeln|tränset|hästen|henne|Sitt upp)\b/;
   const blandat = texter.filter(t => SVENSKA.test(t.replace(h.namn, "")));
-  prova("ingen svenska i panelen genom hela kedjan", blandat.length === 0,
+  prova("ingen svenska i panelen genom startvalet och uppsittningskortet", blandat.length === 0,
     blandat.length ? blandat[0].replace(/\n/g, " ¦ ").slice(0, 140) : `${texter.length} kort`);
   await page.close();
 }
@@ -443,7 +369,6 @@ for (const vp of [{ width: 1600, height: 900, namn: "skrivbord" }, { width: 1180
   const page = await oppna(vp);
   await vidBoxen(page);
   await vanta(page);
-  await klicka(page, "start:sjalv");
   const r = await page.evaluate(() => {
     const b = document.getElementById("stegkort").getBoundingClientRect();
     return { x: b.x, y: b.y, w: b.width, h: b.height, vw: innerWidth, vh: innerHeight };
@@ -451,7 +376,7 @@ for (const vp of [{ width: 1600, height: 900, namn: "skrivbord" }, { width: 1180
   prova(`${vp.namn}: panelen helt synlig och ≤ 34 % av bredden`,
     r.x >= 0 && r.y >= 0 && r.x + r.w <= r.vw && r.y + r.h <= r.vh && r.w <= 0.34 * r.vw,
     `${Math.round(r.w)}×${Math.round(r.h)} vid ${Math.round(r.x)},${Math.round(r.y)} av ${r.vw}×${r.vh}`);
-  if (BILDER) await page.screenshot({ path: path.join(BILDER, `halsa-${vp.width}x${vp.height}.png`) });
+  if (BILDER) await page.screenshot({ path: path.join(BILDER, `startval-${vp.width}x${vp.height}.png`) });
   await page.close();
 }
 

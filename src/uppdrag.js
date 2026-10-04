@@ -215,8 +215,8 @@ function uppdragMal(){
       punkter:[tSpr("guide.ga_till_text")],
       mal:hast, hastId:G.hastId};
   }
-  return {id:"sitt_upp", rubrik:tSpr("guide.leder_rubrik",n),
-    punkter:[tSpr("guide.leder_text",n)],
+  return {id:"sitt_upp", rubrik:tSpr("guide.sittupp_rubrik",n),
+    punkter:[tSpr("guide.sittupp_text")],
     mal:uppdragUppsittning()};
 }
 
