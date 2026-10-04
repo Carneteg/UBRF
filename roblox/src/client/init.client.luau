@@ -824,12 +824,8 @@ end)
 
      BEHÖRIGHETEN FLYTTAS INTE. `LedBorja` svarar som förut; servern äger
      rätt häst, avstånd, om hon leds av någon annan, om hon rids. ]]
-InteractionController.setLedCheck(function(model: Model): boolean
-	local id = PreparationController.hastId()
-	if not id then return false end
-	if model:GetAttribute("HorseId") ~= id then return false end
-	return not PreparationController.skotselstegAgerFokus()
-end)
+-- Produktbeslut 2026-10-04: ledningen är borttagen, ingen ledknapp.
+InteractionController.setLedCheck(function(_model: Model): boolean return false end)
 --[[ Prompt-uppdateringen hänger på ATT EN NY VY ACCEPTERATS, inte på
      RemoteEvent-händelsen. Skillnaden är hela rättelsen efter senior review
      runda 2: handskakningens svar kommer inte som en `PreparationSync`, så
@@ -884,24 +880,16 @@ PreparationController.vidNyVy(function(vy: any)
 	     hade statt kvar ett varv efter att sadeln lagts pa. ]]
 	InteractionController.uppdatera()
 end)
-InteractionController.setSadlaCheck(function(model: Model): boolean
-	if not barSadelNu then return false end
-	local id = PreparationController.hastId()
-	if not id then return false end
-	return model:GetAttribute("HorseId") == id
-end)
+-- Produktbeslut 2026-10-04: stallet sadlar åt spelaren, ingen «Sadla»-knapp.
+InteractionController.setSadlaCheck(function(_model: Model): boolean return false end)
 
 --[[ #235 FAS 3. Samma fraga, en annan del. Att knapparna inte kan vara
      uppe samtidigt avgors inte har utan av KANON: transet kraver att hon
      ar sadlad, och nar hon ar det har `burenUtrustning` redan slappt
      sadeln. Servern bar regeln (`tack.sadeln_forst`); den har raden ritar
      bara knappen. ]]
-InteractionController.setTransaCheck(function(model: Model): boolean
-	if not barTransNu then return false end
-	local id = PreparationController.hastId()
-	if not id then return false end
-	return model:GetAttribute("HorseId") == id
-end)
+-- Produktbeslut 2026-10-04: stallet tränsar åt spelaren, ingen «Transa»-knapp.
+InteractionController.setTransaCheck(function(_model: Model): boolean return false end)
 PreparationController.start()
 DinHast.start()
 --[[ #235: den gemensamma touchytan. Returnerar direkt utan pekskarm. ]]
@@ -934,7 +922,7 @@ end)
 UgnetaController.start()
 --[[ Ledningslektionen till fots: en sekundär ingång i Ugnetas val när ingen
      ridlektion är installerad (docs/LEADING-LESSON-CONTRACT.md). ]]
-LedLektionController.start()
+-- Produktbeslut 2026-10-04: ledlektionen är borttagen, så den startas inte.
 --[[ #161: `?`-knappen byggs vid uppstart och lever hela sessionen. Att
      bygga den vid uppsittning hade gett samma hål vi just stängde — hjälpen
      ska finnas i stallet också. ]]

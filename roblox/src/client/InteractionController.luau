@@ -392,12 +392,11 @@ end
 
 	`farVisas` bär nu bara det den alltid handlade om: G01-flaggans tre
 	lägen (se `promptSynlig`). Är loopen på äger `ledFor` frågan ensam. ]]
-local function farVisasLed(model: Model): boolean
-	if InteractionController.g01Lage() ~= true then
-		--[[ nil → göm (fail closed), false → legacy utan G01-loopen. ]]
-		return farVisas(model)
-	end
-	return ledFor ~= nil and ledFor(model)
+local function farVisasLed(_model: Model): boolean
+	--[[ PRODUKTBESLUT 2026-10-04: ledningen är borttagen ur spelet. Spelaren
+		väljer «Rida nu» och stallet gör hästen redo. Ingen väg, varken den nya
+		loopen eller den gamla, ritar längre en ledknapp. ]]
+	return false
 end
 
 function InteractionController.setReadyCheck(fn: ((Model) -> boolean)?)

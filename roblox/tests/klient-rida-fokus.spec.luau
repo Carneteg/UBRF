@@ -231,8 +231,8 @@ do
 
 	local relevanta = {}
 	for _, p in ipairs(N._relevanta()) do relevanta[p.Name] = true end
-	prova("förutsättning: sadel- och tränsknapparna finns också på hästen (det trånga läget)",
-		relevanta.SadlaPrompt == true and relevanta.TransaPrompt == true,
+	prova("sadel- och tränsknapparna finns inte längre på hästen (stallet gör det)",
+		relevanta.SadlaPrompt == nil and relevanta.TransaPrompt == nil,
 		(function() local t = {} for n in pairs(relevanta) do table.insert(t, n) end table.sort(t) return table.concat(t, ",") end)())
 
 	local forst = N._prompter()
@@ -242,8 +242,9 @@ do
 		table.concat(namn, ","))
 	local sida = N._sida()
 	prova("och den står på sida 1 — ingen bläddring", sida == 1, tostring(sida))
-	prova("sadla/tränsa trängde inte in före dörren",
-		forst[1] ~= nil and forst[1].Name == "DorrPrompt" and forst[2] ~= nil and forst[2].Name == "LedPrompt",
+	prova("ingen sadla/tränsa/led-prompt trängs in efter dörren",
+		forst[1] ~= nil and forst[1].Name == "DorrPrompt"
+			and (forst[2] == nil or forst[2].Name == "RidaNuPrompt"),
 		table.concat(namn, ","))
 	local rader = N._rader()
 	local harDorr = false
