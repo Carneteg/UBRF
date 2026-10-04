@@ -482,6 +482,31 @@ check("och den bär hästens namn — webbens namnskylt", #utanNamn == 0,
 	#utanNamn == 0 and ("%d namngivna sadlar"):format(#UBRFSpel.ordning)
 		or table.concat(utanNamn, " · "))
 
+--[[ NAMNSKYLTEN SOM KORT (förlaga: stall-inne-05-stallgangen.jpg): ett vitt
+	kort med hästens namn i blå versaler, på BÅDA sidor så att det läses från
+	gången. Miljö — ingen prompt. ]]
+do
+	local utanKort = {}
+	for _, id in ipairs(UBRFSpel.ordning) do
+		local m = TackForradService.forHast(id)
+		local kort = m and m:FindFirstChild("Namnskylt")
+		local namn = UBRFSpel.hastar[id].namn
+		local forvantat = string.upper(namn):gsub("å", "Å"):gsub("ä", "Ä"):gsub("ö", "Ö")
+		local ok = kort ~= nil
+		if ok then
+			local sidor = 0
+			for _, g in ipairs(kort:GetChildren()) do
+				local t = g:FindFirstChild("Namn")
+				if g.ClassName == "SurfaceGui" and t and t.Text == forvantat then sidor += 1 end
+			end
+			ok = sidor == 2 and kort.Color.R > 0.9 and kort:FindFirstChildOfClass("ProximityPrompt") == nil
+		end
+		if not ok then table.insert(utanKort, id) end
+	end
+	check("varje boxfront har ett vitt namnkort med hästens namn på båda sidor, utan prompt",
+		#utanKort == 0, #utanKort == 0 and ("%d kort"):format(#UBRFSpel.ordning) or table.concat(utanKort, " · "))
+end
+
 --[[ ROUTINGEN. Står man vid Jacks front får man JACKS utrustning; står man
 	vid grannens får man grannens. Det andra fallet är det som gör webbens
 	felutrustning möjlig att GÖRA på Roblox, och utan det vore

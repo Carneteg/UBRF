@@ -240,6 +240,40 @@ local function hangUpp(foralder: Folder, b: CFrame, hastId: string, namn: string
 		stallet har tagit dem. Hästens namn bärs som attribut på sadeln. ]]
 	sadel:SetAttribute("HastNamn", namn)
 
+	--[[ ── NAMNSKYLTEN: ETT VITT KORT I HÅLLARE, PÅ BOXFRONTEN ────────
+		Förlaga: `references/buildings/stall/stall-inne-05-stallgangen.jpg`
+		(och `stall-gang-05.jpg`) — ett vitt kort i en hållare på boxfrontens
+		stolpe, hästens namn i blå versaler överst. Fotot bär också små rader
+		under namnet; de går inte att läsa och byggs därför INTE ([REFERENCE GAP]).
+		Stiliserat betyder förenklat: kortet med namnet, ingenting påhittat.
+
+		Kortet hänger mellan sadeln och tränset och är MILJÖ: ingen prompt, och
+		det släcks inte av `satSynlig`. Namnet står på båda sidorna så att det
+		läses från gången oavsett håll. ]]
+	local kort = del(modell, "Namnskylt", Vector3.new(0.02 * M, 0.22 * M, 0.17 * M),
+		vid(0, 1.50), Color3.fromRGB(240, 238, 232), Enum.Material.SmoothPlastic)
+	kort:SetAttribute("HastNamn", namn)
+	local versaler = string.upper(namn):gsub("å", "Å"):gsub("ä", "Ä"):gsub("ö", "Ö")
+	for _, sida in ipairs({ Enum.NormalId.Right, Enum.NormalId.Left }) do
+		local gui = Instance.new("SurfaceGui")
+		gui.Name = "NamnskyltYta"
+		gui.Face = sida
+		gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		gui.PixelsPerStud = 50
+		gui.LightInfluence = 1
+		gui.Parent = kort
+		local text = Instance.new("TextLabel")
+		text.Name = "Namn"
+		text.BackgroundTransparency = 1
+		text.Size = UDim2.new(0.92, 0, 0.38, 0)
+		text.Position = UDim2.new(0.04, 0, 0.05, 0)
+		text.Font = Enum.Font.GothamBold
+		text.TextScaled = true
+		text.TextColor3 = Color3.fromRGB(31, 78, 158)
+		text.Text = versaler
+		text.Parent = gui
+	end
+
 	modell.PrimaryPart = sadel
 	modell.Parent = foralder
 	return modell
