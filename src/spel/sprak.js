@@ -748,6 +748,7 @@ const SPRAK = {
      bytt ord — och det är precis vad human-QA inte kunde se. */
   "led.slutade": { sv: "Du slutade leda %s", en: "You stopped leading %s" },
   "led.ingen_hast": { sv: "Ingen häst att leda", en: "No horse to lead" },
+  "led.borttagen": { sv: "Man leder inte hästen längre — välj «Rida nu».", en: "You no longer lead the horse — choose “Ride now”." },
   "led.fel_hast": { sv: "Det är inte din häst", en: "That is not your horse" },
   "led.ingen_karaktar": { sv: "Ingen karaktär", en: "No character" },
   "led.rider": { sv: "Du sitter upp — du rider, du leder inte",

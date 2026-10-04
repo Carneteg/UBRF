@@ -2341,6 +2341,10 @@ Sprak.text = {
 		sv = "Ingen häst att leda",
 		en = "No horse to lead",
 	},
+	["led.borttagen"] = {
+		sv = "Man leder inte hästen längre — välj «Rida nu».",
+		en = "You no longer lead the horse — choose “Ride now”.",
+	},
 	["led.fel_hast"] = {
 		sv = "Det är inte din häst",
 		en = "That is not your horse",

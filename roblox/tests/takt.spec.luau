@@ -332,8 +332,8 @@ do
 	end
 	local tak = S.GRANSER.LedBorja.tak
 	check("200 anrop når handlaren högst takets antal gånger",
-		(svar["led.ingen_hast"] or 0) == tak,
-		("%d nådde handlaren, tak %d"):format(svar["led.ingen_hast"] or 0, tak))
+		(svar["led.borttagen"] or 0) == tak,
+		("%d nådde handlaren, tak %d"):format(svar["led.borttagen"] or 0, tak))
 	check("resten nekas av takten",
 		(svar["takt.for_snabbt"] or 0) == 200 - tak,
 		("%d"):format(svar["takt.for_snabbt"] or 0))
