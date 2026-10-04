@@ -57,6 +57,8 @@ SPECAR="$SPECAR klient-forenkling"
 SPECAR="$SPECAR ridefirst-fortsatt klient-fortsatt klient-rida-fokus"
 # #279: R/Y stanger efter-ritten-kortet nar hon inte rider.
 SPECAR="$SPECAR klient-efterritt-tangent"
+# #290: en ny ritt efter ett RAKNAT pass kraver ett uttryckligt Rida nu och ett nytt passId.
+SPECAR="$SPECAR ridefirst-upprepad"
 # #252 DEL B: banken provar SIG SJALV forst, i bada riktningarna. En
 # require av en modul som inte ligger i bunten ska falla bygget — inte
 # bli ett tyst nil (DEL A). Faller provet bygger vi inte en enda spec.
