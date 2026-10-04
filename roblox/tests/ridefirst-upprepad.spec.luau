@@ -157,10 +157,16 @@ do
 	GameplayService.ridaNu(sp)
 	check("EFTERVÅRD med påbörjat moment: oförändrad",
 		passId(sp) == id2 and lage(sp) == Pass.LAGE.EFTERVARD and Pass.eftervardBorjad(p))
+	--[[ KLART där skrivningen inte bekräftats: passet är redan registrerat i
+		MINNESBILDEN (så `passnummer` har gått fram och ett nytt id vore
+		möjligt), men `RAKNAT` sattes aldrig. Då är läget ENSAMT skyddet. ]]
+	Sparning.registreraPass(SparService.save(sp), p.passId, os.time())
 	p.lage = Pass.LAGE.KLART
+	local fore = sparatPass(sp)
 	GameplayService.ridaNu(sp)
 	check("KLART utan bekräftad sparning: oförändrat", passId(sp) == id2 and lage(sp) == Pass.LAGE.KLART)
-	check("och inget pass räknades av «Rida nu»", sparatPass(sp) == 1, tostring(sparatPass(sp)))
+	check("och inget pass räknades av «Rida nu»", sparatPass(sp) == fore and fore == 2,
+		tostring(fore) .. " → " .. tostring(sparatPass(sp)))
 	p.lage = Pass.LAGE.EFTERVARD
 end
 
