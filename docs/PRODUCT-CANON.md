@@ -279,9 +279,16 @@ Beslutet är Tobias, efter att ledningsfelet i #265 reproducerats
 - ledningssteget i punkt 4 ovan: stall → utrustning → dörr → ledning → ridhus
   blir stall → «Rida nu» → ridhus.
 
-**Öppen fråga `[OPEN]`:** hur hästkunskap lärs ut när skötseln inte längre är
-spelarens handling. Inget är bestämt och inget antas här. Pelare 2 och 3
-står kvar som mål tills Tobias avgör hur de ska uppfyllas på annat sätt.
+**Hästkunskap (Tobias, senare 2026-10-04):** skötsel före ritten förblir
+borta ur ridflödet. Hästkunskapen kommer tillbaka som interaktiva
+teorirumslektioner; första genomförandet ger en permanent kunskapsrosett.
+Rosetter är samlar-/progressionsbelöning, inte direkt ridbonus. Teorirummet är
+inte byggt än och ingår inte i #288.
+
+**Eftervård efter ritten gäller oförändrat (#273 S3):** valet «Stallet tar
+hand om henne» (utan straff) eller «Ta hand om henne själv» är kvar på båda
+plattformarna. Beslutet om ledning och skötsel gäller bara förberedelsen före
+ritten.
 
 **Konsekvens för #265:** P1 (topologi för ledd häst) förlorar sin grund och är
 **NO_PORT, obsolet genom produktbeslut** (ChatGPT-order 2026-10-04 på #265). Den

@@ -545,15 +545,24 @@ function avslutaSkotsel(){
 }
 
 /* ── Resultatet ── */
-/* ── EFTERVÅRDEN GÖRS AV STALLET (produktbeslut 2026-10-04) ──────────
-   Efter avsittningen i huvudvägen står ETT kort: «Stallet tar hand om
-   henne». Egen eftervård finns inte längre som spelarhandling (tidigare
-   #273 S3). Reglerna bor i `Efter` (src/forberedelse.js, porten av Roblox
-   Pass); den här funktionen ritar och skickar.
+/* ── #273 S3 (T1): EFTERVÅRDEN ÄR ETT VAL ─────────────────────────
+   Efter avsittningen i huvudvägen: «Stallet tar hand om henne» eller «Ta
+   hand om henne själv». Reglerna bor i `Efter` (src/forberedelse.js, porten
+   av Roblox Pass.handlingar); den här funktionen ritar och skickar.
+
+   Egen eftervård är tre handlingar, en i taget, och stallet finns kvar som
+   väg ut hela tiden. Den lilla positiva effekten läggs på hästens
+   förtroende (webbens relation) när eftervården är klar — stallets hand
+   ger noll, och det är golvet, inte ett avdrag.
 
    PASSET RÄKNAS HÄR, när valet är gjort — inte vid avsittningen. Samma
    ordning som Roblox (`GameplayService.avslutaPass` efter eftervården):
    den som sitter av och lämnar vid valet har inte avslutat passet. */
+const EFTER_TEXT={
+  sadla_av:{knapp:()=>tSpr("eftervard.sadla_av"),text:()=>tSpr("eftervard.sadla_av_text")},
+  transa_av:{knapp:()=>tSpr("eftervard.transa_av"),text:()=>tSpr("eftervard.transa_av_text")},
+  ta_hand:{knapp:()=>tSpr("eftervard.ta_hand"),text:()=>tSpr("eftervard.ta_hand_text")},
+};
 function efterKlar(dom){
   const e=G.efter, andel=Efter.egenAndel(e);
   /* Först passet (en gång — `raknaPass` bär kvittot), sedan den lilla
@@ -572,14 +581,35 @@ function efterKlar(dom){
 function visaEftervard(dom){
   const e=G.efter;
   const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const sv=typeof SPRAKET==="undefined"||SPRAKET!=="en";
+  const hd=Efter.nastaHandling(e);
+  const sjalv=e.sjalv||Efter.borjad(e);
+  const T=hd&&EFTER_TEXT[hd.id];
+  /* Kunskapslagret: handlingens moment med kanonens egna meningar. Stängt
+     tills spelaren öppnar det. */
+  const kunskap=sjalv&&hd?hd.moment.map(m=>`${(!sv&&m.namnEn)||m.namn} — ${(!sv&&m.textEn)||m.text}`):[];
   overlay(true,`
   <span class="lbl">${esc(tSpr("hud.ta_hand_om_henne"))}</span>
-  <h1 style="margin-top:8px" id="efterText">${esc(tSpr("eftervard.stallet_text"))}</h1>
+  <h1 style="margin-top:8px" id="efterText">${esc(sjalv&&T?T.text():tSpr("eftervard.val_text"))}</h1>
+  ${kunskap.length?`<details class="note" style="font-size:13px"><summary>${esc(tSpr("handling.kunskap"))}</summary>
+    <ul style="margin:6px 0 0 18px">${kunskap.map(t=>`<li>${esc(t)}</li>`).join("")}</ul></details>`:""}
   <div class="btnrow">
-    <button class="btn" id="bEfterStallet">${esc(tSpr("eftervard.stallet"))}</button>
+    ${sjalv&&T
+      ?`<button class="btn" id="bEfterHandling" data-handling="${hd.id}">${esc(T.knapp())}</button>
+        <button class="btn ghost" id="bEfterStallet">${esc(tSpr("eftervard.stallet_resten"))}</button>`
+      :`<button class="btn" id="bEfterStallet">${esc(tSpr("eftervard.stallet"))}</button>
+        <button class="btn ghost" id="bEfterSjalv">${esc(tSpr("eftervard.sjalv"))}</button>`}
   </div>`);
   const bS=document.getElementById("bEfterStallet");
   if(bS)bS.onclick=()=>{Efter.stallet(e);efterKlar(dom);};
+  const bJ=document.getElementById("bEfterSjalv");
+  if(bJ)bJ.onclick=()=>{e.sjalv=true;visaEftervard(dom);};
+  const bH=document.getElementById("bEfterHandling");
+  if(bH)bH.onclick=()=>{
+    const r=Efter.utforHandling(e,bH.dataset.handling);
+    if(!r[0]){saga(typeof skAvslag==="function"?skAvslag(r):tSpr(r[1]),3);return;}
+    if(e.klar)efterKlar(dom);else visaEftervard(dom);
+  };
 }
 
 /* ── #273 S2 (A3): TILLBAKA TILL STEGKORTET, inte till den gamla skötseln ──
