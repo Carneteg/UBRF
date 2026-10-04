@@ -105,7 +105,7 @@ prova("dörren öppen: «Gå till Trixie» + följ pilen",
 	rubrik() == Sprak.t("guide.ga_till_rubrik", "Trixie") and steg() == Sprak.t("guide.ga_till_text"), rubrik() .. " | " .. steg())
 prova("åtgärdsraderna finns kvar (panelen visar dörren)", #N._rader() >= 1, #N._rader())
 
-print("\n── 2. Vid hästen, inget gjort: STARTSKÄRMEN med bara två vägar (UI-1) ──")
+print("\n── 2. Vid hästen, inget gjort: STARTSKÄRMEN med en enda väg (UI-1) ──")
 flytta(vidHasten)
 visa("preparing")
 local function valTexter()
@@ -120,12 +120,12 @@ end
 prova("«Välj hur du börjar» med den korta instruktionen (ingen hälsningsfråga)",
 	rubrik() == Sprak.t("guide.valj_rubrik", "Trixie") and steg() == Sprak.t("guide.valj_kort", "Trixie"), steg())
 local vt = valTexter()
-prova("exakt två val: «Rida nu — Trixie» och «Gör i ordning Trixie själv»", #vt == 2
-	and vt[1] == Sprak.t("guide.val_rida_nu", "Trixie") and vt[2] == Sprak.t("guide.val_sjalv", "Trixie"), table.concat(vt, " / "))
+prova("exakt ett val: «Rida nu — Trixie», inget «Gör i ordning själv»", #vt == 1
+	and vt[1] == Sprak.t("guide.val_rida_nu", "Trixie") and valMed("start:sjalv") == nil, table.concat(vt, " / "))
 -- `_rader()` är ALLT synligt i skärmordning (valen först, sedan promptraderna).
 local synligt = N._rader()
-prova("inga promptrader och inget «Fler»: det synliga är exakt de två valen", #synligt == 2
-	and synligt[1] == vt[1] and synligt[2] == vt[2], table.concat(synligt, " / "))
+prova("inga promptrader och inget «Fler»: det synliga är exakt det enda valet", #synligt == 1
+	and synligt[1] == vt[1], table.concat(synligt, " / "))
 local harHalsning = false
 for _, v in ipairs(N._val()) do if v.fel ~= nil then harHalsning = true end end
 prova("inga hälsningssvar på startskärmen", not harHalsning)
@@ -135,61 +135,14 @@ dorrDel.CFrame = CFrame.new(vidHasten + Vector3.new(0, 0, 3)) -- boxdörren vid 
 dorr:SetAttribute("SprakNyckel", "dorr.oppna")
 visa("preparing")
 local vt2 = valTexter()
-prova("stängd box vid hästen: de två valen finns kvar", #vt2 == 2 and vt2[1] == Sprak.t("guide.val_rida_nu", "Trixie"), table.concat(vt2, " / "))
+prova("stängd box vid hästen: det enda valet finns kvar", #vt2 == 1 and vt2[1] == Sprak.t("guide.val_rida_nu", "Trixie"), table.concat(vt2, " / "))
 local syn2 = N._rader()
-prova("stängd box vid hästen: «Öppna dörren» är en synlig rad under valen", #syn2 == 3 and string.find(syn2[3], "Dörr", 1, true) ~= nil, table.concat(syn2, " / "))
+prova("stängd box vid hästen: «Öppna dörren» är en synlig rad under valen", #syn2 == 2 and string.find(syn2[2], "Dörr", 1, true) ~= nil, table.concat(syn2, " / "))
 dorr:SetAttribute("SprakNyckel", "dorr.stang")
 visa("preparing")
-prova("öppen box vid hästen: åter exakt två val, ingen dörrrad", #N._rader() == 2, #N._rader())
+prova("öppen box vid hästen: åter exakt ett val, ingen dörrrad", #N._rader() == 1, #N._rader())
 dorrDel.CFrame = CFrame.new(langtBort + Vector3.new(0, 0, 3))
 visa("preparing")
-
-print("\n── 3. Den manuella kedjan genom den riktiga Preparation ──")
-valMed("start:sjalv").skicka()
-N.satRider(false)
---[[ #273 S2: EN handling och EN kort rad — inte hälsningens tre val. ]]
-prova("«Gör i ordning själv»: «Hälsa på Trixie» med handlingens korta rad och EN handling",
-	rubrik() == Sprak.t("guide.halsa_rubrik", "Trixie") and steg() == Sprak.t("handling.halsa_text")
-		and #N._val() == 1 and valMed("handling:halsa") ~= nil and valMed("start:sjalv") == nil,
-	rubrik() .. " | " .. steg())
-gorFas("halsa"); visa("preparing")
-prova("visitera: «Kolla Trixie · x/y» med momentets egen text", borjar(rubrik(), Sprak.t("guide.visitera_rubrik", "Trixie"))
-	and har(rubrik(), "/") and steg() ~= "", rubrik() .. " | " .. steg())
-gorFas("visitera"); visa("preparing")
-prova("rykta: «Rykta Trixie · x/y»", borjar(rubrik(), Sprak.t("guide.rykta_rubrik", "Trixie")) and steg() ~= "", rubrik())
-gorFas("rykta"); visa("preparing")
-prova("iordning, hovarna: «Kratsa hovarna»", rubrik() == Sprak.t("guide.hovar_rubrik", "Trixie") and steg() ~= "", rubrik())
-gorMoment("iordning", "hov:"); visa("preparing")
-prova("ingen utrustning buren: «Hämta sadeln»", rubrik() == Sprak.t("guide.hamta_sadel_rubrik", "Trixie")
-	and steg() == Sprak.t("guide.hamta_sadel_text", "Trixie"), rubrik() .. " | " .. steg())
-visa("preparing", bar("sadel"))
-prova("sadeln buren, tränset inte: «Hämta tränset»", rubrik() == Sprak.t("guide.hamta_trans_rubrik", "Trixie"), rubrik())
-visa("preparing", bar("sadel", "trans"))
-prova("båda burna: «Lägg på sadeln» med momentets text", rubrik() == Sprak.t("guide.sadla_rubrik", "Trixie") and steg() ~= "",
-	rubrik() .. " | " .. steg())
--- Underlägg och sadel på (utr:1, utr:2); resten av sadlingen (utr:3/4) medan tränset bärs.
-local m1 = Preparation.nastaMoment(state, "iordning")
-Preparation.utforMoment(state, "iordning", m1.id, HAST_ID)
-local m2 = Preparation.nastaMoment(state, "iordning")
-Preparation.utforMoment(state, "iordning", m2.id, HAST_ID)
-visa("preparing", bar("trans"))
-prova("sadeln på, resten av sadlingen: fortfarande «Lägg på sadeln»", rubrik() == Sprak.t("guide.sadla_rubrik", "Trixie"),
-	rubrik() .. " (" .. tostring(Preparation.nastaMoment(state, "iordning").id) .. ")")
-while Preparation.nastaMoment(state, "iordning") and Preparation.nastaMoment(state, "iordning").id ~= "utr:5" do
-	local m = Preparation.nastaMoment(state, "iordning")
-	if not Preparation.utforMoment(state, "iordning", m.id, HAST_ID) then break end
-end
-visa("preparing", bar("trans"))
-prova("tränset på tur och buret: «Sätt på tränset»", rubrik() == Sprak.t("guide.transa_rubrik", "Trixie") and steg() ~= "",
-	rubrik() .. " | " .. steg())
-visa("preparing", nil)
-prova("tränset på tur men inte buret: «Hämta tränset»", rubrik() == Sprak.t("guide.hamta_trans_rubrik", "Trixie"), rubrik())
-gorFas("iordning"); visa("preparing")
-prova("leda: «Led Trixie till ridhuset» + välj i listan", rubrik() == Sprak.t("guide.leda_rubrik", "Trixie")
-	and steg() == Sprak.t("guide.leda_text"), rubrik() .. " | " .. steg())
-gorFas("leda"); visa("ready_to_mount")
-prova("redo: «Sitt upp på Trixie» + rid", rubrik() == Sprak.t("guide.sittupp_rubrik", "Trixie")
-	and steg() == Sprak.t("guide.sittupp_text"), rubrik() .. " | " .. steg())
 
 print("\n── 4. «Rida nu»-vägen: knappen på startskärmen, sedan «Sitt upp» ──")
 state = Preparation.nyState(HAST_ID, 2)

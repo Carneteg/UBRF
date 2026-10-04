@@ -518,8 +518,8 @@ Sprak.text = {
 		en = "Choose how to start",
 	},
 	["guide.valj_kort"] = {
-		sv = "Rida nu: stallet gör i ordning %s rätt och leder hästen till ridhuset. Eller gör i ordning allt själv — steg för steg.",
-		en = "Ride now: the stable gets %s ready properly and leads the horse to the arena. Or do it all yourself — step by step.",
+		sv = "Rida nu: stallet gör %s redo, och hon står i ridhuset när ritten börjar.",
+		en = "Ride now: the stable gets %s ready, and she is waiting in the arena when the ride begins.",
 	},
 	["guide.val_rida_nu"] = {
 		sv = "Rida nu — %s",

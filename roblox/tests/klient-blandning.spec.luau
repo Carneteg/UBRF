@@ -176,9 +176,7 @@ local function kedja(lage)
 	state = Preparation.nyState(HAST_ID, 1)
 	visa("preparing")
 	granska("startvalet", lage)
-	-- «Själv» minns tills hästen varit redo; första varvet kommer efter avsnitt 2.
-	local sj = valMed("start:sjalv")
-	if sj then sj.skicka() end
+	-- Produktbeslut 2026-10-04: inget «själv»-val; startskärmen har bara «Rida nu».
 	N.satRider(false)
 	granska("hälsningen", lage)
 	for _ = 1, 3 do
@@ -225,30 +223,6 @@ do
 	local efter = U._larare()
 	prova("ny värd: samma yta dockad igen", efter.ram == fore and efter.dockad and fore.Parent == N._panel().ram,
 		tostring(fore.Parent and fore.Parent.Name))
-end
-
-print("\n── 2. Hälsningen: Ugneta instruerar, handlingarna i ordning ──")
-valMed("start:sjalv").skicka()
-N.satRider(false)
-do
-	local p = N._panel()
-	local m1 = Preparation.nastaMoment(state, "halsa")
-	local vals = N._val()
-	prova("rubriken är «Hälsa på Trixie»", p.rubrik == Sprak.t("guide.halsa_rubrik", HAST_NAMN), p.rubrik)
-	--[[ #273 S2: hälsningen är EN handling. Ugneta säger handlingens korta
-	     rad; momentens detaljmeningar står i kunskapslagret. ]]
-	prova("instruktionen är handlingens korta rad, i UGNETAS yta (inte två gånger)",
-		p.stegHos == "ugneta" and p.steg == Sprak.t("handling.halsa_text") and p.steg ~= m1.text,
-		tostring(p.stegHos) .. " | " .. tostring(p.steg))
-	prova("EN handling, och den är inget felaktigt svar", #vals == 1 and not vals[1].fel
-		and vals[1].id == "handling:halsa", #vals)
-	prova("och den står på tur", vals[1] ~= nil and vals[1].paTur == true)
-	local ok, skal = Preparation.provaMoment(state, "halsa", "halsa3", HAST_ID)
-	prova("handen innan namnet nekas med «fel tur»", ok == false and skal == "forb.fel_tur", tostring(skal))
-	prova("hälsningen är en checklista, inte ett val", Preparation.arVal("halsa") == false)
-	local en = Preparation.momentPaSprak(m1, "en", HAST_NAMN)
-	prova("kvittensen följer språket", en.kvittens == "There she can see you coming." and m1.kvittens == "Där ser hon dig komma.",
-		tostring(en.kvittens))
 end
 
 print("\n── 3. Hela kedjan på svenska ──")

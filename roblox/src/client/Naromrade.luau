@@ -2212,20 +2212,14 @@ rita = function()
 			if v.aktiv and #valen < MAX_VAL then table.insert(valen, v) end
 		end
 	end
-	--[[ UI-1: STARTSKÄRMEN. Exakt två val — «Rida nu — {häst}» (primärt, samma
-	     funktion som prompten) och «Gör i ordning {häst} själv». Inga
-	     hälsningssvar, inga promptrader, inget «Fler». ]]
+	--[[ UI-1: STARTSKÄRMEN. Exakt ETT val — «Rida nu — {häst}» (samma funktion
+	     som prompten). «Gör i ordning själv» är borttaget (produktbeslut
+	     2026-10-04). Inga hälsningssvar, inga promptrader, inget «Fler». ]]
 	if data and arStartskarm(data.guide, minHast, data.lage) then
 		local namn = if hastnamn and hastnamn ~= "" then hastnamn else Sprak.t("guide.din_hast")
-		local hast = minHast :: string
 		valen = {
 			{ id = "start:rida_nu", text = Sprak.t("guide.val_rida_nu", namn), aktiv = true, paTur = true, klar = false,
 				skicka = function() task.spawn(InteractionController.ridaNu) end },
-			{ id = "start:sjalv", text = Sprak.t("guide.val_sjalv", namn), aktiv = true, paTur = false, klar = false,
-				skicka = function()
-					startvalSjalv[hast] = true
-					if rita then rita() end
-				end },
 		}
 		--[[ #274: STÄNGD BOX = «ÖPPNA DÖRREN» SYNS PÅ STARTVÄGEN. Spelaren ska
 		     aldrig behöva gissa att nästa fysiska steg är dörren. Då får den

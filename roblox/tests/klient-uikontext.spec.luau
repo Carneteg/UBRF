@@ -682,9 +682,6 @@ do
 	NR.satRider(false)
 	--[[ UI-1 (docs/UI1-START-CHOICE-CONTRACT.md): startskärmen visar bara de två
 	     vägarna; hälsningens fråga kommer först efter «Gör i ordning … själv». ]]
-	for _, v in ipairs(NR._val()) do
-		if v.id == "start:sjalv" then v.skicka() end
-	end
 	NR.satRider(false)
 	local harFel = false
 	for _, v in ipairs(NR._val()) do if v.fel then harFel = true end end
@@ -693,10 +690,9 @@ do
 	     där ska just NÄSTA handling lyftas (Ugneta säger den). R2:s regel
 	     gäller frågor, och fyndet nedan är fortfarande en. ]]
 	--[[ #273 S2: hälsningen är EN handling — «Hälsa» — och den är lyft. ]]
-	local forsta = Preparation.nastaHandling(state, "halsa")
-	prova("HÄLSNINGEN: inga felaktiga svar, EN handling och den är lyft",
-		not harFel and n1 == 1 and #l1 == 1 and forsta ~= nil and forsta.id == "halsa"
-			and l1[1] == Sprak.t("handling.halsa"),
+	-- Produktbeslut 2026-10-04: ingen manuell hälsning. Startskärmen har bara «Rida nu».
+	prova("STARTSKÄRMEN: inga skötselsvar och EN handling — «Rida nu»",
+		not harFel and n1 == 1 and #l1 == 1 and l1[1] == Sprak.t("guide.val_rida_nu", "Trixie"),
 		("%d handlingar, lyfta: %s"):format(n1, table.concat(l1, " | ")))
 
 	local vy = Preparation.vy(state, Preparation.STATUS.FORBEREDER, rev + 1, "Trixie")
@@ -837,13 +833,10 @@ do
 	NR.satRider(false)
 	--[[ UI-1 (docs/UI1-START-CHOICE-CONTRACT.md): startskärmen visar bara de två
 	     vägarna; hälsningens fråga kommer först efter «Gör i ordning … själv». ]]
-	for _, v in ipairs(NR._val()) do
-		if v.id == "start:sjalv" then v.skicka() end
-	end
 	NR.satRider(false)
 	local _, _, fraga0 = rader()
 	--[[ #273 S2: skötseln står i panelen som EN handling, inte tre val. ]]
-	prova("KONTROLL: skötselns handling står i panelen", fraga0 == 1, fraga0)
+	prova("KONTROLL: ingen skötselfråga står i panelen (skötseln är borttagen)", fraga0 == 0, fraga0)
 	for n = 0, 3 do
 		UC.dolj()
 		if n > 0 then UC.visa("Kort", {}, n >= 1, nil, n >= 2, n >= 3) end
