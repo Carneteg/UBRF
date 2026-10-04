@@ -25,6 +25,7 @@ uttryckliga beslut har högst prioritet. Miljökällor och tidigare arbete bevar
 - spelet ska vara **roligt att spela**,
 - spelaren ska **lära sig verklig hästkunskap genom att göra**,
 - **ansvaret och plikterna kring hästen är gameplay**, inte dekoration — men **manuellt utförande är frivilligt**, se nedan,
+- **ledning och manuell skötsel är borttagna (produktbeslut 2026-10-04)**: spelaren väljer «Rida nu», stallet gör hästen redo; välfärd och säkerhet gäller oförändrat. Se `docs/PRODUCT-CANON.md`,
 - **UBRF är den verkliga spelplatsen och verkligheten är facit**,
 - **Roblox är primär spelplattform**,
 - **HTML/webb är också en riktig spelbar distribution**, inte bara en intern prototyp.

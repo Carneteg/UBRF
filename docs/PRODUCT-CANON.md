@@ -250,6 +250,48 @@ leveransmatrisen, `docs/LEVERANSMATRIS.md`.
 
 Se även `docs/ASSET-SOURCE-OF-TRUTH.md` för material- och datakällor.
 
+### Produktbeslut 2026-10-04: ledning och manuell skötsel tas bort
+
+Beslutet är Tobias, efter att ledningsfelet i #265 reproducerats
+(`265_LEADING_BLOCKER_REPRO_READY_FOR_CHATGPT_REVIEW`).
+
+**Beslut:**
+1. **Ledning tas bort helt** ur spelet, på både Roblox och webb: ingen
+   ledprompt, inget koppel, ingen ledlektion, inget ledningsminne.
+2. **Manuell skötsel tas bort** som spelarhandling: hälsa, känn över, ryktning,
+   hovar, sadling och tränsning görs inte längre av spelaren.
+3. Spelaren väljer **«Rida nu»**. Stallet gör hästen redo och hästen står i
+   ridhuset när ritten börjar. Spelaren leder den inte dit.
+4. Ledlektionen och ledningsminnet tas bort helt.
+
+**Gäller oförändrat — får aldrig tas bort:**
+- välfärdsstopp: en häst som stallet ser är sjuk, halt eller inte redo rids inte,
+- säkerhetsgrindar och fysisk sanning om var hästen står,
+- hästen är alltid korrekt och säkert förberedd när ritten börjar,
+- spelet lär aldrig ut fel hästhantering.
+
+**Ersätter:**
+- pelare 3 «Responsibility is gameplay» i den del som kräver att spelaren
+  själv utför plikter, och raden «hur man leder och hanterar en häst från
+  marken» i pelare 2,
+- «manuellt utförande är frivilligt» i FUN FIRST-beslutet 2026-09-14: det
+  manuella utförandet finns inte längre, bara det som stallet gör åt spelaren,
+- ledningssteget i punkt 4 ovan: stall → utrustning → dörr → ledning → ridhus
+  blir stall → «Rida nu» → ridhus.
+
+**Öppen fråga `[OPEN]`:** hur hästkunskap lärs ut när skötseln inte längre är
+spelarens handling. Inget är bestämt och inget antas här. Pelare 2 och 3
+står kvar som mål tills Tobias avgör hur de ska uppfyllas på annat sätt.
+
+**Konsekvens för #265:** P1 (topologi för ledd häst) förlorar sin grund och
+föreslås stängd som NO_PORT, obsolet genom produktbeslut. P2 och P5 påverkas inte.
+
+**Leverans:** Roblox och webb i samma leverans (se 2026-09-28). Äldre
+sparfiler som innehåller ledningsdata ska tåla att läsas: datat ignoreras,
+spelaren förlorar ingenting annat. Plan och steg: kommentar på #265.
+Historiska dokument (`docs/LEADING-LESSON-CONTRACT.md`,
+`docs/LEADING-MEMORY-CONTRACT.md`) ligger kvar för spårbarhet men gäller inte.
+
 ## Beslutsfilter
 
 Före en större feature eller ändring ska ChatGPT och Claude kunna svara ja på minst följande:
