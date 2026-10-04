@@ -367,6 +367,25 @@ do
 		natt == tak, ("%d nådde handlaren, tak %d"):format(natt, tak))
 end
 
+--[[ EFTERVÅRDEN ÄR STALLETS (produktbeslut 2026-10-04). Ett enskilt moment
+	eller en egen eftervårdshandling får ett rent nej från servern; bara
+	«stallet» går igenom. ]]
+do
+	rent()
+	GameplayService.start()
+	local passMoment = Networking.get("PassMoment")
+	local passHandling = Networking.get("PassHandling")
+	local a = nySpelare("Eftervard")
+	local ok1, skal1 = passMoment.OnServerInvoke(a, "gjord")
+	check("PassMoment nekas — stallet gör eftervården",
+		ok1 == false and skal1 == "pass.stallet_gor_det", tostring(skal1))
+	for _, id in ipairs({ "sadla_av", "transa_av", "ta_hand" }) do
+		local ok2, skal2 = passHandling.OnServerInvoke(a, id)
+		check("egen eftervårdshandling «" .. id .. "» nekas",
+			ok2 == false and skal2 == "pass.stallet_gor_det", tostring(skal2))
+	end
+end
+
 --[[ FÖRSTÄRKNINGEN MÄTT I UTGÅENDE PAKET.
 
 	Att räkna hur många anrop som når handlaren mäter grinden. Det mäter

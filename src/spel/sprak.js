@@ -1081,6 +1081,8 @@ const SPRAK = {
      straffavgift. Själv — frivilligt, med en liten positiv effekt. */
   "spel.dagens_hast": { sv: "Du rider %s. Följ pilen till boxen.", en: "You are riding %s. Follow the arrow to the box." },
   "eftervard.val_text": { sv: "Bra ridet. Vill du ta hand om henne själv, eller ska stallet göra det?", en: "Well ridden. Do you want to look after her yourself, or shall the stable do it?" },
+  "eftervard.stallet_text": { sv: "Bra ridet. Stallet tar hand om henne.", en: "Well ridden. The stable looks after her." },
+  "pass.stallet_gor_det": { sv: "Stallet tar hand om henne", en: "The stable looks after her" },
   "eftervard.stallet": { sv: "Stallet tar hand om henne", en: "The stable looks after her" },
   "eftervard.stallet_resten": { sv: "Stallet tar hand om resten", en: "The stable does the rest" },
   "eftervard.sjalv": { sv: "Ta hand om henne själv", en: "Look after her myself" },

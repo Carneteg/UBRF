@@ -2937,6 +2937,14 @@ Sprak.text = {
 		sv = "Bra ridet. Vill du ta hand om henne själv, eller ska stallet göra det?",
 		en = "Well ridden. Do you want to look after her yourself, or shall the stable do it?",
 	},
+	["eftervard.stallet_text"] = {
+		sv = "Bra ridet. Stallet tar hand om henne.",
+		en = "Well ridden. The stable looks after her.",
+	},
+	["pass.stallet_gor_det"] = {
+		sv = "Stallet tar hand om henne",
+		en = "The stable looks after her",
+	},
 	["eftervard.stallet"] = {
 		sv = "Stallet tar hand om henne",
 		en = "The stable looks after her",

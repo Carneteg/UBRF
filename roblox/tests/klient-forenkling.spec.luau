@@ -321,54 +321,30 @@ do
 
 	visaPass()
 	local s1 = PC._synligaMoment()
-	prova("efter avsittningen står EXAKT två val: stallet och själv",
-		#s1 == 2 and valet("efter:stallet") ~= nil and valet("efter:sjalv") ~= nil, table.concat(s1, ", "))
-	prova("de heter «Stallet tar hand om henne» och «Ta hand om henne själv»",
-		valet("efter:stallet").text == Sprak.t("eftervard.stallet")
-			and valet("efter:sjalv").text == Sprak.t("eftervard.sjalv"))
-	prova("stallet är det lyfta valet — ingen straffavgift för att rida först",
-		valet("efter:stallet").paTur == true and valet("efter:sjalv").paTur ~= true)
-	prova("instruktionen är EN fråga, inget eftervårdsmoment",
-		PC._ytor().instruktion.Text == Sprak.t("eftervard.val_text"), PC._ytor().instruktion.Text)
-	local femGamla = false
+	-- PRODUKTBESLUT 2026-10-04: stallet tar hand om henne. Inget val, ingen egen eftervård.
+	prova("efter avsittningen står EXAKT ett val: stallet",
+		#s1 == 1 and valet("efter:stallet") ~= nil and valet("efter:sjalv") == nil, table.concat(s1, ", "))
+	prova("valet heter «Stallet tar hand om henne» och är det lyfta",
+		valet("efter:stallet").text == Sprak.t("eftervard.stallet") and valet("efter:stallet").paTur == true)
+	prova("instruktionen är EN rad: stallet tar hand om henne, ingen fråga",
+		PC._ytor().instruktion.Text == Sprak.t("eftervard.stallet_text"), PC._ytor().instruktion.Text)
+	local gamla = false
 	for _, m in ipairs(Pass.moment()) do
-		if valet(m.id) ~= nil then femGamla = true end
+		if valet(m.id) ~= nil then gamla = true end
 	end
-	prova("de fem obligatoriska momentraderna finns inte i panelen", not femGamla)
+	for _, h in ipairs(Pass.handlingar()) do
+		if valet("efter:" .. h.id) ~= nil then gamla = true end
+	end
+	prova("varken de fem momentraderna eller de tre egna handlingarna finns i panelen", not gamla)
 
-	--[[ SJÄLV: en handling i taget, och stallet kvar som väg ut. ]]
-	valet("efter:sjalv").skicka()
-	local s2 = PC._synligaMoment()
-	prova("«själv» visar handlingen på tur och stallet som väg ut",
-		#s2 == 2 and valet("efter:sadla_av") ~= nil and valet("efter:stallet") ~= nil
-			and valet("efter:sjalv") == nil, table.concat(s2, ", "))
-	prova("handlingen är «Ta av sadeln» med EN kort rad",
-		valet("efter:sadla_av").text == Sprak.t("eftervard.sadla_av")
-			and PC._ytor().instruktion.Text == Sprak.t("eftervard.sadla_av_text"))
-	prova("och stallet heter nu «Stallet tar hand om resten»",
-		valet("efter:stallet").text == Sprak.t("eftervard.stallet_resten"))
-	local kunskap = tostring((PC.panel() or {}).kunskap or "")
-	prova("kunskapslagret bär gjordens och sadelns meningar ordagrant",
-		string.find(kunskap, UBRFSkotsel.eftervard[1].text, 1, true) ~= nil
-			and string.find(kunskap, UBRFSkotsel.eftervard[2].text, 1, true) ~= nil, kunskap)
-
-	valet("efter:sadla_av").skicka()
-	if type(__senasteDelay) == "function" then __senasteDelay() end
-	visaPass()
-	prova("handlingen gick iväg som «sadla_av»", skickade[1] == "sadla_av", table.concat(skickade, ","))
-	prova("nästa handling är «Ta av tränset»", valet("efter:transa_av") ~= nil
-		and valet("efter:transa_av").text == Sprak.t("eftervard.transa_av"))
-
-	--[[ Hon tröttnar: stallet gör resten. ]]
 	valet("efter:stallet").skicka()
-	prova("«Stallet tar hand om resten» skickar valet «stallet»", skickade[2] == "stallet",
-		table.concat(skickade, ","))
+	prova("trycket skickar «stallet»", skickade[1] == "stallet", table.concat(skickade, ","))
 	prova("och kvittensen säger att passet är klart",
 		type(PC._bekraftelse()) == "string"
 			and string.find(PC._bekraftelse(), Sprak.t("eftervard.stallet_klar"), 1, true) ~= nil,
 		tostring(PC._bekraftelse()))
-	prova("två av fem moment blev hennes egna, resten stallets",
-		math.abs(Pass.egenAndel(pass) - 0.4) < 1e-9 and pass.lage == Pass.LAGE.KLART,
+	prova("inget moment blev spelarens eget — allt stallets",
+		Pass.egenAndel(pass) == 0 and pass.lage == Pass.LAGE.KLART,
 		("%.2f · %s"):format(Pass.egenAndel(pass), tostring(pass.lage)))
 	remote.InvokeServer = fore
 	if type(__senasteDelay) == "function" then __senasteDelay() end

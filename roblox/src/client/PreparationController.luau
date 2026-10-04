@@ -322,7 +322,6 @@ local senastePass: any = nil
 	hästens eftervård? Sessionslokalt och bara presentation — servern vet
 	vem som gjorde vad genom momentens utförare. Nollställs när passet
 	lämnar eftervården. ]]
-local egenEftervard: string? = nil
 --[[ #273 S2: det frivilliga kunskapslagret för den handling som står på
 	tur — kanonens egna meningar, ordagrant. Går till hjälplistan. ]]
 local kunskapNu: { string } = {}
@@ -1562,7 +1561,6 @@ function PreparationController.tillampaPass(vy: any)
 	if not Preparation.farRita(senastePassRev, vy) then return end
 	senastePassRev = vy.rev
 	senastePass = vy
-	if vy.lage ~= "aftercare" then egenEftervard = nil end
 	if senasteVy then rita(senasteVy) end
 end
 
@@ -2026,46 +2024,15 @@ function rita(vy: any)
 		det som återstår är hästen. ]]
 	if iEftervard() then
 		for _, r in pairs(rader) do r.ram.Visible = false end
-		--[[ #273 S3 (T1): ETT ENKELT VAL. Innan något är gjort står två
-			rader: stallet (passet räknas, ingen straffavgift) eller själv.
-			Har hon valt själv — eller redan börjat — står handlingen på
-			tur, och stallet finns kvar som väg ut: ingen blir låst i en
-			eftervård hon inte vill göra färdigt. ]]
-		local hl = if type(senastePass.handlingar) == "table" then senastePass.handlingar else {}
-		local nastaH = senastePass.nastaHandling
-		local sjalv = senastePass.borjad == true or egenEftervard == senastePass.hastId
-		local text = ""
+		--[[ PRODUKTBESLUT 2026-10-04: stallet tar hand om henne. Det finns EN rad
+			och ingen egen eftervård att välja — passet räknas, ingen straffavgift.
+			Hon kan fortfarande sitta upp igen innan raden trycks (servern avgör). ]]
 		allaNu = true
-		if not sjalv then
-			anvanda["efter:stallet"] = true
-			anvanda["efter:sjalv"] = true
-			paTurNu = "efter:stallet"
-			momentRad({ id = "efter:stallet", namn = Sprak.t("eftervard.stallet"), klar = false },
-				1, true, function() PreparationController.eftervardStallet() end)
-			momentRad({ id = "efter:sjalv", namn = Sprak.t("eftervard.sjalv"), klar = false },
-				2, false, function()
-					egenEftervard = senastePass and senastePass.hastId or nil
-					if senasteVy then rita(senasteVy) end
-				end)
-			text = Sprak.t("eftervard.val_text")
-		else
-			for _, h in ipairs(hl) do
-				local T = HANDLING[h.id]
-				if h.id == nastaH and T then
-					local rid = "efter:" .. h.id
-					anvanda[rid] = true
-					paTurNu = rid
-					momentRad({ id = rid, namn = T.knapp(), klar = false }, 1, true, function()
-						PreparationController.eftervardHandling(h.id)
-					end)
-					text = T.text()
-					kunskapNu = kunskapsrader(h, lokalt)
-				end
-			end
-			anvanda["efter:stallet"] = true
-			momentRad({ id = "efter:stallet", namn = Sprak.t("eftervard.stallet_resten"), klar = false },
-				2, false, function() PreparationController.eftervardStallet() end)
-		end
+		anvanda["efter:stallet"] = true
+		paTurNu = "efter:stallet"
+		momentRad({ id = "efter:stallet", namn = Sprak.t("eftervard.stallet"), klar = false },
+			1, true, function() PreparationController.eftervardStallet() end)
+		local text = Sprak.t("eftervard.stallet_text")
 		doljOanvanda(anvanda)
 		if rubrik then rubrik.Text = Sprak.t("hud.ta_hand_om_henne") end
 		avsluta("eftervard", 2, text, true)

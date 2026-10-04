@@ -1978,9 +1978,11 @@ function GameplayService.start()
 		function(player, svarId)
 			return GameplayService.svara(player, svarId)
 		end)
+	--[[ PRODUKTBESLUT 2026-10-04: eftervården görs av stallet. Ett enskilt
+		moment kan inte längre göras av spelaren, så anropet får ett rent nej. ]]
 	Net.get("PassMoment").OnServerInvoke = Skopa.grind("PassMoment",
-		function(player, momentId)
-			return GameplayService.eftervard(player, momentId)
+		function(_player, _momentId)
+			return false, "pass.stallet_gor_det"
 		end)
 	--[[ #273 S2/S3: handlingarna. Argumentet är ett id och ingenting annat. ]]
 	Net.get("PreparationHandling").OnServerInvoke = Skopa.grind("PreparationHandling",
@@ -1992,7 +1994,7 @@ function GameplayService.start()
 			if handlingId == "stallet" then
 				return GameplayService.eftervardStallet(player)
 			end
-			return GameplayService.eftervardHandling(player, handlingId)
+			return false, "pass.stallet_gor_det"
 		end)
 
 	--[[ `PreparationStep` finns kvar i nätkontraktet men gör inget mer än

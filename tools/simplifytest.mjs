@@ -294,9 +294,9 @@ console.log("\n── D. S3: «Stallet tar hand om henne» ──");
   await page.keyboard.press("KeyE"); await vanta(page, 500);
   let o = await overlayLage(page);
   const sparat = () => page.evaluate(() => { try { return (JSON.parse(localStorage.getItem("ubrf-ridskolan-v1") || "{}").pass) || 0; } catch (_) { return -1; } });
-  prova("avsittningen öppnar valet «Ta hand om henne»", o.uppe && o.text.toLowerCase().includes("vill du ta hand om henne själv, eller ska stallet göra det?"), o.text.slice(0, 80).replace(/\n/g, " ¦ "));
-  prova("EXAKT två val: «Stallet tar hand om henne» och «Ta hand om henne själv»",
-    o.knappar.length === 2 && o.knappar[0] === "Stallet tar hand om henne" && o.knappar[1] === "Ta hand om henne själv",
+  prova("avsittningen öppnar kortet «Ta hand om henne» — utan fråga", o.uppe && o.text.toLowerCase().includes("bra ridet. stallet tar hand om henne.") && !o.text.includes("vill du"), o.text.slice(0, 80).replace(/\n/g, " ¦ "));
+  prova("EXAKT ett val: «Stallet tar hand om henne» — ingen egen eftervård",
+    o.knappar.length === 1 && o.knappar[0] === "Stallet tar hand om henne",
     o.knappar.join(" | "));
   prova("inga av de fem eftervårdsmomenten står som obligatoriska steg",
     !/Lossa gjorden|Känn igenom benen|Grimma på först/.test(o.text));
@@ -335,46 +335,21 @@ console.log("\n── D. S3: «Stallet tar hand om henne» ──");
   await page.context().close();
 }
 
-console.log("\n── D2. S3: «Ta hand om henne själv» ──");
+console.log("\n── D2. Egen eftervård finns inte (beslut 2026-10-04) ──");
 {
   const page = await sittUppNy();
   await bevakaGamla(page);
   const fore = await page.evaluate(() => ({ hast: G.hastId }));
-  /* Ordningen är kanonens, och regeln nekar fel tur. */
-  const regel = await page.evaluate(() => {
-    const e = Efter.nyState("x");
-    const fel = Efter.utforHandling(e, "transa_av");
-    return { h: Efter.handlingar().map(x => x.id + ":" + x.moment.map(m => m.id).join("+")),
-      fel, orord: Object.keys(e.gjorda).length === 0, bonus: Efter.BONUS };
-  });
-  prova("tre handlingar bär kanonens fem moment: sadla_av, transa_av, ta_hand",
-    regel.h.join(" | ") === "sadla_av:gjord+sadel | transa_av:trans | ta_hand:ben+vatten", regel.h.join(" | "));
-  prova("tränset före sadeln nekas med fel tur, och inget blir gjort",
-    regel.fel[0] === false && regel.fel[1] === "pass.fel_tur" && regel.orord, JSON.stringify(regel.fel.slice(0, 2)));
   await page.keyboard.press("KeyE"); await vanta(page, 500);
   const passFore = await page.evaluate(() => SPAR.pass);
-  await page.click("#bEfterSjalv"); await vanta(page);
-  const steg = [];
-  for (let i = 0; i < 3; i++) {
-    const o = await overlayLage(page);
-    steg.push({ knappar: o.knappar, text: o.text, pass: await page.evaluate(() => SPAR.pass) });
-    await page.click("#bEfterHandling"); await vanta(page);
-  }
-  prova("under den egna eftervården är passet ännu inte räknat", steg.every(s => s.pass === passFore), steg.map(s => s.pass).join(","));
-  prova("själv: en handling i taget — Ta av sadeln → Ta av tränset → Vatten och hö",
-    steg.map(s => s.knappar[0]).join(" → ") === "Ta av sadeln → Ta av tränset → Vatten och hö", steg.map(s => s.knappar[0]).join(" → "));
-  prova("och stallet finns kvar som väg ut vid varje steg", steg.every(s => s.knappar[1] === "Stallet tar hand om resten"));
-  prova("varje steg bär EN kort rad; detaljmeningarna ligger bakom «Så gör man»",
-    steg[0].text.includes("Lossa gjorden och lyft av sadeln.") && steg.every(s => s.text.includes("Så gör man")));
-  const o = await overlayLage(page);
-  const slut = await page.evaluate(h => ({ pass: SPAR.pass, rang: SPAR.fortroende[h].rang, passRang: G.passRes.rangEfter, bonus: G.efter.bonus }), fore.hast);
-  const rang0 = slut.passRang, rang1 = slut.rang;
-  prova("när den egna eftervården är klar räknas passet — en gång", slut.pass === passFore + 1, String(slut.pass));
-  prova("efter tredje handlingen: passet är klart, och hennes egen omsorg sägs",
-    o.utfall === "Du tog hand om henne själv. Det märker hon.", o.utfall);
-  prova("liten positiv effekt: förtroendet +0,02 ovanpå det passet gav — inte mer",
-    Math.abs((rang1 - rang0) - regel.bonus) < 1e-9 && regel.bonus === 0.02 && Math.abs(slut.bonus - 0.02) < 1e-9,
-    `${rang0.toFixed(4)} → ${rang1.toFixed(4)}`);
+  const knappar = await page.evaluate(() => ({ sjalv: !!document.getElementById("bEfterSjalv"),
+    handling: !!document.getElementById("bEfterHandling"), stallet: !!document.getElementById("bEfterStallet") }));
+  prova("varken «Ta hand om henne själv» eller någon egen handling finns på kortet",
+    knappar.stallet && !knappar.sjalv && !knappar.handling, JSON.stringify(knappar));
+  await page.click("#bEfterStallet"); await vanta(page);
+  const slut = await page.evaluate(h => ({ pass: SPAR.pass, bonus: G.efter.bonus, egen: Efter.egenAndel(G.efter) }), fore.hast);
+  prova("stallet räknar passet — en gång — och spelaren gör inget eget moment",
+    slut.pass === passFore + 1 && slut.bonus === 0 && slut.egen === 0, JSON.stringify(slut));
 
   console.log("\n── E2. S2 (A3): «Rid igen — ny häst» leder till stegkortet ──");
   await page.click("#bIgen"); await vanta(page, 700); await vantaStegkort(page);
@@ -398,7 +373,7 @@ console.log("\n── D3. S3: den som lämnar vid valet har inte avslutat passet
   await page.reload({ waitUntil: "load" }); await vanta(page, 700);
   const efter = await page.evaluate(() => SPAR.pass);
   prova("valet stod uppe, fliken laddades om utan val: passet är INTE räknat",
-    o.knappar.length === 2 && lagrat === fore && efter === fore, `före ${fore} · sparfil ${lagrat} · efter omladdning ${efter}`);
+    o.knappar.length === 1 && lagrat === fore && efter === fore, `före ${fore} · sparfil ${lagrat} · efter omladdning ${efter}`);
 
   /* Clear round-raden lovar VALET, inte de fem momenten — sv och en. */
   const rad = await page.evaluate(() => {
