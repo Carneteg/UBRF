@@ -233,68 +233,12 @@ local function hangUpp(foralder: Folder, b: CFrame, hastId: string, namn: string
 		vid(0.42, 1.16), LADER_MORK)
 	transgrupp.PrimaryPart = trans
 
-	--[[ NAMNSKYLTEN. Webbens sadelkammare har den på bygeln — "Namnskyltarna
-		sitter på byglarna" — och här är den prompten. Hästens namn är ett
-		EGENNAMN och skickas som argument, inte som översatt text. ]]
-	--[[ EN PROMPT, EN HANDLING (#235 FAS 1). Den hamtade forut hela paret
-		med ett tryck. Tranget far sin egen i FAS 3; tills dess hanger det
-		kvar utan prompt, och det ar avsiktligt — inte en gloms. ]]
-	local prompt = Instance.new("ProximityPrompt")
-	prompt.Name = "SadelPrompt"
-	prompt.ActionText = "Ta sadeln"
-	prompt:SetAttribute("SprakNyckel", "tack.ta_sadeln")
-	prompt.ObjectText = namn .. "s sadel"
-	prompt:SetAttribute("SprakObjekt", "tack.sadel_for")
-	prompt:SetAttribute("SprakArg", namn)
-	prompt.HoldDuration = 0
-	prompt.MaxActivationDistance = 8
-	prompt.RequiresLineOfSight = false
-	prompt.ClickablePrompt = true
-	--[[ EGEN KNAPP (#182 del 3). Sadeln delade `E` med boxdorren och
-		uppsittningen, och de tre ar natbara samtidigt vid boxen.
-		`G` och `ButtonL1` ar «ga vidare» respektive gangart ned — bada
-		lever bara i sadeln, och utrustning hamtar man till fots. ]]
-	prompt.Exclusivity = Enum.ProximityPromptExclusivity.AlwaysShow
-	prompt.KeyboardKeyCode = Enum.KeyCode.G
-	prompt.GamepadKeyCode = Enum.KeyCode.ButtonL1
-	prompt.Parent = sadel
-
-	prompt.Triggered:Connect(function(spelare)
-		TackForradService.tagSadel(spelare, hastId, namn)
-	end)
-
-	--[[ ── TRANSETS EGEN PROMPT (#235 FAS 3) ─────────────────────
-
-		Samma state-machine som sadeln, en egen handling. Den viktiga
-		skillnaden mot att bara kopiera raderna ovan ar TANGENTEN.
-
-		Bada hanger pa samma front och ar inom rackhall samtidigt. Lat
-		de dela Roblox standardvarde (`E` / `ButtonX`) hade vi byggt
-		precis det #235 rapporterade: flera prompter i djupet dar bara
-		den narmaste gar att na, och spelaren far gissa vilken.
-
-		`T` for trans ar mnemoniskt och delas med «se ritten», som bara
-		lever i sadeln; `ButtonB` ar halvhalten, ocksa bara i sadeln.
-		Samma kontextregel som `docs/KONTROLLMATRIS.md` redan bar. ]]
-	local transPrompt = Instance.new("ProximityPrompt")
-	transPrompt.Name = "TransPrompt"
-	transPrompt.ActionText = "Ta transet"
-	transPrompt:SetAttribute("SprakNyckel", "tack.ta_transet")
-	transPrompt.ObjectText = namn .. "s trans"
-	transPrompt:SetAttribute("SprakObjekt", "tack.trans_for")
-	transPrompt:SetAttribute("SprakArg", namn)
-	transPrompt.HoldDuration = 0
-	transPrompt.MaxActivationDistance = 8
-	transPrompt.RequiresLineOfSight = false
-	transPrompt.ClickablePrompt = true
-	transPrompt.Exclusivity = Enum.ProximityPromptExclusivity.AlwaysShow
-	transPrompt.KeyboardKeyCode = Enum.KeyCode.T
-	transPrompt.GamepadKeyCode = Enum.KeyCode.ButtonB
-	transPrompt.Parent = trans
-
-	transPrompt.Triggered:Connect(function(spelare)
-		TackForradService.tagTrans(spelare, hastId, namn)
-	end)
+	--[[ PRODUKTBESLUT 2026-10-04: spelaren hämtar ingen utrustning. «Rida nu»
+		låter stallet lägga på sadel och träns, så fronten bär INGA prompter
+		(«Ta sadeln» och «Ta transet» är borttagna). Sadeln och tränset hänger
+		kvar som miljö, precis som på UBRF, och `satSynlig` släcker dem när
+		stallet har tagit dem. Hästens namn bärs som attribut på sadeln. ]]
+	sadel:SetAttribute("HastNamn", namn)
 
 	modell.PrimaryPart = sadel
 	modell.Parent = foralder

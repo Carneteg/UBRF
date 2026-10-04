@@ -147,10 +147,8 @@ do
 		end
 	end
 	table.sort(promptar)
-	check("det finns exakt TVÅ prompter på fronten — en per handling",
-		#promptar == 2 and promptar[1] == "SadelPrompt"
-			and promptar[2] == "TransPrompt",
-		table.concat(promptar, ", "))
+	check("fronten har INGA prompter — stallet hämtar utrustningen (beslut 2026-10-04)",
+		#promptar == 0, table.concat(promptar, ", "))
 end
 
 print("\n── WORLD → HELD genom produktionens egen väg ──")
