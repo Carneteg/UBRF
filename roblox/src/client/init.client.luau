@@ -729,6 +729,9 @@ InteractionController.setReadyCheck(function(model: Model): boolean
 	     `klient-uikontext.spec` avsnitt 3c mäter just den — inte det läge
 	     där `redo` redan svarat nej. ]]
 	if PreparationController.skotselstegAgerFokus() then return false end
+	--[[ #292: ett RÄKNAT pass är stängt. «Sitt upp» hör till ett nytt pass,
+	     och det öppnas av «Rida nu» — inte av en uppsittning servern nekar. ]]
+	if PreparationController.passRaknat() then return false end
 	return PreparationController.redo()
 end)
 --[[ Ledningen öppnas av att `leda` är spelarens tur — inte av `redo`.
@@ -744,7 +747,10 @@ InteractionController.setRidaCheck(function(model: Model): boolean
 	if model:GetAttribute("HorseId") ~= id then return false end
 	-- #274: ett öppet fynd eller ett stopp äger fokus; servern nekar «Rida nu» då.
 	if PreparationController.valfardAgerFokus() then return false end
-	return PreparationController.nastaFas() ~= nil
+	--[[ #292: efter ett RÄKNAT pass är förberedelsen «färdig» (`nastaFas` nil)
+	     men dagen är inte slut — ett nytt uttryckligt «Rida nu» öppnar nästa
+	     pass (#290). Under RIDER och EFTERVARD visas inget: ofärdigt rörs inte. ]]
+	return PreparationController.nastaFas() ~= nil or PreparationController.passRaknat()
 end)
 
 --[[ Nejet från «Rida nu» ska läsas av SPELAREN, inte av Output-fönstret.

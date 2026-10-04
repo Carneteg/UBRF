@@ -223,6 +223,105 @@ do
 	prova("rubriken är inte startskärmens", rubrik() ~= Sprak.t("guide.valj_rubrik", "Trixie"), rubrik())
 end
 
+print("\n── 8. #292: efter ett RÄKNAT pass finns «Rida nu», och «Sitt upp» viker ──")
+do
+	local function promptar()
+		local ut = {}
+		for _, d in ipairs(hast:GetDescendants()) do
+			if d.Name == "MountPrompt" or d.Name == "RidaNuPrompt" or d.Name == "LedPrompt" then
+				ut[d.Name] = d
+			end
+		end
+		return ut
+	end
+	local function passVy(pass)
+		rev += 1
+		PC.tillampaPass(Pass.vy(pass, 5000 + rev))
+		IC.uppdatera()
+	end
+	flytta(vidHasten)
+
+	-- A. Ny, ofärdig förberedelse: «Rida nu» som förut.
+	state = Preparation.nyState(HAST_ID, 5)
+	visa("preparing")
+	local passA = Pass.nyState(HAST_ID, Pass.byggId(1, HAST_ID, 5))
+	passVy(passA)
+	prova("A. ny förberedelse (before_ride): «Rida nu» finns och «Sitt upp» inte",
+		promptar().RidaNuPrompt ~= nil and promptar().MountPrompt == nil)
+	prova("A. och startkortet har «Rida nu»", valMed("start:rida_nu") ~= nil)
+
+	-- B. Förberedd före ritt: «Sitt upp», inte «Rida nu».
+	for _, f in ipairs(Preparation.stegFaser()) do gorFas(f.id) end
+	visa("ready_to_mount")
+	prova("B. förberett pass i before_ride: «Sitt upp» syns, «Rida nu» döljs",
+		promptar().MountPrompt ~= nil and promptar().RidaNuPrompt == nil,
+		("Mount %s · Rida nu %s"):format(tostring(promptar().MountPrompt ~= nil), tostring(promptar().RidaNuPrompt ~= nil)))
+
+	-- C. Eftervård: varken upprepad «Rida nu» eller en vilseledande «Sitt upp».
+	Pass.vidUppsittning(passA)
+	Pass.vidAvsittning(passA)
+	passVy(passA)
+	visa("ready_to_mount")
+	prova("C. eftervård (aftercare): ingen «Rida nu» och ingen «Sitt upp» tar fokus",
+		promptar().RidaNuPrompt == nil and promptar().MountPrompt == nil and valMed("start:rida_nu") == nil,
+		("Mount %s · Rida nu %s"):format(tostring(promptar().MountPrompt ~= nil), tostring(promptar().RidaNuPrompt ~= nil)))
+
+	-- D. Räknat pass: «Rida nu» syns, «Sitt upp» är borta.
+	while true do
+		local m = Pass.nastaMoment(passA)
+		if not m then break end
+		Pass.utfor(passA, m.id, "auto")
+	end
+	Pass.markeraRaknat(passA)
+	passVy(passA)
+	visa("ready_to_mount")
+	prova("D. förutsättning: passet är recorded och förberedelsen står kvar komplett",
+		PC.passLage() == "recorded" and PC.redo() == true and PC.nastaFas() == nil,
+		("lage %s · redo %s · fas %s"):format(tostring(PC.passLage()), tostring(PC.redo()), tostring(PC.nastaFas())))
+	prova("D. recorded: «Rida nu» syns på hästen och «Sitt upp» är borta",
+		promptar().RidaNuPrompt ~= nil and promptar().MountPrompt == nil,
+		("Mount %s · Rida nu %s"):format(tostring(promptar().MountPrompt ~= nil), tostring(promptar().RidaNuPrompt ~= nil)))
+	prova("D. startkortet bär samma enda «Rida nu»", valMed("start:rida_nu") ~= nil and #N._val() == 1, #N._val())
+	local fore = ridaNuAnrop
+	valMed("start:rida_nu").skicka()
+	prova("D. kortet kör den befintliga «Rida nu» (InteractionController.ridaNu → servern)",
+		ridaNuAnrop == fore + 1, ("%d → %d"):format(fore, ridaNuAnrop))
+	prova("D. ingen skötsel eller ledning kommer tillbaka", promptar().LedPrompt == nil
+		and valMed("start:sjalv") == nil)
+
+	-- E. Servern svarar med ett nytt pass i before_ride: tillståndet byter igen.
+	state = Preparation.nyState(HAST_ID, 6)
+	visa("preparing")
+	local passE = Pass.nyState(HAST_ID, Pass.byggId(1, HAST_ID, 6))
+	passVy(passE)
+	prova("E. nytt pass (before_ride) efter synk: «Rida nu» som i A, ingen «Sitt upp»",
+		PC.passLage() == "before_ride" and promptar().RidaNuPrompt ~= nil and promptar().MountPrompt == nil)
+
+	-- F. Fel häst och välfärdsfokus släcker «Rida nu» även vid recorded.
+	local passF = Pass.nyState(HAST_ID, Pass.byggId(1, HAST_ID, 7))
+	Pass.vidUppsittning(passF); Pass.vidAvsittning(passF)
+	while true do
+		local m = Pass.nastaMoment(passF)
+		if not m then break end
+		Pass.utfor(passF, m.id, "auto")
+	end
+	Pass.markeraRaknat(passF)
+	state = Preparation.nyState(HAST_ID, 7)
+	for _, f in ipairs(Preparation.stegFaser()) do gorFas(f.id) end
+	visa("ready_to_mount")
+	passVy(passF)
+	hast:SetAttribute("HorseId", "annan_hast")
+	IC.uppdatera()
+	prova("F. fel häst: ingen «Rida nu» trots recorded", promptar().RidaNuPrompt == nil)
+	hast:SetAttribute("HorseId", HAST_ID)
+	state.stoppad = "skada"
+	visa("welfare_stop")
+	passVy(passF)
+	prova("F. välfärdsstopp: ingen «Rida nu» trots recorded", promptar().RidaNuPrompt == nil
+		and valMed("start:rida_nu") == nil)
+	state.stoppad = nil
+end
+
 print("")
 if fel > 0 then
 	error(("%d mätning(ar) föll."):format(fel), 0)

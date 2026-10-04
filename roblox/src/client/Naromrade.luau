@@ -2215,7 +2215,12 @@ rita = function()
 	--[[ UI-1: STARTSKÄRMEN. Exakt ETT val — «Rida nu — {häst}» (samma funktion
 	     som prompten). «Gör i ordning själv» är borttaget (produktbeslut
 	     2026-10-04). Inga hälsningssvar, inga promptrader, inget «Fler». ]]
-	if data and arStartskarm(data.guide, minHast, data.lage) then
+	--[[ #292: efter ett RÄKNAT pass visas samma enda handling — «Rida nu» — som
+	     öppnar nästa pass (#290). Ingen skötsel eller ledning kommer tillbaka;
+	     välfärdsfokus och ledningskontext släcker den som för startkortet. ]]
+	local raknatStart = minHast ~= nil and PreparationController.passRaknat()
+		and not PreparationController.valfardAgerFokus() and PreparationController.kontext() ~= "ledning"
+	if data and (arStartskarm(data.guide, minHast, data.lage) or raknatStart) then
 		local namn = if hastnamn and hastnamn ~= "" then hastnamn else Sprak.t("guide.din_hast")
 		valen = {
 			{ id = "start:rida_nu", text = Sprak.t("guide.val_rida_nu", namn), aktiv = true, paTur = true, klar = false,
