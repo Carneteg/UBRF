@@ -2218,7 +2218,10 @@ rita = function()
 	--[[ #292: efter ett RÄKNAT pass visas samma enda handling — «Rida nu» — som
 	     öppnar nästa pass (#290). Ingen skötsel eller ledning kommer tillbaka;
 	     välfärdsfokus och ledningskontext släcker den som för startkortet. ]]
+	--[[ Som startkortet: «vid hästen». `minHast` är bara tilldelningen, inget bevis
+	     på närhet, så vyns `utomRackhall` måste vara falskt och guiden finnas. ]]
 	local raknatStart = minHast ~= nil and PreparationController.passRaknat()
+		and data ~= nil and type(data.guide) == "table" and not data.guide.utomRackhall
 		and not PreparationController.valfardAgerFokus() and PreparationController.kontext() ~= "ledning"
 	if data and (arStartskarm(data.guide, minHast, data.lage) or raknatStart) then
 		local namn = if hastnamn and hastnamn ~= "" then hastnamn else Sprak.t("guide.din_hast")

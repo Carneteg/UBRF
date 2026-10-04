@@ -289,6 +289,19 @@ do
 	prova("D. ingen skötsel eller ledning kommer tillbaka", promptar().LedPrompt == nil
 		and valMed("start:sjalv") == nil)
 
+	-- D2. Avståndet: startkortet efter recorded gäller bara «vid hästen».
+	flytta(langtBort)
+	visa("ready_to_mount")
+	passVy(passA)
+	prova("D2. recorded + UTOM räckhåll: inget aktivt «Rida nu»-startkort",
+		valMed("start:rida_nu") == nil and N._panel().rubrik ~= Sprak.t("guide.valj_rubrik", "Trixie"),
+		tostring(N._panel().rubrik))
+	flytta(vidHasten)
+	visa("ready_to_mount")
+	passVy(passA)
+	prova("D2. tillbaka vid hästen: exakt ett «Rida nu»-startkort igen",
+		valMed("start:rida_nu") ~= nil and #N._val() == 1, #N._val())
+
 	-- E. Servern svarar med ett nytt pass i before_ride: tillståndet byter igen.
 	state = Preparation.nyState(HAST_ID, 6)
 	visa("preparing")

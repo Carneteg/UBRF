@@ -2511,7 +2511,7 @@ function PreparationController.passLage(): string?
 end
 
 function PreparationController.passRaknat(): boolean
-	return senastePass ~= nil and senastePass.lage == "recorded"
+	return passRaknat()
 end
 
 --[[ Vilket steg spelaren STÅR PÅ. Ledningens prompt hänger på den:
