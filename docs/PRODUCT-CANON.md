@@ -283,8 +283,17 @@ Beslutet är Tobias, efter att ledningsfelet i #265 reproducerats
 spelarens handling. Inget är bestämt och inget antas här. Pelare 2 och 3
 står kvar som mål tills Tobias avgör hur de ska uppfyllas på annat sätt.
 
-**Konsekvens för #265:** P1 (topologi för ledd häst) förlorar sin grund och
-föreslås stängd som NO_PORT, obsolet genom produktbeslut. P2 och P5 påverkas inte.
+**Konsekvens för #265:** P1 (topologi för ledd häst) förlorar sin grund och är
+**NO_PORT, obsolet genom produktbeslut** (ChatGPT-order 2026-10-04 på #265). Den
+äldre trafik-/gångzonstopologin för ledda hästar portas inte. P2 och P5
+påverkas inte.
+
+**Genomfört (branch `claude/ta-bort-ledning-skotsel`):** på både Roblox och webb
+har startskärmen ett enda val, «Rida nu»; hälsa, kolla, rykta, kratsa,
+hämtning och påläggning av sadel och träns samt ledning finns inte som
+spelarhandlingar; ledlektionen och ledningsminnet är borta; hästen står kvar vid
+sargporten i ridhuset. Välfärdsstopp och säkerhetsgrindar är oförändrade.
+Kvarvarande, medvetet orörda delar redovisas i leveransrapporten på #265.
 
 **Leverans:** Roblox och webb i samma leverans (se 2026-09-28). Äldre
 sparfiler som innehåller ledningsdata ska tåla att läsas: datat ignoreras,

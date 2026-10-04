@@ -1,3 +1,5 @@
+> **DELVIS ERSATT (produktbeslut 2026-10-04).** Allt som beskriver att spelaren själv hälsar, kollar, ryktar, kratsar, hämtar och lägger på sadel och träns eller leder hästen gäller inte längre. Det som gäller kvar: ett steg i taget, «Rida nu», fynd och välfärdsstopp. Se `docs/PRODUCT-CANON.md`, «Produktbeslut 2026-10-04».
+
 # Onboarding: one clear step at a time in the left panel (Tobias C: two paths)
 
 Status: contract written before code, 2026-09-28. **BUILT, LOCAL SUITE GREEN, VERIFIED IN STUDIO (engine), NOT VISUALLY VERIFIED** — READY_FOR_CHATGPT_REVIEW.

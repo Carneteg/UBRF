@@ -1,3 +1,5 @@
+> **DELVIS ERSATT (produktbeslut 2026-10-04).** Allt som beskriver att spelaren själv hälsar, kollar, ryktar, kratsar, hämtar och lägger på sadel och träns eller leder hästen gäller inte längre. Det som gäller kvar: ridkontrollerna och att välfärdsstoppet aldrig förenklas bort. Se `docs/PRODUCT-CANON.md`, «Produktbeslut 2026-10-04».
+
 # SIMPLIFY #273 — audit + acceptance contract (care guidance and riding controls)
 
 Status: **audit and contract, written before code**, 2026-10-01. Writer: Claude.
