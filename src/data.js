@@ -85,16 +85,16 @@ const SITE={
    visar E mot läktaren och `-14`/`-15` visar H vid läktarens hörn. Förut
    stod A i norr och E i öster; det var en följd av att läktaren låg fel. */
 const DRESSYRBOKSTAVER=[
-  {b:"A",x:10,y:0,  bild:"ananas"},   // [antagande] — södra kortsidan
-  {b:"C",x:10,y:60, bild:"cykel", paSarg:"N"}, // ur foto — på NORRA SARGEN framför C-blocket; layoutens 60-m-linje ligger 5,5 m söder om sargen, skylten hänger där fotot visar den (bokstavLage)
-  {b:"K",x:0, y:6,  bild:"katt"},     // [antagande] — vänster sida sedd från A = väster
-  {b:"V",x:0, y:18, bild:"vante"},    // [antagande]
-  {b:"E",x:0, y:30, bild:"elefant"},  // [antagande] — mot läktaren, IMG_0198
-  {b:"S",x:0, y:42, bild:"sol"},      // [antagande]
-  {b:"H",x:0, y:54, bild:"hus"},      // [antagande] — vid läktarens hörn, ridhus-inne-14/15
-  {b:"F",x:20,y:6,  bild:"fisk"},     // ur foto
-  {b:"P",x:20,y:18, bild:"paron"},    // [antagande]
-  {b:"B",x:20,y:30, bild:"banan"},    // ur foto
-  {b:"R",x:20,y:42, bild:"ros"},      // [antagande]
-  {b:"M",x:20,y:54, bild:"morot"},    // ur foto
+  {b:"A",x:10,y:0,  bildKalla:"antagande", bild:"ananas"},   // [antagande] — södra kortsidan
+  {b:"C",x:10,y:60, bildKalla:"foto", bild:"cykel", paSarg:"N"}, // ur foto — på NORRA SARGEN framför C-blocket; layoutens 60-m-linje ligger 5,5 m söder om sargen, skylten hänger där fotot visar den (bokstavLage)
+  {b:"K",x:0, y:6,  bildKalla:"antagande", bild:"katt"},     // [antagande] — vänster sida sedd från A = väster
+  {b:"V",x:0, y:18, bildKalla:"antagande", bild:"vante"},    // [antagande]
+  {b:"E",x:0, y:30, bildKalla:"antagande", bild:"elefant"},  // [antagande] — mot läktaren, IMG_0198
+  {b:"S",x:0, y:42, bildKalla:"antagande", bild:"sol"},      // [antagande]
+  {b:"H",x:0, y:54, bildKalla:"antagande", bild:"hus"},      // [antagande] — vid läktarens hörn, ridhus-inne-14/15
+  {b:"F",x:20,y:6,  bildKalla:"foto", bild:"fisk"},     // ur foto
+  {b:"P",x:20,y:18, bildKalla:"antagande", bild:"paron"},    // [antagande]
+  {b:"B",x:20,y:30, bildKalla:"foto", bild:"banan"},    // ur foto
+  {b:"R",x:20,y:42, bildKalla:"antagande", bild:"ros"},      // [antagande]
+  {b:"M",x:20,y:54, bildKalla:"foto", bild:"morot"},    // ur foto
 ];
