@@ -336,17 +336,10 @@ prova("och hästen står i sin box", s.plats === "box", `plats ${s.plats}`);
    "Hämta Blackrock Jacks sadel och träns" (src/world.js). Provet måste
    känna igen båda, annars letar det efter en skylt som inte längre
    står där. */
-s = await station("sadelkammaren|sadel och träns", "sadelkammaren", v => v.ov === true) || s;
-prova("sadelkammaren kräver att man VÄLJER sadel och träns",
-  (await klicka("bSkKlar")) && (await las()).utrustning === false,
-  "klick utan val ger ingen utrustning");
-await ev(() => { for (const t of ["sadel", "trans"]) {
-  const b = document.querySelector(`.sk-val[data-typ="${t}"][data-id="${G.hastId}"]`);
-  if (b) b.click(); } });
-await page.waitForTimeout(600);
-await klicka("bSkKlar");
-s = await las();
-prova("rätt sadel och träns ger utrustningen", s.utrustning === true, `utrustning ${s.utrustning}`);
+/* Produktbeslut 2026-10-04: ingen sadelkammare att välja i. Stallet lägger
+   fram utrustningen, så skylten är bara miljö — inget pussel öppnas. */
+prova("sadelkammarpusslet är borta: ingen funktion och ingen overlay att välja utrustning i",
+  await ev(() => typeof visaSadelkammare === "undefined" && !document.querySelector(".sk-val")));
 
 /* ══ 5. BOXEN — STEGKORTET ═══════════════════════════════════════
    Paritetspasset (#264, docs/WEB-P1A-STABLE-FLOW-CONTRACT.md): vid hästen

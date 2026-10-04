@@ -275,33 +275,13 @@ sektion = "hästbytet";
       mal: uppdragVagvisare().pos.slice(),
       markorNy: markorGallerFor(ny), markorGammal: markorGallerFor(gammal) };
 
-    /* Utrustningen ska gälla den AKTIVA hästen: fel bygel ska nekas. */
-    G.hastMott = true;
-    const utrMal = uppdragMal().mal.pos.slice();
-    /* Sadel OCH träns väljs, sedan bekräftas med "Ta med utrustningen" —
-       det är där valet prövas mot den aktiva hästen. */
-    const valj = id => { for (const el of document.querySelectorAll(".sk-val"))
-      if (el.dataset.id === id) el.click();
-      document.getElementById("bSkKlar").click(); };
-    /* FEL bygel: någon annan hästs, vilken som helst av dem som hänger
-       framme. (Sadelkammaren visar åtta byglar runt den aktiva hästen,
-       så den förra hästens hänger inte nödvändigtvis kvar i bild.) */
-    visaSadelkammare();
-    const felId = [...document.querySelectorAll(".sk-val")]
-      .map(el => el.dataset.id).find(id => id !== G.hastId);
-    valj(felId);
-    const felUtr = { utrustning: G.utrustning, fel: G.felUtrustning,
-      namn: HORSES[felId].namn };
-    visaSadelkammare(); valj(ny);               // den aktiva hästens
-    const rattUtr = { utrustning: G.utrustning };
-    overlay(false);
-
+    /* Sadelkammarpusslet är borttaget (beslut 2026-10-04): stallet lägger fram utrustningen. */
     /* Återvägen efter sadelkammaren. */
     const tillbaka = uppdragMal().mal.pos.slice();
 
     return { gammal, ny, aktivEfter: G.hastId,
       gammalNamn: HORSES[gammal].namn, nyNamn: HORSES[ny].namn,
-      gammalBox, nyBox, fore, efter, utrMal, felUtr, rattUtr, tillbaka,
+      gammalBox, nyBox, fore, efter, tillbaka,
       sadelkammare: (STALLINNE.info || []).find(i => i.sadelkammare).pos };
   });
 
@@ -319,9 +299,8 @@ sektion = "hästbytet";
     Math.hypot(b.efter.mal[0] - b.nyBox[0], b.efter.mal[1] - b.nyBox[1]) < 0.01 &&
     Math.hypot(b.efter.mal[0] - b.gammalBox[0], b.efter.mal[1] - b.gammalBox[1]) > 0.01,
     `waypoint [${b.efter.mal.map(n=>n.toFixed(1))}] · ny box [${b.nyBox.map(n=>n.toFixed(1))}] · förras box [${b.gammalBox.map(n=>n.toFixed(1))}]`);
-  prova("sadelkammaren ger utrustning för den AKTIVA hästen, inte den förra",
-    b.felUtr.utrustning === false && b.felUtr.fel >= 1 && b.rattUtr.utrustning === true,
-    `${b.felUtr.namn}s bygel → nekad (fel ${b.felUtr.fel}) · ${b.nyNamn}s bygel → utrustning ${b.rattUtr.utrustning}`);
+  prova("sadelkammarpusslet finns inte längre — ingen väg att välja utrustning själv",
+    await ev(() => typeof visaSadelkammare === "undefined"));
   /* STALE STATE: bytet görs från ett FÖRBERETT läge — sadeln hämtad,
      hästen mött, skötseln gjord, hästen ledd ut. Inget av det får följa
      med till den nya hästen; annars står man med den förra hästens

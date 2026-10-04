@@ -2344,10 +2344,10 @@ STALLINNE.info=[
      hall-koordinater söder om brandväggen som förut. */
   {pos:[1.6,63.0], text:"Klubbrummet — rosettväggen", klubb:true,
    svar:"Uppehållsrummet: svarta soffor, hästfoton på pärlsponten och en rosa träponny med riktig sadel. Här väntar man in sin lektion."},
-  {pos:[9.8,62.6], text:"Sadelkammaren", sadelkammare:true, svar:""},
+  {pos:[9.8,62.6], text:"Sadelkammaren", sadelkammare:true, svar:"Sadelkammaren: sadelbyglar i två rader, träns på krokar och en vit pegboard med putsgrejer. Stallet lägger fram utrustningen åt dig."},
   {pos:[14.2,67.0], text:"Teorilektion i teorisalen", teori:true,
    svar:""},
-  {pos:[6.2,5.8],  text:"Spolspiltan", spolspilta:true, svar:""},
+  {pos:[6.2,5.8],  text:"Spolspiltan", spolspilta:true, svar:"Spolspiltan: gummimattor, duschblandare och slangvinda på väggen."},
   {pos:[8.8,5.8],  text:"Spånförrådet",
    svar:"Spånförrådet: Mustang kutterspån på pall i galvad bur. Härifrån hämtas spånet du strör med när boxen är mockad."},
 ];

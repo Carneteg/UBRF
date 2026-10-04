@@ -232,8 +232,6 @@ function stegkortKort(antaNara) {
   if (!nara)
     return { id: "ga_till", rubrik: tSpr("guide.ga_till_rubrik", n), text: tSpr("guide.ga_till_text"), val: [] };
 
-  const fler = [{ id: "fler:boxen", text: tSpr("guide.fler_boxen"), gor() { visaBoxmeny(); } }];
-
   /* «Rida nu» är en prompt på hästen i Roblox (RidaNuPrompt, R 0,35 s) och
      finns i världen även när startvalet står i panelen — panelen visar den
      bara inte som rad där (UI-1: exakt ett val). */

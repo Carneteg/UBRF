@@ -900,22 +900,6 @@ function interaktioner(){
     L.push({pos:S.whiteboard.pos, text:"Dagens schema (whiteboarden)",
       gor(){visaSchema();}});
     for(const i of (S.info||[])){
-      /* Spolspiltan används med hästen vid handen, på väg in från hagen. */
-      if(i.spolspilta){
-        const kanSpola=G.hastId&&G.leder&&!G.hamtad;
-        L.push({pos:i.pos, text:kanSpola
-            ?(G.lerig?`Spola av leran på ${hastNamn()}`
-              :`Spola av ${hastNamn()} i spiltan`)
-            :"Spolspiltan",
-          gor(){ if(kanSpola)visaSpolning();
-            else saga("Spolspiltan: gummimattor, duschblandare och slangvinda på väggen. Hit leds hästen in från hagen när benen är leriga.",4.5); }});
-        continue;
-      }
-      if(i.sadelkammare){
-        L.push({pos:i.pos, text:"Sadelkammaren",
-          gor(){visaSadelkammare();}});
-        continue;
-      }
       L.push({pos:i.pos, text:i.text,
         gor(){ if(i.teori)visaTeori();
           else if(i.klubb&&typeof visaKlubbrum==="function")visaKlubbrum();
