@@ -150,8 +150,8 @@ for id, d in pairs(skyltar) do
 	check(id .. " bär sin bokstav som text", etikett ~= nil and etikett.Text == id,
 		etikett and etikett.Text or "ingen etikett")
 	local storlek = d.Size
-	check(id .. " är läsbar: minst 0,5 m hög och 0,6 m bred",
-		storlek.Y >= 0.5 * BuildKit.M - 1e-6 and storlek.X >= 0.6 * BuildKit.M - 1e-6,
+	check(id .. " är läsbar: minst 0,7 m hög och 0,9 m bred",
+		storlek.Y >= 0.7 * BuildKit.M - 1e-6 and storlek.X >= 0.9 * BuildKit.M - 1e-6,
 		("%.2f × %.2f studs"):format(storlek.X, storlek.Y))
 end
 

@@ -988,7 +988,7 @@ end
 	endast C, F, B och M är verifierade ur foto, och inga nya bilder
 	ritas. Det lösa bokstavsstället bakom sargen (`bokstavsstall`) är en
 	annan sak och rörs inte. ]]
-local BOKSTAV_B, BOKSTAV_H, BOKSTAV_Y = 0.7, 0.5, 1.0
+local BOKSTAV_B, BOKSTAV_H, BOKSTAV_Y = 0.9, 0.7, 1.0
 local function byggDressyrBokstaver(model: Model, base: CFrame)
 	local R = G.ridhus
 	local lista = R.dressyrBokstaver
