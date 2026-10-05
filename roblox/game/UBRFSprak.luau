@@ -522,8 +522,16 @@ Sprak.text = {
 		en = "%s is your horse today. You do not need to saddle or bridle yourself — the stable gets %s ready.",
 	},
 	["guide.val_rida_nu"] = {
-		sv = "Rida nu — %s",
-		en = "Ride now — %s",
+		sv = "RIDA NU — %s",
+		en = "RIDE NOW — %s",
+	},
+	["kort.oppna_dorren"] = {
+		sv = "ÖPPNA DÖRREN",
+		en = "OPEN THE DOOR",
+	},
+	["kort.sitt_upp"] = {
+		sv = "SITT UPP",
+		en = "MOUNT",
 	},
 	["guide.val_sjalv"] = {
 		sv = "Gör i ordning %s själv",

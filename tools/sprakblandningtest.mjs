@@ -152,7 +152,7 @@ console.log("\n── A. Ugneta överst, startvalet med ett val ──");
   prova("titeln är «Ugneta · Ridinstruktör» och flaggan «Svenska»", k.titel === "Ugneta · Ridinstruktör" && k.flagga === "Svenska",
     `${k.titel} · ${k.flagga}`);
   prova("startkortet: ETT val, «Rida nu», och det är primärt",
-    k.id === "valj" && k.knappar.length === 1 && k.knappar[0].primar && /^Rida nu/.test(k.knappar[0].text),
+    k.id === "valj" && k.knappar.length === 1 && k.knappar[0].primar && /^RIDA NU/.test(k.knappar[0].text),
     k.knappar.map(b => b.text + (b.primar ? "*" : "")).join(" / "));
   prova("Ugneta säger kortets rad; instruktionen står EN gång", /^.+ är din häst idag. Du behöver inte sadla eller tränsa själv — stallet gör .+ redo.$/.test(k.instr) && !k.dubbel, k.instr);
   prova("ingen «Gör i ordning själv», ingen hälsning, ingen frågesport",

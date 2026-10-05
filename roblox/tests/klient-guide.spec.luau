@@ -91,6 +91,22 @@ local function rubrik() return N._panel().rubrik end
 local function steg() return N._panel().steg end
 local function borjar(t, x) return type(t) == "string" and string.sub(t, 1, #x) == x end
 local function har(t, x) return type(t) == "string" and string.find(t, x, 1, true) ~= nil end
+-- #305: huvudknappen är den knapp spelaren SER som den enda handlingen i steget.
+local ACCENT = Color3.fromRGB(92, 76, 38)
+-- Färger jämförs på komponenter: stubben ger en ny tabell vid varje fromRGB.
+local function arAccent(f) return f.R == ACCENT.R and f.G == ACCENT.G and f.B == ACCENT.B end
+local function hojdPx(b)
+	return b.Size.Y.Offset
+end
+local function huvud(b)
+	return b ~= nil and b.Font == Enum.Font.GothamBold and b.TextSize >= 17
+		and b.TextXAlignment == Enum.TextXAlignment.Center and hojdPx(b) >= 44 and arAccent(b.BackgroundColor3)
+end
+local function antalHuvud(ks)
+	local n = 0
+	for _, b in ipairs(ks) do if arAccent(b.BackgroundColor3) then n += 1 end end
+	return n
+end
 
 print("\nONBOARDINGENS STEGKORT\n")
 
@@ -99,6 +115,12 @@ flytta(langtBort)
 visa("preparing")
 prova("stängd dörr inom räckhåll, hästen långt bort: «Öppna stalldörren»",
 	rubrik() == Sprak.t("guide.dorr_rubrik", "Trixie") and har(steg(), "gyllene pilen"), rubrik() .. " | " .. steg())
+do
+	local k1 = N._knappar()
+	prova("#305 dörrsteget: EN huvudknapp vid instruktionen, «ÖPPNA DÖRREN» (inte «Öppna — Dörr»)",
+		k1[1] ~= nil and k1[1].Text == Sprak.t("kort.oppna_dorren") and Sprak.t("kort.oppna_dorren") == "ÖPPNA DÖRREN"
+		and huvud(k1[1]) and antalHuvud(k1) == 1, k1[1] and k1[1].Text)
+end
 dorr:SetAttribute("SprakNyckel", "dorr.stang")
 visa("preparing")
 prova("dörren öppen: «Gå till Trixie» + följ pilen",
@@ -126,6 +148,12 @@ prova("exakt ett val: «Rida nu — Trixie», inget «Gör i ordning själv»", 
 local synligt = N._rader()
 prova("inga promptrader och inget «Fler»: det synliga är exakt det enda valet", #synligt == 1
 	and synligt[1] == vt[1], table.concat(synligt, " / "))
+do
+	local k2 = N._knappar()
+	prova("#305 «RIDA NU — Trixie» är huvudknappen: stor, fet, centrerad, minst 44 px, exakt en",
+		k2[1] ~= nil and k2[1].Text == "RIDA NU — Trixie" and huvud(k2[1]) and antalHuvud(k2) == 1,
+		k2[1] and k2[1].Text)
+end
 local harHalsning = false
 for _, v in ipairs(N._val()) do if v.fel ~= nil then harHalsning = true end end
 prova("inga hälsningssvar på startskärmen", not harHalsning)
@@ -138,6 +166,12 @@ local vt2 = valTexter()
 prova("stängd box vid hästen: det enda valet finns kvar", #vt2 == 1 and vt2[1] == Sprak.t("guide.val_rida_nu", "Trixie"), table.concat(vt2, " / "))
 local syn2 = N._rader()
 prova("stängd box vid hästen: «Öppna dörren» är en synlig rad under valen", #syn2 == 2 and string.find(syn2[2], "Dörr", 1, true) ~= nil, table.concat(syn2, " / "))
+do
+	local k3 = N._knappar()
+	prova("#305 stängd box: EN huvudhandling (Rida nu); dörrraden är sekundär, inte en andra huvudknapp",
+		#k3 == 2 and huvud(k3[1]) and not huvud(k3[2]) and antalHuvud(k3) == 1
+		and string.find(k3[2].Text, "Dörr", 1, true) ~= nil, #k3)
+end
 dorr:SetAttribute("SprakNyckel", "dorr.stang")
 visa("preparing")
 prova("öppen box vid hästen: åter exakt ett val, ingen dörrrad", #N._rader() == 1, #N._rader())
@@ -178,7 +212,7 @@ prova("engelska: «Time to ride»/stallet gör henne redo; efter valet «Greet T
 	Sprak.satLocale("sv-se")
 	return k and k.rubrik == "Time to ride" and har(k.text, "the stable gets Trixie ready") and not har(k.text, "Walk up")
 		and h and h.rubrik == "Greet Trixie" and h.text == "Walk up from the side."
-		and r == "Ride now — Trixie" and sj == "Get Trixie ready myself"
+		and r == "RIDE NOW — Trixie" and sj == "Get Trixie ready myself"
 end)())
 prova("en öppen välfärdsfråga (stallets fynd) går före: ingen guide", N._guideFor(med({ fynd = true }), "fynd", "x", "Trixie", false) == nil
 	and N._guideFor(med({}), "fynd", "x", "Trixie", false) == nil)
@@ -388,8 +422,15 @@ do
 		and har(steg(), "väntar i ridhuset") and har(steg(), "Sitt upp")
 		and not har(steg(), "rykta") and not har(steg(), "tränset") and not har(steg(), "led "), steg())
 	local radText = table.concat(N._rader(), " / ")
-	prova("9i. «Sitt upp» är en synlig, tryckbar rad i panelen (touch behöver ingen hålltangent)",
-		#prompter("MountPrompt") >= 1 and har(radText, Sprak.t("interaktion.sitt_upp")), #prompter("MountPrompt") .. " | " .. Sprak.t("interaktion.sitt_upp") .. " | " .. radText)
+	prova("9i. «SITT UPP» är en synlig, tryckbar rad i panelen (touch behöver ingen hålltangent)",
+		#prompter("MountPrompt") >= 1 and har(radText, Sprak.t("kort.sitt_upp")), #prompter("MountPrompt") .. " | " .. Sprak.t("kort.sitt_upp") .. " | " .. radText)
+	do
+		local k4 = N._knappar()
+		prova("#305 uppsittningssteget: EN huvudknapp, «SITT UPP» (med hållet sagt), inte «Sitt upp — Trixie»",
+			k4[1] ~= nil and string.sub(k4[1].Text, 1, #Sprak.t("kort.sitt_upp")) == Sprak.t("kort.sitt_upp")
+			and Sprak.t("kort.sitt_upp") == "SITT UPP" and string.find(k4[1].Text, Sprak.t("interaktion.hall_inne"), 1, true) ~= nil
+			and huvud(k4[1]) and antalHuvud(k4) == 1, k4[1] and k4[1].Text)
+	end
 	prova("9j. ingen «Rida nu», skötsel eller ledning kvar efter Rida nu", #prompter("RidaNuPrompt") == 0
 		and forbjudetVal() == "" and #prompter("LedPrompt") == 0)
 

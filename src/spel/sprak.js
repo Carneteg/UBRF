@@ -245,7 +245,10 @@ const SPRAK = {
   "guide.ga_till_text": { sv: "Följ den gyllene pilen till boxen.", en: "Follow the gold arrow to the box." },
   "guide.valj_rubrik": { sv: "Dags att rida", en: "Time to ride" },
   "guide.valj_kort": { sv: "%s är din häst idag. Du behöver inte sadla eller tränsa själv — stallet gör %s redo.", en: "%s is your horse today. You do not need to saddle or bridle yourself — the stable gets %s ready." },
-  "guide.val_rida_nu": { sv: "Rida nu — %s", en: "Ride now — %s" },
+  "guide.val_rida_nu": { sv: "RIDA NU — %s", en: "RIDE NOW — %s" },
+  /* #305: onboardingens huvudknapp i stegkortet — ordet på knappen är handlingen. */
+  "kort.oppna_dorren": { sv: "ÖPPNA DÖRREN", en: "OPEN THE DOOR" },
+  "kort.sitt_upp": { sv: "SITT UPP", en: "MOUNT" },
   "guide.val_sjalv": { sv: "Gör i ordning %s själv", en: "Get %s ready myself" },
   "guide.halsa_rubrik": { sv: "Hälsa på %s", en: "Greet %s" },
   /* Webbens sidoaktivitet vid boxen (TOBIAS_DECISION_WEB_EXTRAS_VISIBLE_20260928):
