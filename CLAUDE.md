@@ -20,6 +20,8 @@ reviewer med produktions-STOPP, inte builder. Historiska uppdrag återstartas in
 uttryckliga beslut har högst prioritet. Miljökällor och tidigare arbete bevaras;
 `docs/ENVIRONMENT-DELIVERY.md` ger inga nya parallella skrivaruppdrag.
 
+`docs/JEV-USAGE-POLICY.md` är bindande för när Jev/TypeSafe får användas: deterministisk kod äger regler och konsekvenser; Jev får endast vara ett begränsat beslutslager med validering, fallback och rätt rollout-gate. Varje icke-trivialt gameplay-, integrations-, QA- eller produktionsjobb ska göra ett uttryckligt `JEV_DECISION` enligt policyn (`JEV_NOT_NEEDED`, `JEV_OFFLINE_QA_CANDIDATE`, `JEV_SHADOW_CANDIDATE` eller `JEV_FUTURE_PILOT_CANDIDATE`) och upprepa det i leveransrapporten. Klassificeringen är inte tillstånd att aktivera Jev.
+
 ## Låst produktkärna
 
 - spelet ska vara **roligt att spela**,

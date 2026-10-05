@@ -41,6 +41,19 @@ one bounded reminder. Never blindly retry an uncertain send or start a new,
 resumed or forked implementation session. No old supervisor loops.
 A completed review/status-only message does not need an idle reminder loop.
 
+## Jev / TypeSafe
+
+Jev följer den bindande policyn i `docs/JEV-USAGE-POLICY.md`. Kortversion:
+
+- deterministisk kod äger regler, säkerhet, poäng, progression, fysik, persistence och tävlingsresultat;
+- Jev används bara för ett begränsat val mellan säkra alternativ som är kontextberoende eller tvetydigt;
+- input valideras deterministiskt före nätverksanrop, och runtime har alltid deterministisk fallback;
+- secrets hålls server-/tool-side; spelardata och fri spelartext skickas inte utan uttryckligt beslut;
+- ny användning går offline PoC, shadow, eventuell pilot, player-visible, aldrig direkt till spelaren;
+- player-visible Jev kräver Tobias uttryckliga beslut och Roblox/webb-paritet; shadow får vara plattformsspecifik bara när den är avstängd som standard, osynlig för spelaren och uttryckligen godkänd.
+
+Varje icke-trivialt jobb gör ett explicit `JEV_DECISION: <klassificering> — <kort motivering>` och upprepar det i handoff. Det är inte tillstånd att aktivera Jev.
+
 ## Additional agents
 
 No extra agents or costs are automatically authorized. If separately authorized,
