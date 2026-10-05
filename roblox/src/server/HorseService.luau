@@ -37,8 +37,49 @@ local HinderObservation = require(script.Parent.HinderObservation)
 local RidPlatsObservation = require(script.Parent.RidPlatsObservation)
 local VoltObservation = require(script.Parent.VoltObservation)
 local RidForsok = require(script.Parent.RidForsok)
+local VoltLektion = require(script.Parent.VoltLektion)
+local HaltLektion = require(script.Parent.HaltLektion)
+local OvergangLektion = require(script.Parent.OvergangLektion)
+local SerpentinLektion = require(script.Parent.SerpentinLektion)
+local TempoLektion = require(script.Parent.TempoLektion)
+local VagLektion = require(script.Parent.VagLektion)
+local HalvvoltLektion = require(script.Parent.HalvvoltLektion)
+local GaloppLektion = require(script.Parent.GaloppLektion)
+local MarkbomLektion = require(script.Parent.MarkbomLektion)
+-- D2a (#266): den första clear round-ritten, förenklad bedömning.
+local ClearRoundLektion = require(script.Parent.ClearRoundLektion)
+-- Genom hörnet (docs/CORNER-LESSON-CONTRACT.md): egen typ `hornet`.
+local HornLektion = require(script.Parent.HornLektion)
+--[[ C4: första-klarad-minnet. Lektionens egen övergång till "complete"
+	anropar `vidKlar`, som HorseService sätter här när lektionen skapas. ]]
+local LektionsMinne = require(script.Parent.LektionsMinne)
+
+--[[ Lektionstyp → modul. Utelämnad/okänd typ i ett befintligt läge är
+	voltlektionen (oförändrat standardbeteende). ]]
+local function lektionModul(typ: string?): any
+	if typ == "halt" then return HaltLektion end
+	if typ == "overgang" then return OvergangLektion end
+	if typ == "serpentin" then return SerpentinLektion end
+	if typ == "tempo" then return TempoLektion end
+	-- Ridvägarna: figuren är typen, så den ingår i begäranbokens identitet.
+	if typ == "vag_mitt" or typ == "vag_diag" then return VagLektion end
+	if typ == "halvvolt" then return HalvvoltLektion end
+	if typ == "galopp" then return GaloppLektion end
+	if typ == "markbom" then return MarkbomLektion end
+	if typ == "hornet" then return HornLektion end
+	if typ == "clearround" then return ClearRoundLektion end
+	return VoltLektion
+end
 
 local HorseService = {}
+
+--[[ C4: en ny lektion för sessionen, med minnets krok. Kroken läser sessionen
+	när den anropas (ryttare, ritt, häst just då), aldrig en sparad kopia. ]]
+local function nyLektion(session: any, typ: string, rittId: string, userId: number, hastId: string): any
+	local l = lektionModul(typ).ny(rittId, userId, hastId, typ)
+	l.vidKlar = function(lektion: any) LektionsMinne.slutford(session, lektion) end
+	return l
+end
 
 export type Session = {
 	rig: Types.Rig,
@@ -118,6 +159,9 @@ export type Session = {
 	     aldrig på det — den MATCHAR det. Hästen slås ändå upp ur `byRider`
 	     på avsändaren, så en annan spelares märke öppnar ingenting. ]]
 	rittId: string?,
+	voltLektion: any?,
+	-- Rittens begäranbok för lektionerna, gemensam för alla lektionstyper.
+	lektionsBegaran: any?,
 }
 
 local sessions: { [Model]: Session } = {}
@@ -535,6 +579,16 @@ local function setRider(session: Session, player: Player?, orsak: string?)
 	     är redan satt, så `replikera` når den nya ryttaren med hennes
 	     utgångsläge i stället för att den förra får ett sista svar. ]]
 	nollstallRitt(session)
+	--[[ D2a (CHATGPT_REVIEW_D2A_CHANGES_REQUESTED): en clear round-ritt som
+		slutar mitt i banan får sitt slutliga utfall ("avbruten") INNAN
+		lektionen rivs — annars försvann tävlingsritten tyst. ]]
+	if gammalRitt and session.voltLektion and session.voltLektion.typ == "clearround" then
+		logga(ClearRoundLektion.vidRittSlut, session.voltLektion, orsak or "avsittning")
+		-- D5: rittslut i vilket läge som helst ger spelarens egna kläder tillbaka.
+		logga(ClearRoundLektion.kladerAv, session.voltLektion, previous, orsak or "avsittning")
+	end
+	session.voltLektion = nil
+	session.lektionsBegaran = nil
 	session.rittId = if player then nyttRittId() else nil
 	--[[ Ridloggen: den gamla ritten stängs (en gång — `avsluta` är ett
 		nej andra gången) och en ny öppnas för den nya ryttaren. ]]
@@ -1762,6 +1816,10 @@ function HorseService.start()
 
 	Net.get("MountRequest").OnServerInvoke = Skopa.grind("MountRequest",
 		HorseService.mountRequest)
+	Net.get("VoltLektion").OnServerInvoke = Skopa.grind("VoltLektion", HorseService.voltLektionsBegaran)
+	--[[ C4: minnet startar efter SparService (Start.luau: SparService före
+		HorseService) och hakar på dess laddning och skrivning. ]]
+	LektionsMinne.start()
 	--[[ ── ETT NEJ MÅSTE ÅTERFÖRENA, INTE BARA NEKA ──────────────────
 
 	     ChatGPT-re-review av `269bec5`. Klienten river LOKALT innan den
@@ -1816,6 +1874,23 @@ function HorseService.start()
 		accumulator = 0
 		for _, session in sessions do
 			stepStamina(session, step)
+			local lesson = session.voltLektion
+			if lesson and session.rider and lesson.rittId == session.rittId then
+				local rev = lesson.revision
+				--[[ En lektion per ritt: `typ` "halt" är start/halt-lektionen,
+					allt annat den oförändrade voltlektionen. ]]
+				local Lektion = lektionModul(lesson.typ)
+				Lektion.steg(lesson, os.clock(), Ridtrappa.gangart(session.stegIndex),
+					Ridtrappa.ryggar(session.stegIndex))
+				--[[ Samma mottagarregel som RidTillstand och StaminaSync: en
+					deklarerad aktör utan klient får inget ägarbesked. I motorn
+					kastar FireClient på en icke-Player, och kastet skulle här
+					hoppa över alla senare sessioner i samma hjärtslag. ]]
+				local kVolt = Aktor.klient(session.rider)
+				if rev ~= lesson.revision and kVolt then
+					Net.get("VoltLektionSync"):FireClient(kVolt, Lektion.bild(lesson))
+				end
+			end
 		end
 	end)
 end
@@ -1911,6 +1986,89 @@ function HorseService.forsokVolt(forsokId: string?): (any, string?)
 	local f = RidForsok.ogonblick(forsokId)
 	if not f then return nil, "forsok.okant" end
 	return RidForsok.voltUnderlag(forsokId, VoltObservation.ogonblick(f.rittId))
+end
+
+function HorseService.voltLektionsBegaran(player: any, rittId: any, op: any, seq: any,
+	typ: any): (boolean, string?, any)
+	if type(rittId) ~= "string" or #rittId > 128 then return false, "stale", nil end
+	local session = forsokRitt(player, rittId)
+	if not session then return false, "stale", nil end
+	-- D2b: clear round-rittens anmälan och banskiss (andra lektioner svarar "unknown").
+	-- D5: `anmal_<id>` för tävlingskläder ur katalogen (ClearRoundLektion.arAnmal).
+	if op ~= "sync" and op ~= "start" and op ~= "retry" and op ~= "finish"
+		and not ClearRoundLektion.arAnmal(op) and op ~= "ga_banan" then
+		return false, "unknown", nil
+	end
+	--[[ Lektionstyp: utelämnad = volt (oförändrat beteende), "halt" =
+		start/halt. En lektion per ritt. ]]
+	if typ == nil then typ = "volt" end
+	if typ ~= "volt" and typ ~= "halt" and typ ~= "overgang" and typ ~= "serpentin"
+		and typ ~= "tempo" and typ ~= "vag_mitt" and typ ~= "vag_diag" and typ ~= "halvvolt"
+		and typ ~= "galopp" and typ ~= "markbom" and typ ~= "hornet" and typ ~= "clearround" then
+		return false, "unknown", nil
+	end
+	local hastId = tostring(session.rig.model:GetAttribute("HorseId") or session.rig.model.Name)
+	local gangart, ryggar = Ridtrappa.gangart(session.stegIndex), Ridtrappa.ryggar(session.stegIndex)
+	local nu = session.voltLektion
+
+	--[[ Läsa ändrar aldrig lektionsläget: den pågående lektionen läses,
+		och finns ingen skapas den valda. ]]
+	if op == "sync" then
+		if not nu then
+			nu = nyLektion(session, typ, rittId, player.UserId, hastId)
+			session.voltLektion = nu
+		end
+		local L = lektionModul(nu.typ)
+		return L.begar(nu, op, seq, os.clock(), gangart, ryggar)
+	end
+
+	--[[ RITTENS BEGÄRANBOK, gemensam för lektionstyperna och prövad INNAN
+		lektionsläget ändras. Sekvensen är monoton över hela ritten: en
+		dubblett ger sitt tidigare svar bara om både operation och typ
+		stämmer, och en äldre okänd begäran är inaktuell. Annars kunde ett
+		typbyte (nytt lektionsobjekt med tom historik) låta en fördröjd
+		gammal start öppna ett försök ingen bad om nu. ]]
+	if type(seq) ~= "number" or seq ~= seq or seq < 1 or seq > 2147483647 or seq % 1 ~= 0 then
+		return false, "request", nil
+	end
+	local bok = session.lektionsBegaran
+	if not bok then
+		bok = { hogsta = 0, svar = {}, ordning = {} }
+		session.lektionsBegaran = bok
+	end
+	local tidigare = bok.svar[seq]
+	if tidigare then
+		if tidigare.op ~= op or tidigare.typ ~= typ then return false, "request", nil end
+		return tidigare.ok, tidigare.fel, tidigare.bild
+	end
+	if seq <= bok.hogsta then return false, "stale", nil end
+	bok.hogsta = seq
+
+	local ok, fel, bild = false, nil, nil
+	local anvand = typ
+	local byte = nu ~= nil and (nu.typ or "volt") ~= typ
+	if byte and op == "finish" then
+		--[[ Avsluta gäller alltid den lektion som faktiskt pågår, så att ett
+			aktivt försök aldrig blir oavslutbart. ]]
+		anvand = nu.typ or "volt"
+	elseif byte and RidForsok.aktivt(rittId) then
+		fel = "active"
+	elseif byte then
+		-- D5: lektionsbyte bort från clear round ger egna kläder tillbaka.
+		if nu.typ == "clearround" then ClearRoundLektion.kladerAv(nu, player, "byte") end
+		session.voltLektion = nil
+	end
+	if fel == nil then
+		local L = lektionModul(anvand)
+		if not session.voltLektion then
+			session.voltLektion = nyLektion(session, anvand, rittId, player.UserId, hastId)
+		end
+		ok, fel, bild = L.begar(session.voltLektion, op, seq, os.clock(), gangart, ryggar, player)
+	end
+	bok.svar[seq] = { op = op, typ = typ, ok = ok, fel = fel, bild = bild }
+	table.insert(bok.ordning, seq)
+	while #bok.ordning > 16 do bok.svar[table.remove(bok.ordning, 1)] = nil end
+	return ok, fel, bild
 end
 
 return HorseService

@@ -35,12 +35,19 @@ await page.goto(`http://localhost:${PORT}/ridskolan.html`, { waitUntil: "load" }
 await page.waitForTimeout(1500);
 await page.evaluate(() => { try { startaVandring(); } catch (e) { console.log("startaVandring:", e.message); } });
 await page.waitForTimeout(600);
+/* TILL FOTS (#301). I en ny webbläsare startar startaVandring() förstaritten
+   automatiskt (#297, forstaRitten) — spelaren sitter då upp och ridpanelen
+   äger tangenterna. Det här provet mäter gåendet, så vi sitter av på samma
+   sätt som spelet självt gör när en ritt lämnas. */
+await page.evaluate(() => { if (typeof ridSittAv === "function") ridSittAv(); });
+await page.waitForTimeout(300);
 /* I 2D-vyn är tangenterna ABSOLUTA (W = norr, S = söder, D = öster,
    A = väster), oberoende av kameran. 3D-kameran kläms mot väggar vid
    teleport och styr då figuren snett — det är testets artefakt, inte
-   spelets. Kollisionen och nivåerna är desamma i båda vyerna. */
-await page.evaluate(() => { if (G.vy !== "2d") vaxlaVy(); });
-await page.waitForTimeout(300);
+   spelets. Kollisionen och nivåerna är desamma i båda vyerna.
+   Kartvyn väljs i ga() efter varje teleport: spelet behåller den bara i
+   den scen där den valdes (vyEfterFlytt), så ett val gjort före
+   teleporten till ridhuset hade nollställts till 3D. */
 const TANGENT = { N: "KeyW", S: "KeyS", O: "KeyD", V: "KeyA" };
 
 /* Ett steg: teleportera till (x,y) på nivån `z`, håll tangenterna för
@@ -48,7 +55,7 @@ const TANGENT = { N: "KeyW", S: "KeyS", O: "KeyD", V: "KeyA" };
    gått, läs slutläget. Tidsoberoende: headless SwiftShader ger få
    bildrutor per sekund, så sträckan mäts, inte tiden. */
 async function ga(scen, x, y, hall, klar, maxMs, z) {
-  await page.evaluate(({ scen, x, y, z }) => gaTill(scen, { x, y, rikt: 0, z }), { scen, x, y, z: z || 0 });
+  await page.evaluate(({ scen, x, y, z }) => { gaTill(scen, { x, y, rikt: 0, z }); if (G.vy !== "2d") vaxlaVy(); }, { scen, x, y, z: z || 0 });
   await page.waitForTimeout(300);
   const keys = [...hall].map(h => TANGENT[h]);
   for (const k of keys) await page.keyboard.down(k);
@@ -80,9 +87,17 @@ function prova(namn, ok, detalj) { resultat.push({ namn, ok, detalj }); console.
    bandets norra del sedan 2026-09-04 07:54; gången x 2,2–4,2 är fri). */
 let p = await ga("ridhusinne", 2.6, dy + 1.4, "N", q => q.y > 76.0, 20000);
 prova("skåpgången norrut genom den öppna hallen fram till gaveln (8 m utan vägg)", p.y > 76.0, `från y ${(dy + 1.4).toFixed(2)} till ${p.y} (gaveln vid 77,18)`);
-/* 2. tvärs över hallen österut, norr om receptionens sydvägg. */
-p = await ga("ridhusinne", 2.8, 75.7, "O", q => q.x > 12.0, 24000);
-prova("tvärs över hallen österut norr om skåpraden (10 m utan rumslådor)", p.x > 12.0, `från x 2,8 till ${p.x}`);
+/* 2. tvärs över hallen österut, norr om receptionens sydvägg.
+   Skåpsidan når numera gångens ände (skap_hoga_v, x 4,2–4,7, y 75,15–77,15,
+   #162 punkt 2+3, antaget läge) och skär linjen y 75,7. Den raka gången
+   börjar därför öster om skåpen, och att hallen ÄR nåbar från entrén provas
+   med spelets vägsökning i stället för med en rak linje genom skåpet. */
+p = await ga("ridhusinne", 5.2, 75.7, "O", q => q.x > 12.0, 24000);
+prova("tvärs över hallen österut öster om skåpraden (7 m utan rumslådor)", p.x > 12.0, `från x 5,2 till ${p.x}`);
+{
+  const vag = await page.evaluate(({ dx, dy }) => { const v = navVag(dx, dy, 12.0, 75.7); return v ? v.length : null; }, { dx, dy });
+  prova("hallens östra del nås från huvudentrén (vägsökningen går runt skåpraden)", vag !== null, `väg ${vag === null ? "SAKNAS" : vag + " punkter"} från (${dx}, ${dy}) till (12, 75,7)`);
+}
 /* 3. open_entrance_hall → arena_access → physical_riding_area: från dörrens
    höjd, i sargportens x, söderut genom porten ut på banan. */
 p = await ga("ridhusinne", px, dy, "S", q => q.y < info.banaTopp - 3.0, 16000);

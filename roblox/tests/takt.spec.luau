@@ -332,8 +332,8 @@ do
 	end
 	local tak = S.GRANSER.LedBorja.tak
 	check("200 anrop når handlaren högst takets antal gånger",
-		(svar["led.ingen_hast"] or 0) == tak,
-		("%d nådde handlaren, tak %d"):format(svar["led.ingen_hast"] or 0, tak))
+		(svar["led.borttagen"] or 0) == tak,
+		("%d nådde handlaren, tak %d"):format(svar["led.borttagen"] or 0, tak))
 	check("resten nekas av takten",
 		(svar["takt.for_snabbt"] or 0) == 200 - tak,
 		("%d"):format(svar["takt.for_snabbt"] or 0))
@@ -365,6 +365,27 @@ do
 	local tak = S.GRANSER.PreparationMoment.tak
 	check("200 anrop når handlaren högst takets antal gånger",
 		natt == tak, ("%d nådde handlaren, tak %d"):format(natt, tak))
+end
+
+--[[ EFTERVÅRDEN EFTER RITTEN ÄR ETT VAL (#273 S3, bekräftad 2026-10-04).
+	Ledning och skötsel FÖRE ritten är borttagna; valet «Ta hand om henne
+	själv» EFTER ritten är det inte. Servern ska därför aldrig svara att
+	stallet gör allt: momentet och egna handlingar går till eftervården och
+	nekas av dess egna regler (ingen häst, fel läge), inte av en blankett. ]]
+do
+	rent()
+	GameplayService.start()
+	local passMoment = Networking.get("PassMoment")
+	local passHandling = Networking.get("PassHandling")
+	local a = nySpelare("Eftervard")
+	local _, skal1 = passMoment.OnServerInvoke(a, "gjord")
+	check("PassMoment går till eftervården — inget blankt «stallet gör det»",
+		skal1 ~= "pass.stallet_gor_det", tostring(skal1))
+	for _, id in ipairs({ "sadla_av", "transa_av", "ta_hand" }) do
+		local _, skal2 = passHandling.OnServerInvoke(a, id)
+		check("egen eftervårdshandling «" .. id .. "» går till eftervården",
+			skal2 ~= "pass.stallet_gor_det", tostring(skal2))
+	end
 end
 
 --[[ FÖRSTÄRKNINGEN MÄTT I UTGÅENDE PAKET.

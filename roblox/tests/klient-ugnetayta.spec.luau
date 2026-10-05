@@ -99,9 +99,29 @@ do
 		k ~= nil and k.Size.X.Offset >= 44 and k.Size.Y.Offset >= 44 and k.Selectable == true,
 		k and ("%dx%d"):format(k.Size.X.Offset, k.Size.Y.Offset) or "saknas")
 	local r = y.ram
-	prova("ytan är ankrad uppe till höger, radie högst 8",
-		r ~= nil and r.AnchorPoint.X == 1 and r.AnchorPoint.Y == 0
+	--[[ UI-2 (docs/P2-UGNETA-INSTRUCTION-CONTRACT.md § 3): med panelen som
+	     värd är ytan panelens FÖRSTA block, i full bredd; utan värd står
+	     den uppe till höger som förut. Båda lägena provas. ]]
+	local pn = r and r.Parent
+	prova("dockad: panelens första block i full bredd",
+		r ~= nil and y.dockad and pn ~= nil and pn.Name == "Panel" and r.LayoutOrder == 0
+			and r.AnchorPoint.X == 0 and r.Size.X.Scale == 1, pn and pn.Name or "ingen förälder")
+	UC.dockaLarare(nil)
+	prova("utan värd: ankrad uppe till höger, 260–300 bred",
+		r.AnchorPoint.X == 1 and r.AnchorPoint.Y == 0 and r.Parent ~= pn
 			and r.Size.X.Offset >= 260 and r.Size.X.Offset <= 300)
+	UC.dockaLarare(pn, 0)
+	prova("och tillbaka i panelen", r.Parent == pn and UC._larare().dockad)
+
+	--[[ #274: TVÅ KORT, INTE ETT BLOCK. Ugneta (bara coachning) och statuskortet
+	     (häst, läge, val) är syskon i panelen, vart och ett med eget fält. ]]
+	local sk = pn:FindFirstChild("StatusKort")
+	prova("två kort: Ugneta och StatusKort är syskon i panelen", sk ~= nil and sk.Parent == pn and r.Parent == pn)
+	prova("statuskortet bär rubrik och handlingar, inte Ugnetas yta",
+		sk ~= nil and sk:FindFirstChild("RubrikRad") ~= nil and sk:FindFirstChild("Lista") ~= nil
+			and sk:FindFirstChild("Larare") == nil and sk:FindFirstChild("Titel", true) == nil)
+	prova("Ugnetas kort har egen kant när det är dockat", r:FindFirstChild("KortKant") ~= nil)
+	prova("och panelen själv är bara behållare — ingen gemensam bakgrund", pn.BackgroundTransparency == 1)
 
 	UC._vaxlaSprak()
 	local e = UC._larare()
@@ -125,7 +145,8 @@ do
 	NR.satRider(false)
 	local function valText()
 		local ut = {}
-		for _, v in ipairs(NR._val()) do table.insert(ut, tostring(v.text)) end
+		-- Ledningens sekundära ingång till fots står sedan 784e8c1 bredvid korten; här räknas lektionens val.
+		for _, v in ipairs(NR._val()) do if not v.sekundar then table.insert(ut, tostring(v.text)) end end
 		return ut
 	end
 	local fore = valText()
@@ -170,7 +191,10 @@ do
 	local m, d = CoachBanner.text()
 	prova("övningens text följer bytet även efter avbrottet",
 		d == Sprak.iSprak("en", "ugneta.ovning.halt_skritt.p1"), ("%q / %q"):format(m, d))
-	prova("och avbrottets väntan väcks inte av bytet", UC.vantar() == false and #NR._val() == 0)
+	NR.satRider(false) -- panelen ritas om (i spelet varje bildruta)
+	local lektionsVal = 0
+	for _, v in ipairs(NR._val()) do if not v.sekundar then lektionsVal += 1 end end
+	prova("och avbrottets väntan väcks inte av bytet", UC.vantar() == false and lektionsVal == 0)
 	UC._vaxlaSprak()
 end
 

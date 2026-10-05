@@ -229,6 +229,13 @@ function RidPlatsObservation.satModell(modell: Instance?)
 	ram.smutsig = true
 end
 
+-- The lesson guide uses the same resolved frame as its server measurement.
+function RidPlatsObservation.lektionsRam(rittId: string): any
+	local r = ritter[rittId]
+	local p, id = aktuellRam()
+	return if r and r.oppen and r.bild and r.bild.ramId == id then p else nil
+end
+
 function RidPlatsObservation.starta(rittId: string, hastId: string, userId: number): boolean
 	if type(rittId) ~= "string" or rittId == "" or ritter[rittId] then return false end
 	ritter[rittId] = {

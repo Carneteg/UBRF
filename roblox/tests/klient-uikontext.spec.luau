@@ -310,8 +310,8 @@ do
 		+ Vector3.new(Config.STEG_RACKVIDD * 4, 0, 0))
 	PC.uppdateraKontext()
 	IC.uppdatera()
-	prova("går man ifrån henne är uppgiften «rida» och knappen tillbaka",
-		PC.aktuellUppgift() == "rida" and promptar().LedPrompt ~= nil,
+	prova("går man ifrån henne är uppgiften «rida» och ingen ledknapp finns",
+		PC.aktuellUppgift() == "rida" and promptar().LedPrompt == nil,
 		PC.aktuellUppgift())
 	kropp.CFrame = CFrame.new(hastRot.CFrame.Position)
 	PC.uppdateraKontext()
@@ -335,13 +335,13 @@ do
 		if PC.nastaFas() ~= f.id then
 			table.insert(fel_i_fas, ("turordning %s≠%s"):format(
 				tostring(PC.nastaFas()), f.id))
-		elseif finns ~= ledsteg then
-			table.insert(fel_i_fas, ("%s: knapp=%s väntat=%s"):format(
-				f.id, tostring(finns), tostring(ledsteg)))
+		elseif finns then
+			table.insert(fel_i_fas, ("%s: knapp=%s väntat=false"):format(
+				f.id, tostring(finns)))
 		end
 		if not ledsteg then gorFas(f.id) end
 	end
-	prova("ledknappen viker i skötselstegen och finns i ledsteget",
+	prova("ledknappen finns i ingen fas (ledningen är borttagen 2026-10-04)",
 		#fel_i_fas == 0,
 		if #fel_i_fas > 0 then table.concat(fel_i_fas, ", ") else "alla 5 faser")
 	visa(Preparation.STATUS.FORBEREDER)
@@ -386,14 +386,11 @@ do
 	prova("uppgiften är LEDA — repet i handen slår steget",
 		PC.aktuellUppgift() == "leda", PC.aktuellUppgift())
 	local led = promptar().LedPrompt
-	prova("och släpp-knappen finns, mitt i skötselsteget",
-		led ~= nil, if led then "(kvar)" else "LedPrompt gömd — fast i repet")
+	prova("ingen släpp-knapp ritas heller, även med repet i handen",
+		led == nil, if led then "LedPrompt kvar" else "(borta)")
 	--[[ RÄTT ORD PÅ KNAPPEN. Byggdes den efter `satLeder` stod «Led
 		Trixie» på en häst som redan går i repet, och trycket hade blivit
 		ett `LedBorja` på ett fäst koppel. ]]
-	prova("den bär släpp-texten, inte «Led Trixie»",
-		led ~= nil and led.ActionText == Sprak.t("led.slapp_namn", "Trixie"),
-		('"%s"'):format(tostring(led and led.ActionText)))
 
 	Net.get("LedSync").OnClientEvent:Fire({ leder = false, hastId = nil,
 		skal = "led.tappade_bort" })
@@ -550,7 +547,7 @@ do
 	visa(Preparation.STATUS.REDO)
 	prova("när eftervården är gjord är uppgiften RIDA och knappen tillbaka",
 		PC.aktuellUppgift() == "rida" and promptar().MountPrompt ~= nil
-			and promptar().LedPrompt ~= nil,
+			and promptar().LedPrompt == nil,
 		("uppgift %s · %d moment kvar"):format(PC.aktuellUppgift(),
 			#PC._synligaMoment()))
 
@@ -609,9 +606,9 @@ do
 	local dorr = sakMed("Grind", "DorrPrompt", bas + Vector3.new(2, 0, 0))
 	NR.satRider(false)
 	local ordning = namnIPanelen()
-	prova("LEDSTEGET: dörren och ledningen står först, i den ordningen",
+	prova("LEDSTEGET: dörren står först och ingen ledprompt följer",
 		paTur() == "leda" and ordning[1] == "DorrPrompt"
-			and ordning[2] == "LedPrompt",
+			and ordning[2] ~= "LedPrompt",
 		("på tur %s · %s"):format(paTur(), table.concat(ordning, " | ")))
 	dorr:Destroy()
 
@@ -641,7 +638,7 @@ do
 	NR.satRider(false)
 	local forst = namnIPanelen()
 	prova("UTRUSTNINGEN: sadeln först, tränset efter — inte Rida nu",
-		paTur() == "utr:1" and forst[1] == "SadelPrompt"
+		paTur() == "handling:sadla" and forst[1] == "SadelPrompt"
 			and forst[2] == "TransPrompt",
 		("på tur %s · %s"):format(paTur(), table.concat(forst, " | ")))
 
@@ -654,7 +651,7 @@ do
 	NR.satRider(false)
 	local sist = namnIPanelen()
 	prova("och i sista utrustningssteget står tränset först",
-		antal > 1 and paTur() == "utr:" .. antal and sist[1] == "TransPrompt",
+		antal > 1 and paTur() == "handling:transa" and sist[1] == "TransPrompt",
 		("%d utr-moment · på tur %s · %s"):format(antal, paTur(),
 			table.concat(sist, " | ")))
 	forrad:Destroy()
@@ -683,12 +680,20 @@ do
 	state = Preparation.nyState(HAST_ID, 1)
 	visa(Preparation.STATUS.FORBEREDER)
 	NR.satRider(false)
+	--[[ UI-1 (docs/UI1-START-CHOICE-CONTRACT.md): startskärmen visar bara de två
+	     vägarna; hälsningens fråga kommer först efter «Gör i ordning … själv». ]]
+	NR.satRider(false)
 	local harFel = false
 	for _, v in ipairs(NR._val()) do if v.fel then harFel = true end end
 	local l1, n1 = lyfta()
-	prova("HÄLSNINGEN: inget alternativ lyft före svaret",
-		harFel and n1 >= 2 and #l1 == 0,
-		("%d alternativ, lyfta: %s"):format(n1, table.concat(l1, " | ")))
+	--[[ UI-2: hälsningen är ingen fråga längre utan handlingar i ordning —
+	     där ska just NÄSTA handling lyftas (Ugneta säger den). R2:s regel
+	     gäller frågor, och fyndet nedan är fortfarande en. ]]
+	--[[ #273 S2: hälsningen är EN handling — «Hälsa» — och den är lyft. ]]
+	-- Produktbeslut 2026-10-04: ingen manuell hälsning. Startskärmen har bara «Rida nu».
+	prova("STARTSKÄRMEN: inga skötselsvar och EN handling — «Rida nu»",
+		not harFel and n1 == 1 and #l1 == 1 and l1[1] == Sprak.t("guide.val_rida_nu", "Trixie"),
+		("%d handlingar, lyfta: %s"):format(n1, table.concat(l1, " | ")))
 
 	local vy = Preparation.vy(state, Preparation.STATUS.FORBEREDER, rev + 1, "Trixie")
 	rev += 1
@@ -724,8 +729,8 @@ do
 	prova("men instruktionsytan lever — den är den relevanta ytan nu",
 		l.interaktion.Visible == true and l.instruktion.Text ~= "",
 		('"%s"'):format(tostring(l.instruktion.Text)))
-	prova("och släpp-knappen står kvar — man ska kunna släppa igen",
-		promptar().LedPrompt ~= nil)
+	prova("och ingen släpp-knapp ritas — ledningen är borttagen",
+		promptar().LedPrompt == nil)
 
 	print("\n── 5. Tillbaka i boxen: samma progression ──")
 	Net.get("LedSync").OnClientEvent:Fire({ leder = false, hastId = nil,
@@ -802,6 +807,51 @@ do
 	prova("men ledknappen är fortfarande borta — den lyder sin egen regel",
 		p.LedPrompt == nil,
 		if p.LedPrompt then "LedPrompt tänd av uppsittningens svar" else "(borta)")
+end
+
+print("\n── C2: textinställningarna öppna bredvid skötselfrågan och 0..3 äldre kort ──")
+do
+	--[[ docs/INSTRUCTOR-TEXT-CONTROLS-CONTRACT.md. Frågan kommer genom
+		produktionens väg (`PreparationController.tillampa` via `visa`), de
+		äldre korten genom `UgnetaController.visa`, och panelen ritas av
+		Naromrade med sin riktiga kapacitet (MAX_VAL = 4). Inställningarna
+		öppnas med samma handling som Text-knappen.
+		SKRIVET FÖR SENARE KÖRNING. Inte kört. ]]
+	local UC = UgnetaController
+	local NR = Naromrade
+	state = Preparation.nyState(HAST_ID, 1)
+	visa(Preparation.STATUS.FORBEREDER)
+	local function rader()
+		NR.satRider(false)
+		local ut, fraga = {}, 0
+		for _, v in ipairs(NR._val()) do
+			table.insert(ut, tostring(v.text))
+			if v.fel ~= nil then fraga += 1 end
+		end
+		return table.concat(ut, " | "), #ut, fraga
+	end
+	NR.satRider(false)
+	--[[ UI-1 (docs/UI1-START-CHOICE-CONTRACT.md): startskärmen visar bara de två
+	     vägarna; hälsningens fråga kommer först efter «Gör i ordning … själv». ]]
+	NR.satRider(false)
+	local _, _, fraga0 = rader()
+	--[[ #273 S2: skötseln står i panelen som EN handling, inte tre val. ]]
+	prova("KONTROLL: ingen skötselfråga står i panelen (skötseln är borttagen)", fraga0 == 0, fraga0)
+	for n = 0, 3 do
+		UC.dolj()
+		if n > 0 then UC.visa("Kort", {}, n >= 1, nil, n >= 2, n >= 3) end
+		if UC._installning().oppen then UC._vaxlaInstallning() end
+		local stangd, antalS, fragaS = rader()
+		UC._vaxlaInstallning()
+		local oppen, antalO, fragaO = rader()
+		UC._vaxlaInstallning()
+		prova(("%d äldre kort: samma rader med inställningarna öppna, högst fyra"):format(n),
+			oppen == stangd and antalO <= 4 and fragaO == fragaS,
+			("%d/%d rader, fråga %d/%d · %s"):format(antalS, antalO, fragaS, fragaO, oppen))
+	end
+	UC.dolj()
+	local _, _, fragaSist = rader()
+	prova("frågan står kvar efteråt", fragaSist == fraga0)
 end
 
 print("")

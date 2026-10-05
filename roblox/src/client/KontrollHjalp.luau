@@ -92,7 +92,6 @@ local player = Players.LocalPlayer
 local gui: ScreenGui? = nil
 local panel: Frame? = nil
 local rader: { TextLabel } = {}
-local visadEnGang = false
 --[[ Den permanenta öppningsknappen. Egen ScreenGui, se filhuvudet. ]]
 local oppnaGui: ScreenGui? = nil
 local oppnaKnapp: TextButton? = nil
@@ -177,13 +176,6 @@ local RADER = {
 	     (`touch.*`), samma nyckel som `TouchControls` ritar knappen med.
 	     Två sanningar där vore en instruktion som säger något annat än
 	     knappen den beskriver. ]]
-	--[[ `pad` stod "E" här (#162 blockerare 2). `E` är en TANGENT. En spelare
-	     med bara handkontroll läste alltså en instruktion hon inte kunde
-	     följa — och kunde faktiskt inte sitta av alls, för `begarAvsittning`
-	     var bara bunden till `E`. Uppsittningen gick via ProximityPrompt,
-	     så hon kom UPP på hästen och blev kvar där. ]]
-	{ nyckel = "hjalp.sitt_upp_av", tgb = "E",
-	  pad = padNamn(KontrollHjalp.AVSITTNING_GAMEPAD),   pek = "touch.sitt_av" },
 	--[[ ══ DRIV OCH BROMS ═══════════════════════════════════════════════
 
 	     Arkitekturbeslut 2026-09-17. Raden "framåt/bakåt" är borta: W och S
@@ -197,10 +189,22 @@ local RADER = {
 	{ nyckel = "hjalp.hogre_gangart", tgb = "W / ↑", pad = "R1", pek = "touch.driv" },
 	{ nyckel = "hjalp.lagre_gangart", tgb = "S / ↓", pad = "L1", pek = "touch.broms" },
 	{ nyckel = "hjalp.styr",         tgb = "A / D", padNyckel = "hjalp.vanster_spak", pek = "hjalp.spaken" },
+	--[[ `pad` stod "E" här (#162 blockerare 2). `E` är en TANGENT. En spelare
+	     med bara handkontroll läste alltså en instruktion hon inte kunde
+	     följa — och kunde faktiskt inte sitta av alls, för `begarAvsittning`
+	     var bara bunden till `E`. Uppsittningen gick via ProximityPrompt,
+	     så hon kom UPP på hästen och blev kvar där. ]]
+	{ nyckel = "hjalp.sitt_upp_av", tgb = "E",
+	  pad = padNamn(KontrollHjalp.AVSITTNING_GAMEPAD),   pek = "touch.sitt_av" },
 	--[[ Blicken finns bara på pekytan: tangentbord och handkontroll har
 	     ingen fri blick i den här kameran, och `bara` håller raden borta
 	     därifrån hellre än att visa en handling utan reglage. ]]
 	{ nyckel = "hjalp.blick", bara = "touch", pek = "touch.blickytan" },
+	--[[ #161: hjälpen kan öppnas igen på varje yta, och står därför i sin
+	     egen hjälp. En rad som säger "H" till en spelare utan tangentbord
+	     hade varit precis det problemet raden beskriver. ]]
+	{ nyckel = "hjalp.denna_hjalp",  tgb = "H",
+	  pad = padNamn(KontrollHjalp.GAMEPADKNAPP),        pek = "?" },
 	--[[ ── HJÄLPERNA HAR INGEN PEKKNAPP LÄNGRE ────────────────────────
 
 	     `pek` är borttagen på de fyra raderna nedan, inte utbytt. Tygeln,
@@ -209,19 +213,20 @@ local RADER = {
 	     peka på ett reglage som FINNS; en nyckel till en knapp ingen
 	     ritar är sämre än tystnad, och det är hela skälet kolumnen finns.
 
-	     [ÖPPEN FRÅGA TILL PRODUKTÄGAREN] Utan dem är hela balansmodellen
-	     — yttertygelstöd, halvhalt, djup sits — stängd på en ren
-	     pekenhet. Vägen tillbaka är fyra `BindAction` till, inte en ny
-	     panel. Beslutet är inte mitt. ]]
-	{ nyckel = "hjalp.tygel",        tgb = "Q",      pad = "R2" },
-	{ nyckel = "hjalp.halvhalt",     tgb = "F",      pad = "B" },
-	{ nyckel = "hjalp.djupare_sits", tgb = "Z / C",  pad = "L2" },
-	{ nyckel = "hjalp.hoppa",        tgb = "Space",  pad = "A" },
-	--[[ #161: hjälpen kan öppnas igen på varje yta, och står därför i sin
-	     egen hjälp. En rad som säger "H" till en spelare utan tangentbord
-	     hade varit precis det problemet raden beskriver. ]]
-	{ nyckel = "hjalp.denna_hjalp",  tgb = "H",
-	  pad = padNamn(KontrollHjalp.GAMEPADKNAPP),        pek = "?" },
+	     [BESVARAD 2026-10-01, #273 T4] Frågan var att balansmodellen —
+	     yttertygelstöd, halvhalt, djup sits — var stängd på en ren
+	     pekenhet. Tobias beslut: hjälperna är neutrala i grundridningen
+	     (`RidKanon.SVAR.HJALP_KRAV = 0`), så ingen straffas för att sakna
+	     ett reglage. De får komma tillbaka kontextuellt när en övning
+	     faktiskt behöver dem. ]]
+	--[[ #273 S1: `avancerat` märker en hjälp som INTE behövs i
+	     grundridningen. Raderna står sist i listan, under rubriken
+	     «Avancerat», och är aldrig med i ridpanelens kärna. Bindningarna
+	     är oförändrade. ]]
+	{ nyckel = "hjalp.tygel",        tgb = "Q",      pad = "R2", avancerat = true },
+	{ nyckel = "hjalp.halvhalt",     tgb = "F",      pad = "B", avancerat = true },
+	{ nyckel = "hjalp.djupare_sits", tgb = "Z / C",  pad = "L2", avancerat = true },
+	{ nyckel = "hjalp.hoppa",        tgb = "Space",  pad = "A", avancerat = true },
 }
 
 --[[ Radens text och reglage i spelarens språk. `pek`/`padNyckel` är
@@ -310,7 +315,7 @@ function KontrollHjalp.ridrader(): { { vad: string, reglage: string } }
 end
 
 --[[ Raderna som text, för panelen och för provet. Ren avläsning. ]]
-function KontrollHjalp.rader(): { { vad: string, reglage: string } }
+function KontrollHjalp.rader(): { { vad: string, reglage: string, avancerat: boolean? } }
 	local sort = KontrollHjalp.inmatning()
 	local ut = {}
 	for _, r in RADER do
@@ -333,9 +338,27 @@ function KontrollHjalp.rader(): { { vad: string, reglage: string } }
 			     Tystnad är ärligare än en tom kolumn. Dyker knappen upp
 			     igen kommer raden tillbaka av sig själv. ]]
 			if reglage ~= nil and reglage ~= "" then
-				table.insert(ut, { vad = radText(r), reglage = reglage })
+				table.insert(ut, { vad = radText(r), reglage = reglage,
+					avancerat = (r :: any).avancerat == true })
 			end
 		end
+	end
+	return ut
+end
+
+--[[ LISTAN SOM DEN RITAS (#273 S1): kärnan och det vardagliga först,
+     sedan rubriken «Avancerat» och hjälperna under den. Rubriken finns
+     bara när det finns något att sätta under den — på en ren pekyta gör
+     det inte det. Panelen här och vänstermenyns «Hjälp» läser samma
+     lista. ]]
+function KontrollHjalp.listrader(): { { vad: string, reglage: string, rubrik: boolean? } }
+	local ut, av = {}, {}
+	for _, r in ipairs(KontrollHjalp.rader()) do
+		table.insert(if r.avancerat then av else ut, r)
+	end
+	if #av > 0 then
+		table.insert(ut, { vad = Sprak.t("hjalp.avancerat"), reglage = "", rubrik = true })
+		for _, r in ipairs(av) do table.insert(ut, r) end
 	end
 	return ut
 end
@@ -377,7 +400,8 @@ local function bygg()
 	rubrik.TextSize = 15
 	rubrik.Parent = p
 
-	for i = 1, #RADER do
+	--[[ En etikett mer än raderna: rubriken «Avancerat». ]]
+	for i = 1, #RADER + 1 do
 		local l = Instance.new("TextLabel")
 		l.Name = "Rad" .. i
 		l.Size = UDim2.new(1, -20, 0, 20)
@@ -412,7 +436,7 @@ local function bygg()
 end
 
 local function fyll()
-	local lista = KontrollHjalp.rader()
+	local lista = KontrollHjalp.listrader()
 	--[[ ── PANELEN MÅSTE VARA SÅ HÖG SOM SITT INNEHÅLL ────────────────
 
 	     Höjden räknades på `44 * (#RADER + 2)` — ett tal som inte hade
@@ -452,6 +476,7 @@ local function fyll()
 		local r = lista[i]
 		if r then
 			l.Text = if r.reglage ~= "" then `{r.vad}  ·  {r.reglage}` else r.vad
+			l.TextColor3 = if (r :: any).rubrik then FARG_GULD else FARG_TEXT
 			l.Visible = true
 		else
 			l.Text = ""
@@ -596,14 +621,10 @@ function KontrollHjalp.vaxla(): boolean
 	return KontrollHjalp.synlig()
 end
 
---[[ FÖRSTA UPPSITTNINGEN. Hjälpen visas en gång av sig själv — då är
-     frågan "vad gör jag nu?" som mest aktuell — och sedan bara när
-     spelaren ber om den. Att visa den vid varje uppsittning hade blivit
-     en ruta att stänga bort, inte en hjälp. ]]
-function KontrollHjalp.vidUppsittning()
-	if visadEnGang then return end
-	visadEnGang = true
-	KontrollHjalp.visa()
-end
+--[[ #273 S1: LISTAN ÖPPNAS ALDRIG AV SIG SJÄLV. `vidUppsittning` fanns
+     här och tände hela listan vid första uppsittningen — nio rader med
+     tygel, halvhalt, sits och hopp över en spelare som behöver fyra.
+     Vänstermenyns kärnrader bär det som behövs; `H`, `?` och styrkors
+     upp är de enda vägarna in. ]]
 
 return KontrollHjalp

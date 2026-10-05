@@ -392,12 +392,11 @@ end
 
 	`farVisas` bär nu bara det den alltid handlade om: G01-flaggans tre
 	lägen (se `promptSynlig`). Är loopen på äger `ledFor` frågan ensam. ]]
-local function farVisasLed(model: Model): boolean
-	if InteractionController.g01Lage() ~= true then
-		--[[ nil → göm (fail closed), false → legacy utan G01-loopen. ]]
-		return farVisas(model)
-	end
-	return ledFor ~= nil and ledFor(model)
+local function farVisasLed(_model: Model): boolean
+	--[[ PRODUKTBESLUT 2026-10-04: ledningen är borttagen ur spelet. Spelaren
+		väljer «Rida nu» och stallet gör hästen redo. Ingen väg, varken den nya
+		loopen eller den gamla, ritar längre en ledknapp. ]]
+	return false
 end
 
 function InteractionController.setReadyCheck(fn: ((Model) -> boolean)?)
@@ -584,6 +583,50 @@ end
 	Den försvinner så fort förberedelsen är klar — då är `MountPrompt`
 	svaret i stället, och två knappar som gör nästan samma sak vore precis
 	den sortens valfrihet som bromsar. ]]
+--[[ UI-1 (docs/UI1-START-CHOICE-CONTRACT.md): «Rida nu» som EN funktion. Samma
+	kropp som promptens `Triggered` hade — prompten och startskärmens knapp
+	anropar båda den här, så det finns en sanning om vad «Rida nu» gör. ]]
+function InteractionController.ridaNu()
+	--[[ TRE VÄRDEN, INTE TVÅ (#246 A).
+
+	     Exakt samma fel som `MountRequest` ovan hade, och som noten
+	     där beskriver — men här var det aldrig rättat. Raden tog
+	     `ok, skal` av serverns `(boolean, string?, string?)`, så
+	     argumentet föll på golvet hos den SISTA mottagaren i kedjan.
+
+	     Studio-QA 2026-09-18, touch, Trixie sadlad och ledning igång:
+
+	         server -> ok=false skal=forb.fel_tur arg=kanon:Hälsa lugnt
+	         spelaren ser  "wrong turn — %s is next"
+
+	     Att bara rätta servern hade inte hjälpt: nejet passerar här
+	     sist, och en kedja är hel först när varje led bär vidare. ]]
+	local ok, skal, arg = Net.get("RidaNu"):InvokeServer()
+	if not ok then
+		--[[ Nej:et är oftast välfärdsstoppet: stallet såg något på
+			henne idag. Det ska LÄSAS, inte tystas.
+
+			OCH `warn` ÄR ATT TYSTA DET (#202). Raden nedan låg ensam
+			här och skrev i Output-fönstret — synligt för den som har
+			Studio öppet, osynligt för spelaren. Mätt i Studio på
+			`e6a674c`: ett andra "Rida nu" svarade `tack.redan_pa` och
+			panelen sa ingenting alls.
+
+			Nu går skälet till den yta spelaren tittar på. `warn`
+			står kvar för den som felsöker; nyckeln bredvid texten är
+			vad loggen är till för. ]]
+		if avslagVisare then avslagVisare(skal, arg) end
+		--[[ Loggen ska visa DET SPELAREN SER, annars ljuger den för den
+		     som felsöker. Argumentet följer därför med hit också — det
+		     var den här raden som skrev "%s" i QA-loggen. ]]
+		warn(("[Horse] Rida nu: %s (%s)"):format(
+			if arg ~= nil then Sprak.t(tostring(skal), arg)
+				else Sprak.t(tostring(skal)),
+			tostring(skal)))
+	end
+	InteractionController.uppdatera()
+end
+
 local function addRidaPrompt(model: Model)
 	if ridaKnappar[model] then return end
 	if not (ridaCheck and ridaCheck(model)) then return end
@@ -605,44 +648,7 @@ local function addRidaPrompt(model: Model)
 	stallIn(prompt)
 
 	prompt.Triggered:Connect(function()
-		--[[ TRE VÄRDEN, INTE TVÅ (#246 A).
-
-		     Exakt samma fel som `MountRequest` ovan hade, och som noten
-		     där beskriver — men här var det aldrig rättat. Raden tog
-		     `ok, skal` av serverns `(boolean, string?, string?)`, så
-		     argumentet föll på golvet hos den SISTA mottagaren i kedjan.
-
-		     Studio-QA 2026-09-18, touch, Trixie sadlad och ledning igång:
-
-		         server -> ok=false skal=forb.fel_tur arg=kanon:Hälsa lugnt
-		         spelaren ser  "wrong turn — %s is next"
-
-		     Att bara rätta servern hade inte hjälpt: nejet passerar här
-		     sist, och en kedja är hel först när varje led bär vidare. ]]
-		local ok, skal, arg = Net.get("RidaNu"):InvokeServer()
-		if not ok then
-			--[[ Nej:et är oftast välfärdsstoppet: stallet såg något på
-				henne idag. Det ska LÄSAS, inte tystas.
-
-				OCH `warn` ÄR ATT TYSTA DET (#202). Raden nedan låg ensam
-				här och skrev i Output-fönstret — synligt för den som har
-				Studio öppet, osynligt för spelaren. Mätt i Studio på
-				`e6a674c`: ett andra "Rida nu" svarade `tack.redan_pa` och
-				panelen sa ingenting alls.
-
-				Nu går skälet till den yta spelaren tittar på. `warn`
-				står kvar för den som felsöker; nyckeln bredvid texten är
-				vad loggen är till för. ]]
-			if avslagVisare then avslagVisare(skal, arg) end
-			--[[ Loggen ska visa DET SPELAREN SER, annars ljuger den för den
-			     som felsöker. Argumentet följer därför med hit också — det
-			     var den här raden som skrev "%s" i QA-loggen. ]]
-			warn(("[Horse] Rida nu: %s (%s)"):format(
-				if arg ~= nil then Sprak.t(tostring(skal), arg)
-					else Sprak.t(tostring(skal)),
-				tostring(skal)))
-		end
-		InteractionController.uppdatera()
+		InteractionController.ridaNu()
 	end)
 
 	ridaKnappar[model] = prompt

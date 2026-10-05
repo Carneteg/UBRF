@@ -1,6 +1,8 @@
 # UBRF — miljöansvar och två spelplattformar
 
-Status: processförslag enligt Tobias beslut 2026-09-07. Gäller omedelbart som senaste produktinstruktion i berörda uppdrag; införlivas i huvudkanon efter review. `docs/DELIVERY-PROTOCOL.md` styr leveransgater och Tobias behåller produktacceptans. Detta dokument ersätter äldre uppdragskommentarer som tilldelar Claude interiörbygget eller förbjuder Replit att implementera miljön.
+Status 2026-09-26: käll- och integrationskontrakt. Nuvarande ansvar och
+behörigheter finns i [WORKING-AGREEMENT](WORKING-AGREEMENT.md). De tidigare
+Replit/Claude-tilldelningarna är historik, inte parallella skrivmandat.
 
 ## Produktkontrakt
 
@@ -13,33 +15,24 @@ UBRF är ett lätt, roligt ridspel där spelaren lär sig hästkunskap och ansva
 > genomförd paritet. Webben bevaras i befintligt skick. Se
 > `docs/PRODUCT-CANON.md`, «Tidsbegränsat produktbeslut 2026-09-22».
 
-> **Produktbeslut 2026-09-26 — miljöansvaret flyttar till Claude efter
-> överlämning.** Tobias beslut, PR #264 kommentar `5843082008`. Claude äger
-> miljöimplementationen **först efter** en kontrollerad överlämning:
-> inventering av Replits befintliga miljöarbete, fastställt filägarskap och
-> kvittens. Överlämningsgrinden står i `docs/LEVERANSMATRIS.md` (G-MILJÖ).
->
-> Till dess gäller Replits ansvar och Claudes begränsning nedan för allt som
-> inte är överlämnat. Accepterat innehåll och referenser bevaras, och ingen
-> andra skrivare startas.
+> **Ägarskap efter överlämning 2026-09-26:** aktuell ensam skrivare och
+> oberoende reviewer följer arbetsöverenskommelsen. Skydda Replits och andra
+> skrivares befintliga filer, referenser och accepterade innehåll. Läs verklig
+> status och filägarskap innan någon miljöfil ändras; allmän rollövergång är
+> inte tillstånd att skriva över oöverlämnat eller smutsigt arbete.
 
 En miljöleverans är inte färdig för oberoende review förrän samma källstyrda miljöändring finns i båda spelbara versionerna, eller en uttryckligt godkänd plattformsspecifik avvikelse är dokumenterad. Webbscreenshots eller grön CI bevisar inte Roblox Studio-funktionalitet.
 
 ## Ansvar och arbetsfördelning
 
-**Tobias — Product Owner:** bestämmer mål, prioriteringar, verklighetsfakta vid motstridiga källor, game feel och slutligt produktgodkännande.
-
-**ChatGPT — orkestrator, senior Game Director och arkitekt:** bestämmer arbetsordning, scope, filägarskap, acceptance contract, integreringsgater och oberoende review. Granskar faktiska diffar, originalkällor, testbevis och båda plattformarna. Skriver inte parallellt i en aktiv builders kärnfiler. Kan delegera smala uppgifter till andra agenter utan att skapa en andra huvudutvecklare.
-
-**Replit — Lead Environment & World Builder:** äger källstyrd rekonstruktion av hela UBRF: terräng, nivåskillnader, vägar, parkering, staket, grindar, byggnaders exteriörer och interiörer, material, möbler, utrustning, skyltar, belysning och miljörekvisita. Äger även miljöasset-pipeline, källinventering, referensjämförelser, miljöprestanda och export till webb/Roblox. Får implementera miljöproduktkod inom tilldelad branch och scope. Är inte begränsad till QA eller teorisalen.
-
-**Claude — Lead Gameplay & Integration Engineer:** äger häst- och ryttarstyrning, fysik/animation, kamera och input, ridning, lektioner, interaktionernas beteende, lärande, progression, sparning, spel-UI och teknisk integration mellan miljö och gameplay. Ansvarar för att spelmekaniken fungerar i både webb och Roblox. Får inte bygga en konkurrerande miljö eller ändra Replits aktiva miljöfiler utan uttrycklig omfördelning. Hjälper till med integrationskontrakt och verifiering av miljön i riktig gameplay.
-
-Replit och Claude kan arbeta parallellt på skilda ansvarsområden. Miljödata, objekt-ID:n, interaktionsankare och spatiala kontrakt är gemensamma gränssnitt, inte två konkurrerande sanningar. Samma fil får bara ha en aktiv skrivande ägare. Delade ändringar förbereds av ägaren och integreras efter samordnad review; inga samtidiga omskrivningar eller osamordnade cherry-picks.
+Följ [WORKING-AGREEMENT](WORKING-AGREEMENT.md). Miljödata, objekt-ID:n,
+interaktionsankare och spatiala kontrakt är gemensamma gränssnitt, inte två
+konkurrerande sanningar. Samma fil har en aktiv skrivare. Delade ändringar
+integreras efter oberoende review, utan osamordnade cherry-picks.
 
 ## Gemensam verktygskedja
 
-Båda agenterna ska känna till och använda hela den godkända verktygskedjan. Tillgång i ChatGPT eller en annan agent innebär dock inte automatiskt att just deras session har samma autentisering. Kontrollera faktisk åtkomst innan en uppgift påstås vara blockerad eller genomförd.
+Använd endast de delar av den godkända verktygskedjan som uppgiften kräver. Tillgång i ChatGPT eller en annan agent innebär dock inte automatiskt att just deras session har samma autentisering. Kontrollera faktisk åtkomst innan en uppgift påstås vara blockerad eller genomförd.
 
 | Tjänst | Avsedd användning | Verifieringskrav |
 | --- | --- | --- |
@@ -62,14 +55,16 @@ Drive är originalarkiv men aldrig enda build-dependency. Material som behövs f
 5. Bevara accepterad läktare, byggnadsgeometri, collision, öppna passager och tidigare underkända sikt-/rumsskaleproblem. Förbättra inte en bild genom att flytta en verklig dörr, vägg eller byggnad utan källstöd.
 6. Optimera draw calls, material/texture-budget, meshkomplexitet, LOD/culling och mobilprestanda när det ger faktisk spelarvinst. Behåll läsbarhet, funktion och källtrogenhet. Mät hellre än att gissa; skapa ingen onödig simulatorarkitektur.
 7. Kör bygg-, miljö-, geometri-, paritets- och relevanta gameplayregressioner. Falsifiera kritiska skydd. Skapa källkopplade före/efter-bilder från samma kameror och exakt ren produkt-SHA. Kontrollera faktiskt spelbar webbpreview på Vercel; Roblox-export/specs samt verklig Studio-/touch-test redovisas separat.
-8. Lämna `READY_FOR_CHATGPT_REVIEW` med Changed, Source evidence, Tested, Falsified, Not tested, Remaining risk, Human gate och SHA. Endast ChatGPT kan ge oberoende review-PASS och endast Tobias kan ge `PRODUCT_ACCEPTED`. Ingen självacceptans eller merge före gaterna.
+8. Lämna `READY_FOR_REVIEW` med Changed, Source evidence, Tested, Falsified, Not tested, Remaining risk, Human gate och SHA. Endast den oberoende granskaren kan ge review-PASS och endast Tobias kan ge `PRODUCT_ACCEPTED`. Ingen självacceptans eller merge före gaterna.
 
-## Aktuella arbetsströmmar
+## Historiska arbetsströmmar (inte aktuella order)
 
-Miljöspår: PR #131 → draft-PR #132, befintlig Replit-app och branch `replit/pr-131-theory-fidelity`. Senast verifierade käll-audit-head vid detta beslut: `93b43fe706115a116bdac185ac2d8da13411169c`. Replit ska först verifiera ny aktuell head och eventuell pågående uppgift. Teorisalen är nästa avgränsade miljöslice; därefter prioriteras övriga byggnader och området genom källstyrd avvikelsematris. Uppehållsrummets öppna L-form, saknad ridhusplan och motstridiga dörr-/passagelägen är fortsatt separata blockerare för geometriändring.
+2026-09-07 beskrev detta dokument miljöspåret PR #131/#132 på
+replit/pr-131-theory-fidelity (då inventerat på 93b43fe) och gameplay
+PR #128/issue #126. Dessa hänvisningar bevaras för spårbarhet, inte som
+nya order till Replit eller Claude. Status på gamla grenar/PR:er måste
+kontrolleras före eventuell återanvändning; inget stängs, flyttas eller
+raderas inom dokumentstädningen.
 
-Gameplayspår: PR #128 / issue #126. Claude behåller detta spår och dess blockerande Ugneta-review. Ingen miljöomfördelning ger tillstånd att stänga gameplayfelet eller ändra dess produktregler.
-
-Tidigare kommentarer om att Claude ska äga teorisalsimplementationen är återkallade av Tobias nyare beslut. Claude ska inte börja den gamla interiörbriefen. Replit ska inte vänta på en Claude-ACK för att påbörja sin separata, godkända miljöslice. Varje aktiv builder ska däremot själv kvittera sin branch, head, scope och ägarskap före kodning.
-
-Detta är ett processdokument, inte produktacceptans, en geometriändring eller tillstånd att mergea befintliga PR:er.
+Nuvarande arbetsindex är [ACTIVE-GATE](ACTIVE-GATE.md). Den här filen är
+varken produktacceptans, geometriändring eller publicerings-/mergetillstånd.

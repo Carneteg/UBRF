@@ -83,6 +83,8 @@ do
 	     båda språken, av exakt samma skäl som `touch.halt` stod här förut. ]]
 	local SAMMANFALLER: { [string]: string } = {
 		["gangart.halt"] = "halt är ridtermen på både svenska och engelska",
+		-- C2 (b6ea134): knappen till textinställningarna. "Text" är samma ord på båda språken.
+		["installning.knapp"] = "text är samma ord på svenska och engelska",
 	}
 	local samma = {}
 	for _, nyckel in ipairs(nycklar) do
