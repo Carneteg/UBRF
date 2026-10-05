@@ -119,12 +119,15 @@ function v3dNamnTex(namn){
   const T=S3.tex;
   if(T.namn[namn])return T.namn[namn];
   return T.namn[namn]=glCanvasTex(256,64,(c,w,h)=>{
-    c.fillStyle="#2A2E34";c.fillRect(0,0,w,h);
+    /* Ett vitt kort med hästens namn i blått — som på boxfronterna på fotot
+       (stall-inne-05-stallgangen.jpg). Småraderna under namnet går inte att
+       läsa och ritas inte. Samma kort som Roblox (TackForradService). */
+    c.fillStyle="#F0EEE8";c.fillRect(0,0,w,h);
     c.strokeStyle="#B4B8BB";c.lineWidth=3;c.strokeRect(2,2,w-4,h-4);
-    c.fillStyle="#E6E4DE";c.textAlign="center";c.textBaseline="middle";
-    let px=34;c.font=`600 ${px}px "IBM Plex Mono", monospace`;
+    c.fillStyle="#1F4E9E";c.textAlign="center";c.textBaseline="middle";
+    let px=34;c.font=`700 ${px}px "IBM Plex Mono", monospace`;
     while(c.measureText(namn).width>w-24&&px>10){px-=2;
-      c.font=`600 ${px}px "IBM Plex Mono", monospace`;}
+      c.font=`700 ${px}px "IBM Plex Mono", monospace`;}
     c.fillText(namn,w/2,h/2+1);
   });
 }

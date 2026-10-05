@@ -1469,7 +1469,7 @@ print("\n── Alternativ 3 med overflow: ingången får den lediga raden på s
 	full och ingången får inte tränga undan någon; sida 2 har en prompt och två
 	lediga rader, och där ska ingången stå — efter prompten. Tangenterna följer
 	fortfarande bara promptraderna. Ingången kommer från den riktiga
-	`LedLektionController` (startad av klientens init), inte från en attrapp. ]]
+	(ledlektionen är borttagen 2026-10-04). ]]
 do
 	local UIS = game:GetService("UserInputService")
 	UIS.TouchEnabled = true
@@ -1532,8 +1532,8 @@ do
 
 	N._bladdra()
 	local s2 = lage()
-	check("SISTA SIDAN, EN LEDIG RAD: ingången syns, efter promptraden",
-		N._sida() == 2 and s2.prompter == 1 and s2.ingangar == 1 and s2.ingangSist,
+	check("SISTA SIDAN: bara promptraden — ledlektionens ingång är borttagen",
+		N._sida() == 2 and s2.prompter == 1 and s2.ingangar == 0,
 		table.concat(s2.rader, " | "))
 	check("sista sidan: tangent ↔ rad följs åt, ingången bär ingen tangent",
 		s2.justerad and #s2.tangentFel == 0, table.concat(s2.tangentFel, " "))
@@ -1541,8 +1541,8 @@ do
 		local ram = N._panel().ram
 		local sk = ram and ram:FindFirstChild("StatusKort") -- #274: Fragan/Lista bor i statuskortet
 		local fr, li = sk and sk:FindFirstChild("Fragan"), sk and sk:FindFirstChild("Lista")
-		check("sista sidan: i layouten ligger ingången under listan",
-			fr ~= nil and li ~= nil and fr.Visible and fr.LayoutOrder > li.LayoutOrder,
+		check("sista sidan: ingen ingångsfråga ritas",
+			fr == nil or not fr.Visible,
 			("%s / %s"):format(tostring(fr and fr.LayoutOrder), tostring(li and li.LayoutOrder)))
 	end
 	local fyrade = 0

@@ -1,3 +1,5 @@
+> **DELVIS ERSATT (produktbeslut 2026-10-04).** Allt som beskriver att spelaren själv hälsar, kollar, ryktar, kratsar, hämtar och lägger på sadel och träns eller leder hästen gäller inte längre. Det som gäller kvar: Ugneta instruerar, ett språk i hela panelen, och instruktionerna för ridningen. Se `docs/PRODUCT-CANON.md`, «Produktbeslut 2026-10-04».
+
 # P2 + UI-2 + UI-3: Ugneta instructs, the player acts, one language — Roblox and web together
 
 Status: contract written before code, 2026-09-29. Writer: Claude 4208679f.

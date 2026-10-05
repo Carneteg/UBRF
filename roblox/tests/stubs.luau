@@ -309,7 +309,7 @@ Enum = {
 	CameraType = { Scriptable = 1, Custom = 2 },
 	--[[ Front och Back tillkom med skyltarnas SurfaceGui: speglingen byter
 	     dem, och utan bada kunde bytet varken goras eller matas. ]]
-	NormalId = { Top = 1, Front = 2, Back = 3 },
+	NormalId = { Top = 1, Front = 2, Back = 3, Right = 10, Left = 11, Bottom = 12 },
 	SurfaceGuiSizingMode = { FixedSize = 1, PixelsPerStud = 2 },
 	--[[ HastRigg satter Top/BottomSurface pa riggens delar, och RiderController
 	     bygger IKControl. Uppraknade, inte en __index som svarar pa allt: samma

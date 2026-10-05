@@ -1,3 +1,7 @@
+> **HISTORISKT — GÄLLER INTE (produktbeslut 2026-10-04).** Ledningen tas bort 
+> ur spelet; det här kontraktet bevaras bara för spårbarhet. Se 
+> `docs/PRODUCT-CANON.md`, «Produktbeslut 2026-10-04».
+
 # Leading the horse to the arena (on foot)
 
 Status: BUILT_NOT_VERIFIED, 2026-09-27. Contract written before code.

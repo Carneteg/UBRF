@@ -20,7 +20,7 @@
 # beroende på vilken mutation som råkade ligga kvar i .build/. Bygget hör till
 # körningen och görs nu här, varje gång.
 cd "$(dirname "$0")/.." || exit 1
-SPECAR="geometri spel spelkanon forberedelse skotselpass sparning-v2 ridlogg ridobservation hinderobservation integration ledning ledning-integration promptkonflikt roster sprak sprak-en bygge mark handighet spelbuild forstaplayable preflight integritet statesync ridinput ridefirst tack tack-fas1 tack-fas2 tack-fas3 buren-tack hasthojd avsittning spelbarhet varldskoherens varldshud topologi qa sikt movement camera rider touch ljud driv-broms blick genomsikt paritet ugneta ugnetatema ugneta-gestalt ridhusplats ridplats volt ridforsok klient klient-reservzon klient-hjalpknapp klient-ledprompt klient-naromrade klient-burenstatus klient-ridhandlingar ridanu-avslag tavlingsklader tavlingsklader-session coachbanner takt forstaritten klient-byggidentitet klient-lektionspaus klient-sessionskedja stubbsemantik fjarrdublett flerhast ledtakt ledspar ledvag klient-uikontext gangfas klient-ugnetayta klient-ugnetalive integration-flagga"
+SPECAR="geometri spel spelkanon forberedelse skotselpass sparning-v2 ridlogg ridobservation hinderobservation integration ledning promptkonflikt roster sprak sprak-en bygge mark handighet spelbuild forstaplayable preflight integritet statesync ridinput ridefirst tack tack-fas1 tack-fas2 tack-fas3 buren-tack hasthojd avsittning spelbarhet varldskoherens varldshud topologi qa sikt movement camera rider touch ljud driv-broms blick genomsikt paritet ugneta ugnetatema ugneta-gestalt ridhusplats ridplats volt ridforsok klient klient-reservzon klient-hjalpknapp klient-naromrade klient-burenstatus klient-ridhandlingar ridanu-avslag tavlingsklader tavlingsklader-session coachbanner takt forstaritten klient-byggidentitet klient-lektionspaus klient-sessionskedja stubbsemantik fjarrdublett flerhast ledtakt ledspar ledvag klient-uikontext gangfas klient-ugnetayta klient-ugnetalive integration-flagga"
 SPECAR="$SPECAR voltlektion"
 SPECAR="$SPECAR haltlektion"
 SPECAR="$SPECAR overganglektion"
@@ -30,7 +30,6 @@ SPECAR="$SPECAR vaglektion"
 SPECAR="$SPECAR halvvoltlektion"
 SPECAR="$SPECAR galopplektion"
 SPECAR="$SPECAR markbomlektion"
-SPECAR="$SPECAR ledlektion"
 SPECAR="$SPECAR utrustning-rattelse"
 SPECAR="$SPECAR lektionsaterkoppling"
 SPECAR="$SPECAR klient-lararinstallning"
@@ -38,7 +37,6 @@ SPECAR="$SPECAR klient-ugnetablick"
 SPECAR="$SPECAR lektionsminne"
 SPECAR="$SPECAR instruktorstart"
 SPECAR="$SPECAR skotselminne"
-SPECAR="$SPECAR ledningsminne"
 SPECAR="$SPECAR tempocoachning"
 SPECAR="$SPECAR hornlektion"
 SPECAR="$SPECAR regelprofil"
@@ -59,6 +57,12 @@ SPECAR="$SPECAR klient-forenkling"
 SPECAR="$SPECAR ridefirst-fortsatt klient-fortsatt klient-rida-fokus"
 # #279: R/Y stanger efter-ritten-kortet nar hon inte rider.
 SPECAR="$SPECAR klient-efterritt-tangent"
+# #290: en ny ritt efter ett RAKNAT pass kraver ett uttryckligt Rida nu och ett nytt passId.
+SPECAR="$SPECAR ridefirst-upprepad"
+# #289: de tolv dressyrbokstaverna pa sargen, ur den delade genererade listan.
+SPECAR="$SPECAR bygge-dressyrbokstaver"
+# #289 (rattningen): ringen pa mittlinjen ar ingen dressyrbokstav; K ar vastra sargens skylt.
+SPECAR="$SPECAR galopplektion-bokstaver"
 # #252 DEL B: banken provar SIG SJALV forst, i bada riktningarna. En
 # require av en modul som inte ligger i bunten ska falla bygget — inte
 # bli ett tyst nil (DEL A). Faller provet bygger vi inte en enda spec.

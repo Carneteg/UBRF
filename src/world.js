@@ -685,9 +685,12 @@ function navVag(sx,sy,mx,my){
   return ut;
 }
 
-/* Hästen följer 2,2 m bakom i spåret när du leder. */
+/* PRODUKTBESLUT 2026-10-04: ingen ledning. Hästen följer inte spelaren —
+   «Rida nu» ställer henne vid sargporten och hon står kvar där. Funktionen
+   finns kvar eftersom anropet i spelloopen är ett ställe till, men den
+   flyttar inte hästen. */
 function ledHasten(){
-  if(G.leder){
+  if(false&&G.leder){
     let kvar=2.2, hx=VD.px, hy=VD.py, vin=VD.rikt;
     const s=VD.spår;
     let fx=VD.px, fy=VD.py;
@@ -813,6 +816,7 @@ function interaktioner(){
     /* Med sadlad häst vid handen kan lektionen ridas utomhus:
        uteridbanan nordost om stallet, eller skogsstigen från grupp 3. */
     if(G.leder&&G.skotselRes&&G.hastId){
+      /* Stallet för dit hästen när spelaren sitter upp — ingen ledning. */
       L.push({pos:[174,126], text:G.tavling&&G.tavling.typ==="dressyr"
           ?`Sitt upp — Dressyr LC börjar här`
           :`Sitt upp på uteridbanan — lektion utomhus`,
@@ -864,7 +868,7 @@ function interaktioner(){
   }else{
     const S=STALLINNE;
     for(const d of S.dorrar) L.push({pos:d.pos,
-      text:G.leder?`Led hästen ${d.text.toLowerCase().replace("ut ","ut ")}`:d.text,
+      text:d.text,
       gor(){gaTill(d.mot,d.spawn);}});
     /* Ridläraren delar ut hästen — och byter den om spelaren vill.
        Bytet ska gå att hitta utan att man vet var det finns, så det
@@ -896,22 +900,6 @@ function interaktioner(){
     L.push({pos:S.whiteboard.pos, text:"Dagens schema (whiteboarden)",
       gor(){visaSchema();}});
     for(const i of (S.info||[])){
-      /* Spolspiltan används med hästen vid handen, på väg in från hagen. */
-      if(i.spolspilta){
-        const kanSpola=G.hastId&&G.leder&&!G.hamtad;
-        L.push({pos:i.pos, text:kanSpola
-            ?(G.lerig?`Spola av leran på ${hastNamn()}`
-              :`Spola av ${hastNamn()} i spiltan`)
-            :"Spolspiltan",
-          gor(){ if(kanSpola)visaSpolning();
-            else saga("Spolspiltan: gummimattor, duschblandare och slangvinda på väggen. Hit leds hästen in från hagen när benen är leriga.",4.5); }});
-        continue;
-      }
-      if(i.sadelkammare){
-        L.push({pos:i.pos, text:"Sadelkammaren",
-          gor(){visaSadelkammare();}});
-        continue;
-      }
       L.push({pos:i.pos, text:i.text,
         gor(){ if(i.teori)visaTeori();
           else if(i.klubb&&typeof visaKlubbrum==="function")visaKlubbrum();
@@ -2554,7 +2542,7 @@ function ritaVandring(){
   /* 3D-vyn ritar vägvisaren här; kartan gör det inne i sin egen
      ritfunktion, där projektionen finns. */
   if(G.vy!=="2d")ritaVagvisare();
-  if(typeof stegkortRita==="function"){ stegkortKvitteraLedning(); stegkortRita(); }
+  if(typeof stegkortRita==="function"){ stegkortRita(); }
   const ap=document.getElementById("approach");
   const pr=VD.prompt&&!overlayUppe()?VD.prompt:null;
   ap.textContent=!pr?"":pr.hall>0

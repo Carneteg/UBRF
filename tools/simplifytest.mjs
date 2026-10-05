@@ -464,56 +464,26 @@ const tryckRad = async (page, id) => {
   await page.waitForTimeout(700);
   await vidBoxen(page, null);
   await vanta(page);
-  await tryckVal(page, "start:sjalv");
-  const detaljer = await page.evaluate(() => [...HALSNING.map(x => x.text), ...VISITPUNKT.map(x => x.ok),
-    ...RYKTREDSKAP.map(x => x.text), ...HOVAR.map(x => x.text), ...SADELFAS.map(x => x.t)]);
-  const KEDJA = [
-    { kort: "halsa", handling: "halsa", knapp: "Hälsa", rad: "Hon ska se och höra dig innan du rör henne.", moment: 3 },
-    { kort: "visitera", handling: "kolla", knapp: "Kolla henne", rad: "Se efter att hon mår bra innan ni börjar.", moment: 5 },
-    { kort: "rykta", handling: "rykta", knapp: "Rykta", rad: "Borsta henne ren innan sadeln läggs på.", moment: 6 },
-    { kort: "hovar", handling: "kratsa", knapp: "Kratsa hovarna", rad: "Lyft och rensa alla fyra hovarna.", moment: 4 },
-    { kort: "sadla", handling: "sadla", knapp: "Sadla", rad: "Underlägg och sadel på, sedan gjorden.", moment: 4, hamta: "tack:sadel" },
-    { kort: "transa", handling: "transa", knapp: "Tränsa", rad: "Tränset kommer sist.", moment: 1, hamta: "tack:trans" },
-  ];
-  let klick = 0, hamtningar = 0, allaEn = true, allaKorta = true, allaKunskap = true, ingenDetalj = true;
-  const sedda = [];
-  for (const st of KEDJA) {
-    let k = await kortet(page);
-    if (st.hamta && k.id !== st.kort) {
-      /* Hämtningen är en handling i världen: ingen momentknapp, bara prompten. */
-      if (k.val.length !== 0 || !k.rader.includes(st.hamta)) allaEn = false;
-      sedda.push(k.id);
-      await tryckRad(page, st.hamta); hamtningar++;
-      k = await kortet(page);
-    }
-    sedda.push(k.id);
-    if (!(k.id === st.kort && k.val.length === 1 && k.val[0].id === "handling:" + st.handling && k.val[0].text === st.knapp)) allaEn = false;
-    if (k.instr !== st.rad) allaKorta = false;
-    if (detaljer.some(d => k.text.includes(d))) ingenDetalj = false;
-    await page.evaluate(() => document.querySelector("#stegkort button[data-kunskap]").click());
-    await vanta(page, 200);
-    const oppen = await kortet(page);
-    if (!(oppen.kunskap.length === st.moment)) allaKunskap = false;
-    await tryckVal(page, "handling:" + st.handling); klick++;
-  }
+  /* PRODUKTBESLUT 2026-10-04: ingen manuell skötsel. Startkortet har ETT val,
+     och ingen handlingsknapp, hämtprompt eller ledprompt finns att trycka. */
+  const k0 = await kortet(page);
+  prova("startkortet har EN knapp: Rida nu", k0.id === "valj" && k0.val.length === 1 && k0.val[0].id === "start:rida_nu",
+    `${k0.id} · ${k0.val.map(v => v.id).join(",")}`);
+  prova("ingen handlingsknapp och inget kunskapslager på kortet",
+    !k0.val.some(v => /^handling:/.test(v.id)) && !k0.kunskapsknapp, k0.val.map(v => v.id).join(","));
+  prova("ingen hämt-, sadel-, träns- eller ledprompt på kortet",
+    !k0.rader.some(r => /^(tack:|leda$|rad:sadla|rad:transa)/.test(r)), k0.rader.join(","));
+  await tryckVal(page, "start:rida_nu");
   const slut = await kortet(page);
   const lista = await page.evaluate(() => {
-    const ut = { egna: 0, totalt: 0 };
+    const ut = { egna: 0, auto: 0 };
     for (const f of Forb.stegFaser()) { if (f.id === "leda") continue;
-      for (const m of Forb.moment(f.id)) { if (m.fel) continue; ut.totalt++;
-        if ((G.forb.gjorda[f.id] || {})[m.id] === true) ut.egna++; } }
+      for (const m of Forb.moment(f.id)) { if (m.fel) continue;
+        const g = (G.forb.gjorda[f.id] || {})[m.id];
+        if (g === true) ut.egna++; else if (g === "auto") ut.auto++; } }
     return ut; });
-  prova("varje kort i kedjan har EN handling, med rätt knapp", allaEn, sedda.join(" → "));
-  prova("korten kommer i ordning: hälsa → kolla → rykta → kratsa → hämta sadeln → sadla → hämta tränset → tränsa",
-    sedda.join(" → ") === "halsa → visitera → rykta → hovar → hamta_sadel → sadla → hamta_trans → transa", sedda.join(" → "));
-  prova("varje kort bär EN kort rad", allaKorta);
-  prova("inget kort i huvudflödet bär en detaljmening om hovar, mungipor eller gjord", ingenDetalj && detaljer.length === 20,
-    `${detaljer.length} detaljmeningar i kanonen`);
-  prova("«Så gör man» visar handlingens alla moment — 3, 5, 6, 4, 4 och 1", allaKunskap);
-  prova("sex handlingar och två hämtningar räcker till ledningen", klick === 6 && hamtningar === 2 && slut.id === "leda",
-    `${klick} + ${hamtningar} → ${slut.id}`);
-  prova("checklistan är densamma som 23 klick gav: 23 moment, alla spelarens egna", lista.totalt === 23 && lista.egna === 23,
-    JSON.stringify(lista));
+  prova("stallet gör allt — inget moment är spelarens eget", lista.egna === 0 && lista.auto > 0, JSON.stringify(lista));
+  prova("efter «Rida nu» står kortet på «Sitt upp», inte på något skötselsteg", slut.id === "sittupp", slut.id);
   await page.context().close();
 
   /* FYNDET stoppar kollen — välfärden är inte förenklad. */
@@ -529,23 +499,18 @@ const tryckRad = async (page, id) => {
     return -1; });
   await vidBoxen(p2, fyndPass);
   await vanta(p2);
-  await tryckVal(p2, "start:sjalv");
-  await tryckVal(p2, "handling:halsa");
-  await tryckVal(p2, "handling:kolla");
+  await tryckVal(p2, "start:rida_nu");
   let f = await kortet(p2);
   const st = await p2.evaluate(() => ({ sett: G.forb.fyndSett, rapp: G.forb.fyndRapporterat, klar: !!G.forb.klara.visitera,
-    efter: (() => { const ps = VISITPUNKT.map(p => "vis:" + p.id), i = ps.indexOf("vis:" + G.forb.fynd);
-      return ps.slice(i + 1).filter(id => (G.forb.gjorda.visitera || {})[id]).length; })(),
-    fore: (() => { const ps = VISITPUNKT.map(p => "vis:" + p.id), i = ps.indexOf("vis:" + G.forb.fynd);
-      return ps.slice(0, i + 1).filter(id => (G.forb.gjorda.visitera || {})[id]).length === i + 1; })(),
+    plats: G.hastPlats, scen: G.scen,
     nasta: Forb.utforHandling(G.forb, "rykta", G.hastId) }));
-  prova("«Kolla» med ett fynd: kortet blir «Du hittade något» med tre svar", fyndPass > 0 && f.id === "fynd" && f.val.length === 3,
+  prova("«Rida nu» med ett fynd: kortet blir «Du hittade något» med tre svar", fyndPass > 0 && f.id === "fynd" && f.val.length === 3,
     `${f.id} · ${f.val.map(v => v.text).join(" / ")}`);
-  /* Fyndets eget kort talar. Handlingen GICK IGENOM fram till fyndet: det
-     ska varken stå en kvittens («Allt ser bra ut») eller ett nej där. */
-  prova("kollen gick fram TILL fyndet och stannade där — ingen kvittens och inget nej",
-    st.sett && !st.rapp && !st.klar && st.fore && st.efter === 0 && f.ater === "",
-    JSON.stringify({ fore: st.fore, efter: st.efter, ater: f.ater }));
+  /* Stallet SÅG fyndet men rapporterade det inte: beslutet är spelarens. Hon
+     flyttas inte, och det står varken en kvittens eller ett nej på kortet. */
+  prova("stallet såg fyndet, hästen står kvar i boxen och ingen kvittens visas",
+    st.sett && !st.rapp && !st.klar && st.plats === "box" && st.scen === "stallinne" && f.ater === "",
+    JSON.stringify({ sett: st.sett, plats: st.plats, scen: st.scen, ater: f.ater }));
   prova("ett öppet fynd blockerar nästa handling", st.nasta[0] === false && st.nasta[1] === "forb.oppet_fynd", JSON.stringify(st.nasta));
   await tryckVal(p2, "svar:3");
   f = await kortet(p2);

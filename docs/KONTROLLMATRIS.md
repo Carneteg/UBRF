@@ -6,6 +6,8 @@ plattformsspecifika kontrollmatrisen."*
 
 **Allt nedan är läst ur källan**, inte ur minnet. Källorna är:
 
+> Produktbeslut 2026-10-04: raderna för att leda/släppa, sadla, tränsa och ta sadel/träns är borttagna — stallet gör hästen redo vid «Rida nu».
+
 | Yta | Fil |
 |---|---|
 | Roblox tangent/gamepad | `roblox/src/client/Input.luau` |
@@ -27,11 +29,6 @@ provet fyrar hjälpens egen tangent och läser vad `Input.luau` gjorde.
 | Sitt upp (knappen på hästen) | `E` | `ButtonX` | tryck på knappen |
 | Sitt av | `E` | `DPadDown` (styrkors ned) | `SITT AV` (CAS-handling) |
 | Rida nu (knappen på hästen) | `R` | `DPadRight` (styrkors höger) | tryck på knappen |
-| Led / släpp hästen | `L` | `DPadLeft` (styrkors vänster) | tryck på knappen |
-| Sadla hästen (knappen på hästen) | `F` | `ButtonY` | tryck på knappen |
-| Tränsa hästen (knappen på hästen) | `F` | `ButtonY` | tryck på knappen |
-| Ta sadeln (boxfronten) | `G` | `ButtonL1` | tryck på knappen |
-| Ta tränset (boxfronten) | `T` | `ButtonB` | tryck på knappen |
 | Titta in i boxen | `V` | `ButtonL2` | tryck på knappen |
 | Öppna / stäng dörr | `X` | `ButtonR3` | tryck på knappen |
 | **DRIV** — ett steg upp i trappan | `W` / `↑` (även `LeftShift`) | `R1` | `DRIV` |

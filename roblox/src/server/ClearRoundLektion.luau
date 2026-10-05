@@ -26,6 +26,7 @@ local Observation = require(script.Parent.RidObservation)
 local Plats = require(script.Parent.RidPlatsObservation)
 local Hinder = require(script.Parent.HinderObservation)
 local Underlag = require(script.Parent.ClearRoundUnderlag)
+local Dressyrbokstaver = require(ReplicatedStorage.HorseCore.Dressyrbokstaver)
 
 local ClearRoundLektion = {}
 ClearRoundLektion.OVNING = "clearround"
@@ -41,6 +42,27 @@ local BANA = table.freeze({
 	table.freeze({ id = "ridhus_hinder_rod_38", mot = "C", farg = "rod" }),
 })
 ClearRoundLektion.BANA = BANA
+--[[ Riktningsidn i banan (`mot`). De är RIKTNING (A-änden / C-änden), men de är
+	också dressyrbokstavs-id och ska finnas i den delade listan. `kravBokstaver`
+	kontrollerar det mot Dressyrbokstaver redan när modulen laddas (se nedan),
+	så ett okänt id i banan stoppar servern i stället för att köras tyst. ]]
+ClearRoundLektion.RIKTNINGSID = table.freeze({ "A", "C" })
+
+--[[ Failar högt för ett namngivet bokstavs-id som inte finns i den delade
+	listan: varje riktningsid, och varje banas `mot` som dessutom ska vara ett
+	deklarerat riktningsid. `uppslag` är Dressyrbokstaver (eller en uppslagare
+	ur `fran`, för provet). Ingen egen koordinatlista — bara frågan «finns den?». ]]
+function ClearRoundLektion.kravBokstaver(bana: any, riktningsid: any, uppslag: any)
+	local deklarerade = {}
+	for _, id in ipairs(riktningsid) do
+		deklarerade[uppslag.krav(id)] = true
+	end
+	for _, h in ipairs(bana) do
+		local id = uppslag.krav(h.mot)
+		if not deklarerade[id] then error("okant_riktningsid:" .. id, 2) end
+	end
+end
+ClearRoundLektion.kravBokstaver(BANA, ClearRoundLektion.RIKTNINGSID, Dressyrbokstaver)
 local HOJD_M = 0.68
 local LINJE_M = 8 -- TR 352.3: 6–15 m före första / efter sista hindret [antagande: 8]
 local LINJE_HALV = 4 -- linjens halva bredd [antagande]

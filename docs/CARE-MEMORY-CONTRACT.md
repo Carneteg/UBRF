@@ -1,3 +1,5 @@
+> **HISTORISKT — GÄLLER INTE (produktbeslut 2026-10-04).** Manuell skötsel och ledning är borttagna ur spelet (Roblox och webb); «Rida nu» är enda vägen och stallet gör hästen redo. Dokumentet bevaras bara för spårbarhet. Se `docs/PRODUCT-CANON.md`, «Produktbeslut 2026-10-04».
+
 # Care memory: the player's own first completion of four care milestones
 
 Status: BUILT_NOT_VERIFIED, 2026-09-27. This contract was written BEFORE the

@@ -445,6 +445,14 @@ jobs:
           test -f tools/simplifytest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/simplifytest.mjs (steget '#273 — förenklingen (kontroller, en handling per fas, eftervårdens val)')" >&2; exit 1; }
           node tools/simplifytest.mjs
 
+      # #289: de tolv dressyrbokstäverna har EN sanning (src/data.js) som Roblox läser
+      # genom den genererade geometrin. Fäller vid saknad, dubblerad eller felplacerad bokstav.
+      - name: "#289 — dressyrbokstäverna (webb och Roblox läser samma lista)"
+        run: |
+          set -euo pipefail
+          test -f tools/dressyrbokstavertest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/dressyrbokstavertest.mjs (steget '#289 — dressyrbokstäverna')" >&2; exit 1; }
+          node tools/dressyrbokstavertest.mjs
+
       - name: Ridkärnan — Gate 01-värden, telemetri, live-koppling och volten
         run: |
           set -euo pipefail

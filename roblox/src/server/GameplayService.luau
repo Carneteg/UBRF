@@ -46,7 +46,6 @@ local Sparning = require(ReplicatedStorage.HorseCore.Sparning)
 	genererade kanon som resten av spelet läser. ]]
 local Spel = require(ReplicatedStorage.UBRFSpel)
 local LedService = require(script.Parent.LedService)
-local LedLektion = require(script.Parent.LedLektion)
 --[[ #182: ledningen oppnar boxdorren i samma tryck. Se `satDorrKrok`.
 	`DorrService` ager dorrarna; den har raden ar bara kopplingen. ]]
 local DorrService = require(script.Parent.DorrService)
@@ -548,6 +547,40 @@ end
 --[[ Sjalva handlingen. Loggen ligger i skalet nedan — «Rida nu» har ett
 	dussin vagar ut, och en loggrad per return hade garanterat glidit
 	isar fran koden. ]]
+
+--[[ ══ NY RITT EFTER ETT RÄKNAT PASS (#290, beslut 2026-10-04) ═══════════
+
+	Ett färdigräknat pass förblir STÄNGT: `Pass.farSittaUpp` nekar fortfarande
+	en direkt uppsittning på det (`spel.redan_ridit`). Vägen till en ny ritt
+	är ett uttryckligt «Rida nu», och den skapar ett HELT NYTT livscykel-par —
+	ny förberedelse och nytt pass med eget `passId` — för den häst hon redan
+	har. Det gamla passet öppnas aldrig igen.
+
+	Bara `RAKNAT` släpper igenom. `RAKNAT` sätts först när sparningen gick fram
+	(eller sessionen ändå inte kan spara), så följande tillstånd rörs inte:
+	  RIDER / EFTERVARD  — pågående ritt eller ofärdig eftervård,
+	  KLART              — eftervården klar men inte bekräftad sparad,
+	  FORE               — det nya passet finns redan (idempotens).
+	Passet RÄKNAS inte här; det görs som förut av `avslutaPass` när ritten
+	faktiskt är genomförd. Välfärd, rätt häst och den fysiska utrustningen
+	prövas av den vanliga `RidaNu`-vägen som följer. ]]
+local function nyttPassEfterRaknat(player: Player): boolean
+	local p = passState[player]
+	local s = state[player]
+	if not p or not s or p.lage ~= Pass.LAGE.RAKNAT then return false end
+	local nr = passnummer(player)
+	local nyttId = Pass.byggId(player.UserId, s.hastId, nr)
+	--[[ Samma id som det räknade passet vore ett kvitto som aldrig kan räknas
+		om: stäng hellre än att öppna ett pass som inte går att registrera. ]]
+	if nyttId == p.passId then return false end
+	state[player] = Preparation.nyState(s.hastId, nr)
+	passState[player] = Pass.nyState(s.hastId, nyttId)
+	valdUtrustning[player] = nil
+	skicka(player)
+	skickaPass(player)
+	return true
+end
+
 local function ridaNuInre(player: Player): (boolean, string?, string?)
 	local naravaro_ok, skal = narvaro(player)
 	if not naravaro_ok then return false, skal end
@@ -555,6 +588,9 @@ local function ridaNuInre(player: Player): (boolean, string?, string?)
 	if not s then return false, "spel.ingen_hast" end
 	local modell = bunden[player]
 	if not modell then return false, "spel.ingen_hast" end
+	if nyttPassEfterRaknat(player) then
+		s = state[player]
+	end
 
 	--[[ ══ HON STÅR REDAN FÄRDIG (#202 punkt 2) ═══════════════════════
 
@@ -1954,18 +1990,6 @@ function GameplayService.start()
 	LedService.satRattHastKrok(function(player)
 		return bunden[player] or GameplayService.bind(player)
 	end)
-
-	--[[ Ledningslektionen till fots (docs/LEADING-LESSON-CONTRACT.md) OBSERVERAR
-		vanlig ledning. Den får samma svar om rätt häst som ledningen, men
-		frågar bara vad som redan är bundet (ingen ny bindning), och om
-		spelaren sitter upp. Ingen krok i LedService, ingen kvittering. ]]
-	LedLektion.start({
-		rattHast = function(player) return bunden[player] end,
-		rider = function(player) return HorseService.horseOf(player) ~= nil end,
-		--[[ C4 ledning: första genuina fullföljandet, prövat och noterat av
-			minnet. LedService:s egen målkrok för förberedelsen är orörd. ]]
-		klar = LektionsMinne.ledningKlar,
-	})
 
 	--[[ Uppsittningen och avsittningen driver passets läge. De hakas på
 		`HorseService` i stället för att `GameplayService` skulle lyssna på

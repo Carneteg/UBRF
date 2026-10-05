@@ -2073,11 +2073,14 @@ function rita(vy: any)
 	end
 
 	--[[ ── 3b. PASSET ÄR RÄKNAT ───────────────────────────────────
-		Dagens pass är avslutat och sparat. Det finns ingenting kvar att
-		göra på den här hästen idag, och framför allt: sitt INTE upp — det
-		nekar servern. Raderna släcks; ett moment att trycka på här vore
-		samma lögn som rubriken var. ]]
+		Dagens pass är avslutat och sparat. Det gamla passet är STÄNGT: sitt
+		INTE upp på det — det nekar servern. Vill hon rida igen startar ett
+		uttryckligt «Rida nu» ett nytt pass (#290). Raderna släcks; ett
+		moment att trycka på här vore samma lögn som rubriken var. ]]
 	if passRaknat() then
+		--[[ Passet är stängt, men dagen är inte slut (#290/#292): ett nytt
+			uttryckligt «Rida nu» öppnar nästa pass. Det är startkortet och
+			prompten som bär den handlingen; panelen har inga rader att trycka. ]]
 		for _, r in pairs(rader) do r.ram.Visible = false end
 		doljOanvanda(anvanda)
 		if rubrik then rubrik.Text = Sprak.t("hud.passet_sparat") end
@@ -2496,6 +2499,19 @@ end
 
 function PreparationController.redo(): boolean
 	return senasteVy ~= nil and senasteVy.redo == true
+end
+
+--[[ #292: passets livscykel, read-only. «Sitt upp» och «Rida nu» frågar den,
+	så att ett RÄKNAT pass (`recorded`) kan stänga uppsittningen och öppna
+	«Rida nu» — beslutet i #290: ett räknat pass förblir stängt, och ett nytt
+	uttryckligt «Rida nu» öppnar nästa. Klienten räknar inget själv; läget
+	kommer ur servern. ]]
+function PreparationController.passLage(): string?
+	return senastePass and senastePass.lage or nil
+end
+
+function PreparationController.passRaknat(): boolean
+	return passRaknat()
 end
 
 --[[ Vilket steg spelaren STÅR PÅ. Ledningens prompt hänger på den:

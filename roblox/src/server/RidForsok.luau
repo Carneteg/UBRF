@@ -84,7 +84,7 @@ RidForsok.OVNINGAR = table.freeze({
 	ridvag = table.freeze({ ["server-vag-1"] = true }),
 	-- Halvvolt tillbaka till spåret (docs/HALF-CIRCLE-LESSON-CONTRACT.md).
 	halvvolt = table.freeze({ ["server-halvvolt-1"] = true }),
-	-- Galoppfattning vid K, delvis (docs/CANTER-DEPARTURE-LESSON-CONTRACT.md).
+	-- Galoppfattning i galoppringen, delvis (docs/CANTER-DEPARTURE-LESSON-CONTRACT.md).
 	galoppfattning = table.freeze({ ["server-galopp-1"] = true }),
 	-- Bom på marken i skritt, hoppningens första steg (docs/GROUND-POLE-LESSON-CONTRACT.md).
 	markbom = table.freeze({ ["server-markbom-1"] = true }),

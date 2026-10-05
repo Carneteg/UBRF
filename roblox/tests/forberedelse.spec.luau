@@ -1294,7 +1294,8 @@ do
 			if d.Name == "LedPrompt" then ledPrompt = d end
 		end
 		check("MountPrompt byggdes av den riktiga controllern", mountPrompt ~= nil)
-		check("LedPrompt byggdes av den riktiga controllern", ledPrompt ~= nil)
+		-- Produktbeslut 2026-10-04: ledningen är borttagen, så ingen LedPrompt byggs.
+		check("ingen LedPrompt byggs av controllern", ledPrompt == nil)
 
 		--[[ a. ÄGARSKAP — fail-closed ska vara oförändrat och LÄSBART. ]]
 		if mountPrompt then

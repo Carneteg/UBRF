@@ -456,35 +456,15 @@ end)
 	3. VÄRLDSINTEGRITET — boxfronten, per häst
 	══════════════════════════════════════════════════════════════════
 
-	Facit är `docs/KONTROLLMATRIS.md`:
-
-	    Ta sadeln (boxfronten)   G   ButtonL1
-	    Ta tränset (boxfronten)  T   ButtonB
-
-	Texten spelaren SER kommer ur språknyckeln, inte ur `ActionText` —
-	`ActionText` är den oöversatta reserven. Därför mäts båda: att
-	nyckeln sitter på prompten, och att katalogens svenska text är den
-	matrisen skriver.
+	PRODUKTBESLUT 2026-10-04: spelaren hämtar ingen utrustning. Boxfronten
+	bär INGA prompter — «Ta sadeln» och «Ta tränset» är borttagna ur
+	`docs/KONTROLLMATRIS.md`. Sadeln och tränset hänger kvar som miljö, så
+	grupperna `Sadelplats` och `Transplats` ska fortfarande finnas.
 	══════════════════════════════════════════════════════════════════ ]]
 local PROMPTFACIT = {
-	{
-		typ = "sadel",
-		namn = "SadelPrompt",
-		nyckel = "tack.ta_sadeln",
-		sv = "Ta sadeln",
-		tangent = Enum.KeyCode.G,
-		gamepad = Enum.KeyCode.ButtonL1,
-	},
-	{
-		typ = "trans",
-		namn = "TransPrompt",
-		nyckel = "tack.ta_transet",
-		sv = "Ta tränset",
-		tangent = Enum.KeyCode.T,
-		gamepad = Enum.KeyCode.ButtonB,
-	},
+	{ typ = "sadel" },
+	{ typ = "trans" },
 }
-local RACKVIDD_PROMPT = 8
 
 skyddat("varldsintegritet", function()
 	avsnitt("varldsintegritet")
@@ -509,58 +489,19 @@ skyddat("varldsintegritet", function()
 			for _, d in ipairs(modell:GetDescendants()) do
 				if d:IsA("ProximityPrompt") then table.insert(prompter, d) end
 			end
-			if #prompter ~= 2 then
+			if #prompter ~= 0 then
 				table.insert(felAntal, ("%s:%d"):format(id, #prompter))
-			end
-			for _, facit in ipairs(PROMPTFACIT) do
-				local p = nil
 				for _, q in ipairs(prompter) do
-					if q.Name == facit.namn then p = q end
-				end
-				if not p then
-					table.insert(felPrompter, ("%s:%s saknas"):format(id, facit.namn))
-				else
-					local avvik = {}
-					if p.KeyboardKeyCode ~= facit.tangent then
-						table.insert(avvik, "tangent=" .. p.KeyboardKeyCode.Name)
-					end
-					if p.GamepadKeyCode ~= facit.gamepad then
-						table.insert(avvik, "gamepad=" .. p.GamepadKeyCode.Name)
-					end
-					if p.ClickablePrompt ~= true then
-						table.insert(avvik, "ClickablePrompt=false")
-					end
-					if p.Enabled ~= true then
-						table.insert(avvik, "Enabled=false")
-					end
-					if p.RequiresLineOfSight ~= false then
-						table.insert(avvik, "RequiresLineOfSight=true")
-					end
-					if p.MaxActivationDistance ~= RACKVIDD_PROMPT then
-						table.insert(avvik,
-							"MaxActivationDistance=" .. tostring(p.MaxActivationDistance))
-					end
-					if p:GetAttribute("SprakNyckel") ~= facit.nyckel then
-						table.insert(avvik,
-							"SprakNyckel=" .. tostring(p:GetAttribute("SprakNyckel")))
-					end
-					local sv = Sprak.iSprak("sv", facit.nyckel)
-					if sv ~= facit.sv then
-						table.insert(avvik, ("sv=%s"):format(tostring(sv)))
-					end
-					if #avvik > 0 then
-						table.insert(felPrompter, ("%s/%s: %s")
-							:format(id, facit.namn, table.concat(avvik, " ")))
-					end
+					table.insert(felPrompter, ("%s/%s finns"):format(id, q.Name))
 				end
 			end
 		end
 	end
 	kolla("Sadelplats och Transplats finns på varje hästs boxfront",
 		#utanPlats == 0, table.concat(utanPlats, " | "))
-	kolla("exakt två prompter på varje boxfront",
+	kolla("inga prompter på någon boxfront (stallet hämtar utrustningen)",
 		#felAntal == 0, table.concat(felAntal, " "))
-	kolla("prompternas egenskaper stämmer mot KONTROLLMATRIS",
+	kolla("ingen sadel- eller tränsprompt finns kvar (KONTROLLMATRIS)",
 		#felPrompter == 0, table.concat(felPrompter, " | "))
 end)
 
@@ -1005,7 +946,7 @@ skyddat("boxfront", function()
 		end
 	end
 	kolla("sadelns delar är synliga igen och går att peka på", tandaDelar)
-	kolla("sadelprompten går att trycka på igen", tandPrompt)
+	kolla("ingen sadelprompt tänds igen — fronten bär inga prompter", tandPrompt == false)
 
 	kopplaNer(sateB)
 end)

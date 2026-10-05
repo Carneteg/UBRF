@@ -3,22 +3,19 @@
 
    Paritetspasset 2026-09-28 (#264, docs/WEB-P1A-STABLE-FLOW-CONTRACT.md):
    Roblox är facit. Samma hierarki som panelen där — rubrik, instruktion,
-   högst fyra val, "+ Fler handlingar", guldfärgad återkoppling — och samma
-   kort i samma ordning som `Naromrade.guideSteg`:
+   högst fyra val, "+ Fler handlingar", guldfärgad återkoppling.
 
-     ga_till → valj (Rida nu / själv) → halsa → visitera → rykta → hovar →
-     hamta_sadel → sadla → hamta_trans → transa → leda → leder → sittupp
+   PRODUKTBESLUT 2026-10-04 (ledning och manuell skötsel är borttagna): korten
+   är nu bara
 
-   med fyndet och välfärdsstoppet före allt annat.
+     ga_till → valj (ETT val: Rida nu) → sittupp
+
+   med fyndet och välfärdsstoppet före allt annat. Stallet gör hästen redo,
+   och hon står i ridhuset när ritten börjar. Hälsa, kolla, rykta, kratsa,
+   hämta och lägg på sadel och träns samt ledning finns inte som spelarhandlingar.
 
    Reglerna bor i src/forberedelse.js (porten av Preparation.luau). Den här
    filen RITAR och skickar handlingar — den bestämmer ingenting själv.
-
-   #273 S2 (T2): EN HANDLING PER KORT. Hälsa, kolla, rykta, kratsa, sadla
-   och tränsa är var sin knapp; servern/regelmodulen utför fasens moment i
-   ordning (Forb.utforHandling). Kortet bär EN kort rad. Detaljmeningarna
-   — hovarna, mungiporna, gjorden i tre tag — står ordagrant kvar, men i
-   det frivilliga kunskapslagret bakom «Så gör man».
 
    All text går genom tSpr (src/spel/sprak.js) eller skötselkanonens
    engelska syskonfält. Ingen svensk sträng står här.
@@ -73,33 +70,7 @@ function skMomentNamn(m) {
 
 function skAterkoppla(text) { STEGKORT.aterkoppling = text || ""; STEGKORT.aterT = 6; stegkortRita(true); }
 
-/* #273 S2: handlingens knapp, korta rad och kvittens. VARJE NYCKEL ÄR EN
-   LITERAL — språkgrinden ska kunna se dem. */
-const SK_HANDLING = {
-  halsa:  { knapp: () => tSpr("handling.halsa"),  text: () => tSpr("handling.halsa_text"),  klar: () => tSpr("handling.halsa_klar") },
-  kolla:  { knapp: () => tSpr("handling.kolla"),  text: () => tSpr("handling.kolla_text"),  klar: () => tSpr("handling.kolla_klar") },
-  rykta:  { knapp: () => tSpr("handling.rykta"),  text: () => tSpr("handling.rykta_text"),  klar: () => tSpr("hud.bra") },
-  kratsa: { knapp: () => tSpr("handling.kratsa"), text: () => tSpr("handling.kratsa_text"), klar: () => tSpr("hud.bra") },
-  sadla:  { knapp: () => tSpr("handling.sadla"),  text: () => tSpr("handling.sadla_text"),  klar: () => tSpr("hud.bra") },
-  transa: { knapp: () => tSpr("handling.transa"), text: () => tSpr("handling.transa_text"), klar: () => tSpr("hud.bra") },
-};
-function skHandling(id) {
-  const r = Forb.utforHandling(G.forb, id, G.hastId);
-  if (!r[0]) { skAterkoppla(skAvslag(r)); return; }
-  STEGKORT.kunskap = false;
-  if (r[2] === "fynd") { skAterkoppla(""); return; }
-  skAterkoppla("✓  " + SK_HANDLING[id].klar());
-}
-/* Det frivilliga kunskapslagret: handlingens moment med kanonens egna
-   meningar, ordagrant. Läses bara av den som öppnar det. */
-function skKunskap(h) {
-  return h.moment.map(m => {
-    const namn = skMomentNamn(m), text = skKanon(m, "text");
-    return namn && namn !== text ? `${namn} — ${text}` : text;
-  });
-}
-
-/* Förberedelsen är klar till ledningen: hästens dag sätts EN gång, av
+/* Förberedelsen är klar: hästens dag sätts EN gång, av
    samma regel som GameplayService.dagsformFor, och ridtillståndet byggs
    — det avslutaSkotsel gjorde efter webbens gamla utvärderingstabell. */
 function stegkortForberedd() {
@@ -124,8 +95,10 @@ function skSargport() {
 }
 
 /* «Rida nu»: stallet gör i ordning henne genom de RIKTIGA momenten och
-   leder henne till ridhuset. Ett fynd stoppar stallet — beslutet är
-   spelarens (Preparation.autoForbered). */
+   ställer henne i ridhuset — spelaren leder henne inte dit. Ett fynd
+   stoppar stallet — beslutet är spelarens (Preparation.autoForbered).
+   `G.hastPlats === "leds"` är bara det interna namnet på «hon är ute ur
+   boxen»; hästen står still vid sargporten (se `ledHasten`). */
 function stegkortRidaNu() {
   const s = G.forb;
   if (!s) return;
@@ -184,18 +157,8 @@ function forstaRitten() {
   return true;
 }
 
-/* Den manuella ledningen kvitteras när hästen FYSISKT är framme i
-   ridhuset (GameplayService.kvitteraLedning) — aldrig av en knapp. */
-function stegkortKvitteraLedning() {
-  const s = G.forb;
-  if (!s || G.hastPlats !== "leds" || s.klara.leda) return;
-  const n = Forb.nasta(s);
-  if (!n || n.id !== "leda") return;
-  if (G.scen === "ridhusinne" && Forb.utforMoment(s, "leda", "leda", G.hastId)[0]) stegkortDagsform();
-}
-
 /* Dagsformen läses när hon är framme — som Roblox, där dagsformFor frågas
-   vid uppsittningen. Ledningen är spelarens eget arbete och räknas med. */
+   vid uppsittningen. */
 function stegkortDagsform() {
   if (!G.forb || !G.skotselRes) return;
   G.dagsform = Forb.dagsform(G.forb);
@@ -260,79 +223,33 @@ function stegkortKort(antaNara) {
           skAterkoppla(r[0] ? "" : skAvslag(r));
         } })) };
 
-  if (G.hastPlats === "leds") {
-    if (Forb.redo(s))
-      return { id: "sittupp", rubrik: tSpr("guide.sittupp_rubrik", n), text: tSpr("guide.sittupp_text"), val: [] };
-    return { id: "leder", rubrik: tSpr("guide.leder_rubrik", n), text: tSpr("guide.leder_text", n), val: [] };
-  }
+  /* Hon står i ridhuset (efter «Rida nu» eller First Ride): kortet säger
+     bara att det är dags att sitta upp. Ingen ledning finns att visa. */
+  /* #297: kortet bär en TRYCKBAR «Sitt upp» — på touch ska den synliga knappen räcka, utan att
+     spelaren behöver hitta hålltangenten i världen. Samma grind som världens prompt (`sittUpp`). */
+  if (G.hastPlats === "leds")
+    return { id: "sittupp", rubrik: tSpr("guide.sittupp_rubrik", n), text: tSpr("guide.sittupp_text", n),
+      val: [{ id: "sittupp:sitt_upp", text: tSpr("guide.sittupp_rubrik", n), primar: true,
+        gor() { sittUpp("ridhus"); } }] };
 
   const nara = antaNara || stegkortNara();
   if (!nara)
     return { id: "ga_till", rubrik: tSpr("guide.ga_till_rubrik", n), text: tSpr("guide.ga_till_text"), val: [] };
 
-  const fler = [{ id: "fler:boxen", text: tSpr("guide.fler_boxen"), gor() { visaBoxmeny(); } }];
-
   /* «Rida nu» är en prompt på hästen i Roblox (RidaNuPrompt, R 0,35 s) och
      finns i världen även när startvalet står i panelen — panelen visar den
-     bara inte som rad där (UI-1: exakt två knappar). */
+     bara inte som rad där (UI-1: exakt ett val). */
   const ridaNuVarld = { id: "rad:rida_nu", text: tSpr("guide.val_rida_nu", n), tangent: "KeyR", hall: 0.35,
     gor: stegkortRidaNu };
-  if (stegkortOrort(s) && !STEGKORT.sjalv[G.hastId])
-    return { id: "valj", rubrik: tSpr("guide.valj_rubrik"), text: tSpr("guide.valj_kort", n), fler: [],
+  if (stegkortOrort(s))
+    return { id: "valj", rubrik: tSpr("guide.valj_rubrik"), text: tSpr("guide.valj_kort", n, n), fler: [],
       rader: [], varld: [ridaNuVarld],
       val: [
         { id: "start:rida_nu", text: tSpr("guide.val_rida_nu", n), primar: true, gor: stegkortRidaNu },
-        { id: "start:sjalv", text: tSpr("guide.val_sjalv", n), primar: false,
-          gor() { STEGKORT.sjalv[G.hastId] = true; stegkortRita(true); } },
       ] };
 
-  const fas = Forb.nasta(s);
-  if (!fas) return null;
-  /* #273 S2: handlingen som står på tur — EN knapp, EN kort rad. */
-  const hd = Forb.nastaHandling(s, fas.id);
-  const knapp = () => ({ id: "handling:" + hd.id, text: SK_HANDLING[hd.id].knapp(), primar: true,
-    gor() { skHandling(hd.id); } });
-  const hText = () => SK_HANDLING[hd.id].text();
-
-  /* PROMPTRADERNA — Roblox ProximityPrompts vid hästen, med samma tangent
-     och hålltid som InteractionController (RidaNuPrompt R 0,35 s,
-     LedPrompt L 0,2 s, Sadla/Tränsa F 0,35 s, tack på boxfronten 0 s).
-     Den kortspecifika prompten rankas först, «Rida nu» sist — samma
-     ordning som Naromrade ger under utr:- och leda-stegen. */
-  const ridaNuRad = { id: "rad:rida_nu", text: tSpr("guide.val_rida_nu", n), tangent: "KeyR", hall: 0.35,
-    gor: stegkortRidaNu };
-  const kort = (id, rubrik, text, val, egna) => ({ id, rubrik, text, val: val || [], fler,
-    kunskap: hd ? skKunskap(hd) : [],
-    rader: [...(egna || []), ridaNuRad].slice(0, 3) });
-
-  const m = Forb.nastaMoment(s, fas.id);
-  if (fas.id === "halsa")
-    return kort("halsa", tSpr("guide.halsa_rubrik", n), hText(), [knapp()]);
-  if (fas.id === "visitera")
-    return kort("visitera", tSpr("guide.visitera_rubrik", n), hText(), [knapp()]);
-  if (fas.id === "rykta")
-    return kort("rykta", tSpr("guide.rykta_rubrik", n), hText(), [knapp()]);
-  if (fas.id === "iordning") {
-    if (!m.utr)
-      return kort("hovar", tSpr("guide.hovar_rubrik"), hText(), [knapp()]);
-    const trans = m.utr === SADELFAS.length;
-    if (!s.hand[trans ? "trans" : "sadel"])
-      return trans
-        ? kort("hamta_trans", tSpr("guide.hamta_trans_rubrik"), tSpr("guide.hamta_trans_text"), [],
-            [{ id: "tack:trans", text: tSpr("tack.ta_transet"), tangent: "KeyE", hall: 0,
-              gor() { s.hand.trans = true; skAterkoppla(""); } }])
-        : kort("hamta_sadel", tSpr("guide.hamta_sadel_rubrik"), tSpr("guide.hamta_sadel_text", n), [],
-            [{ id: "tack:sadel", text: tSpr("tack.ta_sadeln"), tangent: "KeyE", hall: 0,
-              gor() { s.hand.sadel = true; skAterkoppla(""); } }]);
-    return kort(trans ? "transa" : "sadla", tSpr(trans ? "guide.transa_rubrik" : "guide.sadla_rubrik"),
-      hText(), [knapp()],
-      [{ id: trans ? "rad:transa" : "rad:sadla", text: tSpr(trans ? "interaktion.transa_namn" : "interaktion.sadla_namn", n),
-        tangent: "KeyF", hall: 0.35, gor() { skHandling(hd.id); } }]);
-  }
-  if (fas.id === "leda")
-    return kort("leda", tSpr("guide.leda_rubrik", n), tSpr("guide.leda_text"), [],
-      [{ id: "leda", text: tSpr("led.borja_namn", n), tangent: "KeyL", hall: 0.2,
-        gor() { stegkortForberedd(); G.hastPlats = "leds"; VD.spår.length = 0; skAterkoppla(""); } }]);
+  /* Förberedelsen är påbörjad men hästen står inte i ridhuset: inget kort.
+     Det finns ingen manuell skötsel att fortsätta med (beslut 2026-10-04). */
   return null;
 }
 
@@ -392,7 +309,7 @@ function stegkortInstallera() {
   #stegkort .skT{margin:0 0 8px;color:#D6D2C8}
   #stegkort .skV{display:grid;gap:6px}
   #stegkort button{all:unset;box-sizing:border-box;display:block;width:100%;cursor:pointer;padding:8px 10px;
-    border-radius:6px;background:rgba(255,255,255,.07);color:#EDEAE3;font:inherit;line-height:1.25;min-height:36px}
+    border-radius:6px;background:rgba(255,255,255,.07);color:#EDEAE3;font:inherit;line-height:1.25;min-height:44px}
   #stegkort button:hover,#stegkort button:focus-visible{background:rgba(255,255,255,.13);outline:none}
   #stegkort button.primar{background:rgb(92,76,38);color:#FFF6E0}
   #stegkort button.primar:hover{background:rgb(112,93,47)}

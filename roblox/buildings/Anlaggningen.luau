@@ -972,6 +972,82 @@ local function byggSkyltar(model: Model, base: CFrame)
 	end
 end
 
+--[[ ── DRESSYRBOKSTÄVERNA (#289) ─────────────────────────────────────
+
+	De tolv fasta bokstäverna A C K V E S H F P B R M på ridhusets sarg.
+	Id och läge kommer ORDAGRANT ur `G.ridhus.dressyrBokstaver`, som
+	`tools/exportera-geometri.js` genererar ur `DRESSYRBOKSTAVER` i
+	`src/data.js` — ingen egen lista här. Regeln för vilken sarg en bokstav
+	sitter på är densamma som webbens `bokstavLage` (src/world.js): x == 0
+	västra långsidan, x == bredden östra, y == 0 södra kortsidan, annars
+	norra; `paSarg` sätter skylten på den fysiska sargen (C hänger på norra
+	sargen framför C-blocket, där fotot visar den).
+
+	Skylten är en liten skiva på sargens insida med bokstaven som stor
+	`TextLabel`. Bildgåtan finns bara som ATTRIBUT (`Bild`, `BildKalla`):
+	endast C, F, B och M är verifierade ur foto, och inga nya bilder
+	ritas. Det lösa bokstavsstället bakom sargen (`bokstavsstall`) är en
+	annan sak och rörs inte. ]]
+local BOKSTAV_B, BOKSTAV_H, BOKSTAV_Y = 0.9, 0.7, 1.0
+local function byggDressyrBokstaver(model: Model, base: CFrame)
+	local R = G.ridhus
+	local lista = R.dressyrBokstaver
+	if not lista or not R.dressyr then return end
+	local o, dr, ba = R.origo, R.dressyr, R.bana
+	for _, bo in ipairs(lista) do
+		local x, y = dr.x + bo.x, dr.y + bo.y
+		local nx, nz -- normalen: INÅT mot banan
+		if bo.paSarg == "N" then
+			y = ba.y + ba.h
+			nx, nz = 0, -1
+		elseif bo.paSarg == "S" then
+			y = ba.y
+			nx, nz = 0, 1
+		elseif bo.x == 0 then
+			nx, nz = 1, 0
+		elseif bo.x == dr.w then
+			nx, nz = -1, 0
+		elseif bo.y == 0 then
+			nx, nz = 0, 1
+		else
+			nx, nz = 0, -1
+		end
+		local vin = math.atan2(nx, nz)
+		local del = Instance.new("Part")
+		del.Name = "Dressyrbokstav " .. bo.b
+		del.Anchored = true
+		del.CanCollide = false
+		del.Size = Vector3.new(BOKSTAV_B * BK.M, BOKSTAV_H * BK.M, 0.05 * BK.M)
+		del.CFrame = base * CFrame.new((o.x + x + nx * 0.04) * BK.M, BOKSTAV_Y * BK.M, (o.y + y + nz * 0.04) * BK.M)
+			* CFrame.Angles(0, vin, 0)
+		del.Color = Color3.fromRGB(244, 244, 240)
+		del.Material = Enum.Material.SmoothPlastic
+		del:SetAttribute("BokstavId", bo.b)
+		del:SetAttribute("Bild", tostring(bo.bild))
+		del:SetAttribute("BildKalla", tostring(bo.bildKalla))
+		del:SetAttribute("Layout", string.format("%g,%g", bo.x, bo.y))
+		del.Parent = model
+
+		local yta = Instance.new("SurfaceGui")
+		yta.Name = "Bokstavsyta"
+		yta.Face = Enum.NormalId.Back
+		yta.AlwaysOnTop = false
+		yta.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		yta.PixelsPerStud = 40
+		yta.Parent = del
+
+		local etikett = Instance.new("TextLabel")
+		etikett.Name = "Text"
+		etikett.Size = UDim2.new(1, 0, 1, 0)
+		etikett.BackgroundTransparency = 1
+		etikett.Font = Enum.Font.GothamBold
+		etikett.TextScaled = true
+		etikett.TextColor3 = Color3.fromRGB(38, 42, 46)
+		etikett.Text = bo.b
+		etikett.Parent = yta
+	end
+end
+
 -- Belysningsmasterna runt uteridbanan. Dubbel armatur på en tvärarm — se den
 -- närmaste masten i references/omnejd/banan-03. Lägena står i G.props.
 local function byggMaster(model: Model, base: CFrame)
@@ -2845,6 +2921,7 @@ byggMark(model, base)
 for _, b in ipairs(G.byggnader) do byggHus(model, base, b) end
 byggStallInre(model, base)
 byggRidhusInre(model, base)
+byggDressyrBokstaver(model, base)
 byggStallIdentitet(model, base)
 byggRidhusIdentitet(model, base)
 byggStaket(model, base)

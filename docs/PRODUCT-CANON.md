@@ -250,6 +250,64 @@ leveransmatrisen, `docs/LEVERANSMATRIS.md`.
 
 Se även `docs/ASSET-SOURCE-OF-TRUTH.md` för material- och datakällor.
 
+### Produktbeslut 2026-10-04: ledning och manuell skötsel tas bort
+
+Beslutet är Tobias, efter att ledningsfelet i #265 reproducerats
+(`265_LEADING_BLOCKER_REPRO_READY_FOR_CHATGPT_REVIEW`).
+
+**Beslut:**
+1. **Ledning tas bort helt** ur spelet, på både Roblox och webb: ingen
+   ledprompt, inget koppel, ingen ledlektion, inget ledningsminne.
+2. **Manuell skötsel tas bort** som spelarhandling: hälsa, känn över, ryktning,
+   hovar, sadling och tränsning görs inte längre av spelaren.
+3. Spelaren väljer **«Rida nu»**. Stallet gör hästen redo och hästen står i
+   ridhuset när ritten börjar. Spelaren leder den inte dit.
+4. Ledlektionen och ledningsminnet tas bort helt.
+
+**Gäller oförändrat — får aldrig tas bort:**
+- välfärdsstopp: en häst som stallet ser är sjuk, halt eller inte redo rids inte,
+- säkerhetsgrindar och fysisk sanning om var hästen står,
+- hästen är alltid korrekt och säkert förberedd när ritten börjar,
+- spelet lär aldrig ut fel hästhantering.
+
+**Ersätter:**
+- pelare 3 «Responsibility is gameplay» i den del som kräver att spelaren
+  själv utför plikter, och raden «hur man leder och hanterar en häst från
+  marken» i pelare 2,
+- «manuellt utförande är frivilligt» i FUN FIRST-beslutet 2026-09-14: det
+  manuella utförandet finns inte längre, bara det som stallet gör åt spelaren,
+- ledningssteget i punkt 4 ovan: stall → utrustning → dörr → ledning → ridhus
+  blir stall → «Rida nu» → ridhus.
+
+**Hästkunskap (Tobias, senare 2026-10-04):** skötsel före ritten förblir
+borta ur ridflödet. Hästkunskapen kommer tillbaka som interaktiva
+teorirumslektioner; första genomförandet ger en permanent kunskapsrosett.
+Rosetter är samlar-/progressionsbelöning, inte direkt ridbonus. Teorirummet är
+inte byggt än och ingår inte i #288.
+
+**Eftervård efter ritten gäller oförändrat (#273 S3):** valet «Stallet tar
+hand om henne» (utan straff) eller «Ta hand om henne själv» är kvar på båda
+plattformarna. Beslutet om ledning och skötsel gäller bara förberedelsen före
+ritten.
+
+**Konsekvens för #265:** P1 (topologi för ledd häst) förlorar sin grund och är
+**NO_PORT, obsolet genom produktbeslut** (ChatGPT-order 2026-10-04 på #265). Den
+äldre trafik-/gångzonstopologin för ledda hästar portas inte. P2 och P5
+påverkas inte.
+
+**Genomfört (branch `claude/ta-bort-ledning-skotsel`):** på både Roblox och webb
+har startskärmen ett enda val, «Rida nu»; hälsa, kolla, rykta, kratsa,
+hämtning och påläggning av sadel och träns samt ledning finns inte som
+spelarhandlingar; ledlektionen och ledningsminnet är borta; hästen står kvar vid
+sargporten i ridhuset. Välfärdsstopp och säkerhetsgrindar är oförändrade.
+Kvarvarande, medvetet orörda delar redovisas i leveransrapporten på #265.
+
+**Leverans:** Roblox och webb i samma leverans (se 2026-09-28). Äldre
+sparfiler som innehåller ledningsdata ska tåla att läsas: datat ignoreras,
+spelaren förlorar ingenting annat. Plan och steg: kommentar på #265.
+Historiska dokument (`docs/LEADING-LESSON-CONTRACT.md`,
+`docs/LEADING-MEMORY-CONTRACT.md`) ligger kvar för spårbarhet men gäller inte.
+
 ## Beslutsfilter
 
 Före en större feature eller ändring ska ChatGPT och Claude kunna svara ja på minst följande:

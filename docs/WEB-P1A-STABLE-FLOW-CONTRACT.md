@@ -1,3 +1,5 @@
+> **DELVIS ERSATT (produktbeslut 2026-10-04).** Allt som beskriver att spelaren själv hälsar, kollar, ryktar, kratsar, hämtar och lägger på sadel och träns eller leder hästen gäller inte längre. Det som gäller kvar: stegkortet, «Rida nu», fynd och välfärdsstopp; hästen står i ridhuset efter «Rida nu». Se `docs/PRODUCT-CANON.md`, «Produktbeslut 2026-10-04».
+
 # Web P1a: the stable flow as in Roblox (the step card, the start choice, Rida nu, the welfare stop)
 
 Status: contract written before code, 2026-09-28. **BUILT, WEB SUITE GREEN (28/28), FALSIFIED (8/8), NOT PHYSICALLY PLAYED BY TOBIAS** — READY_FOR_CHATGPT_REVIEW.

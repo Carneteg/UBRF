@@ -514,12 +514,12 @@ Sprak.text = {
 		en = "Follow the gold arrow to the box.",
 	},
 	["guide.valj_rubrik"] = {
-		sv = "Välj hur du börjar",
-		en = "Choose how to start",
+		sv = "Dags att rida",
+		en = "Time to ride",
 	},
 	["guide.valj_kort"] = {
-		sv = "Rida nu: stallet gör i ordning %s rätt och leder hästen till ridhuset. Eller gör i ordning allt själv — steg för steg.",
-		en = "Ride now: the stable gets %s ready properly and leads the horse to the arena. Or do it all yourself — step by step.",
+		sv = "%s är din häst idag. Du behöver inte sadla eller tränsa själv — stallet gör %s redo.",
+		en = "%s is your horse today. You do not need to saddle or bridle yourself — the stable gets %s ready.",
 	},
 	["guide.val_rida_nu"] = {
 		sv = "Rida nu — %s",
@@ -594,8 +594,12 @@ Sprak.text = {
 		en = "Mount %s",
 	},
 	["guide.sittupp_text"] = {
-		sv = "Sitt upp och rid! Välj sedan en lektion hos Ugneta eller rid fritt.",
-		en = "Mount up and ride! Then choose a lesson with Ugneta or ride freely.",
+		sv = "%s är klar och väntar i ridhuset. Välj «Sitt upp».",
+		en = "%s is ready and waiting in the arena. Choose «Mount».",
+	},
+	["guide.ga_till_ridhus_text"] = {
+		sv = "%s är klar och väntar i ridhuset. Följ den gyllene pilen dit och välj «Sitt upp».",
+		en = "%s is ready and waiting in the arena. Follow the gold arrow there and choose «Mount».",
 	},
 	["hjalp.rubrik"] = {
 		sv = "Kontroller",
@@ -1334,32 +1338,32 @@ Sprak.text = {
 		en = "Finish the canter departure",
 	},
 	["galopplektion.intro"] = {
-		sv = "Trava en bit, be om galopp inne i den gröna ringen K på mittlinjen och galoppera vidare. Galoppsidan bedöms inte här.",
-		en = "Trot for a while, ask for canter inside the green ring K on the centre line and canter on. The canter lead is not judged here.",
+		sv = "Trava en bit, be om galopp inne i den gröna ringen på mittlinjen och galoppera vidare. Galoppsidan bedöms inte här.",
+		en = "Trot for a while, ask for canter inside the green ring on the centre line and canter on. The canter lead is not judged here.",
 	},
 	["galopplektion.trot_on"] = {
-		sv = "Trava på med jämn takt mot ringen K.",
-		en = "Trot on with an even rhythm towards the ring K.",
+		sv = "Trava på med jämn takt mot den gröna ringen.",
+		en = "Trot on with an even rhythm towards the green ring.",
 	},
 	["galopplektion.trot_first"] = {
-		sv = "Bra försök! Trava lite längre först, sedan galopp i ringen K.",
-		en = "Good try! Trot a little longer first, then canter in the ring K.",
+		sv = "Bra försök! Trava lite längre först, sedan galopp i den gröna ringen.",
+		en = "Good try! Trot a little longer first, then canter in the green ring.",
 	},
 	["galopplektion.canter_at_k"] = {
-		sv = "Fint! Be om galopp när du är inne i ringen K.",
-		en = "Nice! Ask for canter when you are inside the ring K.",
+		sv = "Fint! Be om galopp när du är inne i den gröna ringen.",
+		en = "Nice! Ask for canter when you are inside the green ring.",
 	},
 	["galopplektion.canter_outside"] = {
-		sv = "Galoppen kom utanför ringen. Trava igen och prova i ringen K.",
-		en = "The canter came outside the ring. Trot again and try in the ring K.",
+		sv = "Galoppen kom utanför ringen. Trava igen och prova i den gröna ringen.",
+		en = "The canter came outside the ring. Trot again and try in the green ring.",
 	},
 	["galopplektion.canter_early"] = {
-		sv = "Galoppen kom innan ni var framme vid ringen K. Trava igen och be om galopp först när ni är inne i ringen.",
-		en = "The canter came before you reached the ring K. Trot again and ask for canter only once you are inside the ring.",
+		sv = "Galoppen kom innan ni var framme vid den gröna ringen. Trava igen och be om galopp först när ni är inne i ringen.",
+		en = "The canter came before you reached the green ring. Trot again and ask for canter only once you are inside the ring.",
 	},
 	["galopplektion.canter_late"] = {
-		sv = "Galoppen kom när ni redan hade passerat ringen K. Trava igen och be om galopp lite tidigare, när ni rider in i ringen.",
-		en = "The canter came when you had already passed the ring K. Trot again and ask for canter a little earlier, as you ride into the ring.",
+		sv = "Galoppen kom när ni redan hade passerat den gröna ringen. Trava igen och be om galopp lite tidigare, när ni rider in i ringen.",
+		en = "The canter came when you had already passed the green ring. Trot again and ask for canter a little earlier, as you ride into the ring.",
 	},
 	["galopplektion.canter_on"] = {
 		sv = "Galopp! Rid vidare en bit i galopp.",
@@ -1378,8 +1382,8 @@ Sprak.text = {
 		en = "I missed part of the ride. Keep trotting and we start over.",
 	},
 	["galopplektion.complete"] = {
-		sv = "Galoppfattningen klar! Du fattade galopp vid K och galopperade vidare.",
-		en = "Canter departure completed! You picked up canter at K and cantered on.",
+		sv = "Galoppfattningen klar! Du fattade galopp i den gröna ringen och galopperade vidare.",
+		en = "Canter departure completed! You picked up canter in the green ring and cantered on.",
 	},
 	["galopplektion.timeout"] = {
 		sv = "Vi hann inte klart. Ta en paus eller prova igen.",
@@ -1706,16 +1710,16 @@ Sprak.text = {
 		en = "Start in the start ring on the track and follow the curve towards the middle.",
 	},
 	["aterkoppling.galopp.klar"] = {
-		sv = "Bra! Galopp vid K efter %s m trav, sedan %s m galopp. Galoppsidan bedömdes inte.",
-		en = "Good! Canter at K after %s m of trot, then %s m of canter. The lead was not judged.",
+		sv = "Bra! Galopp i den gröna ringen efter %s m trav, sedan %s m galopp. Galoppsidan bedömdes inte.",
+		en = "Good! Canter in the green ring after %s m of trot, then %s m of canter. The lead was not judged.",
 	},
 	["aterkoppling.galopp.nasta"] = {
 		sv = "Nästa gång: fatta galopp från samma lugna trav, mitt i ringen.",
 		en = "Next time: pick up canter from the same calm trot, in the middle of the ring.",
 	},
 	["aterkoppling.galopp.igen"] = {
-		sv = "Trava en bit först och be om galopp inne i ringen K.",
-		en = "Trot for a while first and ask for canter inside the ring K.",
+		sv = "Trava en bit först och be om galopp inne i den gröna ringen.",
+		en = "Trot for a while first and ask for canter inside the green ring.",
 	},
 	["aterkoppling.markbom.klar"] = {
 		sv = "Snyggt! %s m rakt fram mot bommen, över den och %s m efteråt. Avståndet mellan hovarna och bommen mäts inte.",
@@ -1822,8 +1826,8 @@ Sprak.text = {
 		en = "Nice – track, half-circle and back to the track!",
 	},
 	["aterkoppling.galopp.kort"] = {
-		sv = "Bra – galopp vid K! Galoppsidan bedömdes inte.",
-		en = "Good – canter at K! The lead was not judged.",
+		sv = "Bra – galopp i den gröna ringen! Galoppsidan bedömdes inte.",
+		en = "Good – canter in the green ring! The lead was not judged.",
 	},
 	["aterkoppling.markbom.kort"] = {
 		sv = "Snyggt – över bommen i skritt! Avståndet mellan hovarna och bommen mäts inte.",
@@ -2254,8 +2258,8 @@ Sprak.text = {
 		en = "Now for the half-circle: follow the curve off the track and back to it.",
 	},
 	["halsning.galopp"] = {
-		sv = "Nu övar vi galoppfattning: trava först och be om galopp inne i ringen vid K.",
-		en = "Now for the canter departure: trot first and ask for canter inside the ring at K.",
+		sv = "Nu övar vi galoppfattning: trava först och be om galopp inne i den gröna ringen.",
+		en = "Now for the canter departure: trot first and ask for canter inside the green ring.",
 	},
 	["halsning.markbom"] = {
 		sv = "Nu rider vi över markbommen: skritta rakt mot bommen, mitt emellan märkena.",
@@ -2340,6 +2344,10 @@ Sprak.text = {
 	["led.ingen_hast"] = {
 		sv = "Ingen häst att leda",
 		en = "No horse to lead",
+	},
+	["led.borttagen"] = {
+		sv = "Man leder inte hästen längre — välj «Rida nu».",
+		en = "You no longer lead the horse — choose “Ride now”.",
 	},
 	["led.fel_hast"] = {
 		sv = "Det är inte din häst",
@@ -2932,6 +2940,14 @@ Sprak.text = {
 	["eftervard.val_text"] = {
 		sv = "Bra ridet. Vill du ta hand om henne själv, eller ska stallet göra det?",
 		en = "Well ridden. Do you want to look after her yourself, or shall the stable do it?",
+	},
+	["eftervard.stallet_text"] = {
+		sv = "Bra ridet. Stallet tar hand om henne.",
+		en = "Well ridden. The stable looks after her.",
+	},
+	["pass.stallet_gor_det"] = {
+		sv = "Stallet tar hand om henne",
+		en = "The stable looks after her",
 	},
 	["eftervard.stallet"] = {
 		sv = "Stallet tar hand om henne",

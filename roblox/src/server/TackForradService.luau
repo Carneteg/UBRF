@@ -233,68 +233,46 @@ local function hangUpp(foralder: Folder, b: CFrame, hastId: string, namn: string
 		vid(0.42, 1.16), LADER_MORK)
 	transgrupp.PrimaryPart = trans
 
-	--[[ NAMNSKYLTEN. Webbens sadelkammare har den på bygeln — "Namnskyltarna
-		sitter på byglarna" — och här är den prompten. Hästens namn är ett
-		EGENNAMN och skickas som argument, inte som översatt text. ]]
-	--[[ EN PROMPT, EN HANDLING (#235 FAS 1). Den hamtade forut hela paret
-		med ett tryck. Tranget far sin egen i FAS 3; tills dess hanger det
-		kvar utan prompt, och det ar avsiktligt — inte en gloms. ]]
-	local prompt = Instance.new("ProximityPrompt")
-	prompt.Name = "SadelPrompt"
-	prompt.ActionText = "Ta sadeln"
-	prompt:SetAttribute("SprakNyckel", "tack.ta_sadeln")
-	prompt.ObjectText = namn .. "s sadel"
-	prompt:SetAttribute("SprakObjekt", "tack.sadel_for")
-	prompt:SetAttribute("SprakArg", namn)
-	prompt.HoldDuration = 0
-	prompt.MaxActivationDistance = 8
-	prompt.RequiresLineOfSight = false
-	prompt.ClickablePrompt = true
-	--[[ EGEN KNAPP (#182 del 3). Sadeln delade `E` med boxdorren och
-		uppsittningen, och de tre ar natbara samtidigt vid boxen.
-		`G` och `ButtonL1` ar «ga vidare» respektive gangart ned — bada
-		lever bara i sadeln, och utrustning hamtar man till fots. ]]
-	prompt.Exclusivity = Enum.ProximityPromptExclusivity.AlwaysShow
-	prompt.KeyboardKeyCode = Enum.KeyCode.G
-	prompt.GamepadKeyCode = Enum.KeyCode.ButtonL1
-	prompt.Parent = sadel
+	--[[ PRODUKTBESLUT 2026-10-04: spelaren hämtar ingen utrustning. «Rida nu»
+		låter stallet lägga på sadel och träns, så fronten bär INGA prompter
+		(«Ta sadeln» och «Ta transet» är borttagna). Sadeln och tränset hänger
+		kvar som miljö, precis som på UBRF, och `satSynlig` släcker dem när
+		stallet har tagit dem. Hästens namn bärs som attribut på sadeln. ]]
+	sadel:SetAttribute("HastNamn", namn)
 
-	prompt.Triggered:Connect(function(spelare)
-		TackForradService.tagSadel(spelare, hastId, namn)
-	end)
+	--[[ ── NAMNSKYLTEN: ETT VITT KORT I HÅLLARE, PÅ BOXFRONTEN ────────
+		Förlaga: `references/buildings/stall/stall-inne-05-stallgangen.jpg`
+		(och `stall-gang-05.jpg`) — ett vitt kort i en hållare på boxfrontens
+		stolpe, hästens namn i blå versaler överst. Fotot bär också små rader
+		under namnet; de går inte att läsa och byggs därför INTE ([REFERENCE GAP]).
+		Stiliserat betyder förenklat: kortet med namnet, ingenting påhittat.
 
-	--[[ ── TRANSETS EGEN PROMPT (#235 FAS 3) ─────────────────────
-
-		Samma state-machine som sadeln, en egen handling. Den viktiga
-		skillnaden mot att bara kopiera raderna ovan ar TANGENTEN.
-
-		Bada hanger pa samma front och ar inom rackhall samtidigt. Lat
-		de dela Roblox standardvarde (`E` / `ButtonX`) hade vi byggt
-		precis det #235 rapporterade: flera prompter i djupet dar bara
-		den narmaste gar att na, och spelaren far gissa vilken.
-
-		`T` for trans ar mnemoniskt och delas med «se ritten», som bara
-		lever i sadeln; `ButtonB` ar halvhalten, ocksa bara i sadeln.
-		Samma kontextregel som `docs/KONTROLLMATRIS.md` redan bar. ]]
-	local transPrompt = Instance.new("ProximityPrompt")
-	transPrompt.Name = "TransPrompt"
-	transPrompt.ActionText = "Ta transet"
-	transPrompt:SetAttribute("SprakNyckel", "tack.ta_transet")
-	transPrompt.ObjectText = namn .. "s trans"
-	transPrompt:SetAttribute("SprakObjekt", "tack.trans_for")
-	transPrompt:SetAttribute("SprakArg", namn)
-	transPrompt.HoldDuration = 0
-	transPrompt.MaxActivationDistance = 8
-	transPrompt.RequiresLineOfSight = false
-	transPrompt.ClickablePrompt = true
-	transPrompt.Exclusivity = Enum.ProximityPromptExclusivity.AlwaysShow
-	transPrompt.KeyboardKeyCode = Enum.KeyCode.T
-	transPrompt.GamepadKeyCode = Enum.KeyCode.ButtonB
-	transPrompt.Parent = trans
-
-	transPrompt.Triggered:Connect(function(spelare)
-		TackForradService.tagTrans(spelare, hastId, namn)
-	end)
+		Kortet hänger mellan sadeln och tränset och är MILJÖ: ingen prompt, och
+		det släcks inte av `satSynlig`. Namnet står på båda sidorna så att det
+		läses från gången oavsett håll. ]]
+	local kort = del(modell, "Namnskylt", Vector3.new(0.02 * M, 0.22 * M, 0.17 * M),
+		vid(0, 1.50), Color3.fromRGB(240, 238, 232), Enum.Material.SmoothPlastic)
+	kort:SetAttribute("HastNamn", namn)
+	local versaler = string.upper(namn):gsub("å", "Å"):gsub("ä", "Ä"):gsub("ö", "Ö")
+	for _, sida in ipairs({ Enum.NormalId.Right, Enum.NormalId.Left }) do
+		local gui = Instance.new("SurfaceGui")
+		gui.Name = "NamnskyltYta"
+		gui.Face = sida
+		gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		gui.PixelsPerStud = 50
+		gui.LightInfluence = 1
+		gui.Parent = kort
+		local text = Instance.new("TextLabel")
+		text.Name = "Namn"
+		text.BackgroundTransparency = 1
+		text.Size = UDim2.new(0.92, 0, 0.38, 0)
+		text.Position = UDim2.new(0.04, 0, 0.05, 0)
+		text.Font = Enum.Font.GothamBold
+		text.TextScaled = true
+		text.TextColor3 = Color3.fromRGB(31, 78, 158)
+		text.Text = versaler
+		text.Parent = gui
+	end
 
 	modell.PrimaryPart = sadel
 	modell.Parent = foralder

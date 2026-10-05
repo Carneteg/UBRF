@@ -1876,17 +1876,22 @@ local function guideSteg(g: any, lage: string?, text: string?, hastnamn: string?
 	end
 	if g.utomRackhall then
 		if stangdDorr then return kort("dorr", Sprak.t("guide.dorr_text", namn)) end
+		--[[ #297: EFTER «RIDA NU» står hon redan i ridhuset medan spelaren kan stå kvar vid
+		     boxen. Då är «följ pilen till boxen» fel plats: kortet säger var hon väntar. ]]
+		if g.redo or g.status == "ready_to_mount" then
+			return kort("ga_till", Sprak.t("guide.ga_till_ridhus_text", namn))
+		end
 		return kort("ga_till", Sprak.t("guide.ga_till_text"))
 	end
 	if g.redo or g.status == "ready_to_mount" then
-		return kort("sittupp", Sprak.t("guide.sittupp_text"))
+		return kort("sittupp", Sprak.t("guide.sittupp_text", namn))
 	end
 	if g.status ~= "preparing" then return nil end
 	local m = if type(g.nastaMoment) == "string" then g.nastaMoment else ""
 	local buren = g.buren or {}
 	if g.nasta == "halsa" and (g.klaraFaser or 0) == 0 then
 		-- UI-1: startskärmen bär bara de två vägarna; hälsningen kommer först efter «själv».
-		if not valtSjalv then return kort("valj", Sprak.t("guide.valj_kort", namn)) end
+		if not valtSjalv then return kort("valj", Sprak.t("guide.valj_kort", namn, namn)) end
 		return kort("halsa", text)
 	elseif g.nasta == "visitera" then
 		return kort("visitera", text, true)
@@ -2212,20 +2217,22 @@ rita = function()
 			if v.aktiv and #valen < MAX_VAL then table.insert(valen, v) end
 		end
 	end
-	--[[ UI-1: STARTSKÄRMEN. Exakt två val — «Rida nu — {häst}» (primärt, samma
-	     funktion som prompten) och «Gör i ordning {häst} själv». Inga
-	     hälsningssvar, inga promptrader, inget «Fler». ]]
-	if data and arStartskarm(data.guide, minHast, data.lage) then
+	--[[ UI-1: STARTSKÄRMEN. Exakt ETT val — «Rida nu — {häst}» (samma funktion
+	     som prompten). «Gör i ordning själv» är borttaget (produktbeslut
+	     2026-10-04). Inga hälsningssvar, inga promptrader, inget «Fler». ]]
+	--[[ #292: efter ett RÄKNAT pass visas samma enda handling — «Rida nu» — som
+	     öppnar nästa pass (#290). Ingen skötsel eller ledning kommer tillbaka;
+	     välfärdsfokus och ledningskontext släcker den som för startkortet. ]]
+	--[[ Som startkortet: «vid hästen». `minHast` är bara tilldelningen, inget bevis
+	     på närhet, så vyns `utomRackhall` måste vara falskt och guiden finnas. ]]
+	local raknatStart = minHast ~= nil and PreparationController.passRaknat()
+		and data ~= nil and type(data.guide) == "table" and not data.guide.utomRackhall
+		and not PreparationController.valfardAgerFokus() and PreparationController.kontext() ~= "ledning"
+	if data and (arStartskarm(data.guide, minHast, data.lage) or raknatStart) then
 		local namn = if hastnamn and hastnamn ~= "" then hastnamn else Sprak.t("guide.din_hast")
-		local hast = minHast :: string
 		valen = {
 			{ id = "start:rida_nu", text = Sprak.t("guide.val_rida_nu", namn), aktiv = true, paTur = true, klar = false,
 				skicka = function() task.spawn(InteractionController.ridaNu) end },
-			{ id = "start:sjalv", text = Sprak.t("guide.val_sjalv", namn), aktiv = true, paTur = false, klar = false,
-				skicka = function()
-					startvalSjalv[hast] = true
-					if rita then rita() end
-				end },
 		}
 		--[[ #274: STÄNGD BOX = «ÖPPNA DÖRREN» SYNS PÅ STARTVÄGEN. Spelaren ska
 		     aldrig behöva gissa att nästa fysiska steg är dörren. Då får den

@@ -68,6 +68,16 @@ Use only [FINAL-PLAYTEST-CHECKLIST.md](FINAL-PLAYTEST-CHECKLIST.md). PC, physica
   - survives respawn and delayed/replaced horse model;
   - Studio engine properties verified; human visual quality still requires Tobias.
 
+## Produktbeslut 2026-10-04 (ledning och manuell skötsel borttagna)
+
+- Beslutet finns i [PRODUCT-CANON](PRODUCT-CANON.md), «Produktbeslut 2026-10-04».
+- Genomförandet ligger på branch `claude/ta-bort-ledning-skotsel` (#265) och är
+  `READY_FOR_REVIEW` först när den granskats; det är inte produktacceptans.
+- P1 (ledd häst genom öppningar) är **NO_PORT**.
+- Den fysiska testlistan i [FINAL-PLAYTEST-CHECKLIST.md](FINAL-PLAYTEST-CHECKLIST.md)
+  innehåller rader för ledning och skötsel som inte längre gäller; den låsta
+  kandidaten ovan är därför äldre än beslutet och måste låsas om.
+
 ## Limits
 
 - No merge, publication or product acceptance is implied by source review.

@@ -1,3 +1,5 @@
+> **DELVIS ERSATT (produktbeslut 2026-10-04).** Allt som beskriver att spelaren själv hälsar, kollar, ryktar, kratsar, hämtar och lägger på sadel och träns eller leder hästen gäller inte längre. Det som gäller kvar: startvalet vid boxen har nu ETT val, «Rida nu». Se `docs/PRODUCT-CANON.md`, «Produktbeslut 2026-10-04».
+
 # UI-1 web: the start choice at the box shows only the two real paths
 
 Status: contract written before code, 2026-09-28.

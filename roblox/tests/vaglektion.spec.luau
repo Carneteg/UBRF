@@ -373,7 +373,7 @@ for n = 0, 3 do
 	check("R1: " .. n .. " cards: Back from a group returns to the original card actions", igen)
 end
 check("R1: every group opens and every leaf is selectable beside 0..3 cards", menyOk)
-UgnetaController.satFotVal(LedLektionController.panel)
+UgnetaController.satFotVal(nil)
 UgnetaController.dolj()
 
 -- Menyprovet ovan skickar många begäranden (också till påhittade ritter);

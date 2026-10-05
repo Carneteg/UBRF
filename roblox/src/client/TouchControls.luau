@@ -261,8 +261,14 @@ end
      styrning och kamera — inte det reglageblock som föll på QA. ]]
 
 --[[ Spaken följer fingret som startade den, inte vilket finger som helst:
-     annars kapar en tumme på gångartsknappen styrningen mitt i en volt. ]]
-local function kopplaSpak(bas: Frame, knop: Frame)
+     annars kapar en tumme på gångartsknappen styrningen mitt i en volt.
+
+     `radie` är den RITADE spakradien (`spakR` i `mount`, alltså `px(RADIE)`),
+     inte konstanten `RADIE`. Förut klampades och normaliserades fingret mot
+     den oskalade konstanten medan ringen ritades med `px()`: på en låg yta
+     (skala 0,62–0,79) gav ritade kanten bara 0,3–0,6 av full styrning, och
+     fullt utslag krävde att tummen drogs 14–25 px utanför ringen. ]]
+local function kopplaSpak(bas: Frame, knop: Frame, radie: number)
 	local function centrum(): Vector2
 		local p, s = bas.AbsolutePosition, bas.AbsoluteSize
 		return p + s / 2
@@ -272,7 +278,7 @@ local function kopplaSpak(bas: Frame, knop: Frame)
 		local c = centrum()
 		local dx, dy = pos.X - c.X, pos.Y - c.Y
 		local len = math.sqrt(dx * dx + dy * dy)
-		local r = TouchControls.RADIE
+		local r = radie
 		if len > r then dx, dy = dx / len * r, dy / len * r end
 		knop.Position = UDim2.new(0.5, dx, 0.5, dy)
 		Input.setTouch(TouchControls.axis(dx, dy, r))
@@ -529,7 +535,7 @@ function TouchControls.mount(input: any, hooks: {
 	basHorn.Parent = bas
 
 	local knop = nyRam("Knop", bas)
-	knop.Size = UDim2.fromOffset(TouchControls.KNAPP, TouchControls.KNAPP)
+	knop.Size = UDim2.fromOffset(px(TouchControls.KNAPP), px(TouchControls.KNAPP))
 	knop.Position = UDim2.fromScale(0.5, 0.5)
 	knop.AnchorPoint = Vector2.new(0.5, 0.5)
 	knop.BackgroundTransparency = 0.1
@@ -739,7 +745,7 @@ function TouchControls.mount(input: any, hooks: {
 			nod = nod.Parent
 		end
 	end
-	kopplaSpak(bas, knop)
+	kopplaSpak(bas, knop, spakR)
 	egnaReglage(false)
 
 	--[[ VAKTEN STÅR EFTER `egnaReglage`, OCH ORDNINGEN ÄR HELA POÄNGEN.

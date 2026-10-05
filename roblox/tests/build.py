@@ -183,13 +183,14 @@ FORBEREDELSE = SPEL + [
     ("TempoLektion", "src/server/TempoLektion.luau"),  # jamn fart i skritt
     ("VagLektion", "src/server/VagLektion.luau"),  # ridvagar: mittlinje, diagonal
     ("HalvvoltLektion", "src/server/HalvvoltLektion.luau"),  # halvvolt tillbaka till sparet
-    ("GaloppLektion", "src/server/GaloppLektion.luau"),  # galoppfattning vid K (delvis)
+    ("GaloppLektion", "src/server/GaloppLektion.luau"),  # galoppfattning i ringen (delvis)
     ("MarkbomLektion", "src/server/MarkbomLektion.luau"),  # bom pa marken i skritt
     ("HornLektion", "src/server/HornLektion.luau"),  # genom hornet (egen typ hornet)
     ("Klassprofil", "src/shared/HorseCore/Klassprofil.luau"),  # D1: regelprofilen A: Clear Round
     ("ClearRoundUnderlag", "src/server/ClearRoundUnderlag.luau"),  # B4c: skuggbedomningen
     ("Tavlingsklader", "src/shared/HorseCore/Tavlingsklader.luau"),  # D5: katalogen (#248)
     ("TavlingskladerService", "src/server/TavlingskladerService.luau"),  # D5: livscykeln (#248)
+    ("Dressyrbokstaver", "src/shared/HorseCore/Dressyrbokstaver.luau"),  # #289: ClearRoundLektion kontrollerar sina bokstavs-id mot den vid laddning
     ("ClearRoundLektion", "src/server/ClearRoundLektion.luau"),  # D2a: forsta clear round-ritten
     # AKTOREN (#252 DEL C) FORE tjansterna: GameplayService, HorseService
     # och LedService fragar den om aktoren har en klient att skicka till.
@@ -199,7 +200,6 @@ FORBEREDELSE = SPEL + [
     # C4: och FORE HorseService, som via LektionsMinne require:ar den.
     ("SparService",  "src/server/SparService.luau"),
     ("LedService",     "src/server/LedService.luau"),  # C4 ledning: fore LektionsMinne, som kraver LedLektion
-    ("LedLektion",     "src/server/LedLektion.luau"),  # ledningslektionen till fots
     ("LektionsMinne", "src/server/LektionsMinne.luau"),  # C4: forsta-klarad-minnet
     ("HorseService", "src/server/HorseService.luau"),
     ("StallService", "src/server/StallService.luau"),
@@ -400,7 +400,6 @@ KLIENT = SPEL + [
     ("LektionsAterkoppling", "src/client/LektionsAterkoppling.luau"),  # C1: aterkoppling efter ovningen
     ("VoltLektionController", "src/client/VoltLektionController.luau"),
     ("LektionController",   "src/client/LektionController.luau"),
-    ("LedLektionController", "src/client/LedLektionController.luau"),  # ledningslektionen till fots
     # Kontrollhjalpen: bara init.client.luau require:ar den, sa den behovs
     # bara i KLIENT. Star har och inte i PARITET av det skalet -- inte av
     # forbiseende. Jamfor noten vid Inspelning/ReplayController ovan.
@@ -447,6 +446,7 @@ def _utan(lista, namn):
 _KLIENTDELEN = _utan(KLIENT, {"Geometri", "UBRFKomplex", "Init"})
 KOHERENS = GEOMETRI + [
     ("BuildKit",     "buildings/BuildKit.luau"),
+    ("Dressyrbokstaver", "src/shared/HorseCore/Dressyrbokstaver.luau"),  # #289: EN uppslagsvag for bokstavernas id och lage
     ("Anlaggningen", "buildings/Anlaggningen.luau"),
 ] + _KLIENTDELEN + _utan([
     ("RigAdapter",      "src/shared/HorseCore/RigAdapter.luau"),
@@ -469,7 +469,7 @@ KOHERENS = GEOMETRI + [
     ("TempoLektion", "src/server/TempoLektion.luau"),  # jamn fart i skritt
     ("VagLektion", "src/server/VagLektion.luau"),  # ridvagar: mittlinje, diagonal
     ("HalvvoltLektion", "src/server/HalvvoltLektion.luau"),  # halvvolt tillbaka till sparet
-    ("GaloppLektion", "src/server/GaloppLektion.luau"),  # galoppfattning vid K (delvis)
+    ("GaloppLektion", "src/server/GaloppLektion.luau"),  # galoppfattning i ringen (delvis)
     ("MarkbomLektion", "src/server/MarkbomLektion.luau"),  # bom pa marken i skritt
     ("HornLektion", "src/server/HornLektion.luau"),  # genom hornet (egen typ hornet)
     ("Klassprofil", "src/shared/HorseCore/Klassprofil.luau"),  # D1: regelprofilen A: Clear Round
@@ -482,7 +482,6 @@ KOHERENS = GEOMETRI + [
     ("Aktor",        "src/shared/HorseCore/Aktor.luau"),
     ("SparService",     "src/server/SparService.luau"),  # C4: fore HorseService (LektionsMinne)
     ("LedService",     "src/server/LedService.luau"),  # C4 ledning: fore LektionsMinne, som kraver LedLektion
-    ("LedLektion",      "src/server/LedLektion.luau"),  # ledningslektionen till fots
     ("LektionsMinne",   "src/server/LektionsMinne.luau"),  # C4: forsta-klarad-minnet
     ("HorseService",    "src/server/HorseService.luau"),
     ("StallService",    "src/server/StallService.luau"),
