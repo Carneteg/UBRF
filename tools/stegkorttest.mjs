@@ -294,7 +294,7 @@ console.log("\n── H. Touch: Rida nu och Sitt upp utan tangent (#297) ──"
     return ruta;
   };
   const r1 = await tryck("start:rida_nu");
-  prova("knappen går att trycka med fingret (minst 36 px hög)", !!r1 && r1.h >= 36, r1 ? `${Math.round(r1.h)} × ${Math.round(r1.v)} px` : "saknas");
+  prova("knappen går att trycka med fingret (minst 44 px hög)", !!r1 && r1.h >= 44, r1 ? `${Math.round(r1.h)} × ${Math.round(r1.v)} px` : "saknas");
   k = await kort(page);
   alla.push(...k.knappar.map(b => b.id), ...k.rader.map(b => b.id));
   prova("efter tryck: hon står i ridhuset och kortet är uppsittningskortet", k.scen === "ridhusinne" && k.id === "sittupp", `${k.scen} · ${k.id}`);
@@ -305,7 +305,7 @@ console.log("\n── H. Touch: Rida nu och Sitt upp utan tangent (#297) ──"
     k.knappar.length === 1 && k.knappar[0].primar && k.knappar[0].id === "sittupp:sitt_upp"
       && k.knappar[0].text === `Sitt upp på ${h.namn}`, k.knappar.map(b => b.text).join(" / "));
   const r2 = await tryck("sittupp:sitt_upp");
-  prova("knappen går att trycka med fingret (minst 36 px hög)", !!r2 && r2.h >= 36, r2 ? `${Math.round(r2.h)} px` : "saknas");
+  prova("knappen går att trycka med fingret (minst 44 px hög)", !!r2 && r2.h >= 44, r2 ? `${Math.round(r2.h)} px` : "saknas");
   const scen = await page.evaluate(() => G.scen);
   prova("tryck på «Sitt upp» sitter upp och ritten börjar — utan en enda tangent", scen === "lektion", scen);
   prova("ingen skötsel- eller ledknapp syntes på vägen", !alla.some(id => FORBJUDET.test(id)), alla.join(","));
@@ -440,6 +440,24 @@ for (const vp of [{ width: 1600, height: 900, namn: "skrivbord" }, { width: 1180
     r.x >= 0 && r.y >= 0 && r.x + r.w <= r.vw && r.y + r.h <= r.vh && r.w <= 0.34 * r.vw,
     `${Math.round(r.w)}×${Math.round(r.h)} vid ${Math.round(r.x)},${Math.round(r.y)} av ${r.vw}×${r.vh}`);
   if (BILDER) await page.screenshot({ path: path.join(BILDER, `startval-${vp.width}x${vp.height}.png`) });
+  await page.close();
+}
+
+/* Telefon: kortet täcker nästan hela bredden, så 34 %-kravet gäller inte —
+   men med 44 px knappar ska det fortfarande ligga helt inom skärmen. */
+for (const vp of [{ width: 390, height: 844, namn: "telefon stående" }, { width: 844, height: 390, namn: "telefon liggande" }]) {
+  const page = await oppna(vp);
+  await vidBoxen(page);
+  await vanta(page);
+  const r = await page.evaluate(() => {
+    const b = document.getElementById("stegkort").getBoundingClientRect();
+    const k = [...document.querySelectorAll("#stegkort button:not(.skSprak)")].map((e) => e.getBoundingClientRect());
+    return { x: b.x, y: b.y, w: b.width, h: b.height, vw: innerWidth, vh: innerHeight,
+      minKnapp: k.length ? Math.min(...k.map((q) => q.height)) : 0, ut: k.some((q) => q.bottom > b.bottom + 0.5 || q.right > b.right + 0.5) };
+  });
+  prova(`${vp.namn}: panelen helt synlig, handlingsknapparna ≥ 44 px och inom kortet`,
+    r.x >= 0 && r.y >= 0 && r.x + r.w <= r.vw && r.y + r.h <= r.vh && r.minKnapp >= 44 && !r.ut,
+    `${Math.round(r.w)}×${Math.round(r.h)} vid ${Math.round(r.x)},${Math.round(r.y)} av ${r.vw}×${r.vh} · minsta knapp ${Math.round(r.minKnapp)} px`);
   await page.close();
 }
 

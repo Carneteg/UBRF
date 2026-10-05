@@ -309,7 +309,7 @@ function stegkortInstallera() {
   #stegkort .skT{margin:0 0 8px;color:#D6D2C8}
   #stegkort .skV{display:grid;gap:6px}
   #stegkort button{all:unset;box-sizing:border-box;display:block;width:100%;cursor:pointer;padding:8px 10px;
-    border-radius:6px;background:rgba(255,255,255,.07);color:#EDEAE3;font:inherit;line-height:1.25;min-height:36px}
+    border-radius:6px;background:rgba(255,255,255,.07);color:#EDEAE3;font:inherit;line-height:1.25;min-height:44px}
   #stegkort button:hover,#stegkort button:focus-visible{background:rgba(255,255,255,.13);outline:none}
   #stegkort button.primar{background:rgb(92,76,38);color:#FFF6E0}
   #stegkort button.primar:hover{background:rgb(112,93,47)}
