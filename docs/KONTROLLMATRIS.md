@@ -38,7 +38,7 @@ provet fyrar hjälpens egen tangent och läser vad `Input.luau` gjorde.
 | Tygel (kontakt) | `Q` | `R2` | *ingen knapp* |
 | Halvhalt (parad) | `F` | `B` | *ingen knapp* |
 | Sits lätt / djup | `Z` / `C` | `L2` | *ingen knapp* |
-| Hoppa | `Space` | `A` | *ingen knapp* |
+| Hoppa | `Space` | `A` | HOPP-knapp (Roblox-touch, #276; ingen på webben) |
 | Lektionen vidare | `R` | `Y` | kortets knapp |
 | Se ritten (ridanalys) | `T` | `X` | *Se ritten* |
 | Gå vidare | `G` | — | *Gå vidare* |
@@ -95,7 +95,10 @@ ingen rygga.
 
 **Avsprånget kommer ur anridningen.** Webben har ingen hoppknapp; hoppet
 avgörs av hur hästen rids fram mot hindret. Roblox har ett hoppreglage
-(`Space`/`ButtonA`) och ingen pekknapp för det. Den skillnaden står kvar.
+(`Space`/`ButtonA`) och, på pekskärm, en HOPP-knapp (#276) som syns vid all
+vanlig uppsutten ridning — inget clear round-krav. Enda undantaget är
+markbommen (skrittbom som inte ska hoppas). Skillnaden mot webben (ingen
+hoppknapp) är ett av Tobias godkänt plattformsundantag, 2026-10-05.
 
 De avancerade hjälperna gör vad de alltid gjort för den som använder dem,
 men **ingen straffas för att låta bli**: yttertygelstödet och sitsstödet

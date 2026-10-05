@@ -380,7 +380,7 @@ print("\n── 8. Klienten: menyn, sidans texter, guiden och resultatkortet ─
 		and string.find(sk, "förenkling", 1, true) ~= nil
 		and hitta(VC.panel().knappar, Sprak.t("clearround.start")) ~= nil, sk)
 	check("banskissen visar start- och mållinjen i guiden", workspace:FindFirstChild("Voltguide") ~= nil)
-	check("#276: banskissen — hopp är inte relevant än", VC.hoppRelevant() == false)
+	check("#276: banskissen — hopp är relevant (vanlig uppsutten ridning)", VC.hoppRelevant() == true)
 	Sprak.satVal("en")
 	check("banskissen på engelska", string.find(VC.panel().text, "1 blue towards C", 1, true) ~= nil
 		and string.find(VC.panel().text, "walk the course on foot", 1, true) ~= nil, VC.panel().text)
@@ -389,7 +389,7 @@ print("\n── 8. Klienten: menyn, sidans texter, guiden och resultatkortet ─
 	request("start"); leverera()
 	check("sidan säger startsignal och startlinjen", borjar(VC.panel().text, Sprak.t("clearround.to_start")),
 		VC.panel().text)
-	check("#276: mot startlinjen — hopp är inte relevant än", VC.hoppRelevant() == false)
+	check("#276: mot startlinjen — hopp är relevant (inget krav på banläget)", VC.hoppRelevant() == true)
 	local guide = workspace:FindFirstChild("Voltguide")
 	check("guiden ritar start- och mållinjen (streck, inga hinder)", guide ~= nil and #guide:GetChildren() > 0,
 		guide and #guide:GetChildren() or 0)
@@ -410,13 +410,13 @@ print("\n── 8. Klienten: menyn, sidans texter, guiden och resultatkortet ─
 		borjar(VC.panel().text, Sprak.t("clearround.hopp", 3, Sprak.t("clearround.farg_bla"), "A")), VC.panel().text)
 	hopp3(); hopp4(); leverera()
 	check("efter sista hoppet: mot mållinjen", borjar(VC.panel().text, Sprak.t("clearround.to_finish")), VC.panel().text)
-	check("#276: efter sista hindret — hopp är inte relevant", VC.hoppRelevant() == false)
+	check("#276: efter sista hindret — hopp är relevant", VC.hoppRelevant() == true)
 	malet(); leverera()
 	local t = VC.panel().text
 	check("resultatkortet: inga observerade fel, förenklad bedömning, träningsbana", har(t,
 		string.sub(Sprak.t("aterkoppling.clearround.inga_fel", "X"), 1, 22)) and har(t, Sprak.t("aterkoppling.clearround.forenklad")), t)
 	check("resultatkortet säger aldrig felfri", not har(string.lower(t), "felfri"), t)
-	check("#276: resultatkortet — hopp är inte relevant", VC.hoppRelevant() == false)
+	check("#276: resultatkortet — hopp är relevant", VC.hoppRelevant() == true)
 	check("utan fel: ingen omstartsknapp", hitta(VC.panel().knappar, Sprak.t("clearround.retry")) == nil)
 	LararInstallning.satDetalj("kort")
 	check("kort text: domen och förbehållet står kvar", har(VC.panel().text, Sprak.t("aterkoppling.clearround.forenklad")))
@@ -447,12 +447,12 @@ print("\n── 8. Klienten: menyn, sidans texter, guiden och resultatkortet ─
 	end
 	--[[ #276, sist: andra lektioner och avbruten koppling. ]]
 	VC.valj("halt")
-	check("#276: en annan lektion — hopp är inte relevant", VC.hoppRelevant() == false)
+	check("#276: en annan lektion (halt) — hopp är relevant", VC.hoppRelevant() == true)
 	VC.valj("markbom")
-	check("#276: markbommen (skrittbom) — hopp är inte relevant", VC.hoppRelevant() == false)
+	check("#276: markbommen (skrittbom) — enda smala undantaget, hopp är inte relevant", VC.hoppRelevant() == false)
 	UC.satLektionsVal(nil)
 	VC.avbryt()
-	check("#276: efter avbrott — hopp är inte relevant", VC.hoppRelevant() == false)
+	check("#276: efter avbrott (ingen lektion, vanlig ridning) — hopp är relevant", VC.hoppRelevant() == true)
 	request("finish")
 end)()
 

@@ -1242,16 +1242,15 @@ function V._minneForProv(): any return minne end
 function V._halsningForProv(): any return halsning end
 function V._coachningForProv(): any return coachning end
 function V.lektion(): boolean return attached and valt end
---[[ #276: ÄR HOPP RELEVANT NU. Bara clear round, bara i serverns läge
-	"course" — banan pågår och nästa hinder ska hoppas — och bara i en bild
-	som hör till den här ritten. Före startlinjen, efter sista hindret, i
-	markbommen (en skrittbom som inte ska hoppas) och i fri ridning är
-	svaret nej, och pekytan har då sina tre vanliga knappar. Läser serverns
-	bild; klienten bestämmer inte själv var banan är. ]]
+--[[ #276: ÄR HOPP RELEVANT NU. Ja vid all vanlig uppsutten ridning — på
+	iPad ska HOPP synas direkt, utan clear round och utan att korsa dess
+	startlinje (Tobias, 2026-10-05; den tidigare tillåtelselistan «bara
+	clear round, bara i course» gav en iPad utan hoppknapp). Enda smala
+	undantaget är markbommen: en skrittbom som inte ska hoppas, där pekytan
+	har sina tre vanliga knappar. Hoppvägen i övrigt (Input.touchJump →
+	MovementController) är oförändrad. ]]
 function V.hoppRelevant(): boolean
-	local b = bild
-	return attached and valt and typ == "clearround" and b ~= nil
-		and b.rittId == ritt and b.lage == "course"
+	return not (attached and valt and typ == "markbom")
 end
 
 function V.avbryt()
