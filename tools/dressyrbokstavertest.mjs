@@ -145,6 +145,23 @@ prova("okänt riktningsid fäller vakten", /okand_dressyrbokstav:Q/.test(kastar(
 prova("äkta bokstav som inte är riktningsid fäller vakten", /okant_riktningsid:K/.test(kastar([{ mot: "K" }], riktIds, lista) || ""));
 prova("lista utan C fäller banan (vakten läser källan)",
   /okand_dressyrbokstav:C/.test(kastar(bana, riktIds, lista.filter(p => p.b !== "C")) || ""));
+/* Vakten ska KÖRAS vid laddning: webben laddas om i en värld där C saknas och
+   ska då kasta; Roblox-modulen ska ha anropet på toppnivå (Luau kan inte laddas om här). */
+const utanC = vm.createContext({ console, Math, JSON, window: {} });
+vm.runInContext("var window = undefined;", utanC);
+let laddFel = null;
+try {
+  for (const f of ["src/model.js", "src/data.js"]) vm.runInContext(las(f), utanC, { filename: f });
+  vm.runInContext("DRESSYRBOKSTAVER.splice(DRESSYRBOKSTAVER.findIndex(p => p.b === 'C'), 1);", utanC);
+  for (const f of ["src/spel/sprak.js", "src/spel/skotsel.js", "src/lektioner/motor.js", "src/lektioner/observation.js",
+    "src/lektioner/hinder.js", "src/lektioner/clearround.js"]) {
+    try { vm.runInContext(las(f), utanC, { filename: f }); } catch (e) { if (f === "src/lektioner/clearround.js") throw e; }
+  }
+} catch (e) { laddFel = String(e.message); }
+prova("webben: clearround.js kastar vid laddning när C saknas i listan", /okand_dressyrbokstav:C/.test(laddFel || ""), laddFel || "kastade inte");
+const robloxCR = utanKommentar(las("roblox/src/server/ClearRoundLektion.luau"));
+prova("Roblox: kravBokstaver anropas på toppnivå vid laddning",
+  /^ClearRoundLektion\.kravBokstaver\(BANA, ClearRoundLektion\.RIKTNINGSID, Dressyrbokstaver\)$/m.test(robloxCR));
 prova("K ligger fortfarande på västra sargen (0, 6)", lista.some(p => p.b === "K" && p.x === 0 && p.y === 6));
 
 console.log("");

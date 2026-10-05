@@ -39,7 +39,7 @@ const prova = (namn, ok, detalj = "") => {
 /* ── Webbens moduler i en egen kontext (samma ordning som index.html) ── */
 const ctx = vm.createContext({ console, Math, JSON, Object, Array, Number, String, Map, Set, isFinite });
 vm.runInContext("var window = undefined;", ctx);
-const WEBB = ["src/spel/sprak.js", "src/spel/skotsel.js", "src/lektioner/motor.js", "src/lektioner/observation.js",
+const WEBB = ["src/model.js", "src/data.js", "src/spel/sprak.js", "src/spel/skotsel.js", "src/lektioner/motor.js", "src/lektioner/observation.js",
   "src/lektioner/hinder.js", "src/lektioner/volt.js", "src/lektioner/halt.js", "src/lektioner/tempo.js",
   "src/lektioner/overgang.js", "src/lektioner/galopp.js", "src/lektioner/serpentin.js", "src/lektioner/vag.js",
   "src/lektioner/halvvolt.js", "src/lektioner/hornet.js", "src/lektioner/markbom.js", "src/lektioner/clearround.js",

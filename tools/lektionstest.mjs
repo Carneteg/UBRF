@@ -32,7 +32,7 @@ const prova = (namn, ok, detalj = "") => {
 function nyVarld() {
   const ctx = vm.createContext({ console, Math, JSON, Object, Array, Number, String, Map, Set, isFinite });
   vm.runInContext("var window = undefined;", ctx);
-  for (const f of ["src/spel/sprak.js", "src/spel/skotsel.js", "src/site.js", "src/lektioner/motor.js",
+  for (const f of ["src/model.js", "src/data.js", "src/spel/sprak.js", "src/spel/skotsel.js", "src/site.js", "src/lektioner/motor.js",
     "src/lektioner/observation.js", "src/lektioner/hinder.js", "src/lektioner/volt.js", "src/lektioner/halt.js",
     "src/lektioner/tempo.js", "src/lektioner/overgang.js", "src/lektioner/galopp.js", "src/lektioner/serpentin.js",
     "src/lektioner/vag.js", "src/lektioner/halvvolt.js", "src/lektioner/hornet.js", "src/lektioner/markbom.js",
