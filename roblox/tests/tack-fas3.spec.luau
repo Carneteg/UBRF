@@ -112,51 +112,15 @@ end
 local vidFront = FRONT.PrimaryPart.Position
 local vidHast = (MODELL.PrimaryPart or MODELL:FindFirstChildWhichIsA("BasePart")).Position
 
-print("\n── Upphängningen har nu TVÅ prompter, med skilda tangenter ──")
+print("\n── Upphängningen har inga prompter ──")
 
 do
 	local funna = {}
 	for _, d in ipairs(FRONT:GetDescendants()) do
 		if d:IsA("ProximityPrompt") then funna[d.Name] = d end
 	end
-	check("sadelns prompt finns kvar", funna.SadelPrompt ~= nil)
-	check("och tränset har fått sin egen", funna.TransPrompt ~= nil)
-
-	if funna.SadelPrompt and funna.TransPrompt then
-		--[[ DET HÄR ÄR PROVET SOM FAS 3 KRÄVER. Båda hänger på samma front
-			och är inom räckhåll samtidigt. Delade de Roblox standardvärde
-			hade vi byggt precis det #235 rapporterade: flera prompter i
-			djupet där bara den närmaste går att nå. ]]
-		--[[ SADELN BEHÅLLER Roblox standardvärde (`E` / `ButtonX`), alltså
-			nil i källan. Det räcker därför INTE att jämföra de två med
-			varandra — `nil ~= T` hade varit sant även om tränset också
-			lämnats odefinierat. Provet kräver att tränsets tangenter är
-			UTTRYCKLIGT satta, och sedan att de skiljer sig. ]]
-		check("tränsets tangent är uttryckligen satt till T",
-			funna.TransPrompt.KeyboardKeyCode == Enum.KeyCode.T,
-			tostring(funna.TransPrompt.KeyboardKeyCode))
-		check("och handkontrollsknappen till ButtonB",
-			funna.TransPrompt.GamepadKeyCode == Enum.KeyCode.ButtonB,
-			tostring(funna.TransPrompt.GamepadKeyCode))
-		check("de delar därmed INTE tangent med sadeln",
-			funna.SadelPrompt.KeyboardKeyCode ~= funna.TransPrompt.KeyboardKeyCode
-				and funna.SadelPrompt.GamepadKeyCode ~= funna.TransPrompt.GamepadKeyCode,
-			("%s/%s vs %s/%s"):format(
-				tostring(funna.SadelPrompt.KeyboardKeyCode),
-				tostring(funna.SadelPrompt.GamepadKeyCode),
-				tostring(funna.TransPrompt.KeyboardKeyCode),
-				tostring(funna.TransPrompt.GamepadKeyCode)))
-		check("båda går att trycka på med ett finger",
-			funna.SadelPrompt.ClickablePrompt == true
-				and funna.TransPrompt.ClickablePrompt == true)
-		--[[ Raderna måste gå att skilja åt i närområdets lista. Samma
-			objekt på båda hade gett två rader som läser lika. ]]
-		check("de två raderna säger olika saker",
-			funna.TransPrompt.ObjectText ~= ""
-				and funna.TransPrompt.ObjectText ~= funna.SadelPrompt.ObjectText,
-			("%s | %s"):format(funna.SadelPrompt.ObjectText,
-				funna.TransPrompt.ObjectText))
-	end
+	check("ingen sadelprompt finns (beslut 2026-10-04)", funna.SadelPrompt == nil)
+	check("och ingen tränsprompt heller", funna.TransPrompt == nil)
 end
 
 print("\n── WORLD -> HELD: tränset hämtas för sig ──")

@@ -233,45 +233,18 @@ prova("spelets egen DOM-prompt står också där",
    tillståndet är på riktigt: tools/forstadagentest.mjs. */
 
 /* ══ 6. FEL HÄST ═══════════════════════════════════════════════════
-   Ordern bad om "fel häst" som negativprov. Två frågor: kan spelaren ta
-   någon annans utrustning, och vad händer vid en box som inte är hennes?
+   Ordern bad om "fel häst" som negativprov. Förr hade det två frågor: kan
+   spelaren ta någon annans utrustning (sadelkammarens val), och vad händer
+   vid en box som inte är hennes?
 
-   Sadelkammaren öppnas genom `visaSadelkammare()` — samma anrop som
-   interaktionens `gor()` gör. Det som provas är vad panelen SVARAR, inte
-   hur man kom in i den.
-
-   GRANNEN HÄMTAS UR PANELEN, inte ur HORSES. Sadelkammaren visar åtta
-   byglar runt din egen häst, inte hela stallet; ett godtyckligt annat
-   häst-id ("air") fanns inte på väggen och provet letade efter en knapp
-   som aldrig ritats. Det såg ut som att fel utrustning inte gick att
-   välja — men ingen hade valt något alls. */
+   Den första frågan finns inte längre (#265): sadelkammarpusslet och dess
+   val är borttagna och stallet gör hästen redo åt den häst spelaren fått.
+   Det finns alltså ingen knapp för "fel sadel" att trycka på, och ett prov
+   som letar efter den mäter ett spel som inte längre finns. Det som
+   återstår av frågan är den andra, nedan: en annan hästs box är inte
+   spelarens att öppna. */
 r = await stallIn({ hastId: "blackrock_jack", hastPlats: "box", skotsel: false,
   utrustning: false, hastMott: true });
-
-await ev(() => visaSadelkammare());
-await page.waitForTimeout(800);
-const val = await ev(() => {
-  const knappar = [...document.querySelectorAll('.sk-val[data-typ="sadel"]')]
-    .filter(b => b.dataset.id !== G.hastId);
-  if (!knappar.length) return null;
-  const id = knappar[0].dataset.id;
-  const t = document.querySelector(`.sk-val[data-typ="trans"][data-id="${id}"]`);
-  if (!t) return null;
-  knappar[0].click(); t.click();
-  return { id, namn: (HORSES[id] || {}).namn || id };
-});
-prova("sadelkammaren visar grannarnas byglar, inte bara din egen",
-  !!val, val ? `granne ${val.namn}` : "ingen grannbygel ritad");
-if (val) {
-  await klicka("bSkKlar");
-  const e = await ev(() => ({ utr: !!G.utrustning,
-    not: ((document.getElementById("skStatus") || {}).className || ""),
-    text: ((document.getElementById("skStatus") || {}).textContent || "").trim().slice(0, 90) }));
-  prova("fel hästs sadel och träns ger INGEN utrustning", e.utr === false, `utrustning ${e.utr}`);
-  prova("och spelaren får veta varför", /bad/.test(e.not), `"${e.text}"`);
-}
-await ev(() => overlay(false));
-await page.waitForTimeout(400);
 
 /* Boxarna ligger i STALLET. Första försöket frågade efter dem medan
    spelaren stod i ridhuset, där `interaktioner()` bygger ridhusets lista
@@ -298,11 +271,13 @@ prova("i stallet har den egna boxen en interaktion",
   !!boxar.vidMin && boxar.vidMin !== "INGEN EGEN BOX", `"${boxar.vidMin}"`);
 prova("en annan hästs box har ingen — den är inte spelarens att öppna",
   boxar.vidAnnan === null || boxar.vidAnnan === "INGEN ANNAN BOX", `"${boxar.vidAnnan}"`);
-/* Utrustningen är fortfarande inte hämtad — då SKA vägvisaren peka på
-   sadelkammaren, inte på boxen. Provet kräver rätt mål, inte bara att
-   något mål finns: "finns ett mål" var grönt oavsett vad det pekade på. */
-prova("och vägvisaren pekar på nästa riktiga steg — sadelkammaren",
-  boxar.malId === "utrustning", `mål ${boxar.malId} · "${boxar.malVar}"`);
+/* Hästen står i boxen och är inte förberedd — då SKA vägvisaren peka på
+   hästen (stegkortets första steg), aldrig på sadelkammaren: den är en
+   sidoaktivitet och inget steg (src/uppdrag.js, paritetspasset 2026-09-28).
+   Provet kräver rätt mål, inte bara att något mål finns: "finns ett mål"
+   var grönt oavsett vad det pekade på. */
+prova("och vägvisaren pekar på nästa riktiga steg — hästen, inte sadelkammaren",
+  boxar.malId === "hitta_hast", `mål ${boxar.malId} · "${boxar.malVar}"`);
 
 console.log("\nPAGEERRORS:", sidfel.length ? sidfel.slice(0, 3) : "inga");
 const fel = resultat.filter(x => !x).length;

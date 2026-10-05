@@ -82,6 +82,9 @@ local GRANSER: { [string]: Grans } = {
 		i rad — hon bockar av en checklista. Taket är därefter. ]]
 	PreparationMoment = { tak = 10, pafyll = 4 },
 	PassMoment = { tak = 10, pafyll = 4 },
+	--[[ #273: en handling är ett tryck per fas, inte en checklista. ]]
+	PreparationHandling = { tak = 6, pafyll = 2 },
+	PassHandling = { tak = 6, pafyll = 2 },
 
 	--[[ Ett fyndsvar är ett val bland få, och det görs en gång. ]]
 	PreparationSvar = { tak = 4, pafyll = 1 },
@@ -104,11 +107,15 @@ local GRANSER: { [string]: Grans } = {
 		`warn`. Grinden ligger nu före den raden. ]]
 	LedBorja = { tak = 4, pafyll = 1 },
 	LedSlapp = { tak = 4, pafyll = 1 },
+	--[[ Ledningslektionen till fots: val och start/avsluta, inga strömmar. ]]
+	--[[ C4: läsning av det egna lektionsminnet, ingen skrivväg. ]]
+	LektionsMinne = { tak = 4, pafyll = 1 },
 
 	--[[ UTRUSTNINGEN bygger fysiska delar på hästen. Dyrare än ett
 		listtryck, och inget en människa gör i ström. ]]
 	SadlaHast = { tak = 4, pafyll = 1 },
 	TransaHast = { tak = 4, pafyll = 1 },
+	LamnaTillbaka = { tak = 4, pafyll = 1 },
 
 	--[[ `RidaNu` låter stallet göra i ordning HELA hästen. Det är den
 		dyraste enskilda handlingen i hela gränssnittet. ]]

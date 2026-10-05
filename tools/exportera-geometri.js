@@ -32,8 +32,8 @@ vm.createContext(ctx);
    möblerna i STALLINNE/RIDHUSINNE) — samma ordning som index.html. */
 vm.runInContext(las("src/model.js") + "\n" + las("src/data.js") + "\n" + las("src/site.js")
   + "\n" + las("src/inredning.js"), ctx);
-const { ANL, STALLINNE, RIDHUSINNE, STALL_BAND, IDENTITET, BANOMRADE, UTEBANA, PADDOCK, TRANINGSYTOR, INREDNING, SPELABSTRAKTIONER, INTERIORYTOR } =
-  vm.runInContext("({ANL, STALLINNE, RIDHUSINNE, STALL_BAND, IDENTITET, BANOMRADE, UTEBANA, PADDOCK, TRANINGSYTOR, INREDNING, SPELABSTRAKTIONER, INTERIORYTOR})", ctx);
+const { DRESSYRBOKSTAVER, ANL, STALLINNE, RIDHUSINNE, STALL_BAND, IDENTITET, BANOMRADE, UTEBANA, PADDOCK, TRANINGSYTOR, INREDNING, SPELABSTRAKTIONER, INTERIORYTOR } =
+  vm.runInContext("({DRESSYRBOKSTAVER, ANL, STALLINNE, RIDHUSINNE, STALL_BAND, IDENTITET, BANOMRADE, UTEBANA, PADDOCK, TRANINGSYTOR, INREDNING, SPELABSTRAKTIONER, INTERIORYTOR})", ctx);
 
 /* ── Luau-serialisering ────────────────────────────────────────────────
    Två fällor som redan slagit till i det här repot (roblox/buildings/README):
@@ -152,6 +152,9 @@ const ut = {
     bredd: RIDHUSINNE.bredd, langd: RIDHUSINNE.langd, tak: RIDHUSINNE.tak,
     entre: RIDHUSINNE.entre, bana: RIDHUSINNE.bana, sargH: RIDHUSINNE.sargH,
     dressyr: RIDHUSINNE.dressyr,   // 20 × 60-layouten, skild från den fysiska banan (senior review 2026-09-03)
+    /* #289: de tolv dressyrbokstäverna, ORDAGRANT ur DRESSYRBOKSTAVER (src/data.js).
+       Roblox läser listan härifrån och skriver aldrig en egen — id och läge har en sanning. */
+    dressyrBokstaver: DRESSYRBOKSTAVER,
     sargGrind: RIDHUSINNE.sargGrind,
     laktare: RIDHUSINNE.laktare, kortanda: RIDHUSINNE.kortanda,
     domarbas: RIDHUSINNE.domarbas, cafe: RIDHUSINNE.cafe,

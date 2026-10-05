@@ -103,9 +103,11 @@ jobs:
             const run = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             /* INGEN KONSTRUERAD PREVIEWLÄNK.
                Här stod `https://deploy-preview-<nr>--ubrf-game.netlify.app`,
-               räknad ur PR-numret. Den länken var påhittad i två led: UBRF
-               ligger inte på Netlify — Vercel är enda preview-/deployvägen
-               (CLAUDE.md, #155, kanoniskt projekt `ubrf`) — och en Vercel-
+               räknad ur PR-numret. Den länken var påhittad i två led: UBRF:s
+               kanoniska preview-/deployväg är Vercel (CLAUDE.md, #155,
+               kanoniskt projekt `ubrf`; en kvarkopplad Netlify-integration
+               kan lägga en egen icke-kanonisk preview, som inte är
+               bevis) — och en Vercel-
                deploy-URL innehåller ett slumpat bygg-id som INTE går att
                räkna fram ur ett PR-nummer. En grind som skriver ut en URL
                som aldrig svarat är värre än ingen URL: den läses som bevis.

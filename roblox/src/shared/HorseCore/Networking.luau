@@ -23,6 +23,10 @@ local DEFINITIONS = {
 	MountRequest = "RemoteFunction",    -- klient → server: får jag sitta upp?
 	DismountRequest = "RemoteFunction",
 	MountChanged = "RemoteEvent",       -- server → alla: vem rider vad
+	VoltLektion = "RemoteFunction",     -- owner intent; no client verdict or coordinates
+	VoltLektionSync = "RemoteEvent",    -- server -> owner: session-local circle outcome
+	LektionsMinne = "RemoteFunction",   -- owner read only ("sync"): own completion memory projection
+	LektionsMinneSync = "RemoteEvent",  -- server -> owner: own completion memory projection
 	--[[ #233 FAS 4b. `StateSync` bar förut PARET (gångart, tempo), och
 	     gångarten på tråden var serverns enda källa till vilken gångart
 	     hästen var i. Det var klientauktoritet med ett rimlighetsfilter:
@@ -60,12 +64,19 @@ local DEFINITIONS = {
 	PreparationSvar = "RemoteFunction",    -- klient → server: mitt svar på ett fynd
 	PassSync = "RemoteEvent",              -- server → ägaren: passets läge och eftervård
 	PassMoment = "RemoteFunction",         -- klient → server: ett eftervårdsmoment
+	--[[ #273 S2/S3: en HANDLING är en grupp av moment — «rykta henne»,
+	     «ta av sadeln» — och fortfarande bara en avsikt. Servern utför
+	     momenten i ordning genom samma väg som förut. `PassHandling` tar
+	     dessutom "stallet": stallet tar hand om henne efter ritten. ]]
+	PreparationHandling = "RemoteFunction", -- klient → server: jag utför den här handlingen
+	PassHandling = "RemoteFunction",        -- klient → server: en eftervårdshandling, eller "stallet"
 	LedBorja = "RemoteFunction",           -- klient → server: jag börjar leda den här hästen
 	LedSlapp = "RemoteFunction",           -- klient → server: jag släpper
 	LedSync = "RemoteEvent",               -- server → ägaren: leder jag, och hur långt har hon kommit
 	--[[ RIDE FIRST: "Rida nu". Klienten skickar en avsikt; servern gör
 	     stallets förberedelse och svarar med hela sanningen. ]]
 	RidaNu = "RemoteFunction",             -- klient → server: låt stallet göra i ordning henne
+	FortsattHast = "RemoteFunction",       -- klient → server: #274 jag fortsätter med den friska hästen efter stoppet
 	--[[ #235 FAS 2: SADEL `HELD -> EQUIPPED`. Klienten pekar ut vilken
 		 häst hon står vid; servern äger allt annat — att hon verkligen bär
 		 sadeln, att den är RÄTT hästs, avståndet, ordningen och själva
@@ -73,6 +84,7 @@ local DEFINITIONS = {
 		 påstående. ]]
 	SadlaHast = "RemoteFunction",          -- klient → server: lägg sadeln jag bär på den här hästen
 	TransaHast = "RemoteFunction",         -- klient -> server: lagg transet jag bar pa den har hasten
+	LamnaTillbaka = "RemoteFunction",      -- klient -> server: hang tillbaka det jag bar pa dess egen front
 	--[[ #264 GAIT_READABILITY_AND_UGNETA: spelarens språkval ur flaggan.
 		 Argumentet är "sv" eller "en" och ingenting annat; servern skriver
 		 bara spelarens eget attribut, så att serverns egna texter till

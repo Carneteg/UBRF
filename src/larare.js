@@ -111,15 +111,15 @@ function ugnetaKort(meta,txt,dur){
   const wrap=s.closest(".hudh.bc"); if(wrap)wrap.classList.add("ugneta-wrap");
   s.className="on ugneta-kort "+(meta.ton||"");
   s.setAttribute("role","status");s.setAttribute("aria-live","polite");
-  s.setAttribute("aria-label","Ugneta, ridinstruktör");
+  s.setAttribute("aria-label",tSpr("ugneta.titel"));
   s.textContent="";
   const p=document.createElement("div"); p.className="ugneta-portratt";
   p.setAttribute("aria-hidden","true");
   const h=document.createElement("i");h.className="ugneta-har";
   const g=document.createElement("i");g.className="ugneta-glas";p.append(h,g);
   const t=document.createElement("div");
-  const n=document.createElement("div");n.className="ugneta-namn";n.textContent="Ugneta · ridinstruktör";
-  const r=document.createElement("div");r.className="ugneta-rubrik";r.textContent=meta.rubrik||"Nästa steg";
+  const n=document.createElement("div");n.className="ugneta-namn";n.textContent=tSpr("ugneta.titel");
+  const r=document.createElement("div");r.className="ugneta-rubrik";r.textContent=meta.rubrik||tSpr("ugneta.nasta_steg");
   const ps=document.createElement("div");ps.className="ugneta-punkter";
   const punkter=(meta.punkter&&meta.punkter.length?meta.punkter:[txt]).slice(0,2);
   for(const rad of punkter){const d=document.createElement("div");d.className="ugneta-punkt";d.textContent=rad;ps.appendChild(d);}

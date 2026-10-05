@@ -117,8 +117,10 @@ local senasteVyForProv = vy
 PreparationController.tillampa(vy)
 PreparationController.uppdateraKontext()
 
-local nastaMoment = vy.nastaMoment
-check("vyn har ett moment på tur att mäta mot", nastaMoment ~= nil,
+--[[ #273 S2: panelens rad är fasens HANDLING («Hälsa»), inte ett enskilt
+	moment. Raden som mäts är den som faktiskt ritas. ]]
+local nastaMoment = if vy.nastaHandling then "handling:" .. vy.nastaHandling else vy.nastaMoment
+check("vyn har en handling på tur att mäta mot", vy.nastaHandling ~= nil and vy.nastaMoment ~= nil,
 	tostring(nastaMoment))
 
 --[[ `_ritadText` ger raderna i ritordning och rubriken står först. ]]
@@ -523,6 +525,18 @@ do
 	--[[ MUTATIONEN: en panel med FAST höjd hade gett samma tal i båda
 		lägena, och då mäter raden ovanför ingenting. Den här jämför de två
 		lägena mot varandra. ]]
+	--[[ #273 S2: skötselvyn har EN handling och inget att fälla ut. Regeln
+		«höjden följer innehållet» mäts därför på en vy med flera rader —
+		fasens moment ritade var för sig, som panelen gör för en fas utan
+		handlingar. Revisionen ligger mellan vyns (1) och nästa avsnitts (2). ]]
+	do
+		local flera = Preparation.vy(state, "preparing", 1.5, hastnamn)
+		flera.handlingar, flera.nastaHandling = {}, nil
+		PreparationController.tillampa(flera)
+		PreparationController.uppdateraKontext()
+		local mf = vid(1024, 768)
+		hopfalld = mf.interaktion.y1 - mf.interaktion.y0
+	end
 	if ytor.interaktionVaxla and ytor.interaktionVaxla.Visible then
 		PreparationController._vaxlaInteraktion()
 		local mu = PreparationController.layout()

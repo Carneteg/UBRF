@@ -500,9 +500,8 @@ local function mount(model: Model, rittId: string?)
 	     återförening efter ett nekat nej — eller en ny. ]]
 	LektionController.start(anlaggning and anlaggning:FindFirstChild("UBRF"),
 		ride and ride.rittId)
-	--[[ Första uppsittningen: visa reglagen en gång, av sig själv. Då är
-	     frågan "vad gör jag nu?" som mest aktuell. ]]
-	KontrollHjalp.vidUppsittning()
+	--[[ #273 S1: kontrollistan öppnas inte av sig själv vid uppsittningen.
+	     Vänstermenyns fyra kärnrader står redan där. ]]
 
 	--[[ ══ EN VARNING SOM ALLTID FYRAR ÄR INGEN VARNING ═══════════════
 
@@ -730,6 +729,9 @@ InteractionController.setReadyCheck(function(model: Model): boolean
 	     `klient-uikontext.spec` avsnitt 3c mäter just den — inte det läge
 	     där `redo` redan svarat nej. ]]
 	if PreparationController.skotselstegAgerFokus() then return false end
+	--[[ #292: ett RÄKNAT pass är stängt. «Sitt upp» hör till ett nytt pass,
+	     och det öppnas av «Rida nu» — inte av en uppsittning servern nekar. ]]
+	if PreparationController.passRaknat() then return false end
 	return PreparationController.redo()
 end)
 --[[ Ledningen öppnas av att `leda` är spelarens tur — inte av `redo`.
@@ -743,7 +745,12 @@ InteractionController.setRidaCheck(function(model: Model): boolean
 	local id = PreparationController.hastId()
 	if not id then return false end
 	if model:GetAttribute("HorseId") ~= id then return false end
-	return PreparationController.nastaFas() ~= nil
+	-- #274: ett öppet fynd eller ett stopp äger fokus; servern nekar «Rida nu» då.
+	if PreparationController.valfardAgerFokus() then return false end
+	--[[ #292: efter ett RÄKNAT pass är förberedelsen «färdig» (`nastaFas` nil)
+	     men dagen är inte slut — ett nytt uttryckligt «Rida nu» öppnar nästa
+	     pass (#290). Under RIDER och EFTERVARD visas inget: ofärdigt rörs inte. ]]
+	return PreparationController.nastaFas() ~= nil or PreparationController.passRaknat()
 end)
 
 --[[ Nejet från «Rida nu» ska läsas av SPELAREN, inte av Output-fönstret.
@@ -822,12 +829,8 @@ end)
 
      BEHÖRIGHETEN FLYTTAS INTE. `LedBorja` svarar som förut; servern äger
      rätt häst, avstånd, om hon leds av någon annan, om hon rids. ]]
-InteractionController.setLedCheck(function(model: Model): boolean
-	local id = PreparationController.hastId()
-	if not id then return false end
-	if model:GetAttribute("HorseId") ~= id then return false end
-	return not PreparationController.skotselstegAgerFokus()
-end)
+-- Produktbeslut 2026-10-04: ledningen är borttagen, ingen ledknapp.
+InteractionController.setLedCheck(function(_model: Model): boolean return false end)
 --[[ Prompt-uppdateringen hänger på ATT EN NY VY ACCEPTERATS, inte på
      RemoteEvent-händelsen. Skillnaden är hela rättelsen efter senior review
      runda 2: handskakningens svar kommer inte som en `PreparationSync`, så
@@ -882,24 +885,16 @@ PreparationController.vidNyVy(function(vy: any)
 	     hade statt kvar ett varv efter att sadeln lagts pa. ]]
 	InteractionController.uppdatera()
 end)
-InteractionController.setSadlaCheck(function(model: Model): boolean
-	if not barSadelNu then return false end
-	local id = PreparationController.hastId()
-	if not id then return false end
-	return model:GetAttribute("HorseId") == id
-end)
+-- Produktbeslut 2026-10-04: stallet sadlar åt spelaren, ingen «Sadla»-knapp.
+InteractionController.setSadlaCheck(function(_model: Model): boolean return false end)
 
 --[[ #235 FAS 3. Samma fraga, en annan del. Att knapparna inte kan vara
      uppe samtidigt avgors inte har utan av KANON: transet kraver att hon
      ar sadlad, och nar hon ar det har `burenUtrustning` redan slappt
      sadeln. Servern bar regeln (`tack.sadeln_forst`); den har raden ritar
      bara knappen. ]]
-InteractionController.setTransaCheck(function(model: Model): boolean
-	if not barTransNu then return false end
-	local id = PreparationController.hastId()
-	if not id then return false end
-	return model:GetAttribute("HorseId") == id
-end)
+-- Produktbeslut 2026-10-04: stallet tränsar åt spelaren, ingen «Transa»-knapp.
+InteractionController.setTransaCheck(function(_model: Model): boolean return false end)
 PreparationController.start()
 DinHast.start()
 --[[ #235: den gemensamma touchytan. Returnerar direkt utan pekskarm. ]]
@@ -908,13 +903,31 @@ Naromrade.start()
      ned — den återvänder direkt när man inte rider, och det är precis då
      frågan "står jag vid min häst?" spelar roll. Heartbeat räcker: det är
      ett avståndsmått, och HUD:en ritas bara om när svaret FAKTISKT byter. ]]
-RunService.Heartbeat:Connect(function()
+--[[ ONBOARDING (docs/ONBOARDING-STEP-CARD-CONTRACT.md): hästens prompter
+     («Rida nu», «Sitt upp», ledningen) räknades bara om vid en NY VY. Vid
+     join kom vyn innan hästens modell strömmat in, så «Rida nu» fanns inte
+     alls förrän spelaren gjort något — mätt i Studio. Nu räknas de också om
+     när en häst DYKER UPP, och en gång i sekunden (uppdateringen är
+     idempotent: finns prompten görs ingenting). ]]
+local promptSvep = 0
+RunService.Heartbeat:Connect(function(dt)
 	PreparationController.uppdateraKontext()
+	promptSvep += (if type(dt) == "number" then dt else 0)
+	if promptSvep >= 1 then
+		promptSvep = 0
+		InteractionController.uppdatera()
+	end
+end)
+game:GetService("CollectionService"):GetInstanceAddedSignal("Horse"):Connect(function()
+	task.defer(InteractionController.uppdatera)
 end)
 --[[ G02-C: Ugnetas lärar-UX byggs vid uppstart så att den finns när
      första ritten börjar. Själva LEKTIONEN startas av `mount` och stegas
      av loopen längst ned — HUD:en är ytan, LektionController är kedjan. ]]
 UgnetaController.start()
+--[[ Ledningslektionen till fots: en sekundär ingång i Ugnetas val när ingen
+     ridlektion är installerad (docs/LEADING-LESSON-CONTRACT.md). ]]
+-- Produktbeslut 2026-10-04: ledlektionen är borttagen, så den startas inte.
 --[[ #161: `?`-knappen byggs vid uppstart och lever hela sessionen. Att
      bygga den vid uppsittning hade gett samma hål vi just stängde — hjälpen
      ska finnas i stallet också. ]]
@@ -1043,6 +1056,24 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	if input.KeyCode == Enum.KeyCode.H
 		or input.KeyCode == KontrollHjalp.GAMEPADKNAPP then
 		KontrollHjalp.vaxla()
+		return
+	end
+
+	--[[ #279: «Done (R)» efter avsittningen.
+
+	     Efter-ritten-kortet visas först när ritten är riven (`ride = nil`,
+	     `pass = nil`), så R-blocket längre ned — bakom `not ride` — nådde
+	     det aldrig: etiketten lovade en tangent som inte fanns, medan
+	     panelknappen gick rakt till `UgnetaController.fortsatt()`.
+
+	     Samma handling som knappen, ingen ny: `fortsatt` returnerar false
+	     när inget kort väntar, så R/Y stjäl ingenting till fots. Bara när
+	     hon INTE rider — under ridningen äger R-blocket nedan tangenten
+	     oförändrat, och `LektionController.fortsatt` har kvar sin
+	     `pass`-vakt. ]]
+	if not ride
+		and (input.KeyCode == Enum.KeyCode.R or input.KeyCode == Enum.KeyCode.ButtonY)
+		and UgnetaController.fortsatt() then
 		return
 	end
 
@@ -1298,6 +1329,12 @@ RunService.RenderStepped:Connect(function(dt)
 	     annat i den här ordningen: den ska se bildrutans mätning, inte
 	     förra bildrutans, och den rör varken rörelse eller kamera. ]]
 	LektionController.steg(dt, ride.telemetri, poseAv(ride.rig))
+	--[[ #276: hopphandlingen följer lektionens läge, efter att lektionen
+	     läst bildrutans serverbild. Binds den kläs pekknappen; rivs den
+	     tar `UnbindAction` knappen med sig. ]]
+	if Input.satHopp(LektionController.hoppRelevant()) and Input.hoppBunden() then
+		TouchControls.klaHopp()
+	end
 	--[[ #264 GAIT_READABILITY_AND_UGNETA: panelens gångartsrad och Ugnetas
 	     ridrad läser samma bildrutas läge. Ugneta säger den knapp spelaren
 	     faktiskt har för högre gångart; lektionen äger rösten medan den pågår. ]]

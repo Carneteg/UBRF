@@ -2457,11 +2457,14 @@ end
 function LedService.start()
 	Net.get("LedSync")
 
+	--[[ PRODUKTBESLUT 2026-10-04: spelaren leder inte längre. Fjärranropet
+		finns kvar så att ett gammalt anrop får ett rent nej i stället för att
+		hänga, men ingen ledning startar. «Rida nu» placerar hästen genom
+		`placeraVidMal`, inte genom det här anropet. `LedSlapp` nedan släpper
+		fortfarande ett koppel som skulle ha blivit kvar. ]]
 	Net.get("LedBorja").OnServerInvoke = Skopa.grind("LedBorja",
-		function(player, modell)
-			local hak = hakar.ratt
-			local ratt = hak and hak(player, nil :: any) or nil
-			return LedService.borja(player, modell, ratt)
+		function(_player, _modell)
+			return false, "led.borttagen"
 		end)
 	Net.get("LedSlapp").OnServerInvoke = Skopa.grind("LedSlapp",
 		function(player)

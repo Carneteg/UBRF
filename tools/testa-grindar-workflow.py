@@ -70,6 +70,8 @@ JOBB = ("grindar", "ridning")
 #[[ KONTRAKTET. (jobb, obligatorisk sokvag, kommandoraderna i ordning).
 #   Genererad ur filen nar grinden infordes, sedan fast. ]]
 INVENTARIE = [
+    # New mandatory runner regression; existing checks/arguments unchanged.
+    ('grindar', 'tools/testa-fore-leverans.py', ['python3 tools/testa-fore-leverans.py']),
     ('grindar', 'tools/testa-grindar-workflow.py', ['python3 -m pip install --quiet pyyaml', 'python3 tools/testa-grindar-workflow.py --forhandskoll']),
     ('grindar', 'tools/kolla-material.py', ['python3 tools/kolla-material.py']),
     ('grindar', 'tools/bygg-identitet.py', ['python3 tools/bygg-identitet.py --kontrollera']),
@@ -102,6 +104,14 @@ INVENTARIE = [
     ('ridning', 'tools/ridtest.mjs', ['npm install --no-save --no-package-lock playwright@1.49.1', 'npx playwright install --with-deps chromium']),
     ('ridning', 'tools/build.py', ['python3 tools/build.py']),
     ('ridning', 'tools/sprakgrind.mjs', ['node tools/sprakgrind.mjs']),
+    ('ridning', 'tools/sprakblandningtest.mjs', ['node tools/sprakblandningtest.mjs']),
+    ('ridning', 'tools/lektionsparitet.mjs', ['node tools/lektionsparitet.mjs']),
+    ('ridning', 'tools/lektionstest.mjs', ['node tools/lektionstest.mjs']),
+    ('ridning', 'tools/ridpaneltest.mjs', ['node tools/ridpaneltest.mjs']),
+    ('ridning', 'tools/kameratest.mjs', ['node tools/kameratest.mjs']),
+    ('ridning', 'tools/lektion-e2e-test.mjs', ['node tools/lektion-e2e-test.mjs']),
+    ('ridning', 'tools/simplifytest.mjs', ['node tools/simplifytest.mjs']),
+    ('ridning', 'tools/dressyrbokstavertest.mjs', ['node tools/dressyrbokstavertest.mjs']),
     ('ridning', 'tools/ridtest.mjs', ['node tools/ridtest.mjs']),
     ('ridning', 'tools/gardtest.mjs', ['node tools/gardtest.mjs']),
     ('ridning', 'tools/uppdragstest.mjs', ['node tools/uppdragstest.mjs']),

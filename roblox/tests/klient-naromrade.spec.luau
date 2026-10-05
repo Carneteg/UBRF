@@ -190,7 +190,25 @@ do
 		vänta på nästa bildruta. ]]
 	N.satRider(false)
 
-	local synliga = N._rader()
+	--[[ Alternativ 3 (CHATGPT_UX_DECISION_NEAR_AREA): ledningens sekundära ingång
+		till fots får en rad som prompterna inte behöver, EFTER dem. Provet räknar
+		handlingsraderna och visar att ingången står sist. ]]
+	local allaRader = N._rader()
+	local synliga = {}
+	for _, t in ipairs(allaRader) do
+		if string.sub(t, 1, #Sprak.t("ledlektion.choose")) ~= Sprak.t("ledlektion.choose") then table.insert(synliga, t) end
+	end
+	check("den sekundära ingången står sist, efter handlingarna",
+		#allaRader == #synliga or string.sub(allaRader[#allaRader], 1, #Sprak.t("ledlektion.choose")) == Sprak.t("ledlektion.choose"),
+		table.concat(allaRader, " | "))
+	do -- och i själva layouten: valsektionen (Fragan) ligger under listan när den bara bär ingången
+		local ram = N._panel().ram
+		local sk = ram and ram:FindFirstChild("StatusKort") -- #274: Fragan/Lista bor i statuskortet
+		local fr, li = sk and sk:FindFirstChild("Fragan"), sk and sk:FindFirstChild("Lista")
+		check("i layouten ligger den sekundära ingången under handlingsraderna",
+			#allaRader == #synliga or (fr ~= nil and li ~= nil and fr.LayoutOrder > li.LayoutOrder),
+			("%s / %s"):format(tostring(fr and fr.LayoutOrder), tostring(li and li.LayoutOrder)))
+	end
 	check("listan RITAS med en rad per handling", #synliga == 2,
 		("%d rader: %s"):format(#synliga, table.concat(synliga, " | ")))
 	check("närmast först också på skärmen",
@@ -285,7 +303,11 @@ do
 			or sadel.Style == nil, tostring(sadel.Style))
 	N.satRider(false)
 
-	check("listan ritar en rad för handlingen", #N._rader() == 1,
+	local handlingsrader = 0
+	for _, t in ipairs(N._rader()) do
+		if string.sub(t, 1, #Sprak.t("ledlektion.choose")) ~= Sprak.t("ledlektion.choose") then handlingsrader += 1 end
+	end
+	check("listan ritar en rad för handlingen", handlingsrader == 1,
 		("%d rader"):format(#N._rader()))
 	check("och Robloxs EGNA bild för samma handling är släckt",
 		sadel.Style == Enum.ProximityPromptStyle.Custom,
@@ -1440,6 +1462,106 @@ do
 	N.stopp()
 end
 
+print("\n── Alternativ 3 med overflow: ingången får den lediga raden på sista sidan ──")
+
+--[[ CHATGPT_REVIEW_R1_CHANGES_REQUESTED_20260928: suppressionen räknade ALLA
+	prompter (`#ordnade`), inte sidans. Fyra prompter på tre rader: sida 1 är
+	full och ingången får inte tränga undan någon; sida 2 har en prompt och två
+	lediga rader, och där ska ingången stå — efter prompten. Tangenterna följer
+	fortfarande bara promptraderna. Ingången kommer från den riktiga
+	(ledlektionen är borttagen 2026-10-04). ]]
+do
+	local UIS = game:GetService("UserInputService")
+	UIS.TouchEnabled = true
+	--[[ Inga prompter utom provets: tidigare blocks prompter (Rida nu, Led,
+		sadel, tränset — en del i hästmodeller) skulle annars fylla sidorna. ]]
+	for _, d in ipairs(workspace:GetDescendants()) do
+		if d:IsA("ProximityPrompt") then d:Destroy() end
+	end
+	N.stopp()
+	N.start()
+	N.satRider(false)
+	local CHOOSE = Sprak.t("ledlektion.choose")
+	local function arIngang(t) return string.sub(t, 1, #CHOOSE) == CHOOSE end
+	local fyra = {}
+	for i = 1, 4 do
+		local p = nyPrompt("Rest" .. i, "Öppna", "Rest " .. i, Vector3.new(i * 0.3, 0, 0))
+		p.KeyboardKeyCode = Enum.KeyCode.E
+		table.insert(fyra, p)
+	end
+	N.satRider(false)
+	check("premissen: tre promptrader och två sidor för fyra prompter",
+		N.radplatser() == 3 and select(2, N._sida()) == 2,
+		("%d platser, %d sidor"):format(N.radplatser(), select(2, N._sida())))
+
+	--[[ Sidans rader, tangenter och ingång på en gång. `rad[i]` för i ≤ antal
+		prompter ska vara prompt i:s rad, och bara de ska bära en tangent. ]]
+	local function lage()
+		local rader, prompter = N._rader(), N._prompter()
+		local ingangar, ingangSist = 0, false
+		for i, t in ipairs(rader) do
+			if arIngang(t) then ingangar += 1; ingangSist = i == #rader end
+		end
+		local justerad = true
+		for i, p in ipairs(prompter) do
+			if rader[i] == nil or not string.find(rader[i], p.ObjectText, 1, true) then justerad = false end
+		end
+		local synlig = {}
+		for _, p in ipairs(prompter) do synlig[p] = true end
+		--[[ Samma invariant som «TANGENTEN FÖLJER RADEN» ovan: det som inte står
+			på sidan är tystat, och minst en synlig promptrad bär en tangent (fyra
+			prompter med samma E kan inte alla bära den). ]]
+		local tangentFel = {}
+		local medTangent = 0
+		for _, p in ipairs(fyra) do
+			local dod = p.KeyboardKeyCode == N.DODTANGENT
+			if not synlig[p] and not dod then table.insert(tangentFel, p.Name) end
+			if synlig[p] and not dod then medTangent += 1 end
+		end
+		if medTangent < 1 then table.insert(tangentFel, "ingen synlig tangent") end
+		return { rader = rader, prompter = #prompter, ingangar = ingangar, ingangSist = ingangSist,
+			justerad = justerad, tangentFel = tangentFel }
+	end
+
+	local s1 = lage()
+	check("sida 1 är full: tre promptrader, ingen ingång som tränger undan",
+		N._sida() == 1 and s1.prompter == 3 and s1.ingangar == 0,
+		table.concat(s1.rader, " | "))
+	check("sida 1: tangent ↔ rad följs åt", s1.justerad and #s1.tangentFel == 0,
+		table.concat(s1.tangentFel, " "))
+
+	N._bladdra()
+	local s2 = lage()
+	check("SISTA SIDAN: bara promptraden — ledlektionens ingång är borttagen",
+		N._sida() == 2 and s2.prompter == 1 and s2.ingangar == 0,
+		table.concat(s2.rader, " | "))
+	check("sista sidan: tangent ↔ rad följs åt, ingången bär ingen tangent",
+		s2.justerad and #s2.tangentFel == 0, table.concat(s2.tangentFel, " "))
+	do
+		local ram = N._panel().ram
+		local sk = ram and ram:FindFirstChild("StatusKort") -- #274: Fragan/Lista bor i statuskortet
+		local fr, li = sk and sk:FindFirstChild("Fragan"), sk and sk:FindFirstChild("Lista")
+		check("sista sidan: ingen ingångsfråga ritas",
+			fr == nil or not fr.Visible,
+			("%s / %s"):format(tostring(fr and fr.LayoutOrder), tostring(li and li.LayoutOrder)))
+	end
+	local fyrade = 0
+	fyra[4].Triggered:Connect(function() fyrade += 1 end)
+	N._tryckPa(1)
+	task.wait()
+	check("sista sidan: rad 1 utlöser sidans egen prompt", fyrade == 1, tostring(fyrade))
+
+	N._bladdra()
+	local s3 = lage()
+	check("och tillbaka på sida 1 försvinner ingången igen",
+		N._sida() == 1 and s3.prompter == 3 and s3.ingangar == 0, table.concat(s3.rader, " | "))
+
+	for _, p in ipairs(fyra) do
+		if p.Parent then p.Parent:Destroy() end
+	end
+	N.stopp()
+end
+
 --[[ ══ ETT AVBRUTET HÅLL ÄR INGEN HANDLING (#264 R2) ═══════════════
 
 	Raden startade förut sitt håll på `MouseButton1Click` — som fyrar när
@@ -2099,7 +2221,7 @@ do
 	check("och panelen håller kontraktets bredd", bredd >= 120 and bredd <= 320,
 		("%d px"):format(bredd))
 	local knapp = nil
-	for _, b in ipairs((pnl.ram and pnl.ram:FindFirstChild("Lista") or {} :: any)._barn or {}) do
+	for _, b in ipairs((pnl.ram and pnl.ram:FindFirstChild("StatusKort") and pnl.ram:FindFirstChild("StatusKort"):FindFirstChild("Lista") or {} :: any)._barn or {}) do
 		if b.Visible and b.Text and string.find(b.Text, "numnah", 1, true) then knapp = b end
 	end
 	check("raden radbryter i fast storlek — ingen skalad text",
@@ -2450,6 +2572,12 @@ do
 	end
 	for _, t in ipairs({ steg, ater, hjalp }) do t.AbsoluteSize = Vector3.new(280, 14, 0) end
 	local KORT = "Walk up from the side. Say her name before you touch her."
+	--[[ UI-2: till fots står instruktionen i Ugnetas dockade yta. R5 mäter
+	     PANELENS egen rad — den som bär ridningens rader och instruktionen
+	     när ytan inte är dockad — så blocket körs med ytan odockad. ]]
+	local ugDock = UgnetaController._larare()
+	local ugForalder = ugDock.ram and ugDock.ram.Parent
+	UgnetaController.dockaLarare(nil)
 	local langaSteg = {}
 	for i = 1, 30 do
 		table.insert(langaSteg, { namn = ("Steg %d: en lång rad om vad som ska göras, och varför"):format(i),
@@ -2509,6 +2637,7 @@ do
 			tostring(steg.Size.Y.Offset), tostring(ater.Size.Y.Offset)))
 
 	PreparationController.panel, PreparationController.hastId = gamlaPanel, gamlaHast
+	if ugDock.dockad and ugForalder then UgnetaController.dockaLarare(ugForalder, 0) end
 	yta.AbsoluteSize = foreStorlek
 	N.satRider(false)
 end

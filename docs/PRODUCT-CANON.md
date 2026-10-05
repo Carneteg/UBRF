@@ -2,6 +2,10 @@
 
 Det här dokumentet är den överordnade produktvisionen för UBRF-spelet. Vid konflikt mellan en bekväm implementation och den här visionen vinner visionen, om inte Product Owner uttryckligen beslutar något annat.
 
+Nuvarande roller, behörigheter och testpolicy: se
+[WORKING-AGREEMENT](WORKING-AGREEMENT.md). Daterade beslut nedan bevarar
+produktens historia, men äldre personuppdrag eller testordrar återstartas inte.
+
 ## North Star
 
 **Bygg ett rid- och hästspel där spelaren har roligt samtidigt som hon lär sig hur hästar faktiskt fungerar, hur man rider och vilket ansvar och vilka plikter som följer med hästlivet. Allt utspelar sig på UBRF, som ska återskapas så verklighetstroget som det tillgängliga källmaterialet tillåter.**
@@ -74,6 +78,9 @@ Målet är maximal verklighetstrohet i:
 **Verkligheten är facit.** Foton, film, ritningar, satellitbilder, platsdata och verifierade uppgifter väger högre än estetisk bekvämlighet.
 
 "100 % likt" är ett fidelity-mål, inte tillåtelse att hitta på. Om underlag saknas ska delen markeras som `[REFERENCE GAP]` eller `[antagande]` och inte presenteras som verifierad verklighet. När nytt källmaterial kommer ska antagandet ersättas.
+
+Regel mot falsk precision: exakt kodvärde får inte beskrivas som exakt verklighetsmått
+om källan bara stödjer proportion eller intervall.
 
 ## Hästen är spelets kärna
 
@@ -181,6 +188,39 @@ Beskriv aldrig en saknad webbimplementation som genomförd paritet. Under
 etappen redovisas den som en **medveten, tidsbegränsad avvikelse** med
 hänvisning hit.
 
+### Produktbeslut 2026-09-28: Roblox och webb uppdateras samtidigt
+
+Det tidsbegränsade Roblox-först-undantaget från 2026-09-22 är **avslutat och
+ersatt för allt framtida arbete**.
+
+Från och med detta beslut gäller följande stående regel:
+
+- Varje ändring som påverkar produktbeteende, gameplay, spelarföde,
+  instruktioner, UI, lokalisering, hästhantering, lektioner, miljöbeteende
+  eller annan spelbar upplevelse ska implementeras och verifieras på
+  **både Roblox och HTML/webb i samma leverans**.
+- Roblox är fortsatt primär spelplattform och är facit när versionerna har
+  driftat, men en Roblox-ändring är inte färdiglevererad förrän webben är
+  uppdaterad till motsvarande produktutfall.
+- En webbändring som påverkar den gemensamma spelupplevelsen ska på samma sätt
+  föras över till Roblox i samma leverans.
+- Rendering, input och teknisk implementation får skilja sig mellan
+  plattformarna, men spelarens avsedda regler, flöde, instruktioner och
+  produktutfall ska motsvara varandra.
+- Om identiskt beteende verkligen inte är möjligt av tekniska plattformsskäl
+  krävs ett **uttryckligt produktägarbeslut från Tobias**. Skillnaden ska
+  dokumenteras som ett plattformsundantag med motivering och samma avsedda
+  spelarutfall.
+- Ingen ensidig plattformsändring får lämnas som normal backlog eller
+  "paritet senare".
+- Varje handoff ska redovisa Roblox-filer, webbfiler, parity-kontroll,
+  relevanta tester/build för båda plattformarna och eventuella uttryckligen
+  godkända undantag.
+
+Detta beslut ersätter punkt 1 och 5 i «Tidsbegränsat produktbeslut 2026-09-22»
+i den mån de pausar samtidig webbleverans. Den historiska texten ligger kvar
+för spårbarhet men är inte längre aktuell arbetsorder.
+
 ### Produktbeslut 2026-09-26: completion first
 
 Beslutet är Tobias, förmedlat i PR #264, kommentar `5843082008`.
@@ -209,6 +249,64 @@ Status, grindar och slutprovfall per komponent finns i den låsta
 leveransmatrisen, `docs/LEVERANSMATRIS.md`.
 
 Se även `docs/ASSET-SOURCE-OF-TRUTH.md` för material- och datakällor.
+
+### Produktbeslut 2026-10-04: ledning och manuell skötsel tas bort
+
+Beslutet är Tobias, efter att ledningsfelet i #265 reproducerats
+(`265_LEADING_BLOCKER_REPRO_READY_FOR_CHATGPT_REVIEW`).
+
+**Beslut:**
+1. **Ledning tas bort helt** ur spelet, på både Roblox och webb: ingen
+   ledprompt, inget koppel, ingen ledlektion, inget ledningsminne.
+2. **Manuell skötsel tas bort** som spelarhandling: hälsa, känn över, ryktning,
+   hovar, sadling och tränsning görs inte längre av spelaren.
+3. Spelaren väljer **«Rida nu»**. Stallet gör hästen redo och hästen står i
+   ridhuset när ritten börjar. Spelaren leder den inte dit.
+4. Ledlektionen och ledningsminnet tas bort helt.
+
+**Gäller oförändrat — får aldrig tas bort:**
+- välfärdsstopp: en häst som stallet ser är sjuk, halt eller inte redo rids inte,
+- säkerhetsgrindar och fysisk sanning om var hästen står,
+- hästen är alltid korrekt och säkert förberedd när ritten börjar,
+- spelet lär aldrig ut fel hästhantering.
+
+**Ersätter:**
+- pelare 3 «Responsibility is gameplay» i den del som kräver att spelaren
+  själv utför plikter, och raden «hur man leder och hanterar en häst från
+  marken» i pelare 2,
+- «manuellt utförande är frivilligt» i FUN FIRST-beslutet 2026-09-14: det
+  manuella utförandet finns inte längre, bara det som stallet gör åt spelaren,
+- ledningssteget i punkt 4 ovan: stall → utrustning → dörr → ledning → ridhus
+  blir stall → «Rida nu» → ridhus.
+
+**Hästkunskap (Tobias, senare 2026-10-04):** skötsel före ritten förblir
+borta ur ridflödet. Hästkunskapen kommer tillbaka som interaktiva
+teorirumslektioner; första genomförandet ger en permanent kunskapsrosett.
+Rosetter är samlar-/progressionsbelöning, inte direkt ridbonus. Teorirummet är
+inte byggt än och ingår inte i #288.
+
+**Eftervård efter ritten gäller oförändrat (#273 S3):** valet «Stallet tar
+hand om henne» (utan straff) eller «Ta hand om henne själv» är kvar på båda
+plattformarna. Beslutet om ledning och skötsel gäller bara förberedelsen före
+ritten.
+
+**Konsekvens för #265:** P1 (topologi för ledd häst) förlorar sin grund och är
+**NO_PORT, obsolet genom produktbeslut** (ChatGPT-order 2026-10-04 på #265). Den
+äldre trafik-/gångzonstopologin för ledda hästar portas inte. P2 och P5
+påverkas inte.
+
+**Genomfört (branch `claude/ta-bort-ledning-skotsel`):** på både Roblox och webb
+har startskärmen ett enda val, «Rida nu»; hälsa, kolla, rykta, kratsa,
+hämtning och påläggning av sadel och träns samt ledning finns inte som
+spelarhandlingar; ledlektionen och ledningsminnet är borta; hästen står kvar vid
+sargporten i ridhuset. Välfärdsstopp och säkerhetsgrindar är oförändrade.
+Kvarvarande, medvetet orörda delar redovisas i leveransrapporten på #265.
+
+**Leverans:** Roblox och webb i samma leverans (se 2026-09-28). Äldre
+sparfiler som innehåller ledningsdata ska tåla att läsas: datat ignoreras,
+spelaren förlorar ingenting annat. Plan och steg: kommentar på #265.
+Historiska dokument (`docs/LEADING-LESSON-CONTRACT.md`,
+`docs/LEADING-MEMORY-CONTRACT.md`) ligger kvar för spårbarhet men gäller inte.
 
 ## Beslutsfilter
 

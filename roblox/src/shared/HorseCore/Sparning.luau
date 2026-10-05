@@ -504,6 +504,53 @@ function Sparning.registreraPris(save: Save, id: string, pris: any): (boolean, s
 	return true, nil
 end
 
+--[[ D4a (docs/D4A-PRIZE-PERSISTENCE-CONTRACT.md): KVITTONYCKELN. Samma typ och
+	samma resultat ger ALLTID samma pris-id — så att ett omförsök, en
+	återanslutning eller en andra session träffar samma kvitto och
+	`registreraPris` svarar "finns". Ett pris per resultat och typ. nil för
+	okänd typ, ogiltigt resultat-id eller total längd över MAX_ID (stängt vid fel). ]]
+function Sparning.prisId(typ: any, resultatId: any): string?
+	if type(typ) ~= "string" or not PRISTYP[typ] or not giltigtId(resultatId) then return nil end
+	local id = "pris:" .. typ .. ":" .. resultatId
+	if not giltigtId(id) then return nil end
+	return id
+end
+
+--[[ D4a: PRISSKÅPETS LÄSMODELL (ren). Ur en priskarta och resultatkartan:
+	en fryst lista, sorterad på `nar` och sedan id, där TYP, KÄLLA och
+	VISNING hålls isär. Inga prestationstal, inga bonusar — posten har inga
+	andra fält. Karantänsatta id:n finns inte i `priser` och listas aldrig.
+	Vilken karta som skickas in avgör vad skåpet visar: `SparService`
+	skickar bara den BEKRÄFTADE (D4-RÄTT), aldrig sessionens minne. ]]
+function Sparning.prisskap(priser: any, resultat: any): { any }
+	local ut = {}
+	if type(priser) ~= "table" then return table.freeze(ut) end
+	for id, p in pairs(priser) do
+		local ren = if giltigtId(id) then tvattPris(p) else nil
+		if ren then
+			local r = ren.resultatId and type(resultat) == "table" and resultat[ren.resultatId] or nil
+			local kopia = nil
+			if type(r) == "table" then
+				kopia = {}
+				for k, v in pairs(r) do kopia[k] = v end
+				kopia = table.freeze(kopia)
+			end
+			table.insert(ut, table.freeze({
+				id = id,
+				typ = ren.typ,
+				kalla = table.freeze({ resultatId = ren.resultatId, resultat = kopia }),
+				visning = table.freeze({ farg = ren.farg }),
+				nar = ren.nar,
+			}))
+		end
+	end
+	table.sort(ut, function(a, b)
+		if a.nar ~= b.nar then return a.nar < b.nar end
+		return a.id < b.id
+	end)
+	return table.freeze(ut)
+end
+
 --[[ RYMS DET SOM SKA SLÅS IHOP? Kontrollen mot den AUKTORITATIVA raden.
 
 	`registreraResultat`, `registreraPris` och `noteraForsok` prövar taket

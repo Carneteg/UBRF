@@ -494,6 +494,25 @@ do
 		lagret.priser.k2 ~= nil and lagret.karantan.k2 == nil)
 end
 
+print("\n── Äldre sparfiler med ledningsdata tål att läsas (produktbeslut 2026-10-04) ──")
+do
+	--[[ Ledning och skötselminne är borttagna. Gamla spar kan ha markörerna
+		`ledning:*` och `skotsel:*` i `framsteg`; de ska läsas utan fel, bära
+		med sig och aldrig kosta spelaren något annat. ]]
+	local s = Sparning.migrera({
+		v = 2, pass = 7,
+		framsteg = {
+			["ledning:server-ledning-1"] = { forsok = 1, klarade = 1, basta = 1, senast = 5 },
+			["skotsel:halsa:v2:3"] = { forsok = 1, klarade = 1, basta = 1, senast = 5 },
+			volt = { forsok = 3, klarade = 2, basta = 1.7, senast = 5 },
+		},
+	})
+	check("ett spar med ledningsmarkör läses utan fel", s ~= nil and s.pass == 7)
+	check("övriga framsteg överlever", s.framsteg.volt ~= nil and s.framsteg.volt.klarade == 2)
+	local tillbaka = Sparning.migrera(Sparning.tillRad(s))
+	check("och spelar om utan att tappa något annat", tillbaka.pass == 7 and tillbaka.framsteg.volt ~= nil)
+end
+
 if fails > 0 then
 	print(string.format("\n%d mätning(ar) föll.", fails))
 	local avsluta = (os :: any).exit

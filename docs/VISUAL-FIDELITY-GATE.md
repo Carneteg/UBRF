@@ -104,8 +104,10 @@ var rent. Skiljer något sig är jobbet rött — paketet är då inte evidens.
 CI (`.github/workflows/visuell-grind.yml`) kör på varje PR från exakt headen:
 kameralista + Roblox-paritet, spatiala ankare, siktgrinden med negativ
 kontroll, screenshot-packet som artifact `screenshot-pack-<sha>`, och skriver
-EN PR-kommentar (uppdateras vid varje push) med **head-SHA, Netlify-preview
-för just den PR:n och länk till paketet**.
+EN PR-kommentar (uppdateras vid varje push) med **head-SHA, previewraden och
+länk till paketet**. Previewraden skriver ut att Vercel-previewn «saknas i
+automatiken» tills leverantören klistrar in den faktiska Vercel-URL:en för
+exakt den headen (§7) — automatiken konstruerar aldrig en länk.
 
 ## 3. Navigation / wall-occlusion gate
 
@@ -196,11 +198,15 @@ något `VISUALLY_ACCEPTED`.
   `ubrf` (#155), byggd från exakt PR-head.
 - **Previewlänken får inte konstrueras.** Här stod tidigare en mall,
   `https://deploy-preview-<nr>--ubrf-game.netlify.app`, räknad ur PR-numret.
-  Den var påhittad i två led: UBRF ligger inte på Netlify, och en Vercel-URL
-  bär ett slumpat bygg-id som inte går att härleda ur ett PR-nummer. Ingen
-  sådan länk har någonsin svarat. `visuell-grind.yml` skriver därför ut att
+  Den var påhittad i två led: UBRF:s kanoniska väg är Vercel, och en
+  Vercel-URL bär ett slumpat bygg-id som inte går att härleda ur ett
+  PR-nummer. Ingen sådan länk har någonsin svarat. `visuell-grind.yml` skriver därför ut att
   previewn saknas i automatiken, och den som levererar klistrar in den
   faktiska URL:en från Vercel-körningen på samma head.
+- **Netlify är inte kanoniskt.** Så länge Netlify-integrationen är kopplad
+  till repot kan den fortfarande lägga en äldre PR-preview («ubrf-game») på
+  en PR. Den är inte review- eller deploybevis och får aldrig ersätta
+  Vercel-deployen för samma head.
 - PR-kommentaren (CI) innehåller head-SHA + preview + paket. Claudes egna
   rapportkommentarer anger också exakt head-SHA.
 - **`main`-länken används aldrig som reviewlänk för en omergad förändring.**

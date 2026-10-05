@@ -72,6 +72,26 @@ local RidForsok = {}
 
 RidForsok.OVNINGAR = table.freeze({
 	storvolt = table.freeze({ [VoltObservation.VERSION] = true }),
+	-- Start/halt-lektionen (docs/HALT-LESSON-CONTRACT.md).
+	starthalt = table.freeze({ ["server-halt-1"] = true }),
+	-- Övergångslektionen (docs/TRANSITION-LESSON-CONTRACT.md).
+	overgangar = table.freeze({ ["server-overgang-1"] = true }),
+	-- Serpentinlektionen (docs/SERPENTINE-LESSON-CONTRACT.md).
+	serpentin = table.freeze({ ["server-serpentin-1"] = true }),
+	-- Jämn fart i skritt (docs/TEMPO-LESSON-CONTRACT.md).
+	jamn_skritt = table.freeze({ ["server-tempo-1"] = true }),
+	-- Ridvägarna mittlinjen och diagonalen (docs/RIDING-PATH-LESSON-CONTRACT.md).
+	ridvag = table.freeze({ ["server-vag-1"] = true }),
+	-- Halvvolt tillbaka till spåret (docs/HALF-CIRCLE-LESSON-CONTRACT.md).
+	halvvolt = table.freeze({ ["server-halvvolt-1"] = true }),
+	-- Galoppfattning i galoppringen, delvis (docs/CANTER-DEPARTURE-LESSON-CONTRACT.md).
+	galoppfattning = table.freeze({ ["server-galopp-1"] = true }),
+	-- Bom på marken i skritt, hoppningens första steg (docs/GROUND-POLE-LESSON-CONTRACT.md).
+	markbom = table.freeze({ ["server-markbom-1"] = true }),
+	-- Genom hörnet (docs/CORNER-LESSON-CONTRACT.md).
+	genom_hornet = table.freeze({ ["server-horn-1"] = true }),
+	-- D2a: clear round på träningsbanan, förenklad bedömning (docs/D2-CLEAR-ROUND-DAY-CONTRACT.md).
+	clearround = table.freeze({ ["server-clearround-1"] = true }),
 })
 RidForsok.MAX_PER_RITT = 8
 RidForsok.MAX_BEGARAN = 16
@@ -257,6 +277,21 @@ end
 function RidForsok.ogonblick(forsokId: string?): any
 	local f = forsokId and perId[forsokId]
 	return if f then f.bild else nil
+end
+
+-- Server-only consumers allocate independently of untrusted request sequences.
+function RidForsok.nastaSekvens(rittId: string): number?
+	local r = ritter[rittId]
+	return if r and r.oppen then r.hogstaSekvens + 1 else nil
+end
+
+function RidForsok.slutfor(rittId: string, forsokId: string, orsak: string,
+	rittTid: number, volt: any): boolean
+	local r = ritter[rittId]
+	if not r or not r.oppen or not r.aktivt or r.aktivt.forsokId ~= forsokId then return false end
+	if orsak ~= "slutford" and orsak ~= "tidsgrans" then return false end
+	if not andligt(rittTid) then return false end
+	return stang(r, orsak, rittTid, volt)
 end
 
 function RidForsok.aktivt(rittId: string?): any

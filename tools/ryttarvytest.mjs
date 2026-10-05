@@ -253,6 +253,10 @@ const avbrott = await ev(() => {
   R.efterScenbyte = { aktiv: Kameralage.aktiv(Kameralage.ritten), vikt: S3.kam.vikt };
 
   uppe();
+  /* En ÅTERVÄNDANDE spelare: på pass 0 börjar dagen uppsutten i
+     ridhuset (First Ride, P1b) och sätter spelaren upp igen — det är
+     då ingen avsittning att mäta. */
+  SPAR.pass = Math.max(1, SPAR.pass);
   startaVandring();              // avsittningen: ridSittAv + kameraNollstall
   R.efterAvsittning = { aktiv: Kameralage.aktiv(Kameralage.ritten), vikt: S3.kam.vikt,
     uppsutten: RID_TILLSTAND.uppsutten };

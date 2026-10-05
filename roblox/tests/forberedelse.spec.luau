@@ -942,18 +942,63 @@ do
 	check("nästa fas är iordningställandet", Preparation.nasta(st).id == "iordning",
 		Preparation.nasta(st).id)
 
+	--[[ #273 S2 (T2): EN HANDLING PER FAS. Hjälparna nedan gör det servern
+		gör i `GameplayService.handling`: handlingens återstående moment i
+		ordning, genom den riktiga `Preparation.utforMoment`. ]]
+	local function utforHandlingRent(state, handlingId)
+		local ok, skal, h = Preparation.provaHandling(state, handlingId, "cosmo")
+		if not ok then return false, skal end
+		for _, m in ipairs(h.moment) do
+			if not (state.gjorda[h.fas] or {})[m.id] then
+				local mok, mskal = Preparation.utforMoment(state, h.fas, m.id, "cosmo")
+				if not mok then return false, mskal end
+			end
+		end
+		return true
+	end
+	--[[ Trycker på raden som står på tur, genom klientens riktiga väg ut. ]]
+	local function begarPaTur()
+		local id = PC._synligaMoment()[1]
+		if type(id) == "string" and string.sub(id, 1, 9) == "handling:" then
+			PC.begarHandling(string.sub(id, 10))
+		else
+			PC.begar(PC.nastaFas(), id)
+		end
+		return id
+	end
+
 	local L = visa(st)
 	local vy = Preparation.vy(st, Preparation.STATUS.FORBEREDER, rev, "Cosmo")
-	check("fasen HAR nio moment att välja mellan — det är fallet ordern pekar ut",
-		L.interaktionVal == 9, L.interaktionVal .. " moment i vyn")
+	check("fasen HAR nio moment i checklistan — men panelen erbjuder EN handling",
+		#vy.moment == 9 and L.interaktionVal == 1,
+		#vy.moment .. " moment i vyn · " .. L.interaktionVal .. " val i panelen")
 
 	--[[ a. EN SAK. ]]
 	local synliga = PC._synligaMoment()
 	check("panelen visar EXAKT ett moment, inte nio",
 		#synliga == 1, table.concat(synliga, ", "))
-	check("och det är det moment servern släpper fram",
-		synliga[1] == vy.nastaMoment,
-		("visar %s · på tur %s"):format(tostring(synliga[1]), tostring(vy.nastaMoment)))
+	check("och det är den HANDLING servern släpper fram: kratsa hovarna",
+		synliga[1] == "handling:" .. tostring(vy.nastaHandling) and vy.nastaHandling == "kratsa"
+			and vy.nastaMoment == "hov:vf",
+		("visar %s · handling på tur %s · moment på tur %s"):format(tostring(synliga[1]),
+			tostring(vy.nastaHandling), tostring(vy.nastaMoment)))
+	--[[ #273 S2 (A2): kortet bär EN kort rad. Hovmeningarna — «Stå vänd
+		bakåt…», «Leta efter sten…» — står ordagrant kvar, men i det
+		frivilliga kunskapslagret. ]]
+	do
+		local instr = ytor.instruktion.Text
+		local kunskap = tostring((PC.panel() or {}).kunskap or "")
+		local allaMed, ingenIKort = true, true
+		for _, h in ipairs(UBRFSkotsel.hovar) do
+			if string.find(kunskap, h.text, 1, true) == nil then allaMed = false end
+			if string.find(instr, h.text, 1, true) ~= nil then ingenIKort = false end
+		end
+		check("#273: kortets rad är handlingens korta, inte en hovmening",
+			instr == Sprak.t("handling.kratsa_text") and ingenIKort,
+			("[%s]"):format(instr))
+		check("#273: de fyra hovmeningarna står ordagrant i kunskapslagret",
+			allaMed and #UBRFSkotsel.hovar == 4, ("[%s]"):format(kunskap))
+	end
 
 	--[[ …och det håller när fasen är HALVGJORD. Det var här den gamla
 		koden sprack: den valde raden med lägst `LayoutOrder`, alltså
@@ -967,9 +1012,10 @@ do
 	local synliga2 = PC._synligaMoment()
 	check("med fyra hovar gjorda visas fortfarande exakt ett moment",
 		#synliga2 == 1, table.concat(synliga2, ", "))
-	check("och det är UTRUSTNINGENS första steg, inte den kratsade hoven",
-		synliga2[1] == vy2.nastaMoment and synliga2[1] == "utr:1",
-		("visar %s · på tur %s"):format(tostring(synliga2[1]), tostring(vy2.nastaMoment)))
+	check("och det är SADLINGEN, inte de kratsade hovarna",
+		synliga2[1] == "handling:sadla" and vy2.nastaHandling == "sadla" and vy2.nastaMoment == "utr:1",
+		("visar %s · handling på tur %s · moment på tur %s"):format(tostring(synliga2[1]),
+			tostring(vy2.nastaHandling), tostring(vy2.nastaMoment)))
 
 	--[[ MUTATIONEN: kan raden ÖVER HUVUD TAGET bli röd?
 
@@ -990,8 +1036,11 @@ do
 
 	--[[ b. HJÄLPEN ÄR FRIVILLIG OCH DISKRET. ]]
 	local hk = ytor.interaktionVaxla
-	check("hjälpen är en riktig knapp och den syns",
-		hk ~= nil and hk.ClassName == "TextButton" and hk.Visible == true,
+	--[[ #273 S2: med EN handling finns ingenting att fälla ut, och då
+		visas ingen växlingsknapp. Knappen finns kvar för de vyer som har
+		flera val (en rättelse bredvid handlingen); se `varldshud.spec`. ]]
+	check("hjälpen är en riktig knapp — och den visas inte när det bara finns en handling",
+		hk ~= nil and hk.ClassName == "TextButton" and hk.Visible == false,
 		("%s · synlig %s"):format(tostring(hk and hk.ClassName),
 			tostring(hk and hk.Visible)))
 	check("den säger ? — inte Visa alla 9 val",
@@ -1008,35 +1057,46 @@ do
 	check("MUTATION: katalogen kan svara ja — hud.visa_mindre finns",
 		Sprak.finns("hud.visa_mindre") == true)
 
-	--[[ c. HJÄLPEN — OCH BARA HJÄLPEN — ÖPPNAR CHECKLISTAN. ]]
+	--[[ c. INGEN VÄG TILLBAKA TILL NIO RADER (#273 S2). Förut öppnade ?
+		hela checklistan. Nu finns bara handlingen: att växla läget ändrar
+		varken antalet rader eller panelens höjd. ]]
+	local hojdFore = PC.layout().interaktion.y1 - PC.layout().interaktion.y0
 	PC._vaxlaInteraktion()
 	local oppen = PC._synligaMoment()
-	check("ett tryck på ? visar hela checklistan",
-		#oppen == 9, #oppen .. " moment")
-	check("och panelen växer med den",
-		PC.layout().interaktion.y1 - PC.layout().interaktion.y0
-			> L.interaktion.y1 - L.interaktion.y0)
+	check("utfällt läge visar fortfarande EN handling, aldrig checklistans rader",
+		#oppen == 1 and oppen[1] == "handling:sadla", table.concat(oppen, ", "))
+	check("och panelen växer inte",
+		PC.layout().interaktion.y1 - PC.layout().interaktion.y0 == hojdFore)
 	PC._vaxlaInteraktion()
 	check("ett tryck till stänger den igen — en sak i taget är utgångsläget",
 		#PC._synligaMoment() == 1)
 
 	--[[ d. DIREKT FEEDBACK, OCH VIDARE AV SIG SJÄLV. ]]
 	do
-		local moment = Networking.get("PreparationMoment")
+		local moment = Networking.get("PreparationHandling")
 		local fore = moment.InvokeServer
 		local begart = nil
-		moment.InvokeServer = function(_, fasId, momentId)
-			begart = momentId
+		moment.InvokeServer = function(_, handlingId)
+			begart = handlingId
 			--[[ Servern gör arbetet och skickar sedan en ny vy. Samma
 				ordning som produktionen: svaret bär ingen text. ]]
-			Preparation.utforMoment(st, fasId, momentId, "cosmo")
+			utforHandlingRent(st, handlingId)
 			return true
 		end
 
-		local paTur = PC._synligaMoment()[1]
-		PC.begar("iordning", paTur)
-		check("momentet gick iväg till servern", begart == paTur,
-			tostring(begart))
+		local paTur = begarPaTur()
+		check("handlingen gick iväg till servern", "handling:" .. tostring(begart) == paTur
+			and begart == "sadla", tostring(begart))
+		--[[ #273 S2: EN handling gjorde sadlingens fyra moment, i ordning,
+			med spelaren som utförare — samma checklista som fyra klick gav. ]]
+		do
+			local g = st.gjorda.iordning or {}
+			check("#273: «Sadla» gjorde utr:1–4 som spelarens egna, och tränset återstår",
+				g["utr:1"] == true and g["utr:2"] == true and g["utr:3"] == true
+					and g["utr:4"] == true and g["utr:5"] == nil,
+				("utr:1 %s · utr:4 %s · utr:5 %s"):format(tostring(g["utr:1"]),
+					tostring(g["utr:4"]), tostring(g["utr:5"])))
+		end
 		local kvitto = PC._bekraftelse()
 		check("ett godkänt moment kvitteras direkt i panelen",
 			type(kvitto) == "string" and kvitto ~= ""
@@ -1062,11 +1122,17 @@ do
 			PC._bekraftelse() == nil and ytor.instruktion.Text ~= kvitto
 				and ytor.instruktion.Text ~= "",
 			("[%s]"):format(tostring(ytor.instruktion.Text)))
-		check("och den ENDA synliga raden är det nya momentet på tur",
+		check("och den ENDA synliga raden är den nya handlingen på tur: tränsa",
 			#PC._synligaMoment() == 1
-				and PC._synligaMoment()[1] == nu.nastaMoment,
+				and PC._synligaMoment()[1] == "handling:" .. tostring(nu.nastaHandling)
+				and nu.nastaHandling == "transa",
 			("%s mot %s"):format(tostring(PC._synligaMoment()[1]),
-				tostring(nu.nastaMoment)))
+				tostring(nu.nastaHandling)))
+
+		--[[ Härifrån mäts bara kvittens och avslag: ett ja från servern
+			som inte flyttar tillståndet, så att samma handling står kvar på
+			tur genom hela blocket. ]]
+		moment.InvokeServer = function() return true end
 
 		--[[ ETT NEJ SLÄCKER EN STÅENDE KVITTENS. Panelen ska säga skälet,
 			inte lämna kvar ett bock-svar bredvid ett moment servern just
@@ -1076,12 +1142,12 @@ do
 			annars är den grön av sig själv, och då mäter den ingenting.
 			Ett moment till går igenom, kvittensen kontrolleras, och först
 			därefter kommer avslaget. ]]
-		PC.begar("iordning", PC._synligaMoment()[1])
+		begarPaTur()
 		check("det står en kvittens att släcka",
 			type(PC._bekraftelse()) == "string",
 			("[%s]"):format(tostring(PC._bekraftelse())))
 		moment.InvokeServer = function() return false, "spel.for_langt" end
-		PC.begar("iordning", PC._synligaMoment()[1])
+		begarPaTur()
 		check("ett avslag släcker kvittensen och säger skälet i stället",
 			PC._bekraftelse() == nil
 				and ytor.instruktion.Text == PC.skalText("spel.for_langt"),
@@ -1104,7 +1170,7 @@ do
 			nejet är ett tillstånd renderaren läser, precis som jat. ]]
 		local avslagstext = PC.skalText("tack.hamta_forst")
 		moment.InvokeServer = function() return false, "tack.hamta_forst" end
-		PC.begar("iordning", PC._synligaMoment()[1])
+		begarPaTur()
 		check("nejet står i panelen innan vyn kommer",
 			ytor.instruktion.Text == avslagstext,
 			("[%s]"):format(tostring(ytor.instruktion.Text)))
@@ -1136,13 +1202,10 @@ do
 		--[[ ETT JA SLÄCKER ETT STÅENDE NEJ. Gjorde hon om momentet och det
 			gick igenom är nejet inte längre sant. ]]
 		moment.InvokeServer = function() return false, "tack.hamta_forst" end
-		PC.begar("iordning", PC._synligaMoment()[1])
+		begarPaTur()
 		check("det står ett nej att släcka", PC._avslag() == avslagstext)
-		moment.InvokeServer = function(_, fasId, momentId)
-			Preparation.utforMoment(st, fasId, momentId, "cosmo")
-			return true
-		end
-		PC.begar("iordning", PC._synligaMoment()[1])
+		moment.InvokeServer = function() return true end
+		begarPaTur()
 		--[[ OCH ANDRA KNAPPAR FÅR SKICKA HIT SITT NEJ (#202 punkt 2).
 
 			`Rida nu` sitter på en ProximityPrompt i `InteractionController`
@@ -1161,12 +1224,9 @@ do
 		if type(__senasteDelay) == "function" then __senasteDelay() end
 
 		moment.InvokeServer = function() return false, "tack.hamta_forst" end
-		PC.begar("iordning", PC._synligaMoment()[1])
-		moment.InvokeServer = function(_, fasId, momentId)
-			Preparation.utforMoment(st, fasId, momentId, "cosmo")
-			return true
-		end
-		PC.begar("iordning", PC._synligaMoment()[1])
+		begarPaTur()
+		moment.InvokeServer = function() return true end
+		begarPaTur()
 		check("ett godkänt moment släcker nejet och kvitterar i stället",
 			PC._avslag() == nil and type(PC._bekraftelse()) == "string",
 			("avslag [%s] · kvittens [%s]"):format(
@@ -1234,7 +1294,8 @@ do
 			if d.Name == "LedPrompt" then ledPrompt = d end
 		end
 		check("MountPrompt byggdes av den riktiga controllern", mountPrompt ~= nil)
-		check("LedPrompt byggdes av den riktiga controllern", ledPrompt ~= nil)
+		-- Produktbeslut 2026-10-04: ledningen är borttagen, så ingen LedPrompt byggs.
+		check("ingen LedPrompt byggs av controllern", ledPrompt == nil)
 
 		--[[ a. ÄGARSKAP — fail-closed ska vara oförändrat och LÄSBART. ]]
 		if mountPrompt then
@@ -1317,36 +1378,53 @@ do
 		if type(__senasteDelay) == "function" then __senasteDelay() end
 	end
 
-	--[[ e. EN VALFAS STÄLLER SIN FRÅGA.
+	--[[ e. INSTRUKTIONEN GRATULERAR ALDRIG I FÖRVÄG.
 
-		Hälsningen är ett VAL, och momentens `text` är kanonens SVAR på
-		valet — "Bra. Nu vet hon att du är där." Den stod som instruktion
-		innan spelaren valt: panelen gratulerade till något som inte hänt,
-		och frågan fanns ingenstans. Nu är fasens egen text instruktionen. ]]
+		Förr var hälsningen ett VAL och momentens `text` kanonens SVAR —
+		panelen gratulerade till något som inte hänt. Sedan UI-2 är
+		hälsningen handlingar i ordning: `text` är Ugnetas instruktion för
+		nästa handling och `kvittens` det som sägs efteråt. Invarianten är
+		densamma: instruktionen före handlingen är aldrig kvittensen. ]]
 	do
 		local ny = Preparation.nyState("cosmo", 1)
 		visa(ny)
 		local fas = Preparation.fas("halsa")
 		local paTur = Preparation.nastaMoment(ny, "halsa")
-		check("instruktionen är fasens FRÅGA",
-			ytor.instruktion.Text == fas.text,
+		--[[ #273 S2: hälsningen är EN handling. Instruktionen är handlingens
+			korta rad — inte fasens sammanfattning, inte en av de tre
+			detaljmeningarna, och aldrig kvittensen. ]]
+		local kortRad, klarRad = Sprak.t("handling.halsa_text"), Sprak.t("handling.halsa_klar")
+		check("instruktionen är handlingens korta rad, inte fasens sammanfattning eller en detaljmening",
+			ytor.instruktion.Text == kortRad and fas.text ~= kortRad and paTur.text ~= kortRad,
 			("[%s]"):format(tostring(ytor.instruktion.Text)))
-		check("MUTATION: den är inte momentets svarstext — de två skiljer sig",
-			fas.text ~= paTur.text,
-			("fas [%s] · moment [%s]"):format(fas.text, paTur.text))
-		--[[ …och kvittensen är då kanonens egen mening, inte ett generiskt
-			ord: valet HAR ett svar, och det är själva lärandet. ]]
-		local moment = Networking.get("PreparationMoment")
+		check("MUTATION: instruktionen är inte kvittensen — de två skiljer sig",
+			klarRad ~= kortRad and ytor.instruktion.Text ~= klarRad,
+			("text [%s] · kvittens [%s]"):format(kortRad, klarRad))
+		check("#273: panelen visar EN rad — «Hälsa» — inte tre",
+			#PC._synligaMoment() == 1 and PC._synligaMoment()[1] == "handling:halsa",
+			table.concat(PC._synligaMoment(), ", "))
+		--[[ …och kvittensen säger vad som hände — «Nu vet hon att du är där»
+			— inte ett generiskt ord. ]]
+		local moment = Networking.get("PreparationHandling")
 		local fore = moment.InvokeServer
-		moment.InvokeServer = function(_, fasId, momentId)
-			Preparation.utforMoment(ny, fasId, momentId, "cosmo")
+		moment.InvokeServer = function(_, handlingId)
+			local ok0, s0, h0 = Preparation.provaHandling(ny, handlingId, "cosmo")
+			if not ok0 then return false, s0 end
+			for _, m in ipairs(h0.moment) do Preparation.utforMoment(ny, h0.fas, m.id, "cosmo") end
 			return true
 		end
-		PC.begar("halsa", paTur.id)
-		check("valet kvitteras med kanonens egen konsekvens",
+		PC.begarHandling("halsa")
+		check("handlingen kvitteras med sin egen mening",
 			type(PC._bekraftelse()) == "string"
-				and string.find(PC._bekraftelse(), paTur.text, 1, true) ~= nil,
+				and string.find(PC._bekraftelse(), klarRad, 1, true) ~= nil,
 			("[%s]"):format(tostring(PC._bekraftelse())))
+		do
+			local g = ny.gjorda.halsa or {}
+			check("#273: «Hälsa» gjorde hälsningens tre moment som spelarens egna, och fasen är klar",
+				g.halsa1 == true and g.halsa2 == true and g.halsa3 == true and ny.klara.halsa == true,
+				("%s %s %s · klar %s"):format(tostring(g.halsa1), tostring(g.halsa2),
+					tostring(g.halsa3), tostring(ny.klara.halsa)))
+		end
 		moment.InvokeServer = fore
 		if type(__senasteDelay) == "function" then __senasteDelay() end
 	end
@@ -1506,9 +1584,14 @@ do
 			return PC.layout()
 		end
 
-		--[[ Den tätaste vyn — iordningställandets nio moment — står kvar i
-			`st` från blocket ovanför. Samma vy som ordern pekar ut. ]]
+		--[[ Den tätaste vyn. Förut var det iordningställandets nio moment
+			med en tvåradig detaljmening. Sedan #273 S2 bär kortet EN kort rad,
+			och panelen är som högst när den visar ett NEJ på två rader —
+			«Sadel och träns hänger på boxfronten…». Det är den vyn som mäts:
+			ett sådant nej står uppe varje gång spelaren trycker «Sadla» utan
+			att ha hämtat sadeln. ]]
 		visa(st)
+		PC.visaAvslagFor("tack.hamta_forst")
 
 		--[[ ── ENHETERNA ───────────────────────────────────────────────
 			`kalla` är inte prydnad: ett tal utan källa är ett påhittat
@@ -1585,6 +1668,9 @@ do
 					("%d px"):format(k and k.Size.Y.Offset or -1))
 			end
 		end
+
+		if type(__senasteDelay) == "function" then __senasteDelay() end
+		visa(st)
 
 		--[[ ── HOPPKNAPPEN KLÄMMER, DEN SKYMS INTE ────────────────────
 			Rutorna här är KONSTRUERADE, och det står de för: de mäter
@@ -1708,7 +1794,7 @@ do
 				("%d px text · %d px handling"):format(
 					m.interaktionTextBredd, m.interaktionRadBredd))
 			check("telefon i landskap: EN uppgift i taget gäller fortfarande",
-				m.interaktionVisade == 1 and m.interaktionVal == 9,
+				m.interaktionVisade == 1 and m.interaktionVal == 1,
 				("%d av %d val synliga"):format(m.interaktionVisade, m.interaktionVal))
 			for _, id in ipairs(PC._synligaMoment()) do
 				local k = ytor.moment:FindFirstChild(id)
@@ -1739,14 +1825,18 @@ do
 			local kort = vid(749, 367)
 			local kortHojd = kort.interaktion.y1 - kort.interaktion.y0
 			local fore = ytor.instruktion.Text
-			ytor.instruktion.Text = string.rep("a", 78)
+			--[[ Tre rader i bandets textkolumn. 78 tecken räckte när
+				handlingskolumnen bar en lång momentrad; med handlingens korta
+				knapp är textkolumnen bredare, och det krävs mer text för att
+				inte rymmas. Regeln som mäts är densamma. ]]
+			ytor.instruktion.Text = string.rep("a", 150)
 			local lang = vid(749, 367)
 			local langHojd = lang.interaktion.y1 - lang.interaktion.y0
 			ytor.instruktion.Text = fore
 			vid(749, 367)
 			check("bandet växer när texten inte ryms i DESS kolumn, inte i 316 px",
 				langHojd > kortHojd and lang.interaktionBand == true,
-				("%d px vid 78 tecken mot %d px vid %d · textkolumn %d px"):format(
+				("%d px vid 150 tecken mot %d px vid %d · textkolumn %d px"):format(
 					langHojd, kortHojd, utf8.len(fore) or #fore,
 					lang.interaktionTextBredd))
 		end
@@ -1757,6 +1847,15 @@ do
 		do
 			pekreglage({ x0 = 29, x1 = 103, y0 = 216, y1 = 290 },
 				{ x0 = 654, x1 = 724, y0 = 219, y1 = 289 })
+			--[[ #273 S2: skötselvyn har en enda handling och inget att fälla
+				ut. Regeln mäts därför på den vy som HAR flera rader — fasens
+				moment ritade var för sig, som panelen gör för en fas utan
+				handlingar. Layoutregeln är densamma för N rader. ]]
+			rev += 1
+			local flera = Preparation.vy(st, Preparation.STATUS.FORBEREDER, rev, "Cosmo")
+			flera.handlingar, flera.nastaHandling = {}, nil
+			PC.tillampa(flera)
+			PC.uppdateraKontext()
 			vid(749, 367)
 			PC._vaxlaInteraktion()
 			local mu = PC.layout()
@@ -1765,6 +1864,7 @@ do
 				("band %s · %d rader"):format(tostring(mu.interaktionBand),
 					mu.interaktionVisade))
 			PC._vaxlaInteraktion()
+			visa(st)
 		end
 
 		--[[ Skrivbordet ska vara oförändrat: ingen pekyta, inget att väja
