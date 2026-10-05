@@ -113,8 +113,13 @@ def main():
     else:
         print("place.updateTime: (HTTP %s)" % st)
 
-    # Ingen version i vagen = senast publicerade versionen.
-    url = "%s/cloud/v2/universes/%s/places/%d/luau-execution-session-tasks" % (APIS, uni, place)
+    # Ingen version i vagen = senast publicerade versionen. UBRF_VERSION
+    # (lasande) provar en namngiven aldre version i stallet.
+    ver = os.environ.get("UBRF_VERSION", "").strip()
+    if ver and not ver.isdigit():
+        fall("UBRF_VERSION ska vara ett tal")
+    url = "%s/cloud/v2/universes/%s/places/%d%s/luau-execution-session-tasks" % (
+        APIS, uni, place, "/versions/" + ver if ver else "")
     task = js(*anrop("POST", url, nyckel,
                      json.dumps({"script": LUAU, "timeout": "60s"}).encode()),
               vad="task-skapandet")
