@@ -48,8 +48,16 @@ const vyer = [
   { namn: "skrivbord 1366", width: 1366, height: 768, hasTouch: false },
 ];
 
-for (const vy of vyer) {
-  console.log(`\n── ${vy.namn} (${vy.width}×${vy.height}) ──`);
+/* Hästen styrs, inte lottas: provet kördes förut med den häst spelet råkade
+   tilldela, och "Puma ( Ashdale cougar )" — det längsta kanoniska namnet — bröt
+   etiketten till två rader i vissa körningar (#295). Nu körs varje vy med det
+   längsta OCH det kortaste kanoniska hästnamnet, plus ett överlångt provnamn som
+   alltid måste brytas (typsnittet på CI är bredare än lokalt, så Puma ensam
+   prövar brytningen bara ibland). */
+const FALL = ["lang", "kort", "overlang"];
+
+for (const vy of vyer) for (const fall of FALL) {
+  console.log(`\n── ${vy.namn} (${vy.width}×${vy.height}) · ${fall} hästnamn ──`);
   const page = await browser.newPage({
     viewport: { width: vy.width, height: vy.height }, hasTouch: vy.hasTouch,
   });
@@ -64,9 +72,18 @@ for (const vy of vyer) {
   await page.evaluate(() => { SPAR.pass = 1; });
   await page.click("#bStart");
   await page.waitForTimeout(2500);
+  /* Välj hästen genom spelets enda väg, sattAktivHast, och kräv att det lyckades. */
+  const vald = await page.evaluate(f => {
+    const h = Object.values(HORSES).filter(x => x.typ === "hast").sort((a, b) => a.namn.length - b.namn.length);
+    const id = (f === "kort" ? h[0] : h[h.length - 1]).id;
+    if (f === "overlang") HORSES[id].namn = HORSES[id].namn + " · provnamn som aldrig ryms på en rad";
+    return { ok: sattAktivHast(id) !== false && G.hastId === id, id, namn: HORSES[id].namn };
+  }, fall);
+  prova(`${vy.namn}/${fall}: hästen är satt`, vald.ok, `${vald.id} · "${vald.namn}"`);
+  await page.waitForTimeout(500);
 
   /* Ett helt varv med A intryckt. Etiketten mäts varje steg. */
-  let synliga = 0, varsta = null, bredast = 0, flest = 0, flestTxt = "";
+  let synliga = 0, varsta = null, bredast = 0, flest = 0, flestTxt = "", onodig = null, feltBruten = null;
   await page.keyboard.down("KeyA");
   for (let i = 0; i < 32; i++) {
     await page.waitForTimeout(250);
@@ -83,13 +100,23 @@ for (const vy of vyer) {
       const rad = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.2;
       const inre = r.height - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)
         - parseFloat(cs.borderTopWidth) - parseFloat(cs.borderBottomWidth);
-      return { l: Math.round(r.left), r: Math.round(r.right), w: Math.round(r.width),
+      /* Textens NATURLIGA bredd på en rad: en kopia utan bredd- och radtak. */
+      const k = e.cloneNode(true);
+      k.style.cssText = "position:fixed;left:0;top:0;visibility:hidden;white-space:nowrap;max-width:none;width:max-content";
+      e.parentNode.appendChild(k);
+      const nat = Math.round(k.getBoundingClientRect().width); k.remove();
+      return { nat, l: Math.round(r.left), r: Math.round(r.right), w: Math.round(r.width),
         t: Math.round(r.top), b: Math.round(r.bottom), txt: (e.textContent || "").trim(),
         rader: Math.max(1, Math.round(inre / rad)) };
     });
     if (!m) continue;
     synliga++;
     bredast = Math.max(bredast, m.w);
+    const tak = Math.min(280, vy.width - 24);
+    /* Kontraktet (src/uppdrag.js, .etikett): ryms texten under taket står den på EN rad;
+       annars bryts den, högst två rader, och blir aldrig bredare än taket. */
+    if (m.nat <= tak - 1 && m.rader !== 1) onodig = `"${m.txt}" ${m.rader} rader, naturligt ${m.nat} px`;
+    if (m.nat > tak + 1 && (m.rader !== 2 || m.w > tak + 1)) feltBruten = `"${m.txt}" ${m.rader} rader, ${m.w} px, naturligt ${m.nat} px, tak ${tak}`;
     /* Texten följer med i utskriften: ett rött «2 rader» utan att säga
        VILKEN rubrik som bröts går inte att felsöka i CI. */
     if (m.rader > flest) flestTxt = `"${m.txt}" ${m.w} px`;
@@ -115,8 +142,12 @@ for (const vy of vyer) {
      kunde "innanför skärmen" bli grönt genom att etiketten bröts till
      en smal klump i stället för att klampas rätt — vilket ett tidigare
      utkast av rättelsen faktiskt gjorde (98 px i stället för 231). */
-  if (vy.width >= 420) prova(`${vy.namn}: rubriken bryts inte i onödan`,
-    flest === 1, `flest ${flest} rader, bredast ${bredast} px · ${flestTxt}`);
+  if (vy.width >= 420) {
+    prova(`${vy.namn}/${fall}: rubriken bryts inte i onödan (ryms den under taket står den på en rad)`,
+      onodig === null, onodig || `bredast ${bredast} px`);
+    prova(`${vy.namn}/${fall}: för lång rubrik bryts till två rader under taket`,
+      feltBruten === null, feltBruten || "ok");
+  }
 
   await page.close();
 }
