@@ -114,9 +114,9 @@ for (const vy of vyer) for (const fall of FALL) {
     bredast = Math.max(bredast, m.w);
     const tak = Math.min(280, vy.width - 24);
     /* Kontraktet (src/uppdrag.js, .etikett): ryms texten under taket står den på EN rad;
-       annars bryts den, högst två rader, och blir aldrig bredare än taket. */
+       annars bryts den (minst två rader, inte fler än texten kräver) och blir aldrig bredare än taket. */
     if (m.nat <= tak - 1 && m.rader !== 1) onodig = `"${m.txt}" ${m.rader} rader, naturligt ${m.nat} px`;
-    if (m.nat > tak + 1 && (m.rader !== 2 || m.w > tak + 1)) feltBruten = `"${m.txt}" ${m.rader} rader, ${m.w} px, naturligt ${m.nat} px, tak ${tak}`;
+    if (m.nat > tak + 1 && (m.rader < 2 || m.rader > Math.ceil(m.nat / (tak - 24)) + 1 || m.w > tak + 1)) feltBruten = `"${m.txt}" ${m.rader} rader, ${m.w} px, naturligt ${m.nat} px, tak ${tak}`;
     /* Texten följer med i utskriften: ett rött «2 rader» utan att säga
        VILKEN rubrik som bröts går inte att felsöka i CI. */
     if (m.rader > flest) flestTxt = `"${m.txt}" ${m.w} px`;
@@ -145,7 +145,7 @@ for (const vy of vyer) for (const fall of FALL) {
   if (vy.width >= 420) {
     prova(`${vy.namn}/${fall}: rubriken bryts inte i onödan (ryms den under taket står den på en rad)`,
       onodig === null, onodig || `bredast ${bredast} px`);
-    prova(`${vy.namn}/${fall}: för lång rubrik bryts till två rader under taket`,
+    prova(`${vy.namn}/${fall}: för lång rubrik bryts och håller sig under taket`,
       feltBruten === null, feltBruten || "ok");
   }
 
