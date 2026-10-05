@@ -1,0 +1,40 @@
+name: Live-revision
+
+# #293. LASANDE audit av den publicerade startplacen. Publicerar aldrig.
+# Gar igang pa den har PR:en (workflow_dispatch kraver att filen ligger pa
+# main) och manuellt. Nyckeln skrivs aldrig ut.
+
+on:
+  pull_request:
+    paths:
+      - tools/live-revision.py
+      - .github/workflows/live-revision.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-revision:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Vilken build ligger live?
+        env:
+          ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
+          UBRF_UNIVERSE_ID: ${{ vars.UBRF_UNIVERSE_ID }}
+        run: python3 tools/live-revision.py
+      # Aldre versioner, enbart lasning: vad lag live innan 2026-10-05 05:14Z?
+      - name: Aldre versioner
+        continue-on-error: true
+        env:
+          ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
+          UBRF_UNIVERSE_ID: ${{ vars.UBRF_UNIVERSE_ID }}
+        run: |
+          for v in 529 525 520 510 500 480 450 400; do
+            echo "=== version $v ==="
+            UBRF_VERSION=$v python3 tools/live-revision.py | grep -E "PlaceVersion|kallhash|genererad|led.borttagen|FAIL|REPO-HEAD|SKILJER" || true
+          done
