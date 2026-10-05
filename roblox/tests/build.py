@@ -445,6 +445,7 @@ def _utan(lista, namn):
 _KLIENTDELEN = _utan(KLIENT, {"Geometri", "UBRFKomplex", "Init"})
 KOHERENS = GEOMETRI + [
     ("BuildKit",     "buildings/BuildKit.luau"),
+    ("Dressyrbokstaver", "src/shared/HorseCore/Dressyrbokstaver.luau"),  # #289: EN uppslagsvag for bokstavernas id och lage
     ("Anlaggningen", "buildings/Anlaggningen.luau"),
 ] + _KLIENTDELEN + _utan([
     ("RigAdapter",      "src/shared/HorseCore/RigAdapter.luau"),

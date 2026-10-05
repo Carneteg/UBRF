@@ -91,6 +91,29 @@ for (const b of lista) {
 }
 prova("exporten har inga extra bokstäver", poster.every(e => lista.some(b => b.b === e.b)));
 
+/* ── Galoppringen är ingen dressyrbokstav (rättningen efter #292) ──────────
+   Ringen på mittlinjen hette «K», men K är västra sargens skylt. Spelartexten
+   får inte säga «vid K» / «ringen K», och lektionens mål-id får inte vara en
+   bokstav. Samma regel som roblox/tests/galopplektion-bokstaver.spec.luau. */
+console.log("\n── D. Galoppringen är ingen bokstav ──");
+const sprakKalla = las("src/spel/sprak.js");
+const sprakCtx = { console, Math, JSON, window: {} };
+vm.createContext(sprakCtx);
+vm.runInContext(sprakKalla + "\n;this.__S = SPRAK;", sprakCtx);
+const SPRAK = sprakCtx.__S;
+const galoppNycklar = Object.keys(SPRAK).filter(n =>
+  n.startsWith("galopplektion.") || n.startsWith("aterkoppling.galopp.") || n.startsWith("halsning.galopp"));
+prova("galopptexterna hittades", galoppNycklar.length >= 10, String(galoppNycklar.length));
+const fristaende = [];
+for (const n of galoppNycklar) for (const sp of ["sv", "en"]) {
+  if (typeof SPRAK[n][sp] === "string" && /(^|[^\p{L}\p{N}])K($|[^\p{L}\p{N}])/u.test(SPRAK[n][sp])) fristaende.push(n + "/" + sp);
+}
+prova("ingen galopptext säger «K»", fristaende.length === 0, fristaende.join(" "));
+const galoppKalla = las("src/lektioner/galopp.js");
+const mal = galoppKalla.match(/mal:\s*"([^"]+)"/);
+prova("lektionens mål-id är satt", !!mal, mal ? mal[1] : "saknas");
+prova("mål-id är ingen dressyrbokstav", !!mal && !(mal[1] in KANON), mal ? mal[1] : "");
+
 console.log("");
 if (fel) { console.log(`dressyrbokstavertest: ${fel} mätning(ar) föll`); process.exit(1); }
 console.log("dressyrbokstavertest: alla gröna");

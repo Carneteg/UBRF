@@ -176,7 +176,7 @@ const sett = (namn, r, nyckel) => prova(namn, r.tips.has(nyckel), [...r.tips].sl
   prova("galopp: start", r.begar("start").ok);
   r.till(0, 29.5, 3);
   r.hjalp("galopp"); r.till(0, 38, 4.5);
-  sag("galopp: galopp vid K efter trav fullföljs", r, "complete", "complete");
+  sag("galopp: galopp i galoppringen efter trav fullföljs", r, "complete", "complete");
   const r2 = new Ritt("galopp", [0, 10], "trav");
   r2.begar("start"); r2.till(0, 14, 3); r2.hjalp("galopp"); r2.till(0, 15, 4.5);
   sag("galopp: galopp före 8 m trav är «trot_first»", r2, "trot", "trot_first");

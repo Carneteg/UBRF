@@ -41,6 +41,10 @@ local BANA = table.freeze({
 	table.freeze({ id = "ridhus_hinder_rod_38", mot = "C", farg = "rod" }),
 })
 ClearRoundLektion.BANA = BANA
+--[[ Riktningsidn i banan (`mot`). De är RIKTNING (A-änden / C-änden), men de är
+	också dressyrbokstavs-id och ska finnas i den delade listan; fokusprovet
+	galopplektion-bokstaver kontrollerar det mot Dressyrbokstaver. ]]
+ClearRoundLektion.RIKTNINGSID = table.freeze({ "A", "C" })
 local HOJD_M = 0.68
 local LINJE_M = 8 -- TR 352.3: 6–15 m före första / efter sista hindret [antagande: 8]
 local LINJE_HALV = 4 -- linjens halva bredd [antagande]
