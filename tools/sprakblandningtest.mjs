@@ -154,7 +154,7 @@ console.log("\n── A. Ugneta överst, startvalet med ett val ──");
   prova("startkortet: ETT val, «Rida nu», och det är primärt",
     k.id === "valj" && k.knappar.length === 1 && k.knappar[0].primar && /^Rida nu/.test(k.knappar[0].text),
     k.knappar.map(b => b.text + (b.primar ? "*" : "")).join(" / "));
-  prova("Ugneta säger kortets rad; instruktionen står EN gång", /^Rida nu: stallet gör/.test(k.instr) && !k.dubbel, k.instr);
+  prova("Ugneta säger kortets rad; instruktionen står EN gång", /^.+ är din häst idag. Du behöver inte sadla eller tränsa själv — stallet gör .+ redo.$/.test(k.instr) && !k.dubbel, k.instr);
   prova("ingen «Gör i ordning själv», ingen hälsning, ingen frågesport",
     !k.knappar.some(b => /själv|Hälsa|bakifrån|Framifrån/.test(b.text)));
   await page.close();

@@ -225,8 +225,12 @@ function stegkortKort(antaNara) {
 
   /* Hon står i ridhuset (efter «Rida nu» eller First Ride): kortet säger
      bara att det är dags att sitta upp. Ingen ledning finns att visa. */
+  /* #297: kortet bär en TRYCKBAR «Sitt upp» — på touch ska den synliga knappen räcka, utan att
+     spelaren behöver hitta hålltangenten i världen. Samma grind som världens prompt (`sittUpp`). */
   if (G.hastPlats === "leds")
-    return { id: "sittupp", rubrik: tSpr("guide.sittupp_rubrik", n), text: tSpr("guide.sittupp_text"), val: [] };
+    return { id: "sittupp", rubrik: tSpr("guide.sittupp_rubrik", n), text: tSpr("guide.sittupp_text", n),
+      val: [{ id: "sittupp:sitt_upp", text: tSpr("guide.sittupp_rubrik", n), primar: true,
+        gor() { sittUpp("ridhus"); } }] };
 
   const nara = antaNara || stegkortNara();
   if (!nara)
@@ -238,7 +242,7 @@ function stegkortKort(antaNara) {
   const ridaNuVarld = { id: "rad:rida_nu", text: tSpr("guide.val_rida_nu", n), tangent: "KeyR", hall: 0.35,
     gor: stegkortRidaNu };
   if (stegkortOrort(s))
-    return { id: "valj", rubrik: tSpr("guide.valj_rubrik"), text: tSpr("guide.valj_kort", n), fler: [],
+    return { id: "valj", rubrik: tSpr("guide.valj_rubrik"), text: tSpr("guide.valj_kort", n, n), fler: [],
       rader: [], varld: [ridaNuVarld],
       val: [
         { id: "start:rida_nu", text: tSpr("guide.val_rida_nu", n), primar: true, gor: stegkortRidaNu },
@@ -305,7 +309,7 @@ function stegkortInstallera() {
   #stegkort .skT{margin:0 0 8px;color:#D6D2C8}
   #stegkort .skV{display:grid;gap:6px}
   #stegkort button{all:unset;box-sizing:border-box;display:block;width:100%;cursor:pointer;padding:8px 10px;
-    border-radius:6px;background:rgba(255,255,255,.07);color:#EDEAE3;font:inherit;line-height:1.25;min-height:36px}
+    border-radius:6px;background:rgba(255,255,255,.07);color:#EDEAE3;font:inherit;line-height:1.25;min-height:44px}
   #stegkort button:hover,#stegkort button:focus-visible{background:rgba(255,255,255,.13);outline:none}
   #stegkort button.primar{background:rgb(92,76,38);color:#FFF6E0}
   #stegkort button.primar:hover{background:rgb(112,93,47)}

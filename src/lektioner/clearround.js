@@ -59,6 +59,21 @@ LEKTION_TYPER.clearround = (() => {
     Object.freeze({ id: "ridhus_hinder_bla_24", mot: "A", farg: "bla" }),
     Object.freeze({ id: "ridhus_hinder_rod_38", mot: "C", farg: "rod" }),
   ]);
+  /* Riktningsidn i banan (`mot`): A-änden / C-änden, men också dressyrbokstavs-id
+     som ska finnas i DRESSYRBOKSTAVER. Kontrolleras när modulen laddas, så ett
+     okänt id stoppar start i stället för att köras tyst (som ClearRoundLektion). */
+  const RIKTNINGSID = Object.freeze(["A", "C"]);
+  function kravBokstaver(bana, riktningsid, lista) {
+    const finns = id => Array.isArray(lista) && lista.some(p => p && p.b === id);
+    for (const id of riktningsid) {
+      if (!finns(id)) throw new Error("okand_dressyrbokstav:" + id);
+    }
+    for (const h of bana) {
+      if (!finns(h.mot)) throw new Error("okand_dressyrbokstav:" + h.mot);
+      if (!riktningsid.includes(h.mot)) throw new Error("okant_riktningsid:" + h.mot);
+    }
+  }
+  kravBokstaver(BANA, RIKTNINGSID, DRESSYRBOKSTAVER);
   const HOJD_M = 0.68;
   const LINJE_M = 8;
   const LINJE_HALV = 4;
@@ -274,7 +289,7 @@ LEKTION_TYPER.clearround = (() => {
     return [true, null];
   }
 
-  return { OVNING: "clearround", VERSION: "server-clearround-1", DEADLINE: TILLATEN_S, AKTIVA, BANA,
+  return { OVNING: "clearround", VERSION: "server-clearround-1", DEADLINE: TILLATEN_S, AKTIVA, BANA, RIKTNINGSID, kravBokstaver,
     GRANSER: Object.freeze({ HOJD_M, LINJE_M, LINJE_HALV, START_S, TILLATEN_S }),
     ny, bild, steg, begar, vidRittslut, extraOp: op => op === "anmal" || op === "ga_banan",
     _nollstallSenaste: () => { senaste = null; } };

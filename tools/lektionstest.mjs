@@ -32,7 +32,7 @@ const prova = (namn, ok, detalj = "") => {
 function nyVarld() {
   const ctx = vm.createContext({ console, Math, JSON, Object, Array, Number, String, Map, Set, isFinite });
   vm.runInContext("var window = undefined;", ctx);
-  for (const f of ["src/spel/sprak.js", "src/spel/skotsel.js", "src/site.js", "src/lektioner/motor.js",
+  for (const f of ["src/model.js", "src/data.js", "src/spel/sprak.js", "src/spel/skotsel.js", "src/site.js", "src/lektioner/motor.js",
     "src/lektioner/observation.js", "src/lektioner/hinder.js", "src/lektioner/volt.js", "src/lektioner/halt.js",
     "src/lektioner/tempo.js", "src/lektioner/overgang.js", "src/lektioner/galopp.js", "src/lektioner/serpentin.js",
     "src/lektioner/vag.js", "src/lektioner/halvvolt.js", "src/lektioner/hornet.js", "src/lektioner/markbom.js",
@@ -176,7 +176,7 @@ const sett = (namn, r, nyckel) => prova(namn, r.tips.has(nyckel), [...r.tips].sl
   prova("galopp: start", r.begar("start").ok);
   r.till(0, 29.5, 3);
   r.hjalp("galopp"); r.till(0, 38, 4.5);
-  sag("galopp: galopp vid K efter trav fullföljs", r, "complete", "complete");
+  sag("galopp: galopp i galoppringen efter trav fullföljs", r, "complete", "complete");
   const r2 = new Ritt("galopp", [0, 10], "trav");
   r2.begar("start"); r2.till(0, 14, 3); r2.hjalp("galopp"); r2.till(0, 15, 4.5);
   sag("galopp: galopp före 8 m trav är «trot_first»", r2, "trot", "trot_first");

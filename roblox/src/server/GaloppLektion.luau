@@ -1,7 +1,7 @@
 --!strict
---[[ GALOPPFATTNING VID TRÄNINGSMÅL K (DELVIS) — docs/CANTER-DEPARTURE-LESSON-CONTRACT.md.
+--[[ GALOPPFATTNING I GALOPPRINGEN (DELVIS) — docs/CANTER-DEPARTURE-LESSON-CONTRACT.md.
 
-	En begärd övergång trav → galopp inne i träningsmålet K, efter färsk
+	En begärd övergång trav → galopp inne i galoppringen, efter färsk
 	trav, följd av observerad galopp. INTE igenkänning av höger/vänster
 	galopp och ingen bedömning av fattningens kvalitet: galoppsidan är ett
 	uttryckligt, obyggt beroende. Samma livscykel och begäranregler som de
@@ -9,12 +9,12 @@
 	accepterade övergångar (`orsak = "hjalp"` ur `onRidingIntent`), RidObservations
 	observerade sträcka och RidPlatsObservations segment. En fattning
 	räknas bara om BÅDA ändpunkterna i det observerade intervall där den
-	först syns ligger i K. TIDEN binds genom loggens ORDNING, inte genom
+	först syns ligger i ringen. TIDEN binds genom loggens ORDNING, inte genom
 	klockor: RidLoggs `t` är sekunder sedan uppsittningen i loggens egen
 	klocka (`_start` exponeras inte) och jämförs aldrig med lektionens
 	`now`. En händelse hör till stegets intervall om den lagts till efter
 	föregående bearbetade steg och steget har exakt ETT nytt giltigt
-	observerat segment (samplingen och lektionen går i samma hjärtslag). K är ett
+	observerat segment (samplingen och lektionen går i samma hjärtslag). Galoppringen är ett
 	träningsmål på mittlinjen, ingen bokstav. Siffrorna är spelantaganden. ]]
 local Forsok = require(script.Parent.RidForsok)
 local Observation = require(script.Parent.RidObservation)
@@ -24,15 +24,19 @@ local Logg = require(script.Parent.RidLogg)
 local GaloppLektion = {}
 GaloppLektion.OVNING = "galoppfattning"
 GaloppLektion.VERSION = "server-galopp-1"
+--[[ Ringens mål-id i resultatet. En BOKSTAV är det aldrig: K, A, C och de andra
+	dressyrbokstäverna sitter på sargen (Dressyrbokstaver), medan ringen ligger
+	på mittlinjen. Fokusprovet galopplektion-bokstaver håller dem isär. ]]
+GaloppLektion.MAL = "galoppring"
 
 local DEADLINE = 150
 local MAX_REQUESTS = 16
 local M = 3 -- studs per meter, som BuildKit.M
-local K_V = 30 -- meter från A, på mittlinjen
-local ZON_R = 3.0 -- K är en cirkel, samma radie som guidens ring
+local RING_V = 30 -- meter från A, på mittlinjen
+local ZON_R = 3.0 -- ringen är en cirkel, samma radie som guidens ring
 local TRAV_M = 8.0
 local GALOPP_M = 6.0
-GaloppLektion.GRANSER = table.freeze({ K_V = K_V, ZON_R = ZON_R, TRAV_M = TRAV_M,
+GaloppLektion.GRANSER = table.freeze({ RING_V = RING_V, ZON_R = ZON_R, TRAV_M = TRAV_M,
 	GALOPP_M = GALOPP_M, DEADLINE = DEADLINE })
 
 local AKTIVA = { trot = true, canter = true }
@@ -46,7 +50,7 @@ function GaloppLektion.bild(s): any
 	return table.freeze({ typ = "galopp", rittId = s.rittId, forsokId = s.forsokId,
 		revision = s.revision, sekvens = s.hogsta, lage = s.lage, progress = s.progress,
 		tips = s.tips, resultat = s.resultat, referens = s.referens,
-		--[[ C1 (docs/CANTER-TIMING-ADVICE-CONTRACT.md): före eller efter K,
+		--[[ C1 (docs/CANTER-TIMING-ADVICE-CONTRACT.md): före eller efter ringen,
 			bara medan just den missen visas. ]]
 		malSida = if s.lage == "trot" and s.tips == "canter_outside" and s.malForsok ~= nil
 			and s.malForsok == s.forsokId then s.malSida else nil })
@@ -87,17 +91,17 @@ local function ryms(plats): boolean
 	if type(plats) ~= "table" or type(plats.dressyr) ~= "table" then return false end
 	local halvBredd = plats.dressyr.halvTvars / plats.studsPerMeter
 	local langd = 2 * plats.dressyr.halvLangs / plats.studsPerMeter
-	return halvBredd >= ZON_R + 1 and langd >= K_V + GALOPP_M
+	return halvBredd >= ZON_R + 1 and langd >= RING_V + GALOPP_M
 end
 
 local function referens(s, p, plats)
-	return table.freeze({ ramId = p.ramId, u = p.dressyrMitt.u, v = K_V, radie = ZON_R, plats = plats })
+	return table.freeze({ ramId = p.ramId, u = p.dressyrMitt.u, v = RING_V, radie = ZON_R, plats = plats })
 end
 
 --[[ Förberedelsen från början, med nya baslinjer och samma tidsgräns. ]]
 local function tillTrav(s, tips, sida: string?)
 	s.trav, s.galopp = 0, 0
-	--[[ C1: bara missen utanför K bär en sida; varje annan återgång tar bort den. ]]
+	--[[ C1: bara missen utanför ringen bär en sida; varje annan återgång tar bort den. ]]
 	s.malSida = sida
 	s.malForsok = if sida then s.forsokId else nil
 	andra(s, "trot", tips)
@@ -124,18 +128,18 @@ local function nyBaslinje(s, o, p, logg)
 	end
 end
 
---[[ Båda ändpunkterna i stegets observerade intervall inne i K. ]]
-local function iK(s, p): boolean
+--[[ Båda ändpunkterna i stegets observerade intervall inne i ringen. ]]
+local function iRingen(s, p): boolean
 	local seg = p.segment
 	if type(seg) ~= "table" or not seg.fran or not seg.till or not s.referens then return false end
 	local function inne(q): boolean
-		return math.sqrt((q.u - s.referens.u) ^ 2 + (q.v - K_V) ^ 2) <= ZON_R
+		return math.sqrt((q.u - s.referens.u) ^ 2 + (q.v - RING_V) ^ 2) <= ZON_R
 	end
 	return inne(seg.fran) and inne(seg.till)
 end
 
---[[ C1: samma två ändpunkter och samma ZON_R som `iK`, på mittlinjen men
-	utanför K — "fore" om hästen ännu inte nått K i sin färdriktning, "efter"
+--[[ C1: samma två ändpunkter och samma ZON_R som `iRingen`, på mittlinjen men
+	utanför ringen — "fore" om hästen ännu inte nått ringen i sin färdriktning, "efter"
 	om den redan passerat. Annars nil (vid sidan av, över kanten, ingen rörelse). ]]
 local function malSida(s, p): string?
 	local seg = p.segment
@@ -148,7 +152,7 @@ local function malSida(s, p): string?
 	local fore, efter = true, true
 	for _, q in { seg.fran, seg.till } do
 		if not (math.abs(q.u - s.referens.u) <= ZON_R) then return nil end
-		local d = (q.v - K_V) * riktning
+		local d = (q.v - RING_V) * riktning
 		if not (d < -ZON_R) then fore = false end
 		if not (d > ZON_R) then efter = false end
 	end
@@ -160,7 +164,7 @@ local function stang(s, orsak): boolean
 	if not Forsok.slutfor(s.rittId, s.forsokId, orsak, obsTid(s.rittId), nil) then return false end
 	if orsak == "slutford" then
 		s.resultat = table.freeze({ forsokId = s.forsokId, rittId = s.rittId, userId = s.userId,
-			hastId = s.hastId, ovning = GaloppLektion.OVNING, mal = "K", vidK = s.vidK,
+			hastId = s.hastId, ovning = GaloppLektion.OVNING, mal = GaloppLektion.MAL, vidRingen = s.vidRingen,
 			travMeter = s.travVid, galoppMeter = s.galopp, galoppsida = "ej_bedomd",
 			start = Forsok.ogonblick(s.forsokId).start })
 		s.progress = 100
@@ -181,8 +185,8 @@ local function overgang(s, p, d): boolean
 	if s.lage == "trot" then
 		if d.till == "canter" and d.fran == "trot" and hjalp then
 			if s.trav < TRAV_M then tillTrav(s, "trot_first"); return false end
-			if not iK(s, p) then tillTrav(s, "canter_outside", malSida(s, p)); return false end
-			s.vidK = table.freeze({ u = p.segment.till.u, v = p.segment.till.v })
+			if not iRingen(s, p) then tillTrav(s, "canter_outside", malSida(s, p)); return false end
+			s.vidRingen = table.freeze({ u = p.segment.till.u, v = p.segment.till.v })
 			s.travVid, s.galopp = s.trav, 0
 			andra(s, "canter", "canter_on")
 			return true
@@ -309,7 +313,7 @@ function GaloppLektion.begar(s, op: any, seq: any, now: number, gangart: string?
 				GaloppLektion.OVNING, GaloppLektion.VERSION, o.tid, nil)
 			if ok then
 				s.forsokId, s.deadline = id, now + DEADLINE
-				s.resultat, s.vidK, s.travVid = nil, nil, nil
+				s.resultat, s.vidRingen, s.travVid = nil, nil, nil
 				nyBaslinje(s, o, p, logg)
 				s.trav, s.galopp = 0, 0
 				s.malSida, s.malForsok = nil, nil

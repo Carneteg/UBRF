@@ -1,15 +1,15 @@
 {
   "base": "e65675dfe3584f5654aab3280d53692fe9b17f1a",
-  "sha256": "806acb10d559796ceaae9a052f83d4ef7ac3aafc0ce501a8b91006c1b12835a7",
+  "sha256": "3243a8f336a1ca5ecc118680b2bb11591682b371fdf03318cd853c08d973e47d",
   "lockers": [
     {
       "id": "skap_v_1",
       "pos": [
         4.45,
-        71.65
+        72.5
       ],
       "matt": {
-        "b": 6.600000000000003,
+        "b": 4.9,
         "d": 0.5,
         "h": 1.9
       },
@@ -19,44 +19,45 @@
     {
       "id": "skap_grona",
       "pos": [
-        0.55,
-        69.3
+        6.4,
+        69.6
       ],
       "matt": {
         "b": 1.6,
         "d": 0.5,
         "h": 1.8
       },
-      "rikt": 0,
+      "rikt": 3.141592653589793,
       "kolliderar": true
     },
     {
       "id": "skap_hoga_v",
       "pos": [
-        0.55,
-        71.5
+        4.45,
+        76.15
       ],
       "matt": {
         "b": 2,
         "d": 0.5,
         "h": 1.9
       },
-      "rikt": 0,
+      "rikt": 3.141592653589793,
       "kolliderar": true
     },
     {
       "id": "skap_vita_2v",
       "pos": [
-        1.45,
-        72.35
+        6.4,
+        71.3
       ],
       "matt": {
         "b": 1.2,
         "d": 0.45,
         "h": 1.8
       },
-      "rikt": -1.5707963267948966,
+      "rikt": 3.141592653589793,
       "kolliderar": true
     }
-  ]
+  ],
+  "notering": "#301: sha256 omräknad efter 5743434 (#162 östra skjutporten mynnar i stallgången, produktbeslut) och skåplistan efter d2e8211 (#162 punkt 2+3, antagna skåplägen flyttade). Båda ändringarna var beslutade och dokumenterade men låset följde inte med. base är oförändrad."
 }

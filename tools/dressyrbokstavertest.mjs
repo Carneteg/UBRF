@@ -91,6 +91,79 @@ for (const b of lista) {
 }
 prova("exporten har inga extra bokstäver", poster.every(e => lista.some(b => b.b === e.b)));
 
+/* ── Galoppringen är ingen dressyrbokstav (rättningen efter #292) ──────────
+   Ringen på mittlinjen hette «K», men K är västra sargens skylt. Spelartexten
+   får inte säga «vid K» / «ringen K», och lektionens mål-id får inte vara en
+   bokstav. Samma regel som roblox/tests/galopplektion-bokstaver.spec.luau. */
+console.log("\n── D. Galoppringen är ingen bokstav ──");
+const sprakKalla = las("src/spel/sprak.js");
+const sprakCtx = { console, Math, JSON, window: {} };
+vm.createContext(sprakCtx);
+vm.runInContext(sprakKalla + "\n;this.__S = SPRAK;", sprakCtx);
+const SPRAK = sprakCtx.__S;
+const galoppNycklar = Object.keys(SPRAK).filter(n =>
+  n.startsWith("galopplektion.") || n.startsWith("aterkoppling.galopp.") || n.startsWith("halsning.galopp"));
+prova("galopptexterna hittades", galoppNycklar.length >= 10, String(galoppNycklar.length));
+const fristaende = [];
+for (const n of galoppNycklar) for (const sp of ["sv", "en"]) {
+  if (typeof SPRAK[n][sp] === "string" && /(^|[^\p{L}\p{N}])K($|[^\p{L}\p{N}])/u.test(SPRAK[n][sp])) fristaende.push(n + "/" + sp);
+}
+prova("ingen galopptext säger «K»", fristaende.length === 0, fristaende.join(" "));
+const galoppKalla = las("src/lektioner/galopp.js");
+const mal = galoppKalla.match(/mal:\s*"([^"]+)"/);
+prova("lektionens mål-id är satt", !!mal, mal ? mal[1] : "saknas");
+prova("mål-id är ingen dressyrbokstav", !!mal && !(mal[1] in KANON), mal ? mal[1] : "");
+
+/* E. Inget internt galopp-id bär K, och lektionernas namngivna bokstavs-id
+   kontrolleras av en AKTIV vakt (inte bara av det här provet). */
+console.log("\n── E. Inga K-namn i galoppkoden, och körtidsvakten ──");
+const utanKommentar = k => k.replace(/\/\*[\s\S]*?\*\//g, "").replace(/--\[\[[\s\S]*?\]\]/g, "")
+  .replace(/^\s*\/\/.*$/gm, "").replace(/^\s*--.*$/gm, "").replace(/\s(\/\/|--)\s.*$/gm, "");
+const KNAMN = /\b(K_V|iK|vidK|K_[A-Za-z]\w*|[A-Za-z]\w*_K)\b|\bGRANSER\.K\b/;
+for (const [fil, kalla] of [["roblox/src/server/GaloppLektion.luau", las("roblox/src/server/GaloppLektion.luau")],
+                            ["src/lektioner/galopp.js", galoppKalla]]) {
+  const kod = utanKommentar(kalla);
+  const traff = kod.match(KNAMN);
+  prova(fil + ": inget internt id namnger ringen K", !traff, traff ? traff[0] : "");
+  prova(fil + ": ringens läge heter RING_V = 30", /\bRING_V\s*=\s*30\b/.test(kod));
+}
+const crCtx = { console, Math, JSON, window: {} };
+vm.createContext(crCtx);
+vm.runInContext("var window = undefined;", crCtx);
+for (const f of ["src/model.js", "src/data.js", "src/spel/sprak.js", "src/spel/skotsel.js", "src/site.js",
+  "src/lektioner/motor.js", "src/lektioner/observation.js", "src/lektioner/hinder.js", "src/lektioner/clearround.js"]) {
+  try { vm.runInContext(las(f), crCtx, { filename: f }); }
+  catch (e) { if (f !== "src/site.js") throw e; }
+}
+const CR = vm.runInContext("LEKTION_TYPER.clearround", crCtx);
+prova("clearround exponerar kravBokstaver", typeof CR.kravBokstaver === "function");
+const bana = CR.BANA, riktIds = CR.RIKTNINGSID;
+const kastar = (...a) => { try { CR.kravBokstaver(...a); return null; } catch (e) { return String(e.message); } };
+prova("riktig bana + riktningsid passerar", kastar(bana, riktIds, lista) === null);
+prova("okänt `mot` fäller vakten", /okand_dressyrbokstav:Q/.test(kastar([{ mot: "Q" }], riktIds, lista) || ""));
+prova("okänt riktningsid fäller vakten", /okand_dressyrbokstav:Q/.test(kastar(bana, ["A", "Q"], lista) || ""));
+prova("äkta bokstav som inte är riktningsid fäller vakten", /okant_riktningsid:K/.test(kastar([{ mot: "K" }], riktIds, lista) || ""));
+prova("lista utan C fäller banan (vakten läser källan)",
+  /okand_dressyrbokstav:C/.test(kastar(bana, riktIds, lista.filter(p => p.b !== "C")) || ""));
+/* Vakten ska KÖRAS vid laddning: webben laddas om i en värld där C saknas och
+   ska då kasta; Roblox-modulen ska ha anropet på toppnivå (Luau kan inte laddas om här). */
+const utanC = vm.createContext({ console, Math, JSON, window: {} });
+vm.runInContext("var window = undefined;", utanC);
+let laddFel = null;
+try {
+  for (const f of ["src/model.js", "src/data.js"]) vm.runInContext(las(f), utanC, { filename: f });
+  vm.runInContext("DRESSYRBOKSTAVER.splice(DRESSYRBOKSTAVER.findIndex(p => p.b === 'C'), 1);", utanC);
+  for (const f of ["src/spel/sprak.js", "src/spel/skotsel.js", "src/lektioner/motor.js", "src/lektioner/observation.js",
+    "src/lektioner/hinder.js", "src/lektioner/clearround.js"]) {
+    try { vm.runInContext(las(f), utanC, { filename: f }); } catch (e) { if (f === "src/lektioner/clearround.js") throw e; }
+  }
+} catch (e) { laddFel = String(e.message); }
+prova("webben: clearround.js kastar vid laddning när C saknas i listan", /okand_dressyrbokstav:C/.test(laddFel || ""), laddFel || "kastade inte");
+const robloxCR = utanKommentar(las("roblox/src/server/ClearRoundLektion.luau"));
+prova("Roblox: kravBokstaver anropas på toppnivå vid laddning",
+  /^ClearRoundLektion\.kravBokstaver\(BANA, ClearRoundLektion\.RIKTNINGSID, Dressyrbokstaver\)$/m.test(robloxCR));
+prova("K ligger fortfarande på västra sargen (0, 6)", lista.some(p => p.b === "K" && p.x === 0 && p.y === 6));
+
 console.log("");
 if (fel) { console.log(`dressyrbokstavertest: ${fel} mätning(ar) föll`); process.exit(1); }
 console.log("dressyrbokstavertest: alla gröna");

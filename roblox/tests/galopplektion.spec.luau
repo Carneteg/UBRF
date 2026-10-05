@@ -1,5 +1,5 @@
 --!nostrict
---[[ GALOPPFATTNING VID K (DELVIS) — docs/CANTER-DEPARTURE-LESSON-CONTRACT.md.
+--[[ GALOPPFATTNING I GALOPPRINGEN (DELVIS) — docs/CANTER-DEPARTURE-LESSON-CONTRACT.md.
 
 	BANK_ONLY, KOHERENS-bänken: riktig HorseService, riktigt byggt ridhus,
 	riktiga observationer och den riktiga klientmenyn (källnivå).
@@ -103,16 +103,16 @@ local fore = s.voltLektion.trav
 aid("driv")
 ga(28.8)
 check("KONTROLL: canter accepted", gangart() == "canter")
-check("canter asked inside K starts the canter phase", image().lage == "canter")
+check("canter asked inside the ring starts the canter phase", image().lage == "canter")
 check("the departure step itself credits neither trot nor canter",
 	s.voltLektion.trav == fore and s.voltLektion.galopp == 0)
 galopp(36)
 local done = image()
-check("trot, canter at K and 6 m of canter completes", done.lage == "complete")
+check("trot, canter in the ring and 6 m of canter completes", done.lage == "complete")
 check("completion is slutford", HorseService.forsok(done.forsokId).orsak == "slutford")
 check("frozen result holds identity and the evidence summary, and no lead claim",
 	done.resultat ~= nil and table.isfrozen(done.resultat) and done.resultat.rittId == id
-	and done.resultat.vidK ~= nil and done.resultat.travMeter >= G.TRAV_M
+	and done.resultat.vidRingen ~= nil and done.resultat.travMeter >= G.TRAV_M
 	and done.resultat.galoppMeter >= G.GALOPP_M and done.resultat.galoppsida == "ej_bedomd")
 galopp(40)
 check("later riding cannot change the frozen result", image().resultat == done.resultat)

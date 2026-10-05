@@ -125,7 +125,7 @@ local gaLektion: (() -> ())? = nil
 -- "overgang" (övergångar vid T1/T2), "serpentin" (träningsserpentin) eller
 -- "tempo" (jämn fart i skritt; ingen guide), "vag_mitt" eller "vag_diag"
 -- (ridvägarna; figuren är typen), "halvvolt" (halvvolt tillbaka till spåret)
--- "galopp" (galoppfattning vid K, utan galoppsida) eller "markbom" (bom på marken).
+-- "galopp" (galoppfattning i galoppringen, utan galoppsida) eller "markbom" (bom på marken).
 local typ = "volt"
 -- Valsidan före en vald lektion: nil = toppnivån, "topp" (ersättningssidan
 -- bakom "Välj övning"), "gangart", "overgangar" (undergrupp i gangart),
@@ -423,7 +423,7 @@ local function visaGuide(ref, delmal)
 	if typ == "overgang" then
 		ringar = { { u = ref.u, v = ref.v1, r = ref.halv }, { u = ref.u, v = ref.v2, r = ref.halv } }
 	elseif typ == "galopp" then
-		-- Canter departure: one ring at K, the same radius as the server zone.
+		-- Canter departure: one ring (the green canter ring), the same radius as the server zone.
 		ringar = { { u = ref.u, v = ref.v, r = ref.radie } }
 	elseif typ == "halt" then
 		ringar = { { u = ref.u, v = ref.v, r = ref.radie } }
@@ -1075,7 +1075,7 @@ function V.panel()
 		if b.malSida == "fore" then txt = Sprak.t("overganglektion.walk_early")
 		elseif b.malSida == "efter" then txt = Sprak.t("overganglektion.walk_late") end
 	elseif typ == "galopp" and key == "canter_outside" then
-		-- C1 (docs/CANTER-TIMING-ADVICE-CONTRACT.md): samma regel för galoppfattningen vid K.
+		-- C1 (docs/CANTER-TIMING-ADVICE-CONTRACT.md): samma regel för galoppfattningen i galoppringen.
 		if b.malSida == "fore" then txt = Sprak.t("galopplektion.canter_early")
 		elseif b.malSida == "efter" then txt = Sprak.t("galopplektion.canter_late") end
 	end
