@@ -183,13 +183,14 @@ FORBEREDELSE = SPEL + [
     ("TempoLektion", "src/server/TempoLektion.luau"),  # jamn fart i skritt
     ("VagLektion", "src/server/VagLektion.luau"),  # ridvagar: mittlinje, diagonal
     ("HalvvoltLektion", "src/server/HalvvoltLektion.luau"),  # halvvolt tillbaka till sparet
-    ("GaloppLektion", "src/server/GaloppLektion.luau"),  # galoppfattning vid K (delvis)
+    ("GaloppLektion", "src/server/GaloppLektion.luau"),  # galoppfattning i ringen (delvis)
     ("MarkbomLektion", "src/server/MarkbomLektion.luau"),  # bom pa marken i skritt
     ("HornLektion", "src/server/HornLektion.luau"),  # genom hornet (egen typ hornet)
     ("Klassprofil", "src/shared/HorseCore/Klassprofil.luau"),  # D1: regelprofilen A: Clear Round
     ("ClearRoundUnderlag", "src/server/ClearRoundUnderlag.luau"),  # B4c: skuggbedomningen
     ("Tavlingsklader", "src/shared/HorseCore/Tavlingsklader.luau"),  # D5: katalogen (#248)
     ("TavlingskladerService", "src/server/TavlingskladerService.luau"),  # D5: livscykeln (#248)
+    ("Dressyrbokstaver", "src/shared/HorseCore/Dressyrbokstaver.luau"),  # #289: ClearRoundLektion kontrollerar sina bokstavs-id mot den vid laddning
     ("ClearRoundLektion", "src/server/ClearRoundLektion.luau"),  # D2a: forsta clear round-ritten
     # AKTOREN (#252 DEL C) FORE tjansterna: GameplayService, HorseService
     # och LedService fragar den om aktoren har en klient att skicka till.
@@ -468,7 +469,7 @@ KOHERENS = GEOMETRI + [
     ("TempoLektion", "src/server/TempoLektion.luau"),  # jamn fart i skritt
     ("VagLektion", "src/server/VagLektion.luau"),  # ridvagar: mittlinje, diagonal
     ("HalvvoltLektion", "src/server/HalvvoltLektion.luau"),  # halvvolt tillbaka till sparet
-    ("GaloppLektion", "src/server/GaloppLektion.luau"),  # galoppfattning vid K (delvis)
+    ("GaloppLektion", "src/server/GaloppLektion.luau"),  # galoppfattning i ringen (delvis)
     ("MarkbomLektion", "src/server/MarkbomLektion.luau"),  # bom pa marken i skritt
     ("HornLektion", "src/server/HornLektion.luau"),  # genom hornet (egen typ hornet)
     ("Klassprofil", "src/shared/HorseCore/Klassprofil.luau"),  # D1: regelprofilen A: Clear Round

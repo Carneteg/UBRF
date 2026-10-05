@@ -5,7 +5,7 @@ LEKTION_TYPER.galopp = (() => {
   const M = LektionMotor;
   const DEADLINE = 150;
   const MPS = 1;
-  const K_V = 30;
+  const RING_V = 30;
   const ZON_R = 3.0;
   const TRAV_M = 8.0;
   const GALOPP_M = 6.0;
@@ -22,10 +22,10 @@ LEKTION_TYPER.galopp = (() => {
   }
   function ryms(plats) {
     const l = M.layout(plats);
-    return !!l && l.halvBredd >= ZON_R + 1 && l.langd >= K_V + GALOPP_M;
+    return !!l && l.halvBredd >= ZON_R + 1 && l.langd >= RING_V + GALOPP_M;
   }
   function referens(p, plats) {
-    return Object.freeze({ ramId: p.ramId, u: p.dressyrMitt.u, v: K_V, radie: ZON_R, plats });
+    return Object.freeze({ ramId: p.ramId, u: p.dressyrMitt.u, v: RING_V, radie: ZON_R, plats });
   }
   function tillTrav(s, tips, sida) {
     s.trav = 0; s.galopp = 0;
@@ -43,10 +43,10 @@ LEKTION_TYPER.galopp = (() => {
     if (p.ramId != null && p.dressyrMitt != null && ryms(plats)) { s.ramId = p.ramId; s.referens = referens(p, plats); }
     else s.ramId = null;
   }
-  function iK(s, p) {
+  function iRingen(s, p) {
     const seg = p.segment;
     if (!seg || !seg.fran || !seg.till || !s.referens) return false;
-    const inne = q => Math.hypot(q.u - s.referens.u, q.v - K_V) <= ZON_R;
+    const inne = q => Math.hypot(q.u - s.referens.u, q.v - RING_V) <= ZON_R;
     return inne(seg.fran) && inne(seg.till);
   }
   function malSida(s, p) {
@@ -58,7 +58,7 @@ LEKTION_TYPER.galopp = (() => {
     let fore = true, efter = true;
     for (const q of [seg.fran, seg.till]) {
       if (!(Math.abs(q.u - s.referens.u) <= ZON_R)) return null;
-      const d = (q.v - K_V) * riktning;
+      const d = (q.v - RING_V) * riktning;
       if (!(d < -ZON_R)) fore = false;
       if (!(d > ZON_R)) efter = false;
     }
@@ -82,7 +82,7 @@ LEKTION_TYPER.galopp = (() => {
     if (s.lage === "trot") {
       if (d.till === "canter" && d.fran === "trot" && hjalp) {
         if (s.trav < TRAV_M) { tillTrav(s, "trot_first"); return false; }
-        if (!iK(s, p)) { tillTrav(s, "canter_outside", malSida(s, p)); return false; }
+        if (!iRingen(s, p)) { tillTrav(s, "canter_outside", malSida(s, p)); return false; }
         s.vidRingen = Object.freeze({ u: p.segment.till.u, v: p.segment.till.v });
         s.travVid = s.trav; s.galopp = 0;
         M.andra(s, "canter", "canter_on");
@@ -158,6 +158,6 @@ LEKTION_TYPER.galopp = (() => {
   }
 
   return { OVNING: "galoppfattning", VERSION: "server-galopp-1", DEADLINE, AKTIVA,
-    GRANSER: Object.freeze({ K_V, ZON_R, TRAV_M, GALOPP_M, DEADLINE }),
+    GRANSER: Object.freeze({ RING_V, ZON_R, TRAV_M, GALOPP_M, DEADLINE }),
     ny, bild, steg, platsFel, starta };
 })();

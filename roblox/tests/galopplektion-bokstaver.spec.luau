@@ -48,7 +48,7 @@ print("Galoppringen är ingen bokstav")
 local G = GaloppLektion.GRANSER
 check("ringens mål-id är inte en dressyrbokstav", not B.finns(GaloppLektion.MAL), GaloppLektion.MAL)
 check("ringens mål-id är inte K", GaloppLektion.MAL ~= "K")
-local ringX, ringY = R.dressyr.w / 2, G.K_V -- mittlinjen, 30 m från A
+local ringX, ringY = R.dressyr.w / 2, G.RING_V -- mittlinjen, 30 m från A
 local sammanfaller = false
 for _, id in ipairs(B.alla()) do
 	local x, y = B.lage(id)
@@ -102,6 +102,36 @@ for id in pairs(anvanda) do
 end
 check("dressyrlayoutens ankare «" .. tostring(R.dressyr.forankring) .. "» är en dressyrbokstav",
 	B.finns(R.dressyr.forankring))
+
+print("Galoppringens interna id bär inget K")
+check("GRANSER har ingen K_V", G.K_V == nil)
+local grKeys = {}
+for k in pairs(G) do table.insert(grKeys, k) end
+local kNamn = {}
+for _, k in ipairs(grKeys) do if string.find(k, "K", 1, true) then table.insert(kNamn, k) end end
+check("ingen GRANSER-nyckel namnger ringen med K", #kNamn == 0, table.concat(kNamn, " "))
+check("ringen ligger 30 m från A (RING_V)", G.RING_V == 30, G.RING_V)
+check("ringens radie oförändrad (3,0 m)", G.ZON_R == 3.0, G.ZON_R)
+local mitt = (R.dressyr.w or 0) / 2
+check("ringen ligger på mittlinjen (halva bredden)", mitt == 10, mitt)
+
+print("Körtidsvakten i ClearRoundLektion (aktiv väg, inte bara ett hjälpprov)")
+local CR = ClearRoundLektion
+check("kravBokstaver finns som exporterad vakt", type(CR.kravBokstaver) == "function")
+check("riktig bana + riktningsid passerar", pcall(CR.kravBokstaver, CR.BANA, CR.RIKTNINGSID, Dressyrbokstaver))
+local okQ, felQ = pcall(CR.kravBokstaver, { { mot = "Q" } }, CR.RIKTNINGSID, Dressyrbokstaver)
+check("okänt `mot` i banan fäller vakten", not okQ and string.find(tostring(felQ), "okand_dressyrbokstav:Q", 1, true) ~= nil, felQ)
+local okR, felR = pcall(CR.kravBokstaver, CR.BANA, { "A", "Q" }, Dressyrbokstaver)
+check("okänt riktningsid fäller vakten", not okR and string.find(tostring(felR), "okand_dressyrbokstav:Q", 1, true) ~= nil, felR)
+local okK, felK = pcall(CR.kravBokstaver, { { mot = "K" } }, CR.RIKTNINGSID, Dressyrbokstaver)
+check("äkta bokstav som inte är deklarerat riktningsid fäller vakten", not okK
+	and string.find(tostring(felK), "okant_riktningsid:K", 1, true) ~= nil, felK)
+--[[ Källan styr: en lista utan «C» (men välformad) ska fälla den riktiga banan,
+	alltså konsumerar vakten den delade listan i stället för en egen kopia. ]]
+local utanC = Dressyrbokstaver.fran({ { b = "A", x = 10, y = 0 }, { b = "K", x = 0, y = 6 } }, 20)
+local okC, felC = pcall(CR.kravBokstaver, CR.BANA, CR.RIKTNINGSID, utanC)
+check("lista utan C fäller banan (vakten läser källan)", not okC
+	and string.find(tostring(felC), "okand_dressyrbokstav:C", 1, true) ~= nil, felC)
 
 print(fails == 0 and "alla gröna" or ("FEL: " .. fails))
 if fails > 0 then error("galopplektion-bokstaver: " .. fails .. " fel") end

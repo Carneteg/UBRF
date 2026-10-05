@@ -32,11 +32,11 @@ GaloppLektion.MAL = "galoppring"
 local DEADLINE = 150
 local MAX_REQUESTS = 16
 local M = 3 -- studs per meter, som BuildKit.M
-local K_V = 30 -- meter från A, på mittlinjen
+local RING_V = 30 -- meter från A, på mittlinjen
 local ZON_R = 3.0 -- ringen är en cirkel, samma radie som guidens ring
 local TRAV_M = 8.0
 local GALOPP_M = 6.0
-GaloppLektion.GRANSER = table.freeze({ K_V = K_V, ZON_R = ZON_R, TRAV_M = TRAV_M,
+GaloppLektion.GRANSER = table.freeze({ RING_V = RING_V, ZON_R = ZON_R, TRAV_M = TRAV_M,
 	GALOPP_M = GALOPP_M, DEADLINE = DEADLINE })
 
 local AKTIVA = { trot = true, canter = true }
@@ -91,11 +91,11 @@ local function ryms(plats): boolean
 	if type(plats) ~= "table" or type(plats.dressyr) ~= "table" then return false end
 	local halvBredd = plats.dressyr.halvTvars / plats.studsPerMeter
 	local langd = 2 * plats.dressyr.halvLangs / plats.studsPerMeter
-	return halvBredd >= ZON_R + 1 and langd >= K_V + GALOPP_M
+	return halvBredd >= ZON_R + 1 and langd >= RING_V + GALOPP_M
 end
 
 local function referens(s, p, plats)
-	return table.freeze({ ramId = p.ramId, u = p.dressyrMitt.u, v = K_V, radie = ZON_R, plats = plats })
+	return table.freeze({ ramId = p.ramId, u = p.dressyrMitt.u, v = RING_V, radie = ZON_R, plats = plats })
 end
 
 --[[ Förberedelsen från början, med nya baslinjer och samma tidsgräns. ]]
@@ -129,16 +129,16 @@ local function nyBaslinje(s, o, p, logg)
 end
 
 --[[ Båda ändpunkterna i stegets observerade intervall inne i ringen. ]]
-local function iK(s, p): boolean
+local function iRingen(s, p): boolean
 	local seg = p.segment
 	if type(seg) ~= "table" or not seg.fran or not seg.till or not s.referens then return false end
 	local function inne(q): boolean
-		return math.sqrt((q.u - s.referens.u) ^ 2 + (q.v - K_V) ^ 2) <= ZON_R
+		return math.sqrt((q.u - s.referens.u) ^ 2 + (q.v - RING_V) ^ 2) <= ZON_R
 	end
 	return inne(seg.fran) and inne(seg.till)
 end
 
---[[ C1: samma två ändpunkter och samma ZON_R som `iK`, på mittlinjen men
+--[[ C1: samma två ändpunkter och samma ZON_R som `iRingen`, på mittlinjen men
 	utanför ringen — "fore" om hästen ännu inte nått ringen i sin färdriktning, "efter"
 	om den redan passerat. Annars nil (vid sidan av, över kanten, ingen rörelse). ]]
 local function malSida(s, p): string?
@@ -152,7 +152,7 @@ local function malSida(s, p): string?
 	local fore, efter = true, true
 	for _, q in { seg.fran, seg.till } do
 		if not (math.abs(q.u - s.referens.u) <= ZON_R) then return nil end
-		local d = (q.v - K_V) * riktning
+		local d = (q.v - RING_V) * riktning
 		if not (d < -ZON_R) then fore = false end
 		if not (d > ZON_R) then efter = false end
 	end
@@ -185,7 +185,7 @@ local function overgang(s, p, d): boolean
 	if s.lage == "trot" then
 		if d.till == "canter" and d.fran == "trot" and hjalp then
 			if s.trav < TRAV_M then tillTrav(s, "trot_first"); return false end
-			if not iK(s, p) then tillTrav(s, "canter_outside", malSida(s, p)); return false end
+			if not iRingen(s, p) then tillTrav(s, "canter_outside", malSida(s, p)); return false end
 			s.vidRingen = table.freeze({ u = p.segment.till.u, v = p.segment.till.v })
 			s.travVid, s.galopp = s.trav, 0
 			andra(s, "canter", "canter_on")

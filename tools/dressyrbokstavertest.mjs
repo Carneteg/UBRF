@@ -114,6 +114,39 @@ const mal = galoppKalla.match(/mal:\s*"([^"]+)"/);
 prova("lektionens mål-id är satt", !!mal, mal ? mal[1] : "saknas");
 prova("mål-id är ingen dressyrbokstav", !!mal && !(mal[1] in KANON), mal ? mal[1] : "");
 
+/* E. Inget internt galopp-id bär K, och lektionernas namngivna bokstavs-id
+   kontrolleras av en AKTIV vakt (inte bara av det här provet). */
+console.log("\n── E. Inga K-namn i galoppkoden, och körtidsvakten ──");
+const utanKommentar = k => k.replace(/\/\*[\s\S]*?\*\//g, "").replace(/--\[\[[\s\S]*?\]\]/g, "")
+  .replace(/^\s*\/\/.*$/gm, "").replace(/^\s*--.*$/gm, "").replace(/\s(\/\/|--)\s.*$/gm, "");
+const KNAMN = /\b(K_V|iK|vidK|K_[A-Za-z]\w*|[A-Za-z]\w*_K)\b|\bGRANSER\.K\b/;
+for (const [fil, kalla] of [["roblox/src/server/GaloppLektion.luau", las("roblox/src/server/GaloppLektion.luau")],
+                            ["src/lektioner/galopp.js", galoppKalla]]) {
+  const kod = utanKommentar(kalla);
+  const traff = kod.match(KNAMN);
+  prova(fil + ": inget internt id namnger ringen K", !traff, traff ? traff[0] : "");
+  prova(fil + ": ringens läge heter RING_V = 30", /\bRING_V\s*=\s*30\b/.test(kod));
+}
+const crCtx = { console, Math, JSON, window: {} };
+vm.createContext(crCtx);
+vm.runInContext("var window = undefined;", crCtx);
+for (const f of ["src/model.js", "src/data.js", "src/spel/sprak.js", "src/spel/skotsel.js", "src/site.js",
+  "src/lektioner/motor.js", "src/lektioner/observation.js", "src/lektioner/hinder.js", "src/lektioner/clearround.js"]) {
+  try { vm.runInContext(las(f), crCtx, { filename: f }); }
+  catch (e) { if (f !== "src/site.js") throw e; }
+}
+const CR = vm.runInContext("LEKTION_TYPER.clearround", crCtx);
+prova("clearround exponerar kravBokstaver", typeof CR.kravBokstaver === "function");
+const bana = CR.BANA, riktIds = CR.RIKTNINGSID;
+const kastar = (...a) => { try { CR.kravBokstaver(...a); return null; } catch (e) { return String(e.message); } };
+prova("riktig bana + riktningsid passerar", kastar(bana, riktIds, lista) === null);
+prova("okänt `mot` fäller vakten", /okand_dressyrbokstav:Q/.test(kastar([{ mot: "Q" }], riktIds, lista) || ""));
+prova("okänt riktningsid fäller vakten", /okand_dressyrbokstav:Q/.test(kastar(bana, ["A", "Q"], lista) || ""));
+prova("äkta bokstav som inte är riktningsid fäller vakten", /okant_riktningsid:K/.test(kastar([{ mot: "K" }], riktIds, lista) || ""));
+prova("lista utan C fäller banan (vakten läser källan)",
+  /okand_dressyrbokstav:C/.test(kastar(bana, riktIds, lista.filter(p => p.b !== "C")) || ""));
+prova("K ligger fortfarande på västra sargen (0, 6)", lista.some(p => p.b === "K" && p.x === 0 && p.y === 6));
+
 console.log("");
 if (fel) { console.log(`dressyrbokstavertest: ${fel} mätning(ar) föll`); process.exit(1); }
 console.log("dressyrbokstavertest: alla gröna");
