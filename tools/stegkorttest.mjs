@@ -136,12 +136,12 @@ console.log("\n── A. Startvalet vid hästen ──");
   prova("kortet säger att stallet gör hästen redo och att spelaren inte behöver sadla själv",
     /stallet gör .+ redo/.test(k.text) && /inte sadla eller tränsa själv/.test(k.text), k.text.replace(/\s+/g, " "));
   prova("exakt EN knapp: Rida nu — inget «Gör i ordning … själv»",
-    k.knappar.length === 1 && k.knappar[0].text === `Rida nu — ${h.namn}`,
+    k.knappar.length === 1 && k.knappar[0].text === `RIDA NU — ${h.namn}`,
     k.knappar.map(b => b.text).join(" / "));
   prova("«Rida nu» är primär", k.knappar[0].primar);
   prova("inget «Fler handlingar» på startvalet", !k.fler);
   prova("ingen hälsningsfråga på startvalet", !/bakifrån|Framifrån/.test(k.text));
-  prova("E vid hästen är «Rida nu»", k.prompt === `Rida nu — ${h.namn}`, String(k.prompt));
+  prova("E vid hästen är «Rida nu»", k.prompt === `RIDA NU — ${h.namn}`, String(k.prompt));
   prova("den gamla vänsterrutan syns inte till fots", !k.vansterruta);
   if (BILDER) await page.screenshot({ path: path.join(BILDER, "startval-1600x900.png") });
 
@@ -245,7 +245,7 @@ console.log("\n── E. Engelska ──");
   let k = await kort(page);
   prova("Time to ride / Ride now (ett enda val, ingen «Choose»)",
     k.rubrik === "Time to ride" && !/choose/i.test(k.rubrik) && k.knappar.length === 1
-      && k.knappar[0].text === `Ride now — ${h.namn}`,
+      && k.knappar[0].text === `RIDE NOW — ${h.namn}`,
     k.rubrik + " | " + k.knappar.map(b => b.text).join(" / "));
   prova("engelska kortet säger att stallet gör hästen redo",
     /the stable gets .+ ready/.test(k.text) && /do not need to saddle or bridle yourself/.test(k.text),
@@ -280,7 +280,7 @@ console.log("\n── H. Touch: Rida nu och Sitt upp utan tangent (#297) ──"
   alla.push(...k.knappar.map(b => b.id), ...k.rader.map(b => b.id));
   prova("startkortet: exakt en primär knapp, «Rida nu — häst», och inget «Välj»",
     k.id === "valj" && k.knappar.length === 1 && k.knappar[0].primar && k.knappar[0].id === "start:rida_nu"
-      && k.knappar[0].text === `Rida nu — ${h.namn}` && !/välj/i.test(k.rubrik), k.knappar.map(b => b.text).join(" / "));
+      && k.knappar[0].text === `RIDA NU — ${h.namn}` && !/välj/i.test(k.rubrik), k.knappar.map(b => b.text).join(" / "));
   const tryck = async id => {
     const ruta = await page.evaluate(id => {
       const b = [...document.querySelectorAll("#stegkort button")].find(x => x.dataset.id === id);

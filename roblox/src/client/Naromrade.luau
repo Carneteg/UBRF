@@ -448,6 +448,41 @@ local function arDorr(p: ProximityPrompt): boolean
 	return p.Name == "DorrPrompt"
 end
 
+--[[ ══ #305: STEGKORTETS HUVUDKNAPP ÄR HANDLINGEN, MED HANDLINGENS ORD ══════
+	iPad i produktion 2026-10-05: kortet till vänster sa «Öppna stalldörren»
+	men knappen under hette «Öppna — Dörr» och såg ut som vilken listrad som
+	helst, medan högerpanelen läste som hästens kontroller. Spelaren fick gissa
+	att handlingen låg precis under instruktionen.
+
+	Nu har de tre onboardingstegen var sin tydlig huvudknapp: «ÖPPNA DÖRREN»,
+	«RIDA NU — {häst}» och «SITT UPP». Samma prompt, samma väg — texten och
+	utseendet är det enda som är nytt. Hållet vid uppsittning står kvar (det är
+	en medveten spärr, se `borjaHall`) men sägs på knappen. Tangenten står
+	sist och är aldrig det man måste kunna. Högerpanelens hästkontroller rörs
+	inte. ]]
+local function primarEtikett(p: ProximityPrompt): string?
+	local text: string
+	if arDorr(p) and p:GetAttribute("SprakNyckel") == "dorr.oppna" then
+		text = Sprak.t("kort.oppna_dorren")
+	elseif p.Name == "MountPrompt" then
+		text = Sprak.t("kort.sitt_upp")
+		if (p.HoldDuration or 0) > 0 then text ..= "  (" .. Sprak.t("interaktion.hall_inne") .. ")" end
+	else
+		return nil
+	end
+	local tangent = tangenttext(p)
+	if tangent then text ..= "  [" .. tangent .. "]" end
+	return text
+end
+
+--[[ Huvudknappens utseende: större, fet, centrerad. Knapparna återanvänds
+     mellan ritningar, så den vanliga raden sätts tillbaka uttryckligen. ]]
+local function stilaKnapp(b: TextButton, huvud: boolean)
+	b.Font = if huvud then Enum.Font.GothamBold else Enum.Font.GothamMedium
+	b.TextSize = if huvud then 17 else 14
+	b.TextXAlignment = if huvud then Enum.TextXAlignment.Center else Enum.TextXAlignment.Left
+end
+
 --[[ Den dörr panelen senast visade, och hur mycket närmare en annan måste
      vara för att ta över. Se `sorterade`. ]]
 local valdDorr: ProximityPrompt? = nil
@@ -2399,18 +2434,23 @@ rita = function()
 		if v then
 			b.Text = tostring(v.text)
 			b.BackgroundColor3 = if v.paTur then ACCENT else NEUTRAL
+			stilaKnapp(b, v.paTur == true and v.id == "start:rida_nu")
 		end
 	end
 	if valYta then valYta.Visible = #valen > 0 end
 	for i, b in ipairs(rader) do
 		local p = senaste[i]
 		if p then
-			b.Text = etikett(p)
 			b.Visible = true
 		else
 			b.Visible = false
 		end
 		local primar = #valen == 0 and i == 1 and sida == 1 and b.Visible
+		--[[ #305: bara den PRIMÄRA raden får stegets ord och huvudutseende;
+			en sekundär dörrrad under «Rida nu» förblir en vanlig rad. ]]
+		local ord = if primar and p then primarEtikett(p) else nil
+		if p then b.Text = ord or etikett(p) end
+		stilaKnapp(b, ord ~= nil)
 		b.BackgroundColor3 = if primar then ACCENT else NEUTRAL
 	end
 
@@ -2513,6 +2553,26 @@ function Naromrade._rader(): { string }
 	if not valEfter then valen() end
 	for _, b in ipairs(rader) do
 		if b.Visible then table.insert(ut, b.Text) end
+	end
+	if valEfter then valen() end
+	return ut
+end
+
+--[[ #305: de SYNLIGA knapparna själva, i skärmordning (samma ordning som
+	`_rader`). Provet läser etikett, typsnitt, storlek, höjd och färg ur den
+	knapp spelaren faktiskt ser — inte ur en parallell tabell. ]]
+function Naromrade._knappar(): { TextButton }
+	local ut = {}
+	local function valen()
+		if valYta and valYta.Visible then
+			for _, b in ipairs(valKnappar) do
+				if b.Visible then table.insert(ut, b) end
+			end
+		end
+	end
+	if not valEfter then valen() end
+	for _, b in ipairs(rader) do
+		if b.Visible then table.insert(ut, b) end
 	end
 	if valEfter then valen() end
 	return ut
