@@ -117,7 +117,7 @@ local function valMed(id)
 	for _, v in ipairs(N._val()) do if v.id == id then return v end end
 	return nil
 end
-prova("«Välj hur du börjar» med den korta instruktionen (ingen hälsningsfråga)",
+prova("«Dags att rida» med den korta instruktionen (ingen hälsningsfråga)",
 	rubrik() == Sprak.t("guide.valj_rubrik", "Trixie") and steg() == Sprak.t("guide.valj_kort", "Trixie", "Trixie"), steg())
 local vt = valTexter()
 prova("exakt ett val: «Rida nu — Trixie», inget «Gör i ordning själv»", #vt == 1
