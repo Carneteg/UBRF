@@ -34,7 +34,7 @@ jobs:
           ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
           UBRF_UNIVERSE_ID: ${{ vars.UBRF_UNIVERSE_ID }}
         run: |
-          for v in 541 540 538 535 530; do
+          for v in 529 525 520 510 500 480 450 400; do
             echo "=== version $v ==="
             UBRF_VERSION=$v python3 tools/live-revision.py | grep -E "PlaceVersion|kallhash|genererad|led.borttagen|FAIL|REPO-HEAD|SKILJER" || true
           done
