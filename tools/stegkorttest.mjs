@@ -130,7 +130,11 @@ console.log("\n── A. Startvalet vid hästen ──");
   await vanta(page);
   let k = await kort(page);
   prova("panelen syns vid hästen", k.synlig && k.id === "valj", `kort ${k.id}`);
-  prova("rubriken är «Välj hur du börjar»", k.rubrik === "Välj hur du börjar", k.rubrik);
+  /* #297: ett enval-kort ber aldrig spelaren «välja», och det säger att stallet gör hästen redo. */
+  prova("rubriken är «Dags att rida» — inget «Välj» när det bara finns en väg",
+    k.rubrik === "Dags att rida" && !/välj|choose/i.test(k.rubrik), k.rubrik);
+  prova("kortet säger att stallet gör hästen redo och att spelaren inte behöver sadla själv",
+    /stallet gör .+ redo/.test(k.text) && /inte sadla eller tränsa själv/.test(k.text), k.text.replace(/\s+/g, " "));
   prova("exakt EN knapp: Rida nu — inget «Gör i ordning … själv»",
     k.knappar.length === 1 && k.knappar[0].text === `Rida nu — ${h.namn}`,
     k.knappar.map(b => b.text).join(" / "));
@@ -185,6 +189,9 @@ console.log("\n── C. «Rida nu» ──");
   await page.evaluate(() => { VD.px -= 4; VD.py += 3; });
   await page.waitForTimeout(300);
   prova("hon är redo: «Sitt upp på …»", k.redo && k.id === "sittupp", k.id);
+  prova("efter «Rida nu» säger kortet att hon väntar i ridhuset och pekar på «Sitt upp» (inget skötselsteg)",
+    /väntar i ridhuset/.test(k.text) && /Sitt upp/.test(k.text) && !/rykta|hovar|sadeln|tränset|led /i.test(k.text),
+    k.text.replace(/\s+/g, " "));
   prova("stallets hand ger ingen omsorgsbonus: dagsform 0,70", k.dagsform === 0.7, String(k.dagsform));
   prova("E vid sargporten är uppsittningen", /Sitt upp/.test(String(k.prompt)), String(k.prompt));
   const promptRad = await page.evaluate(() => document.getElementById("approach").textContent);
@@ -236,9 +243,13 @@ console.log("\n── E. Engelska ──");
   const h = await vidBoxen(page, { sprak: "en" });
   await vanta(page);
   let k = await kort(page);
-  prova("Choose how to start / Ride now (ett enda val)",
-    k.rubrik === "Choose how to start" && k.knappar.length === 1 && k.knappar[0].text === `Ride now — ${h.namn}`,
-    k.knappar.map(b => b.text).join(" / "));
+  prova("Time to ride / Ride now (ett enda val, ingen «Choose»)",
+    k.rubrik === "Time to ride" && !/choose/i.test(k.rubrik) && k.knappar.length === 1
+      && k.knappar[0].text === `Ride now — ${h.namn}`,
+    k.rubrik + " | " + k.knappar.map(b => b.text).join(" / "));
+  prova("engelska kortet säger att stallet gör hästen redo",
+    /the stable gets .+ ready/.test(k.text) && /do not need to saddle or bridle yourself/.test(k.text),
+    k.text.replace(/\s+/g, " "));
   const texter = [k.text];
   await klicka(page, "start:rida_nu");
   texter.push((await kort(page)).text);
@@ -247,6 +258,58 @@ console.log("\n── E. Engelska ──");
   prova("ingen svenska i panelen genom startvalet och uppsittningskortet", blandat.length === 0,
     blandat.length ? blandat[0].replace(/\n/g, " ¦ ").slice(0, 140) : `${texter.length} kort`);
   await page.close();
+}
+
+/* ── H. #297: förstagångsspelare på touch — båda stegen går att TRYCKA ──
+   iPad liggande, bara pekskärm: ingen tangent trycks. Startkortet och
+   uppsittningskortet bär varsin synlig knapp, och inga skötsel- eller
+   ledknappar syns någonstans på vägen. */
+console.log("\n── H. Touch: Rida nu och Sitt upp utan tangent (#297) ──");
+{
+  const ctx = await browser.newContext({ viewport: { width: 1180, height: 820 }, hasTouch: true, locale: "sv-SE" });
+  await ctx.route(/supabase\.co/, r => r.abort());
+  const page = await ctx.newPage();
+  page.on("pageerror", e => { console.error("PAGEERROR", e.message); fel++; });
+  await page.goto(`http://localhost:${PORT}/`, { waitUntil: "load" });
+  await page.waitForTimeout(600);
+  const h = await vidBoxen(page);
+  await vanta(page);
+  const FORBJUDET = /^(handling:|tack:|rad:sadla|rad:transa|leda$|start:sjalv)/;
+  const alla = [];
+  let k = await kort(page);
+  alla.push(...k.knappar.map(b => b.id), ...k.rader.map(b => b.id));
+  prova("startkortet: exakt en primär knapp, «Rida nu — häst», och inget «Välj»",
+    k.id === "valj" && k.knappar.length === 1 && k.knappar[0].primar && k.knappar[0].id === "start:rida_nu"
+      && k.knappar[0].text === `Rida nu — ${h.namn}` && !/välj/i.test(k.rubrik), k.knappar.map(b => b.text).join(" / "));
+  const tryck = async id => {
+    const ruta = await page.evaluate(id => {
+      const b = [...document.querySelectorAll("#stegkort button")].find(x => x.dataset.id === id);
+      if (!b) return null;
+      const r = b.getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2, h: r.height, v: r.width };
+    }, id);
+    if (!ruta) return null;
+    await page.touchscreen.tap(ruta.x, ruta.y);
+    await page.waitForTimeout(700);
+    return ruta;
+  };
+  const r1 = await tryck("start:rida_nu");
+  prova("knappen går att trycka med fingret (minst 36 px hög)", !!r1 && r1.h >= 36, r1 ? `${Math.round(r1.h)} × ${Math.round(r1.v)} px` : "saknas");
+  k = await kort(page);
+  alla.push(...k.knappar.map(b => b.id), ...k.rader.map(b => b.id));
+  prova("efter tryck: hon står i ridhuset och kortet är uppsittningskortet", k.scen === "ridhusinne" && k.id === "sittupp", `${k.scen} · ${k.id}`);
+  prova("nästa instruktion är uppsittning, inte skötsel: «väntar i ridhuset» + «Sitt upp»",
+    /väntar i ridhuset/.test(k.text) && /Sitt upp/.test(k.text) && !/rykta|hovar|sadeln|tränset|led /i.test(k.text),
+    k.text.replace(/\s+/g, " "));
+  prova("uppsittningskortet har exakt en synlig, primär «Sitt upp»-knapp (ingen hålltangent krävs)",
+    k.knappar.length === 1 && k.knappar[0].primar && k.knappar[0].id === "sittupp:sitt_upp"
+      && k.knappar[0].text === `Sitt upp på ${h.namn}`, k.knappar.map(b => b.text).join(" / "));
+  const r2 = await tryck("sittupp:sitt_upp");
+  prova("knappen går att trycka med fingret (minst 36 px hög)", !!r2 && r2.h >= 36, r2 ? `${Math.round(r2.h)} px` : "saknas");
+  const scen = await page.evaluate(() => G.scen);
+  prova("tryck på «Sitt upp» sitter upp och ritten börjar — utan en enda tangent", scen === "lektion", scen);
+  prova("ingen skötsel- eller ledknapp syntes på vägen", !alla.some(id => FORBJUDET.test(id)), alla.join(","));
+  await ctx.close();
 }
 
 /* ── G. P1b: automatisk tilldelning och First Ride ─────────────────

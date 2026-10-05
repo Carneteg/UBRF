@@ -118,7 +118,7 @@ local function valMed(id)
 	return nil
 end
 prova("«Välj hur du börjar» med den korta instruktionen (ingen hälsningsfråga)",
-	rubrik() == Sprak.t("guide.valj_rubrik", "Trixie") and steg() == Sprak.t("guide.valj_kort", "Trixie"), steg())
+	rubrik() == Sprak.t("guide.valj_rubrik", "Trixie") and steg() == Sprak.t("guide.valj_kort", "Trixie", "Trixie"), steg())
 local vt = valTexter()
 prova("exakt ett val: «Rida nu — Trixie», inget «Gör i ordning själv»", #vt == 1
 	and vt[1] == Sprak.t("guide.val_rida_nu", "Trixie") and valMed("start:sjalv") == nil, table.concat(vt, " / "))
@@ -170,13 +170,13 @@ prova("eftervården och räknat pass: nil", N._guideFor(med({}), "eftervard", "x
 prova("hästen långt bort och dörren STÄNGD: dörren; ÖPPEN: gå till",
 	N._guideFor(med({ utomRackhall = true }), "skotsel", "", "Trixie", true).rubrik == Sprak.t("guide.dorr_rubrik", "Trixie")
 	and N._guideFor(med({ utomRackhall = true }), "skotsel", "", "Trixie", false).rubrik == Sprak.t("guide.ga_till_rubrik", "Trixie"))
-prova("engelska: «Choose how to start»/«Ride now»; efter valet «Greet Trixie» + frågan", (function()
+prova("engelska: «Time to ride»/stallet gör henne redo; efter valet «Greet Trixie» + frågan", (function()
 	Sprak.satLocale("en-us")
 	local k = N._guideFor(med({}), "skotsel:halsa", "Walk up from the side.", "Trixie", false, false)
 	local h = N._guideFor(med({}), "skotsel:halsa", "Walk up from the side.", "Trixie", false, true)
 	local r, sj = Sprak.t("guide.val_rida_nu", "Trixie"), Sprak.t("guide.val_sjalv", "Trixie")
 	Sprak.satLocale("sv-se")
-	return k and k.rubrik == "Choose how to start" and har(k.text, "Ride now") and not har(k.text, "Walk up")
+	return k and k.rubrik == "Time to ride" and har(k.text, "the stable gets Trixie ready") and not har(k.text, "Walk up")
 		and h and h.rubrik == "Greet Trixie" and h.text == "Walk up from the side."
 		and r == "Ride now — Trixie" and sj == "Get Trixie ready myself"
 end)())
@@ -333,6 +333,93 @@ do
 	prova("F. välfärdsstopp: ingen «Rida nu» trots recorded", promptar().RidaNuPrompt == nil
 		and valMed("start:rida_nu") == nil)
 	state.stoppad = nil
+end
+
+print("\n── 9. #297: förstagångsspelaren — en tydlig väg, utan skötsel och ledning ──")
+do
+	-- Prompterna finns på hästen även när panelen tar över (då är de avstängda och raden är handlingen).
+	local function prompter(namn)
+		local ut = {}
+		for _, d in ipairs(hast:GetDescendants()) do
+			if d:IsA("ProximityPrompt") and d.Name == namn then table.insert(ut, d) end
+		end
+		return ut
+	end
+	local FORBJUDET = { "start:sjalv", "handling:", "utr:", "leda", "hov:", "rykta", "visitera", "halsa" }
+	local function forbjudetVal()
+		local traffar = {}
+		for _, v in ipairs(N._val()) do
+			for _, p in ipairs(FORBJUDET) do
+				if string.sub(tostring(v.id), 1, #p) == p then table.insert(traffar, tostring(v.id)) end
+			end
+		end
+		return table.concat(traffar, ",")
+	end
+	state = Preparation.nyState(HAST_ID, 2)
+	flytta(vidHasten)
+	visa("preparing")
+	-- Ett NYTT pass i before_ride: sektion 8 lämnade ett räknat pass, och det är inte förstagångsspelarens läge.
+	rev += 1
+	PC.tillampaPass(Pass.vy(Pass.nyState(HAST_ID, Pass.byggId(1, HAST_ID, 2)), 7000 + rev))
+	IC.uppdatera()
+	prova("9a. startkortets rubrik är «Dags att rida» — ingen uppmaning att «välja» när det bara finns en väg",
+		rubrik() == Sprak.t("guide.valj_rubrik", "Trixie") and rubrik() == "Dags att rida"
+		and not string.find(string.lower(rubrik()), "välj", 1, true), rubrik())
+	prova("9b. kortet säger uttryckligen att stallet gör hästen redo — spelaren behöver inte sadla eller tränsa",
+		steg() == Sprak.t("guide.valj_kort", "Trixie", "Trixie") and har(steg(), "stallet gör Trixie redo")
+		and har(steg(), "inte sadla eller tränsa själv"), steg())
+	prova("9c. exakt EN primär handling: «Rida nu — Trixie» (id start:rida_nu), inget annat val",
+		#N._val() == 1 and N._val()[1].id == "start:rida_nu" and N._val()[1].text == Sprak.t("guide.val_rida_nu", "Trixie"),
+		#N._val())
+	prova("9d. ingen manuell skötselhandling och inget «Gör i ordning själv» bland valen", forbjudetVal() == "", forbjudetVal())
+	prova("9e. den SYNLIGA panelen bär bara «Rida nu» — på touch räcker knappen, ingen tangent behövs",
+		#N._rader() == 1 and N._rader()[1] == Sprak.t("guide.val_rida_nu", "Trixie"), table.concat(N._rader(), " / "))
+	prova("9f. ingen ledning: hästen har ingen LedPrompt, ingen SadlaPrompt, ingen TransaPrompt",
+		#prompter("LedPrompt") == 0 and #prompter("SadlaPrompt") == 0 and #prompter("TransaPrompt") == 0)
+	local fore9 = ridaNuAnrop
+	N._val()[1].skicka()
+	prova("9g. knappen kör den kanoniska InteractionController.ridaNu (serverns RidaNu anropas)",
+		ridaNuAnrop == fore9 + 1, ("%d → %d"):format(fore9, ridaNuAnrop))
+
+	for _, f in ipairs(Preparation.stegFaser()) do gorFas(f.id) end -- stallet har gjort allt, inklusive ledningen till ridhuset
+	visa("ready_to_mount")
+	prova("9h. efter «Rida nu» är nästa instruktion uppsittning: hon väntar i ridhuset, välj «Sitt upp»",
+		rubrik() == Sprak.t("guide.sittupp_rubrik", "Trixie") and steg() == Sprak.t("guide.sittupp_text", "Trixie")
+		and har(steg(), "väntar i ridhuset") and har(steg(), "Sitt upp")
+		and not har(steg(), "rykta") and not har(steg(), "tränset") and not har(steg(), "led "), steg())
+	local radText = table.concat(N._rader(), " / ")
+	prova("9i. «Sitt upp» är en synlig, tryckbar rad i panelen (touch behöver ingen hålltangent)",
+		#prompter("MountPrompt") >= 1 and har(radText, Sprak.t("interaktion.sitt_upp")), #prompter("MountPrompt") .. " | " .. Sprak.t("interaktion.sitt_upp") .. " | " .. radText)
+	prova("9j. ingen «Rida nu», skötsel eller ledning kvar efter Rida nu", #prompter("RidaNuPrompt") == 0
+		and forbjudetVal() == "" and #prompter("LedPrompt") == 0)
+
+	local klar = { status = "ready_to_mount", redo = true, nasta = "", nastaMoment = "", klaraFaser = 5, buren = {}, utomRackhall = true }
+	local bort = N._guideFor(klar, "skotsel", "", "Trixie", false)
+	prova("9k. efter «Rida nu», spelaren långt från ridhuset: kortet säger var hon väntar — inte «till boxen»",
+		bort and bort.rubrik == Sprak.t("guide.ga_till_rubrik", "Trixie") and bort.text == Sprak.t("guide.ga_till_ridhus_text", "Trixie")
+		and har(bort.text, "väntar i ridhuset") and har(bort.text, "Sitt upp") and not har(bort.text, "boxen"), bort and bort.text)
+	local ejKlar = N._guideFor({ status = "preparing", redo = false, nasta = "halsa", nastaMoment = "halsa1", klaraFaser = 0,
+		buren = {}, utomRackhall = true }, "skotsel", "", "Trixie", false)
+	prova("9l. före «Rida nu» pekar «Följ pilen» fortfarande på boxen (hon står där)",
+		ejKlar and ejKlar.text == Sprak.t("guide.ga_till_text") and har(ejKlar.text, "boxen"), ejKlar and ejKlar.text)
+
+	local nycklar = { "guide.valj_rubrik", "guide.valj_kort", "guide.val_rida_nu", "guide.sittupp_rubrik", "guide.sittupp_text", "guide.ga_till_ridhus_text" }
+	local ofullstandig = {}
+	for _, loc in ipairs({ "sv-se", "en-us" }) do
+		Sprak.satLocale(loc)
+		for _, k in ipairs(nycklar) do
+			local t = Sprak.t(k, "Trixie", "Trixie")
+			if t == "" or string.find(t, "%", 1, true) or t == k then table.insert(ofullstandig, loc .. ":" .. k) end
+		end
+	end
+	Sprak.satLocale("en-us")
+	local enText = Sprak.t("guide.valj_kort", "Trixie", "Trixie") .. " | " .. Sprak.t("guide.sittupp_text", "Trixie")
+		.. " | " .. Sprak.t("guide.ga_till_ridhus_text", "Trixie")
+	local enRubrik = Sprak.t("guide.valj_rubrik")
+	Sprak.satLocale("sv-se")
+	prova("9m. sv/en: alla sex nycklarna finns, inga kvarglömda %s, engelskan är konsekvent (inget «Choose», «Mount»)",
+		#ofullstandig == 0 and enRubrik == "Time to ride" and har(enText, "Mount") and not har(string.lower(enText), "choose how"),
+		table.concat(ofullstandig, " ") .. " | " .. enText)
 end
 
 print("")

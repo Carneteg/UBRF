@@ -1876,17 +1876,22 @@ local function guideSteg(g: any, lage: string?, text: string?, hastnamn: string?
 	end
 	if g.utomRackhall then
 		if stangdDorr then return kort("dorr", Sprak.t("guide.dorr_text", namn)) end
+		--[[ #297: EFTER «RIDA NU» står hon redan i ridhuset medan spelaren kan stå kvar vid
+		     boxen. Då är «följ pilen till boxen» fel plats: kortet säger var hon väntar. ]]
+		if g.redo or g.status == "ready_to_mount" then
+			return kort("ga_till", Sprak.t("guide.ga_till_ridhus_text", namn))
+		end
 		return kort("ga_till", Sprak.t("guide.ga_till_text"))
 	end
 	if g.redo or g.status == "ready_to_mount" then
-		return kort("sittupp", Sprak.t("guide.sittupp_text"))
+		return kort("sittupp", Sprak.t("guide.sittupp_text", namn))
 	end
 	if g.status ~= "preparing" then return nil end
 	local m = if type(g.nastaMoment) == "string" then g.nastaMoment else ""
 	local buren = g.buren or {}
 	if g.nasta == "halsa" and (g.klaraFaser or 0) == 0 then
 		-- UI-1: startskärmen bär bara de två vägarna; hälsningen kommer först efter «själv».
-		if not valtSjalv then return kort("valj", Sprak.t("guide.valj_kort", namn)) end
+		if not valtSjalv then return kort("valj", Sprak.t("guide.valj_kort", namn, namn)) end
 		return kort("halsa", text)
 	elseif g.nasta == "visitera" then
 		return kort("visitera", text, true)

@@ -243,8 +243,8 @@ const SPRAK = {
   "guide.dorr_text": { sv: "Öppna dörren framför dig. Den gyllene pilen visar var %s står.", en: "Open the door in front of you. The gold arrow shows where %s is." },
   "guide.ga_till_rubrik": { sv: "Gå till %s", en: "Go to %s" },
   "guide.ga_till_text": { sv: "Följ den gyllene pilen till boxen.", en: "Follow the gold arrow to the box." },
-  "guide.valj_rubrik": { sv: "Välj hur du börjar", en: "Choose how to start" },
-  "guide.valj_kort": { sv: "Rida nu: stallet gör %s redo, och hon står i ridhuset när ritten börjar.", en: "Ride now: the stable gets %s ready, and she is waiting in the arena when the ride begins." },
+  "guide.valj_rubrik": { sv: "Dags att rida", en: "Time to ride" },
+  "guide.valj_kort": { sv: "%s är din häst idag. Du behöver inte sadla eller tränsa själv — stallet gör %s redo.", en: "%s is your horse today. You do not need to saddle or bridle yourself — the stable gets %s ready." },
   "guide.val_rida_nu": { sv: "Rida nu — %s", en: "Ride now — %s" },
   "guide.val_sjalv": { sv: "Gör i ordning %s själv", en: "Get %s ready myself" },
   "guide.halsa_rubrik": { sv: "Hälsa på %s", en: "Greet %s" },
@@ -266,7 +266,8 @@ const SPRAK = {
   "guide.leder_rubrik": { sv: "Led %s till ridhuset", en: "Lead %s to the arena" },
   "guide.leder_text": { sv: "Gå till ridhuset — %s följer dig. Där sitter du upp.", en: "Walk to the arena — %s follows you. You mount there." },
   "guide.sittupp_rubrik": { sv: "Sitt upp på %s", en: "Mount %s" },
-  "guide.sittupp_text": { sv: "Sitt upp och rid! Välj sedan en lektion hos Ugneta eller rid fritt.", en: "Mount up and ride! Then choose a lesson with Ugneta or ride freely." },
+  "guide.sittupp_text": { sv: "%s är klar och väntar i ridhuset. Välj «Sitt upp».", en: "%s is ready and waiting in the arena. Choose «Mount»." },
+  "guide.ga_till_ridhus_text": { sv: "%s är klar och väntar i ridhuset. Följ den gyllene pilen dit och välj «Sitt upp».", en: "%s is ready and waiting in the arena. Follow the gold arrow there and choose «Mount»." },
 
   /* ── Hjälpen och kontrollerna (KontrollHjalp) ─────────────────────── */
   "hjalp.rubrik": { sv: "Kontroller", en: "Controls" },

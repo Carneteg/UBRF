@@ -514,12 +514,12 @@ Sprak.text = {
 		en = "Follow the gold arrow to the box.",
 	},
 	["guide.valj_rubrik"] = {
-		sv = "Välj hur du börjar",
-		en = "Choose how to start",
+		sv = "Dags att rida",
+		en = "Time to ride",
 	},
 	["guide.valj_kort"] = {
-		sv = "Rida nu: stallet gör %s redo, och hon står i ridhuset när ritten börjar.",
-		en = "Ride now: the stable gets %s ready, and she is waiting in the arena when the ride begins.",
+		sv = "%s är din häst idag. Du behöver inte sadla eller tränsa själv — stallet gör %s redo.",
+		en = "%s is your horse today. You do not need to saddle or bridle yourself — the stable gets %s ready.",
 	},
 	["guide.val_rida_nu"] = {
 		sv = "Rida nu — %s",
@@ -594,8 +594,12 @@ Sprak.text = {
 		en = "Mount %s",
 	},
 	["guide.sittupp_text"] = {
-		sv = "Sitt upp och rid! Välj sedan en lektion hos Ugneta eller rid fritt.",
-		en = "Mount up and ride! Then choose a lesson with Ugneta or ride freely.",
+		sv = "%s är klar och väntar i ridhuset. Välj «Sitt upp».",
+		en = "%s is ready and waiting in the arena. Choose «Mount».",
+	},
+	["guide.ga_till_ridhus_text"] = {
+		sv = "%s är klar och väntar i ridhuset. Följ den gyllene pilen dit och välj «Sitt upp».",
+		en = "%s is ready and waiting in the arena. Follow the gold arrow there and choose «Mount».",
 	},
 	["hjalp.rubrik"] = {
 		sv = "Kontroller",

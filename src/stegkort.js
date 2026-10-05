@@ -225,8 +225,12 @@ function stegkortKort(antaNara) {
 
   /* Hon står i ridhuset (efter «Rida nu» eller First Ride): kortet säger
      bara att det är dags att sitta upp. Ingen ledning finns att visa. */
+  /* #297: kortet bär en TRYCKBAR «Sitt upp» — på touch ska den synliga knappen räcka, utan att
+     spelaren behöver hitta hålltangenten i världen. Samma grind som världens prompt (`sittUpp`). */
   if (G.hastPlats === "leds")
-    return { id: "sittupp", rubrik: tSpr("guide.sittupp_rubrik", n), text: tSpr("guide.sittupp_text"), val: [] };
+    return { id: "sittupp", rubrik: tSpr("guide.sittupp_rubrik", n), text: tSpr("guide.sittupp_text", n),
+      val: [{ id: "sittupp:sitt_upp", text: tSpr("guide.sittupp_rubrik", n), primar: true,
+        gor() { sittUpp("ridhus"); } }] };
 
   const nara = antaNara || stegkortNara();
   if (!nara)
@@ -238,7 +242,7 @@ function stegkortKort(antaNara) {
   const ridaNuVarld = { id: "rad:rida_nu", text: tSpr("guide.val_rida_nu", n), tangent: "KeyR", hall: 0.35,
     gor: stegkortRidaNu };
   if (stegkortOrort(s))
-    return { id: "valj", rubrik: tSpr("guide.valj_rubrik"), text: tSpr("guide.valj_kort", n), fler: [],
+    return { id: "valj", rubrik: tSpr("guide.valj_rubrik"), text: tSpr("guide.valj_kort", n, n), fler: [],
       rader: [], varld: [ridaNuVarld],
       val: [
         { id: "start:rida_nu", text: tSpr("guide.val_rida_nu", n), primar: true, gor: stegkortRidaNu },
