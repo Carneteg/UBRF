@@ -14,6 +14,37 @@ Status date: 2026-09-28. This document records the current delivery gate. It is 
 - Coordination source of truth: GitHub issue #266 + the remote branch.
 - Claude review handoff marker: **`HANDOFF_READY_FOR_CHATGPT`**.
 
+## Also active, 2026-11-23: webb-realism-utvecklingsplanen (Steg 0)
+
+Tobias bad om och godkände en utvecklingsplan (genom `ExitPlanMode`) för att
+föra webbspelet från Minecraft-aktigt till verklighetstroget, byggd på en
+156-agents jämförelseanalys av Drive-mappen UBRF mot `src/*.js`. Planfilen
+ligger kvar i den session som skrev den; dess sju faser (A–G, ~60 steg) och
+deras beslutsspärrar är auktoritativa för det här arbetet.
+
+- Aktivt spår: **webb-realism-utvecklingsplanen, Fas 0** (inget beslut krävs,
+  inga Roblox-beroenden för de batcher som redan är levererade).
+- Aktiv gren: **`claude/ridspel-stall-omnejd-zo2zce`** — löper vid sidan av
+  `codex/circle-lesson-20260926`; de rör olika filer (motor/rendering kontra
+  #266:s ridkvalitet/tävling) och ska inte blandas i samma PR.
+- Testpolicy för det här spåret: `WORKING-AGREEMENT.md`:s "bygg utan att
+  testa, Tobias speltestar allt i slutet"-regel (2026-09-27) är skriven mot
+  namngivna #266-paket och gäller **inte** automatiskt här. Full
+  `DELIVERY-PROTOCOL.md`-regim (bevis, falsifiering) gäller för varje batch.
+- Levererat hittills: **Batch 0.1** — de två motorbuggarna (felvänd
+  ljusnormal i `s3Svep` och `glPlatta`, båda i produktionskod, inte i
+  triangelvarvet/kulningen — se kommentarerna i `src/scen3d.js` och
+  `src/gl.js`), FXAA i post-kompositeringen (scenen renderas i en
+  icke-multisamplad offscreen-textur för glödpasset, så context-flaggan
+  `antialias:true` saknar verkan där), ny falsifierbar
+  `tools/kullningsgrind.mjs` registrerad i `grindar.yml` och i
+  `tools/testa-grindar-workflow.py`:s INVENTARIE-kontrakt. Ingen Roblox-
+  motsvarighet krävs (ren WebGL-korrekthetsfix, inget delat beteende).
+- Nästa batcher (0.2 och framåt) kräver ingen ytterligare uppdatering av det
+  här dokumentet förrän de öppnar en PR, men varje batch som rör delad
+  `src/site.js`-geometri, ridkanon eller spelarbeteende måste redovisa
+  Roblox-paritet enligt planens egna regler innan den är klar.
+
 ## Locked physical-test candidate
 
 The current runtime candidate is re-locked after the assigned-horse guide fix.

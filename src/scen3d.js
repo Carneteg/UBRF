@@ -478,7 +478,19 @@ function s3Svep(b,farg,nt,nu,f){
     const d=rut[i][(j+1)%nu], e=rut[i][(j-1+nu)%nu];
     const t=[a[0]-c[0],a[1]-c[1],a[2]-c[2]];
     const w=[d[0]-e[0],d[1]-e[1],d[2]-e[2]];
-    let n=[t[1]*w[2]-t[2]*w[1], t[2]*w[0]-t[0]*w[2], t[0]*w[1]-t[1]*w[0]];
+    /* w×t, inte t×w (motor-engineering 0.1 / A1): w×t pekar UTÅT på en
+       sluten svept kropp. t×w gav en normal som konsekvent pekade
+       INÅT (dot mot den analytiska utåtnormalen var exakt -1 för
+       varje testad punkt på ett rent rör, se tools/kullningsgrind.mjs).
+       Det syntes aldrig som att geometrin försvann — svepningens EGET
+       varv (triangelordningen a,d,e / a,e,c nedan) följer redan GL.js
+       kamerans vänstervridna projektion (se kommentaren vid
+       M4.skala(-1,1,1) i gl.js:kamera) och kulas korrekt. Bara
+       LJUSNORMALEN var vänd, så hästkroppen, halsen och huvudet (och
+       people-torson/jeans/hand i varld3d.js som återanvänder samma
+       funktion) lästes belysta från fel håll — mörkast där solen
+       borde träffa som starkast. */
+    let n=[w[1]*t[2]-w[2]*t[1], w[2]*t[0]-w[0]*t[2], w[0]*t[1]-w[1]*t[0]];
     let L=Math.hypot(n[0],n[1],n[2]);
     if(L<1e-9){n=[0,1,0];L=1;}
     P.push(q[0],q[1],q[2]); N.push(n[0]/L,n[1]/L,n[2]/L); U.push(i/nt, j/nu);

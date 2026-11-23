@@ -95,9 +95,17 @@ function glPlatta(b){
     const P=t.map(v=>[b.p[v*3],b.p[v*3+1],b.p[v*3+2]]);
     const e1=[P[1][0]-P[0][0],P[1][1]-P[0][1],P[1][2]-P[0][2]];
     const e2=[P[2][0]-P[0][0],P[2][1]-P[0][1],P[2][2]-P[0][2]];
-    let nx=e1[1]*e2[2]-e1[2]*e2[1],
-        ny=e1[2]*e2[0]-e1[0]*e2[2],
-        nz=e1[0]*e2[1]-e1[1]*e2[0];
+    /* e2×e1, inte e1×e2 (motor-engineering 0.1 / A1): varje nät byggs med
+       ett varv som avsiktligt är "inåt sett" (samma konvention som
+       GEO.ladas handskrivna normaler, se kommentaren vid kamerans
+       X-spegling i GL.kamera). e1×e2 följer därför alltid den
+       inåtvända riktningen och skrev över t.ex. GEO.ladas egna,
+       korrekta utåtnormaler med en vänd version — synligt som fel
+       belysta kloss-figurer i spelets standardläge (STIL="kloss").
+       e2×e1 ger triangelns sanna utåtriktning utan att röra varvet. */
+    let nx=e2[1]*e1[2]-e2[2]*e1[1],
+        ny=e2[2]*e1[0]-e2[0]*e1[2],
+        nz=e2[0]*e1[1]-e2[1]*e1[0];
     const l=Math.hypot(nx,ny,nz);
     if(l<1e-9)continue;                    // hoppa över degenererade trianglar
     nx/=l; ny/=l; nz/=l;
@@ -615,8 +623,39 @@ const POST_KOMP=`
   precision mediump float; varying vec2 vT;
   uniform sampler2D uScen, uGlod;
   uniform float uBloom, uMattnad, uExponering;
+  uniform vec2 uTexel;
+  /* Scenen renderas i en vanlig (icke-multisamplad) textur för
+     glödpasset ovan — motor-engineering 0.1 / A2: WebGL 1 saknar
+     multisamplade renderbuffrar (ingen renderbufferStorageMultisample),
+     så context-flaggan antialias:true kan aldrig jämna till den här
+     texturen, oavsett vad canvasen själv stödjer. FXAA (Lottes' publika
+     "poor man's"-variant, samma som används i three.js FXAAShader) körs
+     här i kompositeringen i stället, som enda praktiska kantutjämning
+     för den här rendervägen. */
+  vec3 fxaa(vec2 uv){
+    vec2 t=uTexel;
+    vec3 nw=texture2D(uScen,uv+vec2(-1.0,-1.0)*t).rgb;
+    vec3 ne=texture2D(uScen,uv+vec2( 1.0,-1.0)*t).rgb;
+    vec3 sw=texture2D(uScen,uv+vec2(-1.0, 1.0)*t).rgb;
+    vec3 se=texture2D(uScen,uv+vec2( 1.0, 1.0)*t).rgb;
+    vec3 m =texture2D(uScen,uv).rgb;
+    vec3 lw=vec3(0.299,0.587,0.114);
+    float lNW=dot(nw,lw),lNE=dot(ne,lw),lSW=dot(sw,lw),lSE=dot(se,lw),lM=dot(m,lw);
+    float lMin=min(lM,min(min(lNW,lNE),min(lSW,lSE)));
+    float lMax=max(lM,max(max(lNW,lNE),max(lSW,lSE)));
+    vec2 dir=vec2(-((lNW+lNE)-(lSW+lSE)), (lNW+lSW)-(lNE+lSE));
+    float red=max((lNW+lNE+lSW+lSE)*0.03125,0.0078125);
+    float rcp=1.0/(min(abs(dir.x),abs(dir.y))+red);
+    dir=clamp(dir*rcp,-8.0,8.0)*t;
+    vec3 a=0.5*(texture2D(uScen,uv+dir*(1.0/3.0-0.5)).rgb+
+                texture2D(uScen,uv+dir*(2.0/3.0-0.5)).rgb);
+    vec3 b=a*0.5+0.25*(texture2D(uScen,uv+dir*-0.5).rgb+
+                        texture2D(uScen,uv+dir*0.5).rgb);
+    float lB=dot(b,lw);
+    return (lB<lMin||lB>lMax)?a:b;
+  }
   void main(){
-    vec3 c=texture2D(uScen,vT).rgb;
+    vec3 c=fxaa(vT);
     c+=texture2D(uGlod,vT).rgb*uBloom;
     c*=uExponering;
     float l=dot(c,vec3(0.299,0.587,0.114));
@@ -729,6 +768,7 @@ GL.efter=function(){
     L.mattnad===undefined?1.2:L.mattnad);
   gl.uniform1f(gl.getUniformLocation(this.pKomp,"uExponering"),
     L.exponering===undefined?1.05:L.exponering);
+  gl.uniform2f(gl.getUniformLocation(this.pKomp,"uTexel"),1/p.w,1/p.h);
   gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D,p.ljus1.tex);
   gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D,p.scen.tex);
   ritaKvad();

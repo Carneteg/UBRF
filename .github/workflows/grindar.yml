@@ -161,6 +161,17 @@ jobs:
           test -f tools/handighetsgrind.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/handighetsgrind.mjs (steget 'Handigheten på webben')" >&2; exit 1; }
           node tools/handighetsgrind.mjs
 
+      # Kulningen (motor-engineering 0.1 / A1). Ett annat varv-fel än
+      # handigheten ovan: inte spegelvänd anläggning, utan svepta nät
+      # (s3Svep) och klossläget (glPlatta) vars LJUSNORMAL pekade inåt
+      # trots att själva triangelvarvet redan var rätt. Falsifierad med
+      # --muter-trasigt, som återinför de exakta rader som orsakade det.
+      - name: Kulningen — nätens ljusnormaler pekar utåt
+        run: |
+          set -euo pipefail
+          test -f tools/kullningsgrind.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/kullningsgrind.mjs (steget 'Kulningen — nätens ljusnormaler pekar utåt')" >&2; exit 1; }
+          node tools/kullningsgrind.mjs
+
       # PRE_TOBIAS_FIRST_PLAYABLE_GATE (processändringen på #162, 05:42).
       # Samlingsgrinden kör undergrindarna en gång till i ett svep och
       # producerar release evidence bundle + WORLD_MANIFEST. Den ligger

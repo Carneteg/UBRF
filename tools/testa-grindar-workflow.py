@@ -84,6 +84,7 @@ INVENTARIE = [
     ('grindar', 'tools/kolla-nyckelbilder.py', ['python3 tools/kolla-nyckelbilder.py']),
     ('grindar', 'roblox/tests/kor.sh', ['bash roblox/tests/kor.sh']),
     ('grindar', 'tools/handighetsgrind.mjs', ['node tools/handighetsgrind.mjs']),
+    ('grindar', 'tools/kullningsgrind.mjs', ['node tools/kullningsgrind.mjs']),
     ('grindar', 'tools/pre-tobias-grind.py', ['python3 tools/pre-tobias-grind.py']),
     ('grindar', 'references/CHECKSUMS.sha256', ['cd references && sha256sum -c --quiet CHECKSUMS.sha256']),
     ('grindar', 'tools/build.py', ['python3 tools/build.py']),
