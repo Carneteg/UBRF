@@ -34,12 +34,22 @@ deras beslutsspärrar är auktoritativa för det här arbetet.
 - Levererat hittills: **Batch 0.1** — de två motorbuggarna (felvänd
   ljusnormal i `s3Svep` och `glPlatta`, båda i produktionskod, inte i
   triangelvarvet/kulningen — se kommentarerna i `src/scen3d.js` och
-  `src/gl.js`), FXAA i post-kompositeringen (scenen renderas i en
-  icke-multisamplad offscreen-textur för glödpasset, så context-flaggan
-  `antialias:true` saknar verkan där), ny falsifierbar
-  `tools/kullningsgrind.mjs` registrerad i `grindar.yml` och i
-  `tools/testa-grindar-workflow.py`:s INVENTARIE-kontrakt. Ingen Roblox-
-  motsvarighet krävs (ren WebGL-korrekthetsfix, inget delat beteende).
+  `src/gl.js`), ny falsifierbar `tools/kullningsgrind.mjs` registrerad i
+  `grindar.yml` och i `tools/testa-grindar-workflow.py`:s
+  INVENTARIE-kontrakt. Ingen Roblox-motsvarighet krävs (ren
+  WebGL-korrekthetsfix, inget delat beteende).
+- **A2 (kantutjämning) uppskjuten, inte löst i 0.1:** en FXAA-shader
+  provades i post-kompositeringen men orsakade en mätbar, reproducerbar
+  CI-regression i `tools/lektion-e2e-test.mjs` (headless, mjukvaru-
+  rastrerad SwiftShader) — bekräftat två gånger på PR #308 och frånvarande
+  på oförändrad `main` samma dag. Grundorsaken: `src/game.js:1311`
+  klipper `dt` vid 0,05 s (≈20 fps); sjunker bildrutetakten under det på
+  CI:s mjukvaruräknade rendering förlorar den ridna sträckan mot riktig
+  tid, exakt det testets 60 s skrittfas mätte. Kantutjämning för den här
+  rendervägen kräver ett prestandabudgeterat svar (nivåer, se planens
+  Fas 3.0a) innan det kan läggas till utan risk för det låsta kravet
+  "frame-rate-oberoende beteende" i CLAUDE.md. Kvarstår som öppen del av
+  A2, inte avskriven.
 - Nästa batcher (0.2 och framåt) kräver ingen ytterligare uppdatering av det
   här dokumentet förrän de öppnar en PR, men varje batch som rör delad
   `src/site.js`-geometri, ridkanon eller spelarbeteende måste redovisa
