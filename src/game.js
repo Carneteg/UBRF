@@ -617,10 +617,57 @@ function stegaRitt(dt){
   const KB=(typeof ridKanon==="function")?ridKanon():null;
   const HB=KB?KB.HAST_HALVBREDD:0.35;
   const BB=KB?KB.BANA_BREDD:20, BL=KB?KB.BANA_LANGD:60;
-  if(nx<HB){nx=HB;G.rikt=lerpAngle(G.rikt,ny>G.py?Math.PI/2:-Math.PI/2,vaggT);}
-  if(nx>BB-HB){nx=BB-HB;G.rikt=lerpAngle(G.rikt,ny>G.py?Math.PI/2:-Math.PI/2,vaggT);}
-  if(ny<HB){ny=HB;G.rikt=lerpAngle(G.rikt,nx>G.px?0:Math.PI,vaggT);}
-  if(ny>BL-HB){ny=BL-HB;G.rikt=lerpAngle(G.rikt,nx>G.px?0:Math.PI,vaggT);}
+  /* D1 (ridmekanik-grind 0.2), "begränsa väggstyrd sväng till gångartens
+     egen gräns": en tvingad vägg-/hörnomriktning får aldrig vrida hästen
+     snävare än hon själv kan böja sig i den här gångarten — annars känns
+     smällen mot sargen som ett fordon, inte en häst. kappaTak är samma
+     kurvaturtak styrningen lyder under, räknat tidigare i den här
+     funktionen. Golvet på tempot (0,4 m/s) är ett ANTAGANDE: utan det
+     blir taket ~0 för en nästan stillastående häst, och varken
+     hörnflykten eller mittvakten nedan skulle hinna verka. */
+  const vridMotRiktning=(mal)=>{
+    let d=mal-G.rikt; while(d>Math.PI)d-=2*Math.PI; while(d<-Math.PI)d+=2*Math.PI;
+    let steg=d*vaggT;
+    const maxDTheta=kappaTak*Math.max(G.ride.tempo,0.4)*dt;
+    if(Math.abs(steg)>maxDTheta)steg=steg>0?maxDTheta:-maxDTheta;
+    G.rikt+=steg;
+  };
+  const xLag=nx<HB, xHog=nx>BB-HB, yLag=ny<HB, yHog=ny>BL-HB;
+  if(xLag)nx=HB; if(xHog)nx=BB-HB;
+  if(yLag)ny=HB; if(yHog)ny=BL-HB;
+  if(xLag||xHog||yLag||yHog){
+    if((xLag||xHog)&&(yLag||yHog)){
+      /* HÖRN (D1, uppmätt: fast i hörnet i 18/18 försök efter ~25 s utan
+         styrning). De gamla, separata en-väggs-grenarna kördes EFTER
+         varandra och skrev över varandras riktning: den andra grenens
+         tie-break (`nx>G.px`) jämförde DEN HÄR BILDRUTANS redan klippta
+         nx mot FÖREGÅENDE bildrutas G.px — i ett riktigt hörn är de
+         nästan identiska, så tie-breaket kunde peka rakt in i hörnet
+         lika ofta som ut ur det, och hästen satt fast permanent.
+         Riktningen mot öppen bana är i stället en ren geometrisk diagonal
+         ut från just DET hörnet, oberoende av vilken väg hästen kom
+         ifrån eller vad gårdagens bildruta råkade stå på. */
+      vridMotRiktning(Math.atan2(yLag?1:-1, xLag?1:-1));
+    }else if(xLag||xHog){
+      vridMotRiktning(ny>G.py?Math.PI/2:-Math.PI/2);
+    }else{
+      vridMotRiktning(nx>G.px?0:Math.PI);
+    }
+  }
+  /* D1, "vakt på långvarig låg markfart → sväng mot centrum": ett sista
+     skyddsnät, oberoende av exakt VARFÖR hästen råkat fastna (en NPC-häst
+     i vägen precis vid sargen, ett hörn geometrin ovan ändå inte löser).
+     Står hon i praktiken still i mer än FASTTID sekunder utan att
+     spelaren styr bort henne, svänger hon mjukt mot banans mitt —
+     samma rate-begränsade vridning som hörnflykten, aldrig en snäpp.
+     Trösklarna är ANTAGANDEN, inte uppmätta; sänk FASTTID hellre än att
+     ta bort vakten om den visar sig trög i provet. */
+  {
+    const FASTFART=0.05, FASTTID=2.5;
+    const fart=Math.hypot(nx-G.px,ny-G.py)/Math.max(dt,1e-4);
+    G._fastDt=(fart<FASTFART&&Math.abs(G.aids.styrning)<0.05)?(G._fastDt||0)+dt:0;
+    if(G._fastDt>FASTTID)vridMotRiktning(Math.atan2(BL/2-ny,BB/2-nx));
+  }
   /* Ekipagen framför är också väggar. Man kan inte rida genom en häst,
      och kommer man för nära blir hon spänd — avståndsregeln i ridhuset
      är till för hästarnas skull, inte för ordningens. */

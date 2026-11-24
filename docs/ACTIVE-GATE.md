@@ -38,6 +38,21 @@ deras beslutsspärrar är auktoritativa för det här arbetet.
   `grindar.yml` och i `tools/testa-grindar-workflow.py`:s
   INVENTARIE-kontrakt. Ingen Roblox-motsvarighet krävs (ren
   WebGL-korrekthetsfix, inget delat beteende).
+- Levererat: **Batch 0.2** — D1 (hästen fastnade permanent i ett hörn när
+  spelaren släppte all styrning; de två en-väggs-redirect-grenarna i
+  `stegaRitt` (`src/game.js`) skrev över varandra vid en riktig hörnkollision
+  med ett tie-break som jämförde samma bildrutas redan klippta position mot
+  föregående bildrutas — i ett hörn nästan identiska) och D2 (halt glider
+  ~6,8 cm/s i stället för att stå still; `mal` i `stepRide` (`src/model.js`)
+  klampades till lägst 0 men lämnade ändå ett litet, stabilt positivt mål via
+  spänning×framåtbjudning även när gångarten saknade norm, dvs. i halt).
+  Båda rättade; ny falsifierbar hörn- och halt-regression i
+  `tools/ridtest.mjs`. Roblox-kontroll genomförd (läsande, ingen ändring):
+  `roblox/src/client/MovementController.luau` löser kollision via riktig
+  Humanoid-fysik (ingen hand-skriven väggklamp, alltså ingen motsvarande
+  hörnbugg möjlig), och dess halt-formel (rad ~546–573) hoppar hela
+  nyanstermen när `gait.norm<=0`, så målet är redan exakt 0 där — ingen
+  Roblox-ändring behövs eller är gjord.
 - **A2 (kantutjämning) uppskjuten, inte löst i 0.1:** en FXAA-shader
   provades i post-kompositeringen men orsakade en mätbar, reproducerbar
   CI-regression i `tools/lektion-e2e-test.mjs` (headless, mjukvaru-
