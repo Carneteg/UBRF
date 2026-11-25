@@ -79,6 +79,61 @@ deras beslutsspärrar är auktoritativa för det här arbetet.
   **Beslutsspärr (acceptans, inte bygg) kvarstår:** `READY_FOR_PRODUCT_ACCEPTANCE`
   kräver Tobias godkännande av själva tangentbordskänslan (öppnar om
   2026-09-08-beslutet) — byggt och verifierat, men inte produktaccepterat.
+- Levererat: **Batch 0.4** — C1, C2, C3 (rätt bentakt, små
+  rörelsekorrigeringar, övergångar, markkontakt). Webbens häst hade en
+  egen benföljdstabell (`S3FAS`) som var fel, inte förenklad: skritten
+  satte i vf → hb → vb → hf, galoppen slog i fel ordning i tre lika slag
+  utan sväv och utan fattning. Benen läser nu den delade tabellen
+  `GANGFAS` (`src/riding/gangfas.js`, som förut inte ens var med i
+  webbygget) genom uppslag portade från `Gangfas.luau`. Tabellens tal är
+  orörda (`node tools/exportera-ridkanon.mjs --kontrollera` grön).
+  - **C1:** lateral fyrtakt i skritt, diagonalpar med sväv i trav, tretakt
+    med sväv och fattning i galopp. `G.varv` och `G.fattning` är port av
+    `MovementController._varvOchLedande` och är BARA bild.
+  - **C2:** en uppresning per travcykel på yttre framben (fel diagonal
+    syns), häl och knä stannar vid stigbygeln, nick i skritt/galopp,
+    halsen ställs inåt i sväng, språnget lyfter bogen först (`lut` hade
+    fel tecken). `s3MittEkipage` är nu den enda beskrivningen av din häst.
+  - **C3:** den visuella gångarten (`ridVisGang`) läser faktisk markfart:
+    fastklämd ritas som halt, rörelse med etiketten «halt» som skritt, och
+    byten korsblandas över ett halvt steg, linjärt i tid. Hovens mål löses
+    nerifrån golvet genom hästens riktiga grundmatris; svepet är
+    `stod × cykellängd`, så stödhoven står still. Skenbenen var 6 cm för
+    korta (hästen svävade i varje scen) och är rättade — mankhöjd, sadel
+    och ögonhöjd är orörda.
+  - **Uppmätt:** stödhovens glid 0,00 / 0,11 / 0,55 cm i skritt / trav /
+    galopp (med det gamla fasta svepet 33–53 cm); största hovflytt per
+    bildruta i ett gångartsbyte 12,2 cm mot 73,2 cm utan korsblandning.
+  - **Prov:** ny `tools/gangposetest.mjs` (51 mätningar mot ridlärans
+    facit, inte mot tabellen själv; i `grindar.yml` + frysta inventariet)
+    och nya block i `tools/ridtest.mjs` (varv, fattning och hals mot en
+    volts uppmätta mitt; övergångar vid 30 och 120 bilder/s med
+    kontrollmätning). Falsifierad med sex mutationer som alla blir röda:
+    `--muter-fas`, `--muter-latt`, `--muter-hopp`, `--muter-glid`,
+    `--muter-kontakt`, `--muter-ben`.
+  - **Avvikelser från planen, redovisade:** (1) «apex ur hinderhöjd» är
+    flyttat till Batch 0.5 (D4), som ändå bygger om avstampet. (2) Planen
+    sade «sänk kroppen» — i stället är benen förlängda, så att ingenting
+    annat (kamera, ryttare, stall) flyttas. (3) Benet töjs upp till 12 %
+    i stödets ytterlägen: riggens ben är för korta för ett 1 m långt
+    stöd, och utan töjning når hoven inte marken.
+  - **Paritet:** webben hinner ikapp Roblox; inga Roblox-filer ändrade.
+    Roblox läser redan tabellen och har ingen språnglutning alls (hoppet
+    är fysik där), alltså ingen motsvarande bugg. **En plattformsskillnad
+    kräver Tobias ställningstagande:** webben låter svängen avgöra varvet
+    i en båge och banans mitt bara på rakt spår; Roblox läser bara banans
+    mitt, och byter därför varv två gånger per varv i en volt som rids
+    utanför mittlinjen. Föreslagen åtgärd: samma regel i Roblox
+    `_varvOchLedande`, som eget steg.
+  - **Kvar och inte verifierat:** hur rörelsen KÄNNS och ser ut i fart
+    går inte att bedöma automatiskt. Knäets vikriktning (bakåt fram,
+    framåt bak) är oförändrad och ser anatomiskt omvänd ut — eget fynd för
+    C5, inte rört här. NPC-hästarnas fas går på tid, inte sträcka, så de
+    kan fortfarande glida. Alla amplituder, trösklar och blandningstiden
+    är `[ANTAGANDE]`.
+  **Beslutsspärr (acceptans, inte bygg) kvarstår:** Tobias namnger en
+  ridkunnig person som bedömer skritt, trav och galopp i rörelse innan
+  `PRODUCT_ACCEPTED`. `JEV_DECISION: JEV_NOT_NEEDED`.
 - **A2 (kantutjämning) uppskjuten, inte löst i 0.1:** en FXAA-shader
   provades i post-kompositeringen men orsakade en mätbar, reproducerbar
   CI-regression i `tools/lektion-e2e-test.mjs` (headless, mjukvaru-

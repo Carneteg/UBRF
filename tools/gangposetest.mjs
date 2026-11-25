@@ -31,10 +31,13 @@
 
    Varje del måste kunna bli röd, annars mäter den ingenting:
 
-     --muter-fas   byter två bens isättning i en KOPIA av tabellen
-                   (källtexten i minnet, aldrig filen)
-     --muter-latt  återinför `sin(4π·fas)` i lättridningen
-     --muter-hopp  återinför `lut-=` i språnget
+     --muter-fas      byter två bens isättning i en KOPIA av tabellen
+                      (källtexten i minnet, aldrig filen)
+     --muter-latt     återinför `sin(4π·fas)` i lättridningen
+     --muter-hopp     återinför `lut-=` i språnget
+     --muter-glid     ger benen ett fast svep oavsett färdad sträcka
+     --muter-kontakt  tar bort benets töjning, så hoven inte når fram
+     --muter-ben      återinför de 6 cm för korta skenbenen
 
    Kör: node tools/gangposetest.mjs                 (exit 1 vid avvikelse)
         node tools/gangposetest.mjs --muter-fas     (måste bli röd) */
@@ -65,6 +68,12 @@ function byggKontext() {
       "LATTRIDNING.hojd_m*Math.max(0,Math.sin(4*Math.PI*o.fas))", "lättridningen");
   if (ARG.has("--muter-hopp"))
     scenKod = mutera(scenKod, "lut+=0.52*Math.cos(Math.PI*u);", "lut-=0.52*Math.cos(Math.PI*u);", "språngets lutning");
+  if (ARG.has("--muter-glid"))
+    scenKod = mutera(scenKod, "const S=stod*cykel;", "const S=0.6;", "stödets svep");
+  if (ARG.has("--muter-kontakt"))
+    scenKod = mutera(scenKod, "1+(BEN_TOJ_MAX-1)*nara", "1", "benets töjning");
+  if (ARG.has("--muter-ben"))
+    scenKod = mutera(scenKod, "BEN_L2=[0.52,0.52,0.54,0.54]", "BEN_L2=[0.46,0.46,0.48,0.48]", "skenbenens längd");
   const ctx = { console, Math, JSON, Float32Array, Uint8Array, Int32Array, window: {},
     clamp: (v, a, b) => (v < a ? a : v > b ? b : v) };
   vm.createContext(ctx);
@@ -74,7 +83,7 @@ function byggKontext() {
     S3.del = new Proxy({}, { get: (_, k) => (k === "jag" ? null : { namn: String(k) }) });
     this.RITAT = [];
     GL.rita = (nat, mat) => { this.RITAT.push({ namn: nat && nat.namn, m: Array.from(mat) }); };
-    this.X = { s3Ben, s3HastKropp, s3HastBas, s3HuvudLokal, s3HuvudPunkt, s3Sits, s3RitaHast,
+    this.X = { s3BenPunkter, s3HastKropp, s3HastBas, s3HuvudLokal, s3HuvudPunkt, s3Sits, s3RitaHast,
       M4, GANGFAS, GANGBEN, gangBen, gangMonsterNamn, gangVarv, gangYttreFram, gangLattridning, LATTRIDNING };
   `, ctx);
   return ctx;
@@ -114,10 +123,27 @@ const natAv = (ritat, namn) => ritat.filter((r) => r.namn === namn);
 }
 
 /* ── 1. Benföljden ────────────────────────────────────────────────── */
-/* Stöd eller sväng läses ur s3Ben som den ritas: i stödet förs benet
-   BAKÅT (vinkeln minskar med fasen), i svängen förs det fram. */
-const iStod = (gangart, fattning, i, fas) =>
-  X.s3Ben(fas + 1e-4, gangart, i, fattning).t1 < X.s3Ben(fas, gangart, i, fattning).t1;
+/* HOVARNA SOM DE RITAS. Hon rids rakt österut och har färdats
+   fas × cykellängd — precis den sträcka spelet stegar fasen med — så en
+   hov som står still på marken ska ha samma världs-x genom hela stödet.
+   Stöd eller sväng avgörs av bilden: sulan på golvet eller inte. */
+const CYKEL = { skritt: 1.61, trav: 2.21, galopp: 3.50 };
+const hovMinne = new Map();
+function hovar(gangart, fattning, fas, hast) {
+  const nyckel = `${gangart}|${fattning}|${fas.toFixed(6)}|${hast ? hast.typ : ""}`;
+  if (hovMinne.has(nyckel)) return hovMinne.get(nyckel);
+  const L = CYKEL[gangart] || 1.6;
+  const r = rita({ gangart, fattning, fas: ((fas % 1) + 1) % 1, cykel: L, x: fas * L, ...(hast ? { hast } : {}) });
+  const ut = natAv(r, "hov").map((h) => ({ x: h.m[12], y: h.m[13], z: h.m[14] }));
+  hovMinne.set(nyckel, ut);
+  return ut;
+}
+/* Fem hundradels millimeter: sulan STÅR, den är inte bara nära. En
+   lösare gräns (0,5 mm) räknade in svängens första och sista bildrutor,
+   där hoven redan rör sig, och mätte då 2–5 cm "glid" hos en hov som
+   lämnat marken. */
+const PA_GOLVET = 0.00005;
+const iStod = (gangart, fattning, i, fas) => hovar(gangart, fattning || null, fas)[i].y < PA_GOLVET;
 function isattningar(gangart, fattning) {
   /* Fasen där varje ben går från sväng till stöd, på 240 steg. */
   const N = 240, ut = {};
@@ -130,14 +156,14 @@ function isattningar(gangart, fattning) {
   return ut;
 }
 function slagordning(td) {
-  /* Skilda isättningar i fasordning; ben som slår samtidigt blir ETT slag. */
-  const per = new Map();
-  for (const [ben, f] of Object.entries(td)) {
-    const k = f.toFixed(2);
-    if (!per.has(k)) per.set(k, []);
-    per.get(k).push(ben);
+  /* Skilda isättningar i fasordning; ben som slår samtidigt (inom 2 %
+     av cykeln, räknat runt varvet) blir ETT slag. */
+  const grupper = [];
+  for (const [ben, f] of Object.entries(td).sort((a, b) => a[1] - b[1])) {
+    const g = grupper.find((x) => Math.min(Math.abs(x.f - f), 1 - Math.abs(x.f - f)) < 0.02);
+    if (g) g.ben.push(ben); else grupper.push({ f, ben: [ben] });
   }
-  return [...per.entries()].sort((a, b) => a[0] - b[0]).map(([, b]) => b.sort().join("+"));
+  return grupper.map((g) => g.ben.sort().join("+"));
 }
 /* Ordningen jämförs som en RING: var cykeln börjar räknas är ett val. */
 function sammaRing(a, b) {
@@ -197,15 +223,86 @@ for (const [fattning, facit, ledande] of [
   /* Vänster fattning är höger fattning med sidorna bytta — i varje fas. */
   let storst = 0;
   const byt = [1, 0, 3, 2];
-  for (let k = 0; k < 16; k++)
+  for (let k = 0; k < 16; k++) {
+    const a = hovar("galopp", "hoger", k / 16), b = hovar("galopp", "vanster", k / 16);
+    for (let i = 0; i < 4; i++)
+      storst = Math.max(storst, Math.abs(a[i].x - b[byt[i]].x), Math.abs(a[i].y - b[byt[i]].y),
+        Math.abs(a[i].z + b[byt[i]].z));
+  }
+  prova("galopp: vänster fattning är spegelbilden av höger i alla 16 faser", storst < 1e-6,
+    `största skillnad ${storst.toExponential(1)} m`);
+  const halt = hovar("halt", null, 0.37);
+  prova("halt: alla fyra bär, ingen benföljd ritas", halt.every((h) => h.y < PA_GOLVET),
+    halt.map((h) => (h.y * 1000).toFixed(1) + " mm").join(" "));
+}
+
+/* ── 1b. Markkontakten (C3) ───────────────────────────────────────── */
+{
+  /* SVÄVAR INTE, SJUNKER INTE. Förut hängde hovarna sex centimeter över
+     golvet i varje scen: benen var för korta för sin egen bog. */
+  for (const [namn, hast] of [["häst", HAST], ["ponny", { ...HAST, typ: "ponny" }]]) {
+    const h = hovar("halt", null, 0, hast);
+    const storst = Math.max(...h.map((v) => Math.abs(v.y)));
+    prova(`halt (${namn}): alla fyra sulor står på golvet`, storst < 0.002, `som mest ${(storst * 1000).toFixed(1)} mm ifrån`);
+  }
+  {
+    const o = { hast: HAST, x: 0, z: 0, rikt: 0, gangart: "halt", fas: 0 };
+    const K = X.s3HastKropp(o), b = X.s3BenPunkter(o, K, X.s3HastBas(o, K));
+    const toj = Math.max(...b.map((v) => v.toj));
+    prova("halt: ett RAKT ben når golvet — ingen töjning behövs", toj < 1.01, `töjning ${toj.toFixed(3)}`);
+  }
+  const N = 240;
+  for (const [gangart, fattning] of [["skritt", null], ["trav", null], ["galopp", "hoger"], ["galopp", "vanster"]]) {
+    const etikett = gangart + (fattning ? " " + fattning : "");
+    const m = X.GANGFAS[X.gangMonsterNamn(gangart, fattning)];
+    let lagst = Infinity, hogst = -Infinity, glid = 0, andelFel = 0, stodAntalFel = 0;
     for (let i = 0; i < 4; i++) {
-      const a = X.s3Ben(k / 16, "galopp", i, "hoger"), b = X.s3Ben(k / 16, "galopp", byt[i], "vanster");
-      storst = Math.max(storst, Math.abs(a.t1 - b.t1), Math.abs(a.t2 - b.t2));
+      /* Följ benet över två hela cykler och plocka ut de HELA stöden. */
+      const rad = [];
+      for (let k = 0; k <= 2 * N; k++) rad.push(hovar(gangart, fattning, k / N)[i]);
+      for (const v of rad) { lagst = Math.min(lagst, v.y); hogst = Math.max(hogst, v.y); }
+      const stod = [];
+      let start = null;
+      for (let k = 1; k <= 2 * N; k++) {
+        const nu = rad[k].y < PA_GOLVET, forr = rad[k - 1].y < PA_GOLVET;
+        if (nu && !forr) start = k;
+        if (!nu && forr && start !== null) { stod.push([start, k - 1]); start = null; }
+      }
+      /* Två cykler rymmer ett eller två hela stöd per ben, aldrig fler:
+         fler betyder att hoven släppt marken mitt i stödet. */
+      if (stod.length < 1 || stod.length > 2) stodAntalFel++;
+      for (const [a, b] of stod) {
+        let lo = Infinity, hi = -Infinity;
+        for (let k = a; k <= b; k++) { lo = Math.min(lo, rad[k].x); hi = Math.max(hi, rad[k].x); }
+        glid = Math.max(glid, hi - lo);
+        /* Stödets andel i BILDEN ska vara tabellens — annars slår hoven
+           i marken vid en annan tid än hovslaget hörs. */
+        andelFel = Math.max(andelFel, Math.abs((b - a + 1) / N - m.ben[BEN[i]].stod));
+      }
     }
-  prova("galopp: vänster fattning är spegelbilden av höger i alla 16 faser", storst < 1e-9,
-    `största skillnad ${storst.toExponential(1)} rad`);
-  const halt = [0, 1, 2, 3].map((i) => X.s3Ben(0.37, "halt", i).t2);
-  prova("halt: alla fyra bär, ingen benföljd ritas", halt.every((t) => t < 0.1), halt.join(" "));
+    prova(`${etikett}: ingen hov går genom golvet`, lagst > -0.003, `lägst ${(lagst * 1000).toFixed(1)} mm`);
+    prova(`${etikett}: benen lyfts i svängen`, hogst > 0.05, `högst ${(hogst * 100).toFixed(1)} cm`);
+    prova(`${etikett}: stödhoven står STILL på marken (glid under ett helt stöd)`, glid < 0.02,
+      `${(glid * 100).toFixed(2)} cm`);
+    prova(`${etikett}: hoven bär precis så länge som tabellen säger, i ett enda stöd per cykel`,
+      andelFel < 0.03 && stodAntalFel === 0, `största avvikelse ${(andelFel * 100).toFixed(1)} % av cykeln`);
+  }
+  {
+    /* Ponnyn är mindre men färdas lika långt per cykel: svepet ska skalas. */
+    const ponny = { ...HAST, typ: "ponny" };
+    let glid = 0;
+    for (let i = 0; i < 4; i++) {
+      const xs = [];
+      for (let k = 0; k <= 2 * N; k++) { const v = hovar("skritt", null, k / N, ponny)[i]; if (v.y < PA_GOLVET) xs.push([k, v.x]); }
+      /* Sammanhängande stöd = på varandra följande k. */
+      let lo = Infinity, hi = -Infinity, forr = null;
+      for (const [k, x] of xs) {
+        if (forr !== null && k !== forr + 1) { lo = Infinity; hi = -Infinity; }
+        lo = Math.min(lo, x); hi = Math.max(hi, x); glid = Math.max(glid, hi - lo); forr = k;
+      }
+    }
+    prova("skritt (ponny): stödhoven står still även i ponnyns skala", glid < 0.02, `${(glid * 100).toFixed(2)} cm`);
+  }
 }
 
 /* ── 2. Lättridningen ─────────────────────────────────────────────── */

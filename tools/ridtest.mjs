@@ -1184,6 +1184,121 @@ const varvProv = await page.evaluate(() => {
 }
 
 /* ══════════════════════════════════════════════════════════════════
+   DEN VISUELLA GÅNGARTEN OCH ÖVERGÅNGARNA (rörelse-grind 0.4, C3)
+
+   Tre fel i bilden, alla uppmätta före ändringen: gångartsbytet poppade
+   på en bildruta, hon gled ur halt med stilla ben, och fastklämd mot
+   sargen galopperade benen på stället.
+
+   Först den rena regeln (ridVisGang) med syntetiska tal vid 30 och 120
+   bilder per sekund, sedan en riktig ritt genom den körande loopen —
+   med en KONTROLLMÄTNING: samma ritt ritad utan korsblandning. Är inte
+   hoppet tydligt större där mäter provet ingenting. ── */
+const visProv = await page.evaluate(() => {
+  const CYK = { skritt: 1.61, trav: 2.21, galopp: 3.5 };
+  const regel = (fps) => {
+    const dt = 1 / fps, V = ridVisNy(), ut = [];
+    /* etikett, markfart, tempo, sekunder */
+    const led = [["halt", 0, 0, 1], ["skritt", 1.5, 1.5, 2], ["trav", 3.2, 3.2, 2], ["galopp", 5.6, 5.6, 2],
+      ["galopp", 0, 5.6, 2], ["halt", 0.3, 0.2, 1.5], ["halt", 0, 0, 1.5]];
+    for (const [et, mf, tempo, sek] of led) {
+      let klar = null, summaFel = 0, storstSteg = 0, forr = ridVisVikter(V);
+      const n = Math.round(sek * fps);
+      for (let i = 0; i < n; i++) {
+        ridVisGang(V, et, mf, tempo, CYK[et] || 0, dt);
+        const w = ridVisVikter(V);
+        summaFel = Math.max(summaFel, Math.abs(Object.values(w).reduce((a, b) => a + b, 0) - 1));
+        for (const g in w) storstSteg = Math.max(storstSteg, Math.abs(w[g] - forr[g]) / dt);
+        forr = w;
+        if (klar === null && w[V.mal] > 0.999) klar = (i + 1) * dt;
+      }
+      ut.push({ et, mf, mal: V.mal, vikt: ridVisVikter(V)[V.mal], klar, summaFel, storstSteg });
+    }
+    return ut;
+  };
+  /* En riktig ritt: halt → skritt → trav → galopp → halt. Varje bildruta
+     läses hovarnas läge i hästens EGET rum (kota minus fäste), dels som
+     det ritas, dels som det hade ritats utan korsblandning. */
+  G.hastId = G.hastId || Object.keys(HORSES)[0]; G.hastPlats = "box"; G.npcs = [];
+  const dt = 1 / 60;
+  G.ride = nyState(G.dagsform, 0.5, G.sadellage);
+  G.px = 4; G.py = 30; G.rikt = 0; G.kappa = 0; G._fastDt = 0;
+  G.varv = null; G.fattning = null; G.visGang = null; G.visCykel = 0; G.visFattning = null; G.gaitFas = 0;
+  ridNollstallHjalp();
+  const lokalt = (o) => { const K = s3HastKropp(o), b = s3BenPunkter(o, K, s3HastBas({ ...o, x: 0, z: 0, rikt: 0 }, K));
+    return b.map((v) => [v.kota[0], v.kota[1]]); };
+  /* Hoppet mäts för sig UNDER ett byte och i ren gångart: en galopperande
+     hov flyttar sig redan ~15 cm per bildruta, så taket för ett byte är
+     gångartens egen rörelse, inte ett tal ur luften. */
+  let forrMed = null, forrUtan = null, hoppMed = 0, hoppUtan = 0, hoppStadig = 0;
+  let glidUrHalt = 0, fasUrHalt = 0, haltMedFart = 0;
+  const steg = () => {
+    const fas0 = G.gaitFas; stegaRitt(dt);
+    const e = s3MittEkipage();
+    const med = lokalt(e), utan = lokalt({ ...e, gangVikt: undefined });
+    const iByte = Math.max(...Object.values(e.gangVikt)) < 0.999;
+    if (forrMed) for (let i = 0; i < 4; i++) {
+      const dMed = Math.hypot(med[i][0] - forrMed[i][0], med[i][1] - forrMed[i][1]);
+      if (iByte) hoppMed = Math.max(hoppMed, dMed); else hoppStadig = Math.max(hoppStadig, dMed);
+      hoppUtan = Math.max(hoppUtan, Math.hypot(utan[i][0] - forrUtan[i][0], utan[i][1] - forrUtan[i][1]));
+    }
+    forrMed = med; forrUtan = utan;
+    if (G.ride.gangart === "halt" && G.visGang.fart > 0.1) {
+      haltMedFart++;
+      if (G.visGang.mal === "skritt") glidUrHalt++;
+      let d = G.gaitFas - fas0; if (d < 0) d += 1; fasUrHalt += d;
+    }
+  };
+  const impuls = () => { RIDIN.skankel = 1; for (let i = 0; i < 30; i++) steg(); RIDIN.skankel = 0; for (let i = 0; i < 18; i++) steg(); };
+  for (let i = 0; i < 30; i++) steg();
+  const gangarter = [];
+  for (let k = 0; k < 3; k++) { impuls(); RIDIN.skankel = 0.35; for (let i = 0; i < 90; i++) steg(); gangarter.push(G.ride.gangart); }
+  RIDIN.skankel = 0; RIDIN.tygel = 1; RIDIN.sits = 1;
+  for (let i = 0; i < 420; i++) steg();
+  const slut = { gangart: G.ride.gangart, mal: G.visGang.mal, vikt: ridVisVikter(G.visGang).halt };
+  RIDIN.tygel = 0; RIDIN.sits = 0; ridNollstallHjalp();
+  G.varv = null; G.fattning = null; G.visGang = null; G.visCykel = 0; G.visFattning = null;
+  return { a: regel(30), b: regel(120), hoppMed, hoppUtan, hoppStadig, gangarter, slut, glidUrHalt, fasUrHalt, haltMedFart };
+});
+{
+  const [halt0, skritt, trav, galopp, kland, kryp, stilla] = visProv.a;
+  prova("visuell gångart: följer etiketten när hon rör sig (skritt, trav, galopp)",
+    skritt.mal === "skritt" && trav.mal === "trav" && galopp.mal === "galopp" && halt0.mal === "halt" &&
+    [skritt, trav, galopp].every((v) => v.vikt > 0.999),
+    `${[halt0, skritt, trav, galopp].map((v) => v.mal).join(" → ")}`);
+  prova("visuell gångart: fastklämd (etikett galopp, markfart 0) ritas som HALT",
+    kland.mal === "halt" && kland.vikt > 0.999, `mål ${kland.mal}, vikt ${nf(kland.vikt, 3)} efter ${nf(kland.klar, 2)} s`);
+  prova("visuell gångart: rör hon sig med etiketten «halt» ritas SKRITT, och står hon still blir det halt igen",
+    kryp.mal === "skritt" && kryp.vikt > 0.999 && stilla.mal === "halt" && stilla.vikt > 0.999,
+    `0,3 m/s → ${kryp.mal} · 0 m/s → ${stilla.mal}`);
+  const alla = [...visProv.a, ...visProv.b];
+  prova("övergång: vikterna summerar till 1 och ändras aldrig fortare än ett helt byte på 0,15 s",
+    alla.every((v) => v.summaFel < 1e-9 && v.storstSteg <= 1 / 0.15 + 1e-6),
+    `största ändring ${nf(Math.max(...alla.map((v) => v.storstSteg)), 2)} per s (tak ${nf(1 / 0.15, 2)})`);
+  prova("övergång: bytet tar ett halvt steg, 0,15–0,6 s med fartens utjämning",
+    [skritt, trav, galopp].every((v) => v.klar >= 0.15 && v.klar <= 0.6),
+    `skritt ${nf(skritt.klar, 2)} s · trav ${nf(trav.klar, 2)} s · galopp ${nf(galopp.klar, 2)} s`);
+  let storstSkillnad = 0;
+  for (let i = 0; i < visProv.a.length; i++)
+    storstSkillnad = Math.max(storstSkillnad, Math.abs((visProv.a[i].klar || 0) - (visProv.b[i].klar || 0)));
+  prova("övergång: samma förlopp vid 30 och 120 bilder per sekund",
+    storstSkillnad < 0.05 && visProv.a.every((v, i) => v.mal === visProv.b[i].mal),
+    `största skillnad i bytestid ${nf(storstSkillnad * 1000, 0)} ms`);
+  prova("övergång i en riktig ritt: hon red skritt → trav → galopp → halt",
+    visProv.gangarter.join(",") === "skritt,trav,galopp" && visProv.slut.gangart === "halt" &&
+    visProv.slut.mal === "halt" && visProv.slut.vikt > 0.999,
+    `${visProv.gangarter.join(" → ")} → ${visProv.slut.gangart} (ritad ${visProv.slut.mal})`);
+  prova("övergång i en riktig ritt: ingen hov hoppar mellan två bildrutor, och kontrollmätningen utan blandning gör det",
+    visProv.hoppMed > 0 && visProv.hoppMed <= visProv.hoppStadig * 1.25 && visProv.hoppUtan > visProv.hoppMed * 2,
+    `största hovflytt per bildruta under ett byte ${nf(visProv.hoppMed * 100, 1)} cm (i ren gångart ` +
+    `${nf(visProv.hoppStadig * 100, 1)} cm) — utan korsblandning ${nf(visProv.hoppUtan * 100, 1)} cm`);
+  prova("ur halt: benen går så fort hon rör sig, och fasen stegas",
+    visProv.haltMedFart > 0 && visProv.glidUrHalt === visProv.haltMedFart && visProv.fasUrHalt > 0.05,
+    `${visProv.haltMedFart} bildrutor med etiketten «halt» över 0,1 m/s — ${visProv.glidUrHalt} ritade som skritt, ` +
+    `fasen gick ${nf(visProv.fasUrHalt, 2)} varv`);
+}
+
+/* ══════════════════════════════════════════════════════════════════
    SÄTET SOM BALANSMODIFIERARE (senior review #87, blocker 1)
 
    #83 kräver vikt/säte som balansmodifierare. `vikt` fanns som ett

@@ -489,6 +489,50 @@ function stegaNPC(dt){
 
 /* ── Ritt-fysik på planen ── */
 let kursHist=[];
+/* ── DEN VISUELLA GÅNGARTEN (rörelse-grind 0.4, C3) ───────────────
+   Benen ritades rakt ur modellens etikett, och det gav tre fel:
+     · ett gångartsbyte poppade på EN bildruta,
+     · hon gled iväg ur halt med stilla ben (etiketten är «halt» ända
+       upp till 0,25 m/s),
+     · fastklämd mot sargen galopperade benen på stället.
+
+   Här avgörs vad som RITAS, och bara det. Underlaget är den faktiska
+   markfarten (förflyttning per sekund, lågpassad som i Roblox HastGang),
+   inte tempot i modellen:
+     · står hon i praktiken still → halt, vad etiketten än säger,
+     · rör hon sig med etiketten «halt» → skritt.
+   Två trösklar (gå över 0,06, stanna under 0,04 m/s) så att benen inte
+   fladdrar kring gränsen.
+
+   BYTET korsblandas: varje gångart har en vikt som går linjärt mot 1
+   eller 0 över ett halvt steg (0,5 × cykellängd ÷ tempo, 0,15–0,45 s).
+   Linjärt i TID, så resultatet är detsamma vid 30 som vid 120 bilder per
+   sekund. Vikterna är råa och normeras först när de läses.
+
+   [ANTAGANDE] Trösklarna och blandningstiden är designvärden, inte
+   uppmätta; de trimmas om när rörelseklippen (G5) finns.
+
+   Ingenting i fysiken, bedömningen, telemetrin eller ljudet läser det
+   här. Ren funktion av sina argument, så att provet kan köra den. */
+const VIS_FART_TAU=0.16, VIS_GA=0.06, VIS_STA=0.04;
+function ridVisNy(){return {mal:"halt",fart:0,ra:{halt:1,skritt:0,trav:0,galopp:0}};}
+function ridVisGang(V,etikett,markfart,tempo,cykel,dt){
+  V.fart+=(markfart-V.fart)*(1-Math.exp(-dt/VIS_FART_TAU));
+  const stilla=V.mal==="halt"?V.fart<VIS_GA:V.fart<VIS_STA;
+  let vill=etikett in V.ra?etikett:"halt";
+  if(stilla)vill="halt"; else if(vill==="halt")vill="skritt";
+  V.mal=vill;
+  const T=clamp(0.5*(cykel>0.05?cykel:1.6)/Math.max(tempo,0.3),0.15,0.45);
+  const steg=dt/T;
+  for(const g in V.ra)V.ra[g]=clamp(V.ra[g]+(g===vill?steg:-steg),0,1);
+  return V;
+}
+function ridVisVikter(V){
+  let sum=0; for(const g in V.ra)sum+=V.ra[g];
+  const ut={}; for(const g in V.ra)ut[g]=sum>0?V.ra[g]/sum:(g===V.mal?1:0);
+  return ut;
+}
+
 function stegaRitt(dt){
   G.aids=stegaInput(dt);
   if(G.auto)autopilot(dt);
@@ -750,7 +794,18 @@ function stegaRitt(dt){
   const strackaSteg=Math.hypot(nx-G.px, ny-G.py);
   G.px=nx;G.py=ny;
   G.gaitSpar+=strackaSteg;
-  {const cykelLangd=G.ride.steglangd;
+  {/* Den visuella gångarten först: den avgör om hon går i skritt fast
+      modellen ännu säger «halt», och då ska fasen stegas med skrittens
+      cykellängd i stället för att frysa. */
+   const V=G.visGang||(G.visGang=ridVisNy());
+   let cykelLangd=G.ride.steglangd;
+   ridVisGang(V,G.ride.gangart,strackaSteg/Math.max(dt,1e-4),G.ride.tempo,cykelLangd,dt);
+   if(!(cykelLangd>0.05)&&V.mal==="skritt")
+     cykelLangd=Gait.steglangd(h.kategori,"skritt",G.ride.skala.schvung,G.ride.spanning);
+   /* Cykellängden som benen sveper med jämnas ut över bytet, så att
+      hoven inte hoppar när skrittens 1,6 m blir travens 2,2. */
+   if(cykelLangd>0.05)
+     G.visCykel=G.visCykel>0.05?G.visCykel+(cykelLangd-G.visCykel)*(1-Math.exp(-dt/0.15)):cykelLangd;
    if(cykelLangd>0.05){
      G.gaitFas=(G.gaitFas+strackaSteg/cykelLangd)%1;
    }else if(G.ride.gangart!=="halt"){
@@ -786,7 +841,8 @@ function stegaRitt(dt){
    const galopp=G.ride.gangart==="galopp";
    if(galopp&&!G.fattning)
      G.fattning=G.varv||(G.kappa<-0.02?"vanster":"hoger");
-   else if(!galopp)G.fattning=null;}
+   else if(!galopp)G.fattning=null;
+   if(G.fattning)G.visFattning=G.fattning;}
   /* G02-A: gångarten följs av övergångskontraktet och telemetrin läggs
      på G.telemetri, så att G02-B/C har en enda avläsningspunkt. Ren
      avläsning — inget här får påverka ridkänslan. */

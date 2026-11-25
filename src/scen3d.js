@@ -544,28 +544,121 @@ function s3Segment(a,b,r){
    Varje ben har en isättning (`td`) och en stödandel (`stod`). Under
    stödet bär benet och förs bakåt i markens jämna takt; under svängen
    viks knät och benet förs fram. Benindex 0–3 = LF, RF, LH, RH
-   (GANGBEN), samma ordning som `fasten` i s3RitaHast.
+   (GANGBEN), samma ordning som BEN_FASTE.
 
    `fattning` väljer galoppens rad ("hoger"/"vanster"). Okänd gångart
    eller halt: alla fyra bär, ingen benföljd ritas. ── */
-function s3Ben(fas,gangart,i,fattning){
-  const bak=i>=2;
-  const namn=gangMonsterNamn(gangart,fattning);
-  const m=namn&&GANGFAS[namn];
-  if(!m)return {t1:bak?-0.04:0.03, t2:0.06};
-  const A={skritt:0.30, trav:0.42, galopp_hoger:0.50, galopp_vanster:0.50, rygga:0.22}[namn]||0.3;
+/* VIKTERNA: hur mycket av varje gångart som ritas just nu. Ditt eget
+   ekipage bär en korsblandning (`o.gangVikt`, stegad i stegaRitt) så att
+   ett gångartsbyte inte poppar på en bildruta; alla andra hästar har en
+   enda gångart med vikt 1. */
+function s3Vikter(o){ return o.gangVikt||{[o.gangart||"halt"]:1}; }
+
+/* ── BENENS MÅTT ───────────────────────────────────────────────────
+   Skenbenen var 6 cm för korta: bog 1,12 m över marken, men överben +
+   skenben + hov blev bara 1,06 — hästen SVÄVADE sex centimeter, i varje
+   scen (uppmätt, C3). De är nu så långa att ett rakt ben precis når
+   golvet. Mankhöjden, sadeln och ryttarens ögon är orörda; det är benen
+   som rättats, inte hästen som sänkts.
+
+   [ANTAGANDE] Lyfthöjder, bogens följsamhet och töjningstaket är
+   stiliserade första värden. De ska bedömas i rörelse. */
+const BEN_FASTE=[[0.64,1.12,0.17],[0.64,1.12,-0.17],[-0.70,1.16,0.19],[-0.70,1.16,-0.19]];
+const BEN_L1=[0.50,0.50,0.52,0.52], BEN_L2=[0.52,0.52,0.54,0.54];
+const HOV_H=0.10;                    // kotan över sulan
+const BEN_VILA=[0.02,0.02,-0.03,-0.03];  // hovens viloläge fram/bak om fästet
+/* Bogen och höften följer med steget: en riktig häst har skulderblad och
+   lår ovanför det här benet, och de för fästpunkten fram och bak. Utan
+   det räcker ett 1 m långt ben inte till ett 1 m långt stöd. */
+const BEN_GLID=0.30;
+const BEN_TOJ_MIN=0.97, BEN_TOJ_MAX=1.12;
+const HOV_LYFT={skritt:0.10, trav:0.16, galopp_hoger:0.20, galopp_vanster:0.20, rygga:0.07};
+/* Cykellängd när ingen skickats med (andra hästar än din): normtempots
+   värden ur Gait.steglangd, se src/model.js. */
+const CYKEL_RESERV={skritt:1.61, trav:2.21, galopp:3.50};
+
+/* HOVENS MÅL i en gångart: `x` fram/bak om viloläget (hästens egna
+   meter), `lyft` över golvet.
+
+   STÖDET: hoven står STILL på marken. Kroppen färdas `stod × cykel`
+   under ett stöd, så hoven förs exakt den sträckan bakåt, linjärt. Det
+   är hela skillnaden mot förut, då svepet var en fast vinkel oavsett
+   fart och hoven gled 0,2–0,5 m per stöd.
+   SVÄNGEN: hoven lyfts (sin², mjukt i båda ändar) och förs fram. Kurvan
+   börjar och slutar i stödets egen takt, så avlyft och isättning inte
+   rycker. */
+function s3Hov(fas,gangart,i,fattning,cykel){
+  const namn=gangMonsterNamn(gangart,fattning), m=namn&&GANGFAS[namn];
+  if(!m)return {x:0,lyft:0};
   const {u,stod}=gangBen(m,GANGBEN[i],fas);
-  let t1,t2;
-  if(u<stod){                    // stöd: benet bär och förs bakåt
-    const p=u/Math.max(stod,1e-3);
-    t1=A*(1-2*p);
-    t2=0.05+0.10*Math.sin(Math.PI*p);
-  }else{                         // sväng: knäet viks och benet förs fram
-    const q=(u-stod)/Math.max(1-stod,1e-3);
-    t1=-A+2*A*(0.5-0.5*Math.cos(Math.PI*q));
-    t2=0.12+(bak?0.78:0.62)*Math.sin(Math.PI*q);
+  const S=stod*cykel;
+  if(u<stod)return {x:S*(0.5-u/Math.max(stod,1e-3)), lyft:0};
+  const q=(u-stod)/Math.max(1-stod,1e-3), sn=Math.sin(Math.PI*q);
+  /* Hermite från −S/2 till +S/2 med stödets lutning i ändarna (kapad,
+     så att en kort galoppsväng inte slänger benet långt förbi). */
+  const t=-S*Math.min((1-stod)/Math.max(stod,1e-3),0.6);
+  const q2=q*q, q3=q2*q;
+  const x=(2*q3-3*q2+1)*(-S/2)+(q3-2*q2+q)*t+(-2*q3+3*q2)*(S/2)+(q3-q2)*t;
+  return {x, lyft:(HOV_LYFT[namn]||0.1)*(i>=2?0.85:1)*sn*sn};
+}
+
+/* TVÅLEDSKEDJAN: från fästet `f` till kotan `kota`, i hästens sidoplan.
+   Knät viks åt samma håll som förut (bakåt fram, framåt bak). Är målet
+   längre bort än benet räcker töjs benet upp till `tojMax` — segmenten
+   är ändå cylindrar som sträcks mellan sina ändpunkter — och räcker inte
+   det pekar benet rakt mot målet och hoven hamnar kort. */
+function s3BenLos(f,kota,L1,L2,bak,tojMax){
+  const dx=kota[0]-f[0], dy=kota[1]-f[1], d=Math.hypot(dx,dy)||1e-6;
+  const toj=Math.max(BEN_TOJ_MIN,Math.min(tojMax,d/(0.999*(L1+L2))));
+  const a=L1*toj, b=L2*toj;
+  const dd=Math.min(d,(a+b)*0.99999);
+  const A=Math.acos(Math.max(-1,Math.min(1,(a*a+dd*dd-b*b)/(2*a*dd))));
+  const d1=Math.atan2(dx,-dy)+(bak?A:-A);
+  const kna=[f[0]+Math.sin(d1)*a, f[1]-Math.cos(d1)*a, f[2]];
+  const k=d>a+b?[f[0]+dx/d*(a+b), f[1]+dy/d*(a+b), f[2]]:[kota[0],kota[1],f[2]];
+  return {f, kna, kota:k, toj};
+}
+
+/* ALLA FYRA BEN — en ren funktion, så att provet mäter exakt de punkter
+   som ritas. `bas` är hästens riktiga grundmatris: sulans höjd löses
+   genom den, och då står hoven på golvet oavsett gung, galoppens
+   rullning, svängens lutning och ponnyns skala.
+
+   I språnget finns ingen mark att stå på: där ritas tucken som förut. */
+function s3BenPunkter(o,K,bas){
+  const M=K.M, vikt=s3Vikter(o), ut=[];
+  const golv=o.golv||0;
+  for(let i=0;i<4;i++){
+    const f0=BEN_FASTE[i], bak=i>=2, L1=BEN_L1[i], L2=BEN_L2[i];
+    if(K.luft>0){
+      const fram=!bak, u=K.u;
+      const tuck=fram?Math.max(0,Math.sin(Math.PI*Math.min(u*1.4,1)))
+                     :Math.max(0,Math.sin(Math.PI*Math.max((u-0.25)*1.35,0)));
+      const t1=fram?(0.55*tuck-0.1):(-0.65*tuck+0.05);
+      const t2=(fram?1.55:1.25)*tuck+0.1;
+      const d2=t1+(bak?-t2:t2);
+      const kna=[f0[0]+Math.sin(t1)*L1, f0[1]-Math.cos(t1)*L1, f0[2]];
+      ut.push({f:f0, kna, kota:[kna[0]+Math.sin(d2)*L2, kna[1]-Math.cos(d2)*L2, f0[2]], toj:1});
+      continue;
+    }
+    let x=0, lyft=0;
+    for(const g in vikt){
+      const w=vikt[g]; if(!(w>0))continue;
+      const cykel=(o.cykel>0.05?o.cykel:(CYKEL_RESERV[g]||1.6))/M;
+      const h=s3Hov(K.fas,g,i,o.fattning,cykel);
+      x+=w*h.x; lyft+=w*h.lyft;
+    }
+    const f=[f0[0]+BEN_GLID*x, f0[1], f0[2]];
+    const kx=f0[0]+BEN_VILA[i]+x;
+    /* Sulans lokala höjd så att den hamnar på golvet i VÄRLDEN. */
+    const ySula=(golv-bas[13]-bas[1]*kx-bas[9]*f0[2])/bas[5];
+    /* Benet får töjas bara medan hoven bär eller just ska sätta i. I
+       svängen hänger det med kroppen — annars drogs benen ner mot marken
+       genom hela svävmomentet. */
+    const nara=lyft>0?Math.max(0,1-lyft/0.03):1;
+    ut.push(s3BenLos(f,[kx,ySula+HOV_H+lyft,f0[2]],L1,L2,bak,1+(BEN_TOJ_MAX-1)*nara));
   }
-  return {t1, t2};
+  return ut;
 }
 
 /* ── Hästens kropp och grundmatris — EN sanning ────────────────────
@@ -603,10 +696,11 @@ function s3HastKropp(o){
      `lut` > 0 lyfter BOGEN (hästen är byggd mot +X och rotZ vrider +X
      mot +Y) — uppmätt i tools/gangposetest.mjs, inte antaget.
      Amplituderna är stiliserade [ANTAGANDE]; faserna är tabellens. */
-  let bob=0,lut=0;
-  if(gangart==="trav")bob=0.035*Math.cos(4*Math.PI*(fas-0.46));
-  else if(gangart==="galopp"){bob=0.06*Math.cos(2*Math.PI*(fas-0.875));lut=0.07*Math.cos(2*Math.PI*(fas-0.12));}
-  else if(gangart==="skritt")bob=0.018*Math.sin(4*Math.PI*fas);
+  const vikt=s3Vikter(o), wS=vikt.skritt||0, wT=vikt.trav||0, wG=vikt.galopp||0;
+  let bob=wT*0.035*Math.cos(4*Math.PI*(fas-0.46))
+    +wG*0.06*Math.cos(2*Math.PI*(fas-0.875))
+    +wS*0.018*Math.sin(4*Math.PI*fas);
+  let lut=wG*0.07*Math.cos(2*Math.PI*(fas-0.12));
   /* SPRÅNGET: bogen stiger FÖRST och landar först. Förut stod det
      `lut-=`, och hästen tippade nosen i backen i avstampet för att sedan
      landa med bogen i vädret (C2). */
@@ -703,22 +797,11 @@ function s3RitaHast(o){
     rita(D.lock,s3Segment([halsB[0]+l0[0],halsB[1]+l0[1],halsB[2]+l0[2]],
       [halsB[0]+l1[0],halsB[1]+l1[1],halsB[2]+l1[2]],0.8),man);
   }
-  /* Benen: fram vh/hf, bak vb/hb. Knät viks bakåt fram, framåt bak. */
-  const fasten=[[0.64,1.12,0.17],[0.64,1.12,-0.17],[-0.70,1.16,0.19],[-0.70,1.16,-0.19]];
+  /* Benen: fram vh/hf, bak vb/hb. Knät viks bakåt fram, framåt bak.
+     Punkterna kommer ur s3BenPunkter — hoven står på golvet. */
+  const benen=s3BenPunkter(o,K,bas);
   for(let i=0;i<4;i++){
-    const f=fasten[i], bak=i>=2;
-    let {t1,t2}=s3Ben(fas,gangart,i,o.fattning);
-    if(luft>0){                                   // tucken i språnget
-      const fram=!bak;
-      const tuck=fram?Math.max(0,Math.sin(Math.PI*Math.min(u*1.4,1)))
-                     :Math.max(0,Math.sin(Math.PI*Math.max((u-0.25)*1.35,0)));
-      t1=fram?(0.55*tuck-0.1):(-0.65*tuck+0.05);
-      t2=(fram?1.55:1.25)*tuck+0.1;
-    }
-    const L1=bak?0.52:0.50, L2=bak?0.48:0.46;
-    const d1=t1, d2=t1+(bak?-t2:t2);
-    const kna=P(f[0]+Math.sin(d1)*L1, f[1]-Math.cos(d1)*L1, f[2]);
-    const kota=P(kna[0]+Math.sin(d2)*L2, kna[1]-Math.cos(d2)*L2, f[2]);
+    const {f,kna,kota}=benen[i];
     rita(D.overben,s3Segment(f,kna,1),farg);
     rita(D.skenben,s3Segment(kna,kota,1),glMorka(farg,0.94));
     const tecken=h.tecken||{};
@@ -727,7 +810,7 @@ function s3RitaHast(o){
     if(h.fjader)   // hovskägget faller över kotan
       rita(D.fjader,M4.translation(kota[0],kota[1]-0.17,kota[2]),
         tecken.strumpor&&tecken.strumpor[i]?"#F6F3EA":glMorka(man,1.0));
-    rita(D.hov,M4.translation(kota[0],kota[1]-0.10,kota[2]),"#FFFFFF");
+    rita(D.hov,M4.translation(kota[0],kota[1]-HOV_H,kota[2]),"#FFFFFF");
   }
   /* Svansen. */
   const svSv=Math.sin(fas*Math.PI*2)*0.09*(gangart==="halt"?0.2:1);
@@ -807,8 +890,9 @@ function s3Sits(o){
      ridläraren ser. Höjden är kanonens LATTRIDNING.hojd_m. */
   const yttre=gangYttreFram(o.varv)||"LF";
   const lattBen=a.diagonal===0?(yttre==="LF"?"RF":"LF"):yttre;
-  const latt=o.gangart==="trav"&&a.lattridning
-    ? LATTRIDNING.hojd_m*gangLattridning(GANGFAS.trav,o.fas||0,lattBen) : 0;
+  const vikt=s3Vikter(o);
+  const latt=(vikt.trav||0)>0&&a.lattridning
+    ? (vikt.trav||0)*LATTRIDNING.hojd_m*gangLattridning(GANGFAS.trav,o.fas||0,lattBen) : 0;
   /* Sitsen: Ctrl djupt ner, Shift lätt sits framåt. Språng = framåt.
      Det här är den PEDAGOGISKA sitsen — den ryttaren väljer — och den
      ändras inte av det som läggs till nedan. */
@@ -833,9 +917,9 @@ function s3Sits(o){
      Allt är klampat. En ryttare som studsar mer än några centimeter
      eller lutar mer än ett par grader läser som ragdoll, och det är
      precis vad Gate-dokumentet varnar för. */
-  const rytmAmp={skritt:0.008, trav:0.014, galopp:0.020}[o.gangart]||0;
-  const rytmTakt={skritt:4, trav:4, galopp:2}[o.gangart]||0;
-  const rytm=rytmAmp*Math.sin(rytmTakt*Math.PI*o.fas);
+  const rytm=(vikt.skritt||0)*0.008*Math.sin(4*Math.PI*o.fas)
+    +(vikt.trav||0)*0.014*Math.sin(4*Math.PI*o.fas)
+    +(vikt.galopp||0)*0.020*Math.sin(2*Math.PI*o.fas);
   /* Tröghet och balans räknas i stegaRitt och läses här — samma tal
      som mätningarna använder. Andra ekipage än ditt får noll: de rids
      av NPC-logik utan tempoderivata. */
@@ -914,18 +998,17 @@ function s3HalsPunkt(o){
    storleksordning som Roblox HastGang; de ska bedömas i rörelse av en
    ridkunnig person. Faserna är tabellens. */
 const HALS_GIR_PER_KAPPA=0.5, HALS_GIR_TAK=0.15;
-function s3HalsNick(gangart,fas){
-  if(gangart==="skritt")return -0.050*Math.cos(4*Math.PI*(fas-0.31));
-  if(gangart==="galopp")return 0.040*Math.cos(2*Math.PI*(fas-0.12));
-  if(gangart==="trav")return 0.010*Math.cos(4*Math.PI*(fas-0.46));
-  return 0;
+function s3HalsNick(vikt,fas){
+  return -(vikt.skritt||0)*0.050*Math.cos(4*Math.PI*(fas-0.31))
+    +(vikt.galopp||0)*0.040*Math.cos(2*Math.PI*(fas-0.12))
+    +(vikt.trav||0)*0.010*Math.cos(4*Math.PI*(fas-0.46));
 }
 function s3HuvudLokal(o){
   const samling=o.samling===undefined?0.4:o.samling;
   const luft=o.luft||0;
   const u=luft>0?1-luft/0.55:0;
   const halsL=0.88+0.07*(1-samling);
-  const steg=(o.beta||luft>0)?0:s3HalsNick(o.gangart,o.fas||0);
+  const steg=(o.beta||luft>0)?0:s3HalsNick(s3Vikter(o),o.fas||0);
   /* I språnget MOTVERKAR halsen bogens lutning, så att huvudet håller
      sig lugnare än bålen: sänkt i avstampet (bogen är uppe), buren i
      landningen. Termen fanns förut med omvänt tecken, eftersom bålens
@@ -969,7 +1052,11 @@ function s3MittEkipage(){
   return {hast:h, jag:true, x:G.px, z:G.py, rikt:G.rikt,
     gangart:G.ride?G.ride.gangart:"halt", fas:G.gaitFas, luft:G.luft,
     banlut:G.banLut||0, aids:G.aids,
-    fattning:G.fattning||null, varv:G.varv||null, bojning:G.kappa||0,
+    /* Blandningen mellan gångarter och den cykellängd fasen stegas med
+       (stegaRitt). Fattningen hålls kvar medan galoppen tonas ut, så
+       att benen inte byter sida i övergången. */
+    gangVikt:G.visGang?ridVisVikter(G.visGang):undefined, cykel:G.visCykel||0,
+    fattning:G.fattning||G.visFattning||null, varv:G.varv||null, bojning:G.kappa||0,
     samling:G.ride?clamp(G.ride.skala.samling*0.6+G.ride.skala.kontakt*0.4,0,1):0.4};
 }
 
