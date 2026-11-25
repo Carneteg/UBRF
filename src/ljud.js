@@ -48,7 +48,7 @@ const LJUD={
   ambiens:false,
   master:null, ambGain:null, ambKalla:null, ambFilter:null, ambTyp:null,
   brus:null,
-  hovBeat:-1, gangAvstand:0,
+  hovMonster:null, hovFas:0, hovLage:0, gangAvstand:0,
   gnaggT:14, stallT:5, fagelT:3,
 };
 
@@ -85,9 +85,11 @@ function ljudToggle(){
 }
 
 /* En kort brusstöt genom filter — grunden för slag och steg. */
-function ljudStot(freq,typ,tid,vol,startFreq){
+/* `nar` är en tidpunkt på ljudklockan (AudioContext.currentTime). Utan
+   den spelas ljudet nu. */
+function ljudStot(freq,typ,tid,vol,startFreq,nar){
   if(!LJUD.ctx||!LJUD.pa)return;
-  const c=LJUD.ctx,t=c.currentTime;
+  const c=LJUD.ctx,t=nar>c.currentTime?nar:c.currentTime;
   const src=c.createBufferSource();src.buffer=LJUD.brus;
   src.playbackRate.value=0.8+Math.random()*0.4;
   const f=c.createBiquadFilter();f.type=typ;f.frequency.value=startFreq||freq;
@@ -100,9 +102,9 @@ function ljudStot(freq,typ,tid,vol,startFreq){
   src.start(t);src.stop(t+tid+0.05);
 }
 /* Dov puls — hovens tyngd. */
-function ljudPulsslag(freq,tid,vol){
+function ljudPulsslag(freq,tid,vol,nar){
   if(!LJUD.ctx||!LJUD.pa)return;
-  const c=LJUD.ctx,t=c.currentTime;
+  const c=LJUD.ctx,t=nar>c.currentTime?nar:c.currentTime;
   const o=c.createOscillator();o.type="sine";
   o.frequency.setValueAtTime(freq,t);
   o.frequency.exponentialRampToValueAtTime(Math.max(freq*0.45,25),t+tid);
@@ -114,18 +116,45 @@ function ljudPulsslag(freq,tid,vol){
 }
 
 /* Hovslag i sadeln: klangen följer underlaget. */
-function ljudHov(underlag,tung){
+function ljudHov(underlag,tung,nar){
   const v=tung?1.25:1;
-  if(underlag==="fiber"){ ljudPulsslag(95,0.13,0.20*v); ljudStot(300,"lowpass",0.09,0.10*v); }
-  else if(underlag==="vat"){ ljudPulsslag(75,0.16,0.18*v); ljudStot(1500,"bandpass",0.12,0.09*v,2600); }
-  else { ljudPulsslag(110,0.10,0.16*v); ljudStot(1200,"bandpass",0.08,0.14*v,1900); }
+  if(underlag==="fiber"){ ljudPulsslag(95,0.13,0.20*v,nar); ljudStot(300,"lowpass",0.09,0.10*v,undefined,nar); }
+  else if(underlag==="vat"){ ljudPulsslag(75,0.16,0.18*v,nar); ljudStot(1500,"bandpass",0.12,0.09*v,2600,nar); }
+  else { ljudPulsslag(110,0.10,0.16*v,nar); ljudStot(1200,"bandpass",0.08,0.14*v,1900,nar); }
 }
-/* Anropas varje bildruta under ritt: slår när gångartsfasen passerar taktslagen. */
-function ljudRittSteg(fas,gangart,underlag){
-  const beats={skritt:2,trav:2,galopp:3,halt:0}[gangart]||0;
-  if(!beats){LJUD.hovBeat=-1;return;}
-  const b=Math.floor(fas*beats);
-  if(b!==LJUD.hovBeat){LJUD.hovBeat=b;ljudHov(underlag,gangart==="galopp"&&b===0);}
+/* ── HOVSLAGENS TAKT (ljud-grind 0.6, F1) ──────────────────────────
+   Anropas varje bildruta under ritt. Förut delades fasen jämnt i
+   `beats` delar: skritten fick TVÅ slag per cykel (den har fyra) och
+   galoppen tre LIKA långa (den har tre slag och en paus). Ljudet hade
+   ingen koppling till vilka hovar som faktiskt sattes i.
+
+   Nu läser ljudet samma rad i GANGFAS som benen, med samma fas: ett slag
+   hörs när en isättning passeras, och ett diagonalpar är ETT slag. Port
+   av Roblox SoundController.
+
+     · Läget bärs som ett LÖPANDE tal (cykler + fas), så att flera slag i
+       en lång bildruta räknas i ordning och en faswrap inte tappar något.
+     · Byter raden — halt, skritt, trav, galopp eller galoppens sida —
+       SEEDAS läget om utan att slå. Inga dubbla eller kvarhängande steg.
+     · Slagen läggs på LJUDKLOCKAN, inte på bildrutan: ett slag som
+       passerades mitt i bildrutan spelas lika långt in i nästa. Hela
+       takten får då en bildrutas fördröjning, men avstånden mellan
+       slagen blir tabellens — annars hackar rytmen i bildrutornas takt,
+       och det hörs tydligast i en galopp vid låg bildfrekvens.
+
+   Betoningen på galoppens första slag är kvar som förut [ANTAGANDE]. */
+function ljudRittSteg(fas,gangart,underlag,fattning,dt){
+  const namn=gangMonsterNamn(gangart,fattning), m=namn&&GANGFAS[namn];
+  if(!m){LJUD.hovMonster=null;LJUD.hovFas=fas;return;}
+  let steg=(fas-(LJUD.hovFas||0))%1; if(steg<0)steg+=1;
+  LJUD.hovFas=fas;
+  if(LJUD.hovMonster!==namn){LJUD.hovMonster=namn;LJUD.hovLage=fas;return;}
+  const fran=LJUD.hovLage, till=fran+steg;
+  LJUD.hovLage=till>1e6?till%1:till;
+  if(!(steg>0))return;
+  const nu=LJUD.ctx?LJUD.ctx.currentTime:0, ruta=dt>0?Math.min(dt,0.1):0;
+  for(const sl of gangPasserade(m,fran,till))
+    ljudHov(underlag,m.takt===3&&sl.fas===0,nu+ruta*(sl.lage-fran)/steg);
 }
 /* Fotsteg till fots: ett steg var 0,8 m. */
 function ljudFotsteg(avstand,underlag){

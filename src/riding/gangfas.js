@@ -128,6 +128,40 @@ function gangYttreFram(varv) {
   return null;
 }
 
+/* TAKTSLAGEN: de SKILDA isättningsfaserna, sorterade. Ett diagonalpar är
+   ETT slag, inte två — trav har två slag per cykel, galopp tre, skritt
+   fyra. Benen som sätts i samtidigt följer med. */
+function gangSlag(m) {
+  const per = new Map();
+  for (const namn of GANGBEN) {
+    const b = m.ben[namn];
+    if (!b) continue;
+    if (!per.has(b.td)) per.set(b.td, []);
+    per.get(b.td).push(namn);
+  }
+  return [...per.keys()].sort((a, b) => a - b).map(fas => ({ fas, ben: per.get(fas) }));
+}
+
+/* Slagen som PASSERATS mellan två löpande lägen (cykler + fas), i
+   ordning. `fran` räknas inte med, `till` gör det — ett slag som ligger
+   exakt på en bildrutegräns hörs en gång, inte noll eller två gånger.
+   Taket skyddar mot en ljudsalva när lägena ligger långt isär. */
+const GANG_MAX_SLAG = 6;
+function gangPasserade(m, fran, till) {
+  const ut = [];
+  if (!(till > fran)) return ut;
+  const slag = gangSlag(m);
+  for (let c = Math.floor(fran); c <= Math.floor(till); c++)
+    for (const s of slag) {
+      const t = c + s.fas;
+      if (t > fran && t <= till) {
+        ut.push({ fas: s.fas, ben: s.ben, lage: t });
+        if (ut.length >= GANG_MAX_SLAG) return ut;
+      }
+    }
+  return ut;
+}
+
 if (typeof window !== "undefined") {
   window.GANGFAS = GANGFAS;
   window.LATTRIDNING = LATTRIDNING;

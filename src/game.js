@@ -850,8 +850,12 @@ function stegaRitt(dt){
     ridFoljGangart(G.ride.gangart);
     G.telemetri=ridTelemetri(G.ride,G.aids,{kappa:G.kappa,fas:G.gaitFas});
   }
-  ljudRittSteg(G.gaitFas,G.ride.gangart,
-    G.plats==="ridhus"?"fiber":(G.vader&&G.vader.typ==="regn"?"vat":"grus"));
+  /* Hovslagen följer det som RITAS (den visuella gångarten och dess
+     fattning) och tystnar i luften — ljud och ben läser samma rad i
+     GANGFAS med samma fas. */
+  ljudRittSteg(G.gaitFas,G.luft>0?"halt":(G.visGang?G.visGang.mal:G.ride.gangart),
+    G.plats==="ridhus"?"fiber":(G.vader&&G.vader.typ==="regn"?"vat":"grus"),
+    G.fattning||G.visFattning||null,dt);
   G.spanningPuls=clamp(G.ride.spanning-0.55,0,1)/0.45;
 
   /* ── Kroppens lutning i svängen ───────────────────────────────────

@@ -162,6 +162,28 @@ deras beslutsspärrar är auktoritativa för det här arbetet.
   - **Inte verifierat:** hur språnget ser ut i fart. Tidsklämman
     (0,45–0,85 s) och lyftets `0,25 + 0,9 × höjd` är `[ANTAGANDE]`.
   `JEV_DECISION: JEV_NOT_NEEDED`.
+- Levererat: **Batch 0.6** — F1 (hovslagstakt från den delade
+  fottabellen). `ljudRittSteg` delade förut fasen jämnt: skritten fick TVÅ
+  slag per cykel (den har fyra) och galoppen tre lika långa (den har tre
+  slag och en paus). Nu läser ljudet samma rad i `GANGFAS` som benen, med
+  samma fas — port av Roblox `SoundController` (`gangSlag`,
+  `gangPasserade` i `src/riding/gangfas.js`). Slagen läggs på
+  ljudklockan (`AudioContext.currentTime`) i stället för på bildrutan,
+  ett gångartsbyte seedar om utan extra slag, och ljudet följer den
+  visuella gångarten och tystnar i språnget.
+  - **Prov:** ny `tools/ljudtakttest.mjs` (15 mätningar med en attrapp av
+    ljudklockan, i `grindar.yml` + frysta inventariet): fyra / två / tre
+    slag per cykel, galoppens paus, under 1 ms fel vid 30, 60 och 120
+    bilder/s, inga tappade slag vid 5 bilder/s. Falsifierad:
+    `--muter-takt` (56 ms fel) och `--muter-klocka` (22 ms fel) blir röda.
+    Detta stänger planens kända lucka «inget ljudtestverktyg finns» för
+    just takten.
+  - **Paritet:** webben hinner ikapp Roblox; ingen Roblox-ändring.
+  - **Inte verifierat:** provet HÖR ingenting. Klang, styrka, betoningen
+    på galoppens första slag (`[ANTAGANDE]`, oförändrad) och hur takten
+    låter på en riktig telefon kan bara en människa avgöra. Bildrutans
+    fördröjning på takten (en bildruta) är ett medvetet val.
+  `JEV_DECISION: JEV_NOT_NEEDED`.
 - **A2 (kantutjämning) uppskjuten, inte löst i 0.1:** en FXAA-shader
   provades i post-kompositeringen men orsakade en mätbar, reproducerbar
   CI-regression i `tools/lektion-e2e-test.mjs` (headless, mjukvaru-

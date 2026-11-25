@@ -86,6 +86,7 @@ INVENTARIE = [
     ('grindar', 'tools/handighetsgrind.mjs', ['node tools/handighetsgrind.mjs']),
     ('grindar', 'tools/kullningsgrind.mjs', ['node tools/kullningsgrind.mjs']),
     ('grindar', 'tools/gangposetest.mjs', ['node tools/gangposetest.mjs']),
+    ('grindar', 'tools/ljudtakttest.mjs', ['node tools/ljudtakttest.mjs']),
     ('grindar', 'tools/pre-tobias-grind.py', ['python3 tools/pre-tobias-grind.py']),
     ('grindar', 'references/CHECKSUMS.sha256', ['cd references && sha256sum -c --quiet CHECKSUMS.sha256']),
     ('grindar', 'tools/build.py', ['python3 tools/build.py']),

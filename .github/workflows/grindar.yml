@@ -184,6 +184,16 @@ jobs:
           test -f tools/gangposetest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/gangposetest.mjs (steget 'Gångposen — hästen går i en riktig gångart')" >&2; exit 1; }
           node tools/gangposetest.mjs
 
+      # Ljudtakten (ljud-grind 0.6 / F1). Hovslagen läser samma rad i
+      # GANGFAS som benen: skritt fyra slag, trav två, galopp tre och en
+      # paus — lagda på ljudklockan, inte på bildrutan. Falsifierad med
+      # --muter-takt och --muter-klocka.
+      - name: Ljudtakten — hovslagen följer gångartens takt
+        run: |
+          set -euo pipefail
+          test -f tools/ljudtakttest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/ljudtakttest.mjs (steget 'Ljudtakten — hovslagen följer gångartens takt')" >&2; exit 1; }
+          node tools/ljudtakttest.mjs
+
       # PRE_TOBIAS_FIRST_PLAYABLE_GATE (processändringen på #162, 05:42).
       # Samlingsgrinden kör undergrindarna en gång till i ett svep och
       # producerar release evidence bundle + WORLD_MANIFEST. Den ligger
