@@ -134,6 +134,34 @@ deras beslutsspärrar är auktoritativa för det här arbetet.
   **Beslutsspärr (acceptans, inte bygg) kvarstår:** Tobias namnger en
   ridkunnig person som bedömer skritt, trav och galopp i rörelse innan
   `PRODUCT_ACCEPTED`. `JEV_DECISION: JEV_NOT_NEEDED`.
+- Levererat: **Batch 0.5** — D4 (hopp som startar före hindret). Över
+  ridhusets stående hinder började språnget när hon KORSADE bommen: hon
+  gick igenom den på marken och flög sedan över tom sand, och varje hinder
+  fick samma 1,15 m höga, 0,55 s långa båge. Nu räknas avstampet ur
+  samma avsprångszon som anridningsmodellen redan använder
+  (`Approach.zon`), bågens längd ur farten och lyftet ur hinderhöjden
+  (`ridHoppMatt`, `ridHinderSprang`, `ridHoppSteg` i `src/game.js`).
+  Banans språng begärs som förut när utfallet avgörs, och bilden väntar
+  till avstampet (`ridHoppBegar`). BARA BILD: vägran, rivning, felpoäng och
+  `HinderObs` är orörda. 2D-vyn och kartan läser bågen genom
+  `ridLuftNorm()`, så formen är densamma i alla vyer.
+  - **Uppmätt (`tools/ridtest.mjs`, riktig ritt mot 0,68 m-hindret):**
+    trav — avstamp 1,31 m före, toppen 0,15 m från bommen, landning 1,39 m
+    efter; galopp — 1,88 m före, toppen 0,24 m från bommen, 2,08 m efter.
+    Bågen 2,70 m i trav mot 3,97 m i galopp. Lyft 0,83 m över 0,68 m och
+    0,68 m över 0,52 m.
+  - **Falsifiering (kontrollmätning i samma prov):** med den gamla regeln
+    börjar hoppet 0,05 m efter bommen och toppen hamnar 1,60 m efter den.
+  - **Utanför den här batchen:** «i skritt stannar hon vid hindret med en
+    rad från instruktören» (ur fyndet D4) är en ändring av spelbeteendet
+    och kräver Roblox i samma leverans — inte gjord, behöver beslut.
+  - **Paritet:** ingen Roblox-ändring. Roblox hoppar med Space och riktig
+    fysik; webben hoppar av sig själv över hindret. Det är en befintlig
+    plattformsskillnad i själva mekaniken, inte införd här, men den bör
+    tas upp i paritetsgenomgången.
+  - **Inte verifierat:** hur språnget ser ut i fart. Tidsklämman
+    (0,45–0,85 s) och lyftets `0,25 + 0,9 × höjd` är `[ANTAGANDE]`.
+  `JEV_DECISION: JEV_NOT_NEEDED`.
 - **A2 (kantutjämning) uppskjuten, inte löst i 0.1:** en FXAA-shader
   provades i post-kompositeringen men orsakade en mätbar, reproducerbar
   CI-regression i `tools/lektion-e2e-test.mjs` (headless, mjukvaru-

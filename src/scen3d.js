@@ -704,7 +704,9 @@ function s3HastKropp(o){
   /* SPRÅNGET: bogen stiger FÖRST och landar först. Förut stod det
      `lut-=`, och hästen tippade nosen i backen i avstampet för att sedan
      landa med bogen i vädret (C2). */
-  if(luft>0){bob+=1.15*bage; lut+=0.52*Math.cos(Math.PI*u);}
+  /* Lyftet följer hinderhöjden (o.hoppLyft, satt av ridHoppStarta); utan
+     uppgift gäller den gamla fasta bågen. */
+  if(luft>0){bob+=(o.hoppLyft>0?o.hoppLyft:1.15)*bage; lut+=0.52*Math.cos(Math.PI*u);}
   return {M,gangart,fas,luft,u,bage,bob,lut};
 }
 /* Grundmatris: position, riktning (hästen är byggd mot +X), skala.
@@ -1050,7 +1052,10 @@ function s3MittEkipage(){
      var kropp, hals och ryttare är på ETT ställe, och ritanropet i
      rita3D sprider den här beskrivningen. */
   return {hast:h, jag:true, x:G.px, z:G.py, rikt:G.rikt,
-    gangart:G.ride?G.ride.gangart:"halt", fas:G.gaitFas, luft:G.luft,
+    gangart:G.ride?G.ride.gangart:"halt", fas:G.gaitFas,
+    /* Bågens FORM räknas i den gamla skalan (0,55 s); dess verkliga
+       längd och höjd kommer ur farten och hindret (ridHoppMatt). */
+    luft:ridLuftNorm(), hoppLyft:G.hoppLyft||0,
     banlut:G.banLut||0, aids:G.aids,
     /* Blandningen mellan gångarter och den cykellängd fasen stegas med
        (stegaRitt). Fattningen hålls kvar medan galoppen tonas ut, så

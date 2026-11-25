@@ -947,6 +947,84 @@ function hinderRel(h){
   const sida=-dx*ay+dy*ax;
   return{fram,sida};
 }
+/* ── SPRÅNGET SOM BILD (hopp-grind 0.5, D4) ────────────────────────
+   Förut började språnget när hon KORSADE hindret: bågen låg efter
+   bommen, så hon gick igenom den på marken och flög sedan över tom sand.
+   Alla hinder fick dessutom samma 1,15 m höga och 0,55 s långa båge.
+
+   Nu räknas tre saker ur ritten och hindret:
+     · AVSTAMPET ligger FÖRE hindret. Avståndet är samma avsprångszon som
+       anridningsmodellen redan använder (Approach.zon: halva steget plus
+       en del av höjden) — en sanning om var hon lämnar marken.
+     · BÅGENS LÄNGD följer farten: hon är i luften från avstampet till
+       lika långt bakom hindret, och tiden är sträckan delad med farten
+       (klämd till 0,45–0,85 s så att ett skritthopp inte svävar).
+     · LYFTET följer hinderhöjden.
+   Toppen hamnar då över bommen, vilket är hela poängen.
+
+   BARA BILD. Vägran, rivning, felpoäng och HinderObs avgörs som förut;
+   det här bestämmer bara när och hur högt ekipaget ritas i luften.
+
+   [ANTAGANDE] Tidsklämman och lyftets 0,25 + 0,9 × höjd är stiliserade
+   första värden, inte uppmätta. */
+function ridHoppMatt(hojd,fart,steglangd){
+  const zon=Approach.zon(Math.max(steglangd||0,0.6),hojd);
+  const v=Math.max(fart,0.5);
+  const T=clamp(2*zon/v,0.45,0.85);
+  return {T, avstamp:v*T/2, lyft:clamp(0.25+0.9*hojd,0.45,1.60)};
+}
+/* `fart` är farten MOT hindret; utelämnad gäller ridtempot. */
+function ridHoppStarta(hojd,fart){
+  const m=ridHoppMatt(hojd,fart>0?fart:G.ride.tempo,G.ride.steglangd);
+  G.luft=G.luftT=m.T; G.hoppLyft=m.lyft; G.hoppVantar=null;
+}
+/* Banans språng är redan AVGJORT när det begärs (utfallet räknas i
+   avsprångszonen). Bilden väntar bara tills hon är framme vid sitt
+   avstamp. (ax, ay) är språngets riktning; hindret står i (x, y). */
+function ridHoppBegar(x,y,ax,ay,hojd){G.hoppVantar={x,y,ax,ay,hojd,tid:0};}
+function ridHoppSteg(dt){
+  if(G.luft>0){G.luft-=dt; if(G.luft<0)G.luft=0; return;}
+  const v=G.hoppVantar; if(!v)return;
+  v.tid+=dt;
+  const avst=(v.x-G.px)*v.ax+(v.y-G.py)*v.ay;
+  const m=ridHoppMatt(v.hojd,G.ride.tempo,G.ride.steglangd);
+  /* Framme vid avstampet — eller redan förbi, eller väntat orimligt
+     länge: ett begärt språng ska aldrig bli hängande. */
+  if(avst<=m.avstamp||v.tid>2.5)ridHoppStarta(v.hojd);
+}
+/* Luften i den GAMLA skalan (0,55 s), för de ritvägar som räknar bågen
+   ur det talet: 2D-vyn, kartan och 3D-kroppen. Språngets verkliga längd
+   varierar nu; formen på bågen gör det inte. */
+function ridLuftNorm(){return G.luft>0?0.55*G.luft/(G.luftT>0?G.luftT:0.55):0;}
+/* Ridhusets stående hinder: avstampet räknas ur hennes verkliga fart mot
+   bommen. `fore` är förra bildrutans läge. */
+function ridHinderSprang(fore,dt){
+  if(!fore||G.plats!=="ridhus"||G.luft>0)return;
+  const steg=Math.hypot(G.px-fore.x,G.py-fore.y);
+  /* En flytt (ny ritt, teleport) är inget hopp. */
+  if(steg>=1||!(dt>0))return;
+  const vx=(G.px-fore.x)/dt, vy=(G.py-fore.y)/dt;
+  for(const hi of ((typeof RIDHUSINNE!=="undefined"&&RIDHUSINNE.hinder)||[])){
+    if(!(hi.h>0.02))continue;
+    const y0=fore.y-hi.y, y1=G.py-hi.y;
+    /* Reserven, som förut: korsar hon bommen utan att ha stampat av
+       (nästan stillastående, eller snett in) hoppar hon där. */
+    if((y0<0&&y1>=0)||(y0>0&&y1<=0)){
+      const k=y0/(y0-y1), x=fore.x+(G.px-fore.x)*k;
+      if(Math.abs(x-hi.x)<=hi.b/2){ridHoppStarta(hi.h);return;}
+      continue;
+    }
+    if(Math.abs(vy)<0.3)continue;
+    const avst=(hi.y-G.py)*Math.sign(vy);
+    if(avst<=0)continue;
+    const m=ridHoppMatt(hi.h,Math.abs(vy),G.ride.steglangd);
+    if(avst>m.avstamp)continue;
+    /* Var hon korsar bommen om hon håller kursen. */
+    const x=G.px+vx*(avst/Math.abs(vy));
+    if(Math.abs(x-hi.x)<=hi.b/2){ridHoppStarta(hi.h,Math.abs(vy));return;}
+  }
+}
+
 let protT=0;
 function stegaBana(dt){
   protT+=dt; if(protT>0.5){protT=0;uppdateraProt();}
@@ -979,7 +1057,7 @@ function stegaBana(dt){
       const dom=domaRitt(G.handelser,G.t-G.banStart,true);
       if(dom.utesluten){avslutaBana(dom);return;}
     }else{
-      G.luft=0.55; // hopp-animation
+      ridHoppBegar(h.x,h.y,Math.cos(h.rot),Math.sin(h.rot),BANA.hojd); // språngets bild
       if(utfall.resultat==="rivning"){G.rivna.add(h.nr);G.handelser.push({typ:"nedslag",hinder:h.nr});
         flash("4 FEL");saga(utfall.kommentar,2.6);
         /* Vägran prövade uteslutning direkt, nedslag gjorde det inte —
@@ -1132,17 +1210,7 @@ function stegaP3(dt){
   G.p3CueTid=cue;G.p3Parad=parad;G.p3Sk=sk;G.p3BromsN=IN.bromsN;G.p3DrivN=IN.drivN;
   /* Över ett av ridhusets stående hinder hoppar hästen — bara bilden
      (samma G.luft som banans hopp). Passagen bedöms av HinderObs, inte här. */
-  /* En flytt (ny ritt, teleport) är inget hopp: bara en bildrutas verkliga
-     förflyttning under en meter räknas. */
-  if(G.p3Fore&&G.plats==="ridhus"&&Math.hypot(G.px-G.p3Fore.x,G.py-G.p3Fore.y)<1)
-    for(const hi of ((typeof RIDHUSINNE!=="undefined"&&RIDHUSINNE.hinder)||[])){
-      if(!(hi.h>0.02))continue;
-      const y0=G.p3Fore.y-hi.y, y1=G.py-hi.y;
-      if((y0<0&&y1>=0)||(y0>0&&y1<=0)){
-        const k=y0/(y0-y1), x=G.p3Fore.x+(G.px-G.p3Fore.x)*k;
-        if(Math.abs(x-hi.x)<=hi.b/2&&G.luft<=0)G.luft=0.55;
-      }
-    }
+  ridHinderSprang(G.p3Fore,dt);
   G.p3Fore={x:G.px,y:G.py};
   if(!Lektionsmeny.tarOver())FriPass.steg(dt,hjalp);
   if(typeof ridpanelSteg==="function")ridpanelSteg(dt);
@@ -1464,7 +1532,7 @@ function loop(now){
     if(!G.paus){
       stegaRitt(dt);stegaNPC(dt);
       if(G.p3)stegaP3(dt);else stegaLektion(dt);
-      if(G.luft>0)G.luft-=dt;
+      ridHoppSteg(dt);
     }
     if(G.vy==="2d"){gl3dLage(false);draw2D(G);}else draw3D(G);
     ritaHUD(); ritaVaxer();

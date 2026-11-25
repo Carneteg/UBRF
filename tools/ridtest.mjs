@@ -1299,6 +1299,95 @@ const visProv = await page.evaluate(() => {
 }
 
 /* ══════════════════════════════════════════════════════════════════
+   SPRÅNGET (hopp-grind 0.5, D4)
+
+   Förut började språnget när hon korsade hindret: hon gick igenom bommen
+   på marken och flög sedan över tom sand, och varje hinder fick samma
+   1,15 m höga båge. Här rids ridhusets två stående hinder på riktigt —
+   genom stegaRitt, hinderregeln och språngets steg, i samma ordning som
+   spelets egen bildruta — och det som mäts är VAR hon är när hon lämnar
+   marken, når toppen och landar.
+
+   KONTROLLMÄTNING: samma ritt med den gamla regeln (hopp först när bommen
+   korsas). Ligger inte toppen långt efter hindret där mäter provet
+   ingenting. ── */
+const sprang = await page.evaluate(() => {
+  G.hastId = G.hastId || Object.keys(HORSES)[0]; G.hastPlats = "box"; G.npcs = [];
+  const dt = 1 / 60;
+  const hinder = RIDHUSINNE.hinder.filter((h) => h.h > 0.02);
+  const rid = (hi, impulser, gammal) => {
+    G.ride = nyState(G.dagsform, 0.5, G.sadellage);
+    G.plats = "ridhus"; G.px = hi.x; G.py = hi.y - 14; G.rikt = Math.PI / 2; G.kappa = 0; G._fastDt = 0;
+    G.varv = null; G.fattning = null; G.visGang = null; G.visCykel = 0; G.visFattning = null; G.gaitFas = 0;
+    G.luft = 0; G.luftT = 0; G.hoppLyft = 0; G.hoppVantar = null; ridNollstallHjalp();
+    let fore = null, avstamp = null, landning = null, topp = { y: null, bob: -1 }, bogForst = null;
+    let tid = 0, farten = 0;
+    const steg = () => {
+      stegaRitt(dt);
+      if (gammal) {                                    // gamla regeln: hopp när bommen korsas
+        if (fore && G.luft <= 0 && fore.y < hi.y && G.py >= hi.y) { G.luft = G.luftT = 0.55; G.hoppLyft = 0; }
+      } else ridHinderSprang(fore, dt);
+      const iLuften = G.luft > 0;
+      if (iLuften && avstamp === null) { avstamp = G.py; farten = G.ride.tempo; }
+      if (iLuften) {
+        tid += dt;
+        const e = s3MittEkipage(), K = s3HastKropp(e);
+        if (K.bob > topp.bob) topp = { y: G.py, bob: K.bob };
+        if (bogForst === null && K.u > 0.05) bogForst = K.lut > 0;
+      }
+      fore = { x: G.px, y: G.py };
+      ridHoppSteg(dt);
+      if (!iLuften && avstamp !== null && landning === null) landning = G.py;
+    };
+    for (let k = 0; k < impulser; k++) { RIDIN.skankel = 1; for (let i = 0; i < 30; i++) steg(); RIDIN.skankel = 0; for (let i = 0; i < 18; i++) steg(); }
+    RIDIN.skankel = 0.35;
+    for (let i = 0; i < 900 && landning === null; i++) steg();
+    const gangart = G.ride.gangart;
+    RIDIN.skankel = 0; ridNollstallHjalp(); G.luft = 0; G.luftT = 0; G.hoppLyft = 0; G.hoppVantar = null;
+    G.varv = null; G.fattning = null; G.visGang = null; G.visCykel = 0; G.visFattning = null;
+    return { hinderY: hi.y, hojd: hi.h, gangart, avstamp, landning, toppY: topp.y, lyft: topp.bob, bogForst, tid, farten };
+  };
+  /* Banans språng: begärt i avsprångszonen, startar vid avstampet. */
+  G.ride = nyState(G.dagsform, 0.5, G.sadellage);
+  G.px = 5; G.py = 30; G.rikt = 0; G.ride.tempo = 5.6; G.ride.gangart = "galopp"; G.ride.steglangd = 3.5;
+  G.luft = 0; G.hoppVantar = null;
+  const m = ridHoppMatt(0.6, 5.6, 3.5);
+  ridHoppBegar(5 + m.avstamp + 0.5, 30, 1, 0, 0.6);
+  ridHoppSteg(dt); const vantar = G.luft === 0 && !!G.hoppVantar;
+  G.px += 0.6; ridHoppSteg(dt); const startade = G.luft > 0 && !G.hoppVantar && Math.abs(G.luft - m.T) < 1e-9;
+  G.luft = 0; G.luftT = 0; G.hoppLyft = 0; G.hoppVantar = null;
+  return {
+    trav: rid(hinder[0], 2, false), galopp: rid(hinder[0], 3, false), lagt: rid(hinder[1], 3, false),
+    gammal: rid(hinder[0], 3, true), bana: { vantar, startade, matt: m },
+  };
+});
+{
+  for (const [namn, v] of [["trav", sprang.trav], ["galopp", sprang.galopp]]) {
+    const fore = v.hinderY - v.avstamp, efter = v.landning - v.hinderY, topp = v.toppY - v.hinderY;
+    prova(`språng i ${namn}: avstampet ligger FÖRE hindret och landningen efter`,
+      v.gangart === namn && fore > 0.3 && efter > 0.3,
+      `avstamp ${nf(fore, 2)} m före, landning ${nf(efter, 2)} m efter (${nf(v.farten, 1)} m/s, ${nf(v.tid, 2)} s i luften)`);
+    prova(`språng i ${namn}: toppen ligger över bommen`, Math.abs(topp) < 0.35,
+      `toppen ${nf(topp, 2)} m från hindret`);
+    prova(`språng i ${namn}: bogen stiger först`, v.bogForst === true);
+  }
+  const langdT = sprang.trav.landning - sprang.trav.avstamp, langdG = sprang.galopp.landning - sprang.galopp.avstamp;
+  prova("språng: bågen är längre i galopp än i trav (längden följer farten)", langdG > langdT * 1.2,
+    `trav ${nf(langdT, 2)} m · galopp ${nf(langdG, 2)} m`);
+  prova("språng: lyftet följer hinderhöjden — högre hinder, högre båge, och alltid över bommen",
+    sprang.galopp.lyft > sprang.lagt.lyft + 0.05 && sprang.galopp.lyft > sprang.galopp.hojd &&
+    sprang.lagt.lyft > sprang.lagt.hojd && sprang.galopp.lyft < sprang.galopp.hojd + 0.6,
+    `${nf(sprang.galopp.hojd, 2)} m hinder → ${nf(sprang.galopp.lyft, 2)} m lyft · ` +
+    `${nf(sprang.lagt.hojd, 2)} m hinder → ${nf(sprang.lagt.lyft, 2)} m lyft`);
+  const gTopp = sprang.gammal.toppY - sprang.gammal.hinderY, gFore = sprang.gammal.hinderY - sprang.gammal.avstamp;
+  prova("språng, kontrollmätning: med den gamla regeln börjar hoppet vid bommen och toppen hamnar långt efter",
+    gFore < 0.15 && gTopp > 1.0, `avstamp ${nf(gFore, 2)} m före, toppen ${nf(gTopp, 2)} m efter hindret`);
+  prova("banans språng: bilden väntar i avsprångszonen och startar vid avstampet",
+    sprang.bana.vantar && sprang.bana.startade,
+    `avstamp ${nf(sprang.bana.matt.avstamp, 2)} m före, ${nf(sprang.bana.matt.T, 2)} s, lyft ${nf(sprang.bana.matt.lyft, 2)} m`);
+}
+
+/* ══════════════════════════════════════════════════════════════════
    SÄTET SOM BALANSMODIFIERARE (senior review #87, blocker 1)
 
    #83 kräver vikt/säte som balansmodifierare. `vikt` fanns som ett
