@@ -298,7 +298,7 @@ function kopplaEfterPass(){
     for(const i of el.querySelectorAll(".eStapel i[data-mal]"))
       i.style.width=i.dataset.mal+"%";
   }));
-  if(efterDuRader().length&&typeof ljudStot==="function")
-    setTimeout(()=>{ljudStot(660,"sine",0.10,0.05);
-      setTimeout(()=>ljudStot(990,"sine",0.16,0.045),110);},520);
+  if(efterDuRader().length&&typeof ljudTon==="function")
+    setTimeout(()=>{ljudTon(660,0.10,0.05);
+      setTimeout(()=>ljudTon(990,0.16,0.045),110);},520);
 }

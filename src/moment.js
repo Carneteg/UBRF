@@ -208,7 +208,7 @@ function hovDrag(p){
      lämnar hoven halvfärdig. Först vid 94 % är den klar och stängs. */
   if(HOV.ren>=0.94){
     SK.hovar[HOV.i]=1;
-    if(typeof ljudStot==="function")ljudStot(720,"sine",0.10,0.05);
+    if(typeof ljudTon==="function")ljudTon(720,0.10,0.05);
     setTimeout(hovStang,420);
   }else SK.hovar[HOV.i]=Math.max(SK.hovar[HOV.i],HOV.ren);
 }
@@ -469,7 +469,7 @@ function sadelDrag(p,f,klick){
   if(SA.fas===2){
     if(klick&&Math.hypot(x-SK.sadelX,y-0.315)<0.075){
       SA.mankfri=true; SA.fas=3; SA.varning="";
-      if(typeof ljudStot==="function")ljudStot(640,"sine",0.09,0.05);
+      if(typeof ljudTon==="function")ljudTon(640,0.09,0.05);
     }
     return;
   }
@@ -570,7 +570,7 @@ function visitGangKlick(sx,sy,W,H){
   for(const c of visitGangChipp(W,H))
     if(sx*W>=c.x&&sx*W<=c.x+c.b&&sy*H>=c.y&&sy*H<=c.y+c.h){
       VIS.gang=c.i; VIS.ordningsfel="";
-      if(typeof ljudStot==="function")ljudStot(c.v.ratt?700:240,"sine",0.10,0.05);
+      if(typeof ljudTon==="function")ljudTon(c.v.ratt?700:240,0.10,0.05);
       return true;
     }
   return false;
@@ -602,8 +602,8 @@ function visitKlick(sx,sy,W,H){
     for(const c of visitChipp(W,H))
       if(sx*W>=c.x&&sx*W<=c.x+c.b&&sy*H>=c.y&&sy*H<=c.y+c.h){
         VIS.svar=c.i;
-        if(typeof ljudStot==="function")
-          ljudStot(c.v.ratt?720:280,"sine",0.10,0.05);
+        if(typeof ljudTon==="function")
+          ljudTon(c.v.ratt?720:280,0.10,0.05);
         return true;
       }
   }

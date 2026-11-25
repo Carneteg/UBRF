@@ -72,8 +72,46 @@ function ljudInit(){
     LJUD.brus=buf;
   }catch(_){LJUD.ctx=null;}
 }
-addEventListener("pointerdown",()=>{ljudInit();if(LJUD.ctx&&LJUD.ctx.state==="suspended")LJUD.ctx.resume().catch(()=>{});},{passive:true});
-addEventListener("keydown",()=>{ljudInit();if(LJUD.ctx&&LJUD.ctx.state==="suspended")LJUD.ctx.resume().catch(()=>{});});
+/* ── UPPLÅSNING OCH AVBROTT (ljud-grind 0.7, F2) ───────────────────
+   Förut väcktes ljudet bara på `pointerdown` och `keydown`. Det räcker
+   inte på iPhone: Safari räknar inte `pointerdown` som en gest som får
+   starta ljud — det gör `touchend`, `pointerup` och `click`. Resultatet
+   var ett spel som var tyst på telefon tills man råkade trycka på en
+   tangent, vilket ingen gör på en telefon.
+
+   Ljudet återupptogs inte heller efter ett avbrott. iOS ställer
+   kontexten i `interrupted` vid ett samtal, ett låst lås eller en
+   bakgrundad flik, och den kommer inte tillbaka av sig själv: man måste
+   be om det när sidan syns igen (`visibilitychange`, och `pageshow` för
+   en sida som hämtas ur bakåt-cachen).
+
+   EN kontext, alltid: ljudInit skapar den en gång och alla vägar hit
+   återanvänder den.
+
+   INTE AVGJORT HÄR: om spelljudet ska lyda telefonens ljudlös-knapp.
+   Web Audio gör det av sig självt på iOS, och den här koden försöker
+   inte kringgå det. Vill Tobias ha det annorlunda är det ett eget
+   beslut. */
+function ljudVack(){
+  ljudInit();
+  const c=LJUD.ctx;
+  if(c&&c.state!=="running"&&c.state!=="closed"&&typeof c.resume==="function"){
+    const p=c.resume(); if(p&&typeof p.catch==="function")p.catch(()=>{});
+  }
+}
+for(const typ of ["pointerdown","pointerup","touchend","click"])
+  addEventListener(typ,ljudVack,{passive:true});
+addEventListener("keydown",ljudVack);
+/* Tillbaka efter ett avbrott: bara om ljudet redan väckts av en gest —
+   en sida som aldrig rörts får inte börja låta för att den blev synlig. */
+function ljudAteruppta(){
+  if(!LJUD.ctx)return;
+  if(typeof document!=="undefined"&&document.visibilityState==="hidden")return;
+  ljudVack();
+}
+if(typeof document!=="undefined"&&document.addEventListener)
+  document.addEventListener("visibilitychange",ljudAteruppta);
+addEventListener("pageshow",ljudAteruppta);
 
 function ljudToggle(){
   LJUD.pa=!LJUD.pa;
@@ -100,6 +138,27 @@ function ljudStot(freq,typ,tid,vol,startFreq,nar){
   g.gain.exponentialRampToValueAtTime(0.001,t+tid);
   src.connect(f);f.connect(g);g.connect(LJUD.master);
   src.start(t);src.stop(t+tid+0.05);
+}
+/* EN REN TON — gränssnittets signaler (ljud-grind 0.7, F2).
+   De ställen som ville ha en ton anropade brusstöten (ljudStot) med
+   «sine» som filtertyp. Det är en vågform för en oscillator, inte en
+   filtertyp: filtret
+   behöll sitt lågpass och det som hördes var en brusstöt, lika för 240
+   och 990 Hz. Rätt och fel svar lät alltså likadant.
+
+   Det här är en riktig sinuston med mjuk in- och uttoning (ingen knäpp),
+   på ljudklockan som allt annat. */
+function ljudTon(freq,tid,vol,nar){
+  if(!LJUD.ctx||!LJUD.pa)return;
+  const c=LJUD.ctx,t=nar>c.currentTime?nar:c.currentTime;
+  const o=c.createOscillator();o.type="sine";
+  o.frequency.setValueAtTime(freq,t);
+  const g=c.createGain();
+  g.gain.setValueAtTime(0.0001,t);
+  g.gain.exponentialRampToValueAtTime(Math.max(vol,0.0002),t+0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+tid);
+  o.connect(g);g.connect(LJUD.master);
+  o.start(t);o.stop(t+tid+0.05);
 }
 /* Dov puls — hovens tyngd. */
 function ljudPulsslag(freq,tid,vol,nar){

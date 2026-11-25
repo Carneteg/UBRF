@@ -184,6 +184,36 @@ deras beslutsspärrar är auktoritativa för det här arbetet.
     låter på en riktig telefon kan bara en människa avgöra. Bildrutans
     fördröjning på takten (en bildruta) är ett medvetet val.
   `JEV_DECISION: JEV_NOT_NEEDED`.
+- Levererat: **Batch 0.7** — F2 (mobilljudshygien och riktiga UI-toner).
+  - **Tonerna:** åtta anrop (`src/framsteg.js`, `src/moment.js`,
+    `src/efter.js`) skickade «sine» som FILTERTYP till brusstöten. Det är
+    en vågform, inte ett filter; det som hördes var samma brusstöt för 240
+    och 990 Hz, så rätt och fel svar lät likadant. Ny `ljudTon` i
+    `src/ljud.js` är en riktig sinuston med mjuk in- och uttoning.
+  - **Upplåsningen:** ljudet väcktes bara på `pointerdown`/`keydown`.
+    Safari på iPhone räknar inte `pointerdown` som en gest som får starta
+    ljud; nu lyssnar spelet också på `touchend`, `pointerup` och `click`.
+  - **Avbrott:** kontexten återupptas när sidan syns igen
+    (`visibilitychange`, `pageshow`), även ur iOS-tillståndet
+    `interrupted` — men aldrig i bakgrunden och aldrig på en sida som inte
+    rörts. Fortfarande exakt EN `AudioContext`.
+  - **Prov:** `tools/ljudtakttest.mjs` utökad till 23 mätningar.
+    Falsifierad: `--muter-vack`, `--muter-avbrott` och `--muter-ton` blir
+    alla röda.
+  - **Medvetet INTE gjort, redovisat:** planens «förrenderade
+    engångsbuffertar» och «ljudinbäddning i `tools/build.py`». Det finns
+    ingen mätning som visar att nodskapandet kostar något, och inga
+    ljudfiler att bädda in. Båda hör hemma efter enhetsmätningen
+    (Batch 1.2) respektive inspelningarna (6.6) — att bygga dem nu vore
+    infrastruktur utan användare.
+  - **Paritet:** webb-specifik ljudmotor; ingen Roblox-motsvarighet.
+  - **INTE VERIFIERAT — det här är den viktiga raden:** ingenting av
+    detta är provat på en riktig iPhone eller iPad. Provet kör en attrapp
+    av ljudklockan och kan inte veta hur Safari faktiskt beter sig.
+  **Beslutsspärr (acceptans, inte bygg):** Tobias provar på sin egen
+  iPhone, och avgör om spelljudet ska lyda ljudlös-knappen (Web Audio gör
+  det av sig självt på iOS; koden försöker inte kringgå det).
+  `JEV_DECISION: JEV_NOT_NEEDED`.
 - **A2 (kantutjämning) uppskjuten, inte löst i 0.1:** en FXAA-shader
   provades i post-kompositeringen men orsakade en mätbar, reproducerbar
   CI-regression i `tools/lektion-e2e-test.mjs` (headless, mjukvaru-

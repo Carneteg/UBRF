@@ -21,8 +21,14 @@
    riktig enhet kan bara en människa avgöra.
 
    ── FALSIFIERING ───────────────────────────────────────────────────
-     --muter-takt    flyttar galoppens tredje slag i en KOPIA av tabellen
-     --muter-klocka  spelar slagen "nu" i stället för på ljudklockan
+     --muter-takt     flyttar galoppens tredje slag i en KOPIA av tabellen
+     --muter-klocka   spelar slagen "nu" i stället för på ljudklockan
+     --muter-vack     väcker ljudet bara på pointerdown/keydown, som förut
+     --muter-avbrott  återupptar bara `suspended`, inte iOS `interrupted`
+     --muter-ton      låter ljudTon vara en brusstöt igen
+
+   Sedan ljud-grind 0.7 (F2) mäter provet också upplåsningen på telefon,
+   återupptagandet efter ett avbrott och att gränssnittets toner är toner.
 
    Kör: node tools/ljudtakttest.mjs            (exit 1 vid avvikelse) */
 import fs from "node:fs";
@@ -38,21 +44,47 @@ function mutera(kod, fran, till, vad) {
   return kod.replace(fran, till);
 }
 
-function byggKontext() {
+function byggKontext(arg) {
   let fasKod = las("src/riding/gangfas.js"), ljudKod = las("src/ljud.js");
   if (ARG.has("--muter-takt"))
     fasKod = mutera(fasKod, "RF: ben(0.50, 0.25) }", "RF: ben(0.66, 0.25) }", "galoppens tredje slag");
   if (ARG.has("--muter-klocka"))
     ljudKod = mutera(ljudKod, "nu+ruta*(sl.lage-fran)/steg", "nu", "ljudklockan");
+  if (ARG.has("--muter-vack"))
+    ljudKod = mutera(ljudKod, 'for(const typ of ["pointerdown","pointerup","touchend","click"])', 'for(const typ of ["pointerdown"])', "upplåsningens gester");
+  if (ARG.has("--muter-avbrott"))
+    ljudKod = mutera(ljudKod, 'c.state!=="running"&&c.state!=="closed"', 'c.state==="suspended"', "återupptagandet");
+  if (ARG.has("--muter-ton"))
+    ljudKod = mutera(ljudKod, 'const o=c.createOscillator();o.type="sine";\n  o.frequency.setValueAtTime(freq,t);\n  const g=c.createGain();\n  g.gain.setValueAtTime(0.0001,t);',
+      'ljudStot(freq,"sine",tid,vol);return;\n  const o=c.createOscillator();o.type="sine";\n  o.frequency.setValueAtTime(freq,t);\n  const g=c.createGain();\n  g.gain.setValueAtTime(0.0001,t);', "ljudTon");
   const starter = [];
   const param = () => ({ value: 0, setValueAtTime() {}, exponentialRampToValueAtTime() {}, linearRampToValueAtTime() {} });
   const nod = () => ({ connect() {}, start() {}, stop() {}, frequency: param(), gain: param(), Q: param(), playbackRate: param(), buffer: null, type: "" });
   const ljudctx = { currentTime: 0, state: "running",
     createOscillator() { const n = nod(); n.start = (t) => starter.push(t); return n; },
     createGain: nod, createBiquadFilter: nod, createBufferSource: nod };
-  const ctx = { console, Math, window: {}, addEventListener() {}, document: { addEventListener() {} } };
+  /* Lyssnarna sparas, så att provet kan fyra de gester en telefon ger.
+     AudioContext är en attrapp som räknar hur många som skapas och hur
+     ofta de ombeds fortsätta. */
+  const lyss = {}, dlyss = {}, logg = { skapade: 0, resume: 0, noder: [] };
+  const dokument = { visibilityState: "visible", addEventListener: (t, f) => { (dlyss[t] ??= []).push(f); } };
+  class AC {
+    constructor() { logg.skapade++; this.state = "suspended"; this.currentTime = 0; this.sampleRate = 50; this.destination = {}; }
+    resume() { logg.resume++; this.state = "running"; return Promise.resolve(); }
+    createGain() { logg.noder.push("gain"); return nod(); }
+    createBiquadFilter() { logg.noder.push("filter"); return nod(); }
+    createBufferSource() { logg.noder.push("brus"); return nod(); }
+    createOscillator() { const n = nod(); logg.noder.push(n); return n; }
+    createBuffer(k, n) { return { getChannelData: () => new Float32Array(n) }; }
+  }
+  const ctx = { console, Math, Float32Array, Promise, window: { AudioContext: AC },
+    addEventListener: (t, f) => { (lyss[t] ??= []).push(f); }, document: dokument };
   vm.createContext(ctx);
-  vm.runInContext(fasKod + "\n" + ljudKod + "\nthis.X={LJUD,ljudRittSteg,gangSlag,gangPasserade,GANGFAS};", ctx);
+  vm.runInContext(fasKod + "\n" + ljudKod + "\nthis.X={LJUD,ljudRittSteg,ljudTon,gangSlag,gangPasserade,GANGFAS};", ctx);
+  const fyra = (t) => { for (const f of lyss[t] || []) f({}); };
+  const fyraDok = (t) => { for (const f of dlyss[t] || []) f({}); };
+  const telefon = { X: ctx.X, lyss, dlyss, logg, dokument, fyra, fyraDok };
+  if (arg && arg.ravakt) return telefon;
   ctx.X.LJUD.ctx = ljudctx; ctx.X.LJUD.master = nod(); ctx.X.LJUD.brus = {}; ctx.X.LJUD.pa = true;
   return { X: ctx.X, ljudctx, starter };
 }
@@ -140,6 +172,56 @@ for (const [gangart, fattning, Tc, facit, ord] of FACIT) {
   prova("ett slag exakt på en bildrutegräns hörs EN gång (från räknas inte, till gör det)",
     p.length === 1 && p[0].fas === 0.5, JSON.stringify(p.map((v) => v.fas)));
   prova("en orimlig lucka ger ingen ljudsalva (tak på sex slag)", X.gangPasserade(X.GANGFAS.skritt, 0, 50).length === 6);
+}
+
+/* ── Upplåsning, avbrott och toner (ljud-grind 0.7, F2) ───────────── */
+{
+  const T = byggKontext({ ravakt: true });
+  prova("ljudet väcks av de gester en telefon ger: touchend, pointerup och click (och keydown)",
+    ["touchend", "pointerup", "click", "keydown"].every((t) => (T.lyss[t] || []).length > 0),
+    Object.keys(T.lyss).sort().join(", "));
+  T.fyraDok("visibilitychange"); T.fyra("pageshow");
+  prova("en sida som aldrig rörts börjar inte låta för att den blev synlig", T.X.LJUD.ctx === null && T.logg.skapade === 0,
+    `${T.logg.skapade} ljudkontexter`);
+  T.fyra("touchend");
+  prova("första fingertrycket skapar ljudkontexten och ber den starta",
+    T.logg.skapade === 1 && T.logg.resume === 1 && T.X.LJUD.ctx.state === "running",
+    `${T.logg.skapade} kontext, ${T.logg.resume} resume`);
+  T.fyra("click"); T.fyra("pointerup"); T.fyra("pointerdown"); T.fyra("keydown");
+  prova("EN ljudkontext, hur många gester som än kommer", T.logg.skapade === 1, `${T.logg.skapade} skapade`);
+  /* iOS: ett samtal eller ett låst lås ställer kontexten i `interrupted`. */
+  T.X.LJUD.ctx.state = "interrupted";
+  const fore = T.logg.resume;
+  T.dokument.visibilityState = "hidden"; T.fyraDok("visibilitychange");
+  const iBakgrunden = T.logg.resume - fore;
+  T.dokument.visibilityState = "visible"; T.fyraDok("visibilitychange");
+  prova("efter ett avbrott (iOS «interrupted») återupptas ljudet när sidan syns igen — inte i bakgrunden",
+    iBakgrunden === 0 && T.logg.resume === fore + 1 && T.X.LJUD.ctx.state === "running",
+    `i bakgrunden ${iBakgrunden}, synlig ${T.logg.resume - fore}`);
+  T.X.LJUD.ctx.state = "suspended";
+  T.fyra("pageshow");
+  prova("en sida hämtad ur bakåt-cachen (pageshow) återupptar också", T.logg.resume === fore + 2);
+
+  /* Tonerna: en ren sinus på rätt frekvens, inget brus. */
+  T.X.LJUD.pa = true;
+  T.logg.noder.length = 0;
+  let frekvens = null;
+  const orig = T.X.LJUD.ctx.createOscillator.bind(T.X.LJUD.ctx);
+  T.X.LJUD.ctx.createOscillator = () => { const n = orig(); n.frequency.setValueAtTime = (f) => { frekvens = f; }; return n; };
+  T.X.ljudTon(700, 0.10, 0.05);
+  const osc = T.logg.noder.find((n) => typeof n === "object");
+  prova("ljudTon är en ren sinuston på begärd frekvens, utan brus",
+    !!osc && osc.type === "sine" && frekvens === 700 && !T.logg.noder.includes("brus") && !T.logg.noder.includes("filter"),
+    `vågform ${osc && osc.type}, ${frekvens} Hz, noder: ${T.logg.noder.map((n) => (typeof n === "object" ? "oscillator" : n)).join("+")}`);
+  /* Inget anrop i spelet får skicka en vågform som filtertyp igen. */
+  const syndare = [];
+  for (const f of fs.readdirSync(path.join(ROT, "src"), { recursive: true })) {
+    if (!String(f).endsWith(".js")) continue;
+    const kod = las(path.join("src", String(f)));
+    for (const m of kod.matchAll(/ljudStot\([^)]*"(sine|square|sawtooth|triangle)"/g)) syndare.push(`${f}: ${m[0]}`);
+  }
+  prova("ingen ljudStot får en vågform som filtertyp (det var så tonerna blev brus)", syndare.length === 0,
+    syndare.length ? syndare.join(" · ") : "0 träffar i src/");
 }
 
 console.log(fel === 0 ? `ljudtakttest: alla ${antal} gröna — hovslagen följer gångartens takt`
