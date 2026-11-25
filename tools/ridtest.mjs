@@ -1007,6 +1007,118 @@ prova("halt: hästen rör sig mindre än 1 cm på 30 sekunder utan hjälper",
   `tempo ${nf(haltStilla.tempo, 4)} m/s`);
 
 /* ══════════════════════════════════════════════════════════════════
+   D3 (ridmekanik-grind 0.3): TANGENTBORDET KAN RIDA SKOLFIGURER
+
+   Uppmätt bugg: InputFeel.RIDE.digitalGain (0,42) var ett PERMANENT tak
+   på tangentbordsstyrningen i src/input-feel.js, oavsett hur länge A/D
+   hölls. Räknat ur samma kedja provet mäter: full digital styrning gav
+   RIDIN.styr högst 0,42, G.aids.styrning högst 0,42×0,72=0,3024 och
+   därmed kappaBegard högst 0,3024×kappaTak — i skritt (kappaTak≈0,42
+   vid medelsmidig häst) en minsta radie på ~7,9 m, alltså en volt på
+   minst ~15,7 m i diameter. En 10 m volt (radie 5 m) gick aldrig att
+   rida på tangentbord, hur länge man än höll.
+
+   Fixen i src/input-feel.js låter ett HÅLLET tryck trappa upp mot full
+   styrka (digitalGain → 1,0) efter 0,3 s. Med full styrning blir
+   kappaBegard 0,72×kappaTak — i skritt ~0,30 (radie ~3,3 m) och i trav
+   ~0,25 (radie ~4,0 m), båda klart innanför en 10 m volt.
+
+   Provet rider DIGITALT — IN.styrDigital sätts direkt, som ett riktigt
+   tangenttryck, i stället för att skriva RIDIN.styr rakt av (som
+   volt20/ridVolt ovan gör) — så att HELA kedjan mäts (InputFeel.ride →
+   RIDIN.styr → ridAvsiktTillHjalp → G.aids.styrning → kappaBegard),
+   inte bara styrlagret isolerat (det gör redan
+   tools/control-feel-test.mjs, som också vaktar att korta tryck
+   fortfarande bara ger den lilla nyansen). ══════════════════════════ */
+const digitalVolt = await page.evaluate(() => {
+  G.hastId = G.hastId || Object.keys(HORSES)[0]; G.hastPlats = "box"; G.npcs = [];
+  const dt = 1 / 60;
+  const nyRitt = () => { G.ride = nyState(G.dagsform, 0.5, G.sadellage);
+    G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0; G._fastDt = 0; ridNollstallHjalp(); };
+  const impuls = () => { RIDIN.skankel = 1; for (let i = 0; i < 30; i++) stegaRitt(dt);
+    RIDIN.skankel = 0; for (let i = 0; i < 18; i++) stegaRitt(dt); };
+  /* Rider en figur med A/D HÅLLET (IN.styrDigital), inte en skriven
+     RIDIN.styr — ett FULLT håll (≫ rampens tröskel 0,3 s), för de täta
+     voltarna. */
+  const figur = (gangarter, hallSek, varvSek) => {
+    nyRitt();
+    for (let k = 0; k < gangarter; k++) impuls();
+    RIDIN.skankel = 0.35; RIDIN.tygel = 0.20;
+    IN.styrDigital = 1;
+    for (let i = 0; i < Math.round(hallSek * 60); i++) stegaRitt(dt);
+    const pts = [];
+    for (let i = 0; i < Math.round(varvSek * 60); i++) {
+      stegaRitt(dt);
+      if (i % 4 === 0) pts.push([G.px, G.py]);
+    }
+    IN.styrDigital = 0;
+    return { pts, gangart: G.ride.gangart, kappa: G.kappa, styrning: G.aids.styrning };
+  };
+  /* Den lösa cirkeln rids med UPPREPADE KORTA tryck (på/av, aldrig över
+     rampens 0,3 s-tröskel i ett svep) genom HELA varvet, i stället för
+     ett enda långt håll avbrutet av en kort väntan — annars mäter
+     "kort" bara en fördröjd start på samma långa håll, och provet mäter
+     exakt samma sak som voltarna ovan (fånget en gång: 0,15 s "väntan"
+     följt av 10 s FORTSATT hållet A/D gav samma diameter som ett fullt
+     håll). Varje släpp nollställer IN.styrHallt (src/game.js), så
+     styrkan stannar på digitalGain hela varvet — precis det oförändrade
+     "korta tryck ger små korrigeringar"-kontraktet. */
+  const figurPuls = (gangarter, paSek, avSek, varvSek) => {
+    nyRitt();
+    for (let k = 0; k < gangarter; k++) impuls();
+    RIDIN.skankel = 0.35; RIDIN.tygel = 0.20;
+    const pts = []; let maxStyrning = 0;
+    const total = Math.round(varvSek * 60);
+    for (let i = 0; i < total;) {
+      IN.styrDigital = 1;
+      for (let j = 0; j < Math.round(paSek * 60) && i < total; j++, i++) {
+        stegaRitt(dt); maxStyrning = Math.max(maxStyrning, Math.abs(G.aids.styrning));
+        if (i % 4 === 0) pts.push([G.px, G.py]);
+      }
+      IN.styrDigital = 0;
+      for (let j = 0; j < Math.round(avSek * 60) && i < total; j++, i++) {
+        stegaRitt(dt); maxStyrning = Math.max(maxStyrning, Math.abs(G.aids.styrning));
+        if (i % 4 === 0) pts.push([G.px, G.py]);
+      }
+    }
+    return { pts, gangart: G.ride.gangart, kappa: G.kappa, styrning: G.aids.styrning, maxStyrning };
+  };
+  const skritt = figur(1, 3, 20);                    // halt→skritt, hållet länge
+  const trav = figur(2, 3, 15);                      // halt→skritt→trav, hållet länge
+  const los = figurPuls(2, 0.2, 0.15, 14);            // trav, upprepade korta tryck
+  const galopp = figur(3, 3, 8);                      // halt→skritt→trav→galopp, hållet länge
+  return { skritt, trav, los, galopp };
+});
+{
+  const d = digitalVolt;
+  const skritt = cirkel(d.skritt.pts), trav = cirkel(d.trav.pts), los = cirkel(d.los.pts);
+  prova("tangentbordet: 10 m volt går att rida i skritt (hållet A/D)",
+    d.skritt.gangart === "skritt" && 2 * skritt.r < 10.5 && skritt.max < 0.3,
+    `diameter ${nf(2 * skritt.r, 2)} m · avvikelse ${nf(skritt.max * 100, 1)} cm · ` +
+    `styrning ${nf(d.skritt.styrning, 3)} · κ ${nf(Math.abs(d.skritt.kappa), 4)}`);
+  prova("tangentbordet: 10 m volt går att rida i trav (hållet A/D)",
+    d.trav.gangart === "trav" && 2 * trav.r < 10.5 && trav.max < 0.3,
+    `diameter ${nf(2 * trav.r, 2)} m · avvikelse ${nf(trav.max * 100, 1)} cm · ` +
+    `styrning ${nf(d.trav.styrning, 3)} · κ ${nf(Math.abs(d.trav.kappa), 4)}`);
+  /* Den fitta cirkeln genom ett pulsat spår är i sig naturligt flikig
+     (styrningen kopplas av och på var 0,2–0,35 s, inte ett jämnt
+     svep), så los.max (avvikelsen mot en perfekt cirkel) mäter inte
+     mjukhet här — det gör i stället TAKET på styrningen under hela
+     passet: håller sig den vid digitalGain-nivån (inget tryck hinner
+     över rampens 0,3 s-tröskel innan det släpps) är kontraktet "korta
+     tryck förblir små korrigeringar" intakt. */
+  const korttryckTak = 0.42 * 0.72;
+  prova("tangentbordet: upprepade korta tryck förblir små korrigeringar (ingen smygramp)",
+    d.los.gangart === "trav" && d.los.maxStyrning < korttryckTak + 0.05 && 2 * los.r > 10.5,
+    `störst styrning under passet ${nf(d.los.maxStyrning, 3)} (taket för korta tryck är ` +
+    `${nf(korttryckTak, 3)}) · diameter ${nf(2 * los.r, 2)} m, lösare än de hållna voltarna ovan`);
+  prova("tangentbordet: ett galoppvarv hålls stabilt och i gångart",
+    d.galopp.gangart === "galopp" && d.galopp.pts.length > 100,
+    `${d.galopp.pts.length} punkter i galopp · styrning ${nf(d.galopp.styrning, 3)} · ` +
+    `κ ${nf(Math.abs(d.galopp.kappa), 4)}`);
+}
+
+/* ══════════════════════════════════════════════════════════════════
    SÄTET SOM BALANSMODIFIERARE (senior review #87, blocker 1)
 
    #83 kräver vikt/säte som balansmodifierare. `vikt` fanns som ett

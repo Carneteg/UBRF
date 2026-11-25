@@ -59,6 +59,11 @@ const IN={
      bildrutorna, så att ett håll räknas även när bildtakten är låg. */
   nedT:{},slappt:{},
   styrDigital:null,styrKansla:{v:0},
+  /* D3: ackumulerad hålltid (simulerad tid, se stegaInput) för den
+     nuvarande styrDigital-riktningen, och vilken riktning den gällde
+     förra bildrutan — så ett riktningsbyte kan upptäckas och nollställa
+     rampen. */
+  styrHallt:0,_styrForra:null,
   joy:null,          // pekskärmens analoga spak: {x,y,styrka} eller null
 };
 
@@ -72,6 +77,7 @@ const IN={
 function ridNollstallHjalp(){
   RIDIN.skankel=0; RIDIN.tygel=0; RIDIN.sits=0; RIDIN.styr=0; RIDIN.parad=0; RIDIN.pek=false;
   IN.styrDigital=null; IN.styrKansla.v=0;
+  IN.styrHallt=0; IN._styrForra=null;
   IN.broms=false; IN.driv=0;
   ridAvsiktTillHjalp();
   for(const n in IN.kan)IN.kan[n].v=IN.kan[n].mal;
@@ -242,7 +248,17 @@ function stegaInput(dt){
   // Direkta modellprov och analog spak behåller hela sitt omfång.
   if(RIDIN.pek){IN.styrDigital=null;IN.styrKansla.v=RIDIN.styr;}
   else if(IN.styrDigital!==null){
-    RIDIN.styr=InputFeel.ride(IN.styrDigital,dt,IN.styrKansla);
+    /* D3: hur länge den nuvarande styrriktningen hållits, räknat i
+       SIMULERAD tid (ackumulerad dt) — inte väggklocka. Allt annat i
+       den här kedjan är dt-drivet och bildrutetaksoberoende (CLAUDE.md:s
+       släppspärr), och väggklocka hade gjort rampen beroende av hur
+       snabbt bildrutor faktiskt hinner köras, inte hur länge spelaren
+       bett om styrning. Byter riktning (eller släpper) nollställs
+       räknaren — ett nytt tryck startar alltid om på digitalGain. */
+    if(IN.styrDigital!==IN._styrForra)IN.styrHallt=0;
+    IN.styrHallt=IN.styrDigital===0?0:(IN.styrHallt||0)+dt;
+    IN._styrForra=IN.styrDigital;
+    RIDIN.styr=InputFeel.ride(IN.styrDigital,dt,IN.styrKansla,IN.styrHallt);
   }
   ridAvsiktTillHjalp();          // avsikt → hjälpmål, en gång per bildruta
   for(const n in IN.kan){const k=IN.kan[n];

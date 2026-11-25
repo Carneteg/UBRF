@@ -53,6 +53,32 @@ deras beslutsspärrar är auktoritativa för det här arbetet.
   hörnbugg möjlig), och dess halt-formel (rad ~546–573) hoppar hela
   nyanstermen när `gait.norm<=0`, så målet är redan exakt 0 där — ingen
   Roblox-ändring behövs eller är gjord.
+- Levererat: **Batch 0.3** — D3 (tangentbordet kan rida skolfigurer).
+  `InputFeel.RIDE.digitalGain` (0,42) var ett PERMANENT tak på
+  tangentbordsstyrningen i `src/input-feel.js`, oavsett hur länge A/D hölls:
+  full digital styrning gav högst κ≈0,127 i skritt (minsta volt ~15,7 m i
+  diameter), aldrig en 10 m volt. Rättat: ett hållet tryck ligger kvar på
+  42 % de första 0,3 s (oförändrat, "korta tryck förblir små
+  korrigeringar") men trappar sedan upp mot full styrka. Hålltiden räknas
+  i SIMULERAD tid (ackumulerad `dt` i `src/game.js`, `IN.styrHallt`), inte
+  väggklocka — annars blir rampen bildrutetaksberoende, vilket bröt mot
+  CLAUDE.md:s släppspärr och gjorde det första försöket (väggklocka via
+  `performance.now()`) obrukbart i en syntetisk testmiljö med snabbt
+  stegad `dt`. `IN.styrHallt`/`IN._styrForra` nollställs i
+  `ridNollstallHjalp()`, samma läckagelektion som D1:s `G._fastDt`.
+  Nya falsifierbara prov i både `tools/control-feel-test.mjs` (ren
+  styrlagertest, uppdaterar även det gamla "ligger kvar på 42 % i 2 s"-
+  provet som kodade den gamla buggen som korrekt) och `tools/ridtest.mjs`
+  (full kedja: 10 m volt i skritt och trav med hållet A/D, upprepade
+  korta tryck som fortsatt ger små korrigeringar, ett stabilt
+  galoppvarv). Roblox-kontroll genomförd (läsande, ingen ändring):
+  `roblox/src/client/MovementController.luau:_steer` rampar redan mot
+  FULL styrkraft (`SteerTauPress`/`SteerTauRelease`, inget
+  `digitalGain`-liknande permanent tak) — bekräftat att detta alltid
+  varit en webb-bara bugg, ingen Roblox-ändring behövs.
+  **Beslutsspärr (acceptans, inte bygg) kvarstår:** `READY_FOR_PRODUCT_ACCEPTANCE`
+  kräver Tobias godkännande av själva tangentbordskänslan (öppnar om
+  2026-09-08-beslutet) — byggt och verifierat, men inte produktaccepterat.
 - **A2 (kantutjämning) uppskjuten, inte löst i 0.1:** en FXAA-shader
   provades i post-kompositeringen men orsakade en mätbar, reproducerbar
   CI-regression i `tools/lektion-e2e-test.mjs` (headless, mjukvaru-

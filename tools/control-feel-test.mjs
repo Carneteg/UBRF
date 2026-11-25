@@ -19,7 +19,7 @@ function mounted(){const events={},docEvents={};
   const doc={visibilityState:'visible',addEventListener:(n,f)=>(docEvents[n]??=[]).push(f)};
   const c={console,Math,clamp,HJALP_KANON:{STYR_FULLT:.72},G:{},document:doc,
     addEventListener:(n,f)=>(events[n]??=[]).push(f)};
-  vm.createContext(c);vm.runInContext(source+game.slice(game.indexOf('const RIDIN='),game.indexOf('/* ── Speltillstånd'))+'\nthis.RIDIN=RIDIN;this.IN=IN;this.stegaInput=stegaInput;this.reset=ridNollstallHjalp;',c);
+  vm.createContext(c);vm.runInContext(source+game.slice(game.indexOf('const RIDIN='),game.indexOf('/* ── Speltillstånd'))+'\nthis.RIDIN=RIDIN;this.IN=IN;this.stegaInput=stegaInput;this.reset=ridNollstallHjalp;this.InputFeel=InputFeel;',c);
   c.key=(type,code)=>{for(const f of events[type]||[])f({code,repeat:false,preventDefault(){}})};
   c.fonster=(n)=>{for(const f of events[n]||[])f({});};
   c.doldFlik=()=>{doc.visibilityState='hidden';for(const f of docEvents.visibilitychange||[])f({});};
@@ -28,9 +28,30 @@ function walking(){const c={console,Math,clamp,G:{scen:'gard',vy:'2d'},IN:{ned:{
 function runWalk(fps,segments){const c=walking(),dt=1/fps,rows=[];for(const [seconds,keys,joy] of segments){Object.assign(c.IN.ned,{KeyW:false,KeyS:false,KeyA:false,KeyD:false,ShiftLeft:false},keys);c.IN.joy=joy||null;for(let i=0;i<Math.round(seconds*fps);i++){const prev=c.VD.rikt;c.step(dt);rows.push({x:c.VD.px,y:c.VD.py,angle:c.VD.rikt,speed:c.VD.fart,delta:c.VD.rikt-prev});}}return {c,rows};}
 function runRide(fps,segments){const c=mounted(),dt=1/fps,rows=[];for(const [seconds,keys] of segments){for(const [key,down] of Object.entries(keys||{}))c.key(down?'keydown':'keyup',key);for(let i=0;i<Math.round(seconds*fps);i++){c.stegaInput(dt);rows.push(c.IN.kan.styrning.v);}}return {c,rows};}
 test('Digital ridstyrning dämpar korta tryck',()=>{const r=runRide(60,[[.1,{KeyD:true}]]);assert(r.rows.at(-1)>0);assert(r.rows.at(-1)<.20);});
-test('Digital styrning har begränsat normalt utslag',()=>{const r=runRide(60,[[2,{KeyD:true}]]);assert(Math.abs(r.rows.at(-1)-.72*.42)<.005);});
+/* D3 (ridmekanik-grind 0.3): digitalGain var FÖRUT ett permanent tak —
+   en 10 m volt gick aldrig att rida på tangentbord, oavsett hur länge
+   A/D hölls, eftersom styrningen aldrig kom förbi 42 % av kurvaturtaket.
+   Ett HÅLLET tryck ska nu trappa upp mot fullt utslag; ett KORT tryck
+   (nästa prov) ska fortfarande bara ge den lilla nyansen. */
+test('Digital styrning trappar upp mot fullt utslag vid ett hållet tryck',()=>{const r=runRide(60,[[2,{KeyD:true}]]);assert(Math.abs(r.rows.at(-1)-.72)<.01);});
+/* Rampfunktionen mätt direkt, inte genom axis()-utjämningens egen
+   konvergenstid (0,16 s tau), som annars gör en tidsgräns nära
+   tröskeln svår att mäta exakt — en eased styrning vid t=0,25 s har
+   ännu inte hunnit ikapp ett konstant mål på 0,25 s. */
+test('digitalStyrka: oförändrad till och med tröskeln, trappar sedan upp',()=>{
+  const F=mounted().InputFeel;
+  assert.equal(F.digitalStyrka(0),.42);
+  assert.equal(F.digitalStyrka(.29),.42);
+  assert.equal(F.digitalStyrka(.3),.42);
+  assert(F.digitalStyrka(.5)>.42&&F.digitalStyrka(.5)<1);
+  assert(F.digitalStyrka(3)>.99);
+});
 test('Analog och direkta modellprov behåller hela omfånget',()=>{const c=mounted();c.RIDIN.pek=true;c.RIDIN.styr=1;for(let i=0;i<120;i++)c.stegaInput(1/60);assert(Math.abs(c.IN.kan.styrning.v-.72)<.001);c.reset();assert.equal(c.RIDIN.styr,0);assert.equal(c.IN.styrKansla.v,0);});
-test('Släpp och riktningsbyte ger ingen kvarhängande styrning',()=>{const r=runRide(60,[[.4,{KeyD:true}],[.4,{KeyD:false,KeyA:true}],[.8,{KeyA:false}]]);assert(r.rows.at(-1)<.001&&r.rows.at(-1)>-.001);assert(r.rows.some(v=>v<-.1));assert(Math.max(...r.rows)<.31);});
+/* D3: 0,4 s håll ligger 0,1 s förbi rampens tröskel (0,3 s), så taket
+   är inte längre exakt 0,72×0,42=0,3024 — mätt till ~0,320 med rampen.
+   Det provet faktiskt vaktar (ingen kvarhängande styrning efter släpp
+   och riktningsbyte) är oförändrat. */
+test('Släpp och riktningsbyte ger ingen kvarhängande styrning',()=>{const r=runRide(60,[[.4,{KeyD:true}],[.4,{KeyD:false,KeyA:true}],[.8,{KeyA:false}]]);assert(r.rows.at(-1)<.001&&r.rows.at(-1)>-.001);assert(r.rows.some(v=>v<-.1));assert(Math.max(...r.rows)<.33);});
 test('Digital styrning är bildrutetaksoberoende',()=>{const a=runRide(30,[[.5,{KeyD:true}],[.5,{KeyD:false}]]).rows.at(-1),b=runRide(120,[[.5,{KeyD:true}],[.5,{KeyD:false}]]).rows.at(-1);assert(Math.abs(a-b)<.02);});
 test('Fotstyrningens första tiondel är lugnare',()=>{const r=runWalk(60,[[.1,{KeyW:true,KeyD:true}]]);assert(r.rows.at(-1).angle>0);assert(r.rows.at(-1).angle*180/Math.PI<20);});
 test('Ingen eftersväng när spelaren släpper',()=>{const r=runWalk(60,[[.5,{KeyW:true,KeyD:true}],[.4,{}]]);assert(Math.abs(r.rows.at(29).angle-r.rows.at(-1).angle)<1e-8);assert(r.rows.at(-1).speed<.01);});
