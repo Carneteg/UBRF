@@ -1119,6 +1119,71 @@ const digitalVolt = await page.evaluate(() => {
 }
 
 /* ══════════════════════════════════════════════════════════════════
+   VARV, FATTNING OCH HALSENS STÄLLNING (rörelse-grind 0.4, C1/C2)
+
+   tools/gangposetest.mjs mäter benföljden och halsen som rena
+   funktioner. Här mäts det som bara den körande ridloopen kan visa:
+   att den väljer RÄTT varv och fattning ur en riktig ritt, och att
+   halsen ställs mot den volt hästen faktiskt rider.
+
+   Voltens mitt MÄTS ur spåret (medelpunkten av ett varv) — den räknas
+   inte ur krökningens tecken, för det tecknet är just det som provas.
+   Galoppen fattas INNE i volten, så som man gör det på en lektion. ── */
+const varvProv = await page.evaluate(() => {
+  G.hastId = G.hastId || Object.keys(HORSES)[0]; G.hastPlats = "box"; G.npcs = [];
+  const dt = 1 / 60;
+  const impuls = () => { RIDIN.skankel = 1; for (let i = 0; i < 30; i++) stegaRitt(dt);
+    RIDIN.skankel = 0; for (let i = 0; i < 18; i++) stegaRitt(dt); };
+  const kor = (styr) => {
+    G.ride = nyState(G.dagsform, 0.5, G.sadellage);
+    G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0; G._fastDt = 0;
+    G.varv = null; G.fattning = null; ridNollstallHjalp();
+    impuls(); impuls();                                   // trav
+    RIDIN.skankel = 0.35; RIDIN.tygel = 0.20; IN.styrDigital = styr;
+    for (let i = 0; i < 240; i++) stegaRitt(dt);          // in i volten
+    const fattningITrav = G.fattning;
+    impuls();                                             // galoppfattning i bågen
+    RIDIN.skankel = 0.35;
+    const pts = []; const fattningar = new Set();
+    /* Fattningen läses bara medan hon GALOPPERAR: impulsen ber om
+       galopp, och övergången tar några bildrutor i trav först. */
+    for (let i = 0; i < 600; i++) { stegaRitt(dt); pts.push([G.px, G.py]);
+      if (G.ride.gangart === "galopp") fattningar.add(G.fattning); }
+    const gangart = G.ride.gangart;
+    const cx = pts.reduce((a, p) => a + p[0], 0) / pts.length, cy = pts.reduce((a, p) => a + p[1], 0) / pts.length;
+    /* Kartans regel: högervektorn till kursen (fx, fy) är (fy, −fx). */
+    const mx = cx - G.px, my = cy - G.py, ml = Math.hypot(mx, my) || 1;
+    const mittTillHoger = (mx * Math.sin(G.rikt) - my * Math.cos(G.rikt)) / ml;
+    const e = s3MittEkipage();
+    const bojd = s3HuvudPunkt(e), rak = s3HuvudPunkt({ ...e, bojning: 0 });
+    const inat = ((bojd.x - rak.x) * mx + (bojd.z - rak.z) * my) / ml;
+    const varv = G.varv, kappa = G.kappa;
+    /* Ner till trav: fattningen ska släppas. */
+    IN.styrDigital = 0; RIDIN.skankel = 0; RIDIN.tygel = 1; RIDIN.sits = 1;
+    let slappt = false;
+    for (let i = 0; i < 600 && !slappt; i++) { stegaRitt(dt); if (G.ride.gangart !== "galopp") slappt = G.fattning === null; }
+    RIDIN.tygel = 0; RIDIN.sits = 0; ridNollstallHjalp(); G.varv = null; G.fattning = null;
+    return { gangart, varv, kappa, mittTillHoger, inat, fattningITrav, fattningar: [...fattningar], slappt };
+  };
+  return { a: kor(1), b: kor(-1) };
+});
+{
+  const namn = (v) => (v.mittTillHoger > 0 ? "hoger" : "vanster");
+  for (const v of [varvProv.a, varvProv.b]) {
+    const sida = namn(v);
+    prova(`varv och fattning: galopp fattad i en ${sida === "hoger" ? "höger" : "vänster"}volt får ${sida === "hoger" ? "höger" : "vänster"} fattning och håller den`,
+      v.gangart === "galopp" && Math.abs(v.mittTillHoger) > 0.5 && v.varv === sida &&
+      v.fattningar.length === 1 && v.fattningar[0] === sida && v.fattningITrav === null,
+      `uppmätt mitt ${nf(v.mittTillHoger, 2)} (>0 = höger om kursen) · varv ${v.varv} · fattning ${v.fattningar.join("/")} · κ ${nf(v.kappa, 3)}`);
+    prova(`halsen: ställd mot den ${sida === "hoger" ? "högra" : "vänstra"} voltens uppmätta mitt`,
+      v.inat > 0.03 && v.inat < 0.25, `huvudet ${nf(v.inat * 100, 1)} cm inåt`);
+    prova("fattningen släpps när galoppen lämnas", v.slappt === true);
+  }
+  prova("varv och fattning: de två voltarna gick åt var sitt håll (provet mäter båda)",
+    namn(varvProv.a) !== namn(varvProv.b));
+}
+
+/* ══════════════════════════════════════════════════════════════════
    SÄTET SOM BALANSMODIFIERARE (senior review #87, blocker 1)
 
    #83 kräver vikt/säte som balansmodifierare. `vikt` fanns som ett

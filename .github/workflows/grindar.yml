@@ -172,6 +172,18 @@ jobs:
           test -f tools/kullningsgrind.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/kullningsgrind.mjs (steget 'Kulningen — nätens ljusnormaler pekar utåt')" >&2; exit 1; }
           node tools/kullningsgrind.mjs
 
+      # Gångposen (rörelse-grind 0.4 / C1–C3). Webbens häst läser nu
+      # benföljden ur samma GANGFAS-tabell som Roblox. Provet mäter mot
+      # ridlärans facit (inte mot tabellen själv): skritt i lateral
+      # fyrtakt, trav i diagonalpar med sväv, galopp i tretakt med sväv
+      # och fattning, EN uppresning per travcykel, bogen först i
+      # språnget. Falsifierad med --muter-fas, --muter-latt, --muter-hopp.
+      - name: Gångposen — hästen går i en riktig gångart
+        run: |
+          set -euo pipefail
+          test -f tools/gangposetest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/gangposetest.mjs (steget 'Gångposen — hästen går i en riktig gångart')" >&2; exit 1; }
+          node tools/gangposetest.mjs
+
       # PRE_TOBIAS_FIRST_PLAYABLE_GATE (processändringen på #162, 05:42).
       # Samlingsgrinden kör undergrindarna en gång till i ett svep och
       # producerar release evidence bundle + WORLD_MANIFEST. Den ligger

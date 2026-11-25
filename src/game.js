@@ -736,10 +736,10 @@ function stegaRitt(dt){
 
      CYKELLÄNGD betyder EN sak, på båda plattformarna: sträckan hästen
      färdas under ett helt normaliserat fasvarv, fas 0 → 1. Det är inte
-     samma sak som en hovs kliv. S3FAS i scen3d.js lägger alla fyra ben
-     inuti samma fasvarv med var sin förskjutning — vf 0, hf 0,25, vb
-     0,50, hb 0,75 i skritt — så ett ben hinner precis en stance och en
-     sving per varv. Antalet hovnedslag är alltså redan inbakat i
+     samma sak som en hovs kliv. GANGFAS (src/riding/gangfas.js) lägger
+     alla fyra ben inuti samma fasvarv med var sin isättning — vb 0, vf
+     0,25, hb 0,50, hf 0,75 i skritt — så ett ben hinner precis ett stöd
+     och en sväng per varv. Antalet hovnedslag är alltså redan inbakat i
      benens förskjutningar och får inte multipliceras in en gång till.
 
      Gait.steglangd är just den sträckan: SPRANG-basen gånger gångartens
@@ -759,6 +759,34 @@ function stegaRitt(dt){
         fryser mitt i ett steg. */
      G.gaitFas=(G.gaitFas+G.ride.tempo*dt*0.5)%1;
    }}
+  /* ── VARV OCH FATTNING (rörelse-grind 0.4, C1) ────────────────────
+     Port av MovementController._varvOchLedande i Roblox. VARVET är
+     vilken hand hon rider på: ligger banans mitt till höger eller
+     vänster om kursen (gangVarv). Rakt mot eller från mitten finns
+     inget svar, och då behålls det senast giltiga.
+
+     FATTNINGEN är galoppens ledande framben, och den väljs i själva
+     galoppfattningen: varvets hand, i andra hand svängens håll. Den
+     hålls sedan tills galoppen lämnas — en häst byter inte fattning av
+     att man svänger, och gör hon det är det en rörelse för sig.
+
+     BARA BILD. Ingenting i fysiken, bedömningen eller telemetrin läser
+     de här två fälten; de avgör vilket ben som ritas först och vilket
+     framben ryttaren reser sig med. */
+  {/* I EN BÅGE ÄR INSIDAN DIT HON SVÄNGER. Banans mitt avgör bara på
+      rakt spår. Utan den ordningen byter en volt som rids en bit från
+      mittlinjen varv två gånger per varv (mitten ligger omväxlande till
+      höger och vänster om kursen), och ryttaren hade bytt sittben mitt
+      i volten. Positiv krökning är en högersväng (`G.rikt-=omega*dt`).
+      [PLATTFORMSSKILLNAD att ta ställning till: Roblox läser bara
+      banans mitt — se docs/ACTIVE-GATE.md, rörelse-grind 0.4.] */
+   const varv=G.kappa>0.05?"hoger":G.kappa<-0.05?"vanster"
+     :gangVarv(G.px,G.py,G.rikt,BB/2,BL/2);
+   if(varv)G.varv=varv;
+   const galopp=G.ride.gangart==="galopp";
+   if(galopp&&!G.fattning)
+     G.fattning=G.varv||(G.kappa<-0.02?"vanster":"hoger");
+   else if(!galopp)G.fattning=null;}
   /* G02-A: gångarten följs av övergångskontraktet och telemetrin läggs
      på G.telemetri, så att G02-B/C har en enda avläsningspunkt. Ren
      avläsning — inget här får påverka ridkänslan. */

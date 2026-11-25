@@ -19,8 +19,11 @@
    avsnitt 5), inte uppmätta normer. De ska granskas av ridkunnig person i
    rörelse. Ändra dem här, aldrig i Roblox-koden.
 
-   Webben läser inte tabellen ännu: webbens egen benmodell (scen3d.js)
-   flyttas hit i ett separat, senare beställt steg. */
+   Webben läser tabellen sedan rörelse-grind 0.4 (C1): `s3Ben`,
+   lättridningen och galoppens fattning i src/scen3d.js slår upp sina
+   faser här, genom uppslagsfunktionerna sist i filen. De är en port av
+   roblox/src/shared/HorseCore/Gangfas.luau, namn för namn, så att båda
+   plattformarna räknar stöd, sväng och uppresning på samma sätt. */
 
 const GANGFAS = (() => {
   const ben = (td, stod) => ({ td, stod });
@@ -56,6 +59,74 @@ const GANGFAS = (() => {
 /* Lättridning: EN uppresning per hel travcykel. Ryttaren reser sig medan
    det YTTRE frambenet förs fram och sitter ned när det sätts i. */
 const LATTRIDNING = { upp_per_cykel: 1, hojd_m: 0.11 };
+
+/* ── UPPSLAGEN ─────────────────────────────────────────────────────
+   Rena funktioner: samma indata ger samma svar. Ingen av dem ändrar
+   tabellen ovan.
+
+   Benens namn i rigg-ordning, som i Gangfas.BEN: fram vänster/höger, bak
+   vänster/höger. Webbens häst är byggd mot +X med VÄNSTER sida på +Z
+   (uppmätt i tools/gangposetest.mjs, inte antaget), och s3RitaHast
+   ritar benen i just den här ordningen. */
+const GANGBEN = ["LF", "RF", "LH", "RH"];
+
+/* Vilken rad en rörelse läser. Halt har ingen: då bär alla fyra och
+   ingen benföljd ska ritas. Fattningen avgör galoppens rad; okänd
+   fattning ritas som höger, aldrig som något påhittat tredje. */
+function gangMonsterNamn(gangart, fattning) {
+  if (gangart === "skritt") return "skritt";
+  if (gangart === "trav") return "trav";
+  if (gangart === "galopp") return fattning === "vanster" ? "galopp_vanster" : "galopp_hoger";
+  if (gangart === "galopp_hoger" || gangart === "galopp_vanster" || gangart === "rygga") return gangart;
+  return null;
+}
+
+/* Ett bens läge i cykeln: `u` är hur långt efter sin isättning det är
+   (0..1), `stod` hur stor del av cykeln det bär. u < stod betyder stöd. */
+function gangBen(m, ben, fas) {
+  const b = m && m.ben[ben];
+  if (!b) return { u: 0, stod: 1 };
+  let u = (fas - b.td) % 1;
+  if (u < 0) u += 1;
+  return { u, stod: b.stod };
+}
+
+/* LÄTTRIDNINGEN: hur högt ryttaren står, 0..1. EN uppresning per hel
+   travcykel — hon reser sig medan det YTTRE frambenet förs fram (dess
+   svängfas) och sitter ned när det sätts i. Bålens två vertikala
+   impulser per cykel är hästens, inte ryttarens. */
+function gangLattridning(m, fas, yttreFram) {
+  const b = m && m.ben[yttreFram];
+  if (!b) return 0;
+  const sving = 1 - b.stod;
+  if (sving <= 0) return 0;
+  let u = (fas - (b.td + b.stod)) % 1;
+  if (u < 0) u += 1;
+  if (u >= sving) return 0;
+  return Math.sin(Math.PI * u / sving);
+}
+
+/* VILKET VARV hon rider: ligger banans mitt till höger eller vänster om
+   kursen? Kartans koordinater (+x öster, +y norr): högervektorn till en
+   kurs (fx, fy) är (fy, −fx), samma regel som GL.kamera och world.js.
+   Rakt mot eller från mitten finns inget svar (null), och då behåller
+   den som frågar det senast giltiga. */
+function gangVarv(px, py, rikt, mittX, mittY) {
+  const cx = mittX - px, cy = mittY - py;
+  const langd = Math.hypot(cx, cy);
+  if (langd < 1e-3) return null;
+  const d = (cx * Math.sin(rikt) - cy * Math.cos(rikt)) / langd;
+  if (Math.abs(d) < 0.25) return null;
+  return d > 0 ? "hoger" : "vanster";
+}
+
+/* Det yttre frambenet på ett varv. På höger varv ligger mitten till
+   höger, och då är VÄNSTER fram det yttre. Okänt varv: null. */
+function gangYttreFram(varv) {
+  if (varv === "hoger") return "LF";
+  if (varv === "vanster") return "RF";
+  return null;
+}
 
 if (typeof window !== "undefined") {
   window.GANGFAS = GANGFAS;
