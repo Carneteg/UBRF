@@ -605,6 +605,48 @@ deras beslutsspärrar är auktoritativa för det här arbetet.
   - Ritningen är min, gjord för att läsas på håll. Den är inte bedömd av
     någon.
   `JEV_DECISION: JEV_NOT_NEEDED`.
+- Levererat: **Batch 1.3** — bildtexturernas väg in i enfilsbygget.
+  **Bara röret: ingen yta i spelet byter utseende, och ingen bildfil är
+  incheckad.**
+  - **Produktbeslut, Tobias 2026-11-26:** (1) webbygget FÅR innehålla
+    bildfiler, inbäddade i den enda HTML-filen och fortfarande utan
+    nätverk vid körning; (2) den byggda filen får vara högst **4 MB** och
+    bygget ska bli rött annars — taket prövas om efter mätningen på riktig
+    iPad och iPhone; (3) **bara röret nu**: stallgångens fem material
+    (Batch 1.4) väntar på klubbens svar, och brevutkastet ändras inte.
+  - **Bygget** (`tools/build.py`): varje fil i `assets/textures/` (JPEG,
+    PNG, WebP) bakas in i `window.TEXTUR_DATA`. Bygget AVBRYTS och skriver
+    ingen fil när filen går över 4 MB, när en textur inte har sidor som är
+    tvåpotenser, när en enskild textur är över 256 kB `[antagande]`, eller
+    när en textur saknar rad i `assets/textures/KALLOR.tsv`. En ruta ur
+    ett UBRF-foto kräver klubbens sparade svar
+    (`references/licenses/SAMTYCKE-UBRF-<datum>.md`); utkastet räknas inte.
+    Beslutet «bara röret nu» är alltså en kontroll i bygget, inte en
+    minnesregel.
+  - **Motorn** (`src/gl.js`): `GL.bildTextur(namn, reserv, upprepa)` ger
+    genast en textur med den målade reserven och lägger in bilden i samma
+    texturobjekt när den är avkodad. Okänt namn eller trasig bild →
+    reserven står kvar. Ingen av de 21 `glCanvasTex`-anropen är utbytt.
+  - **Avvikelse från arbetsordern, redovisad:** manifestet skrivs ALLTID,
+    också tomt (`window.TEXTUR_DATA={}`, 40 byte). Ordern sade att en tom
+    mapp inte skulle lägga till något. Skälet: den byggda filen måste veta
+    att den är byggd, annars hade ett okänt texturnamn fått motorn att
+    fråga nätet — tvärt emot regeln om inget nätverk.
+  - **Storlek:** `dist/ridskolan.html` 1 745 078 → 1 748 111 byte (41 % av
+    taket). Ökningen är motorkoden och det tomma manifestet.
+  - **Prov:** `tools/testa-texturbygge.py` (23 mätningar; falsifierat med
+    `--muter-tak` och `--muter-kalla`) och `tools/texturtest.mjs` (12
+    mätningar i webbläsare: reserven direkt, bilden rättvänd i samma
+    objekt, okänt och trasigt, aldrig nätet i byggd fil, obyggd version
+    läser `assets/textures/`; falsifierat med `--muter-vand` och
+    `--muter-reserv`). Båda i `grindar.yml` och inventariet.
+  - **Paritet:** ren webbrendering och inget levererat ändras — båda
+    plattformarna ser ut som före. Inga Roblox-filer rörda. Ett
+    plattformsundantag behövs först när en yta byter utseende (1.4).
+  - **Inte verifierbart härifrån:** avkodningstid och minne på en riktig
+    telefon. 4 MB och 256 kB är `[antagande]` tills Batch 1.2:s mätning
+    på Tobias egna enheter är gjord.
+  - Status `READY_FOR_REVIEW`. `JEV_DECISION: JEV_NOT_NEEDED`.
 - **A2 (kantutjämning) uppskjuten, inte löst i 0.1:** en FXAA-shader
   provades i post-kompositeringen men orsakade en mätbar, reproducerbar
   CI-regression i `tools/lektion-e2e-test.mjs` (headless, mjukvaru-

@@ -459,6 +459,61 @@ const GL={
     return t;
   },
 
+  /* TEXTUR UR EN BILDFIL (Batch 1.3, produktbeslut 2026-11-26).
+
+     Ger GENAST en textur, fylld med `reserv` — den canvas som koden målar
+     i dag. Finns `namn` bland de inbäddade bilderna avkodas den i
+     bakgrunden och läggs in i SAMMA texturobjekt, så inget nät behöver
+     byggas om och ingen anropare behöver vänta. Finns namnet inte, eller
+     går bilden inte att avkoda, står reserven kvar: spelet ser då ut
+     precis som utan bildfilen.
+
+     Den byggda filen bär ALLTID window.TEXTUR_DATA (tools/build.py), också
+     tom. Där hämtas därför aldrig något över nätet — en textur som inte
+     ligger i filen finns inte. Bara utvecklingsversionen (obyggd
+     index.html, inget manifest) läser assets/textures/. */
+  _bild:{},
+  bildTextur(namn,reserv,upprepa){
+    const gl=this.gl, t=this.textur(reserv,upprepa);               // RESERVEN
+    const post=this._bild[namn]={lage:"saknas",tex:t,b:reserv.width,h:reserv.height};
+    const finns=typeof window!=="undefined", data=finns?window.TEXTUR_DATA:undefined;
+    const uri=data?(data[namn]&&data[namn].uri):(finns&&typeof Image!=="undefined"?"assets/textures/"+namn:null);
+    if(!uri)return t;
+    post.lage="vantar";
+    const img=new Image();
+    img.onerror=()=>{post.lage=data?"fel":"saknas";};
+    img.onload=()=>{
+      const b=img.naturalWidth,h=img.naturalHeight;
+      const pot=b>0&&h>0&&(b&(b-1))===0&&(h&(h-1))===0;
+      if(!pot||(gl.isContextLost&&gl.isContextLost())){post.lage="fel";return;}
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D,t);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);                 // BILDEN RÄTTVÄND
+      /* Samma fil ska ge samma färg i varje webbläsare: ingen tyst
+         färgrymdsomräkning och ingen förmultiplicerad alfa. */
+      gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL,gl.NONE);
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,false);
+      gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,img);
+      gl.generateMipmap(gl.TEXTURE_2D);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+      const lage=upprepa?gl.REPEAT:gl.CLAMP_TO_EDGE;
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,lage);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,lage);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
+      gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL,gl.BROWSER_DEFAULT_WEBGL);
+      post.lage="klar"; post.b=b; post.h=h;
+    };
+    img.src=uri;
+    return t;
+  },
+  /* För prov och felsökning: namn → vantar | klar | saknas | fel. */
+  texturLage(){
+    const ut={};
+    for(const n of Object.keys(this._bild))ut[n]=this._bild[n].lage;
+    return ut;
+  },
+
   /* Bildrutans start: storlek, rensning och ljussättning. */
   start(bredd,hojd,dpr,ljus){
     const gl=this.gl;
@@ -824,7 +879,10 @@ GL.himmel=function(ljus){
   gl.useProgram(this.prog);
 };
 
-/* Textur ur en ritfunktion — allt är målat i spelet, inga bildfiler. */
+/* Textur ur en ritfunktion. Allt som levereras i dag är målat i spelet;
+   sedan Batch 1.3 (produktbeslut 2026-11-26) FÅR en yta i stället ta sin
+   textur ur en inbäddad bildfil — se GL.bildTextur, som tar en sådan här
+   målad canvas som reserv. */
 function glCanvasTex(bredd,hojd,rita,upprepa){
   const c=document.createElement("canvas");
   c.width=bredd;c.height=hojd;

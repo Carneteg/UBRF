@@ -172,6 +172,17 @@ jobs:
           test -f tools/kullningsgrind.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/kullningsgrind.mjs (steget 'Kulningen — nätens ljusnormaler pekar utåt')" >&2; exit 1; }
           node tools/kullningsgrind.mjs
 
+      # Bildtexturernas väg genom bygget (Batch 1.3, produktbeslut
+      # 2026-11-26: bildfiler får bäddas in, taket är 4 MB). Provet bygger
+      # till en tillfällig katalog med egna testbilder: taket, tvåpotenser,
+      # gränsen per fil och källkontrollen i KALLOR.tsv ska alla AVBRYTA
+      # bygget. Falsifierat med --muter-tak och --muter-kalla.
+      - name: Texturbygget — taket 4 MB och källkontrollen (Batch 1.3)
+        run: |
+          set -euo pipefail
+          test -f tools/testa-texturbygge.py || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/testa-texturbygge.py (steget 'Texturbygget — taket 4 MB och källkontrollen (Batch 1.3)')" >&2; exit 1; }
+          python3 tools/testa-texturbygge.py
+
       # Gångposen (rörelse-grind 0.4 / C1–C3). Webbens häst läser nu
       # benföljden ur samma GANGFAS-tabell som Roblox. Provet mäter mot
       # ridlärans facit (inte mot tabellen själv): skritt i lateral
@@ -478,6 +489,12 @@ jobs:
           set -euo pipefail
           test -f tools/stalltaktest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/stalltaktest.mjs (steget 'Stallgångens tak bakom strömbrytaren (Batch 1.6)')" >&2; exit 1; }
           node tools/stalltaktest.mjs
+
+      - name: Bildtexturen från fil till grafikkort (Batch 1.3)
+        run: |
+          set -euo pipefail
+          test -f tools/texturtest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/texturtest.mjs (steget 'Bildtexturen från fil till grafikkort (Batch 1.3)')" >&2; exit 1; }
+          node tools/texturtest.mjs
 
       - name: P3 — kameran efter en flytt (Kimi Q4)
         run: |

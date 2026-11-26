@@ -109,6 +109,26 @@ Drive-mappen `UBRF` innehåller vid senaste inventeringen:
 
 Tomma mappar är inte assets och skapar inget build-beroende.
 
+## Texturer i webbygget (produktbeslut 2026-11-26, Batch 1.3)
+
+Webbygget får innehålla bildfiler. De ligger i `assets/textures/` och bakas
+in i den enda HTML-filen av `tools/build.py` — spelet hämtar fortfarande
+ingenting över nätet när det körs.
+
+- **Tak:** den byggda filen får vara högst 4 MB. Bygget avbryts annars.
+  Taket prövas om när spelet är mätt på riktig iPad och iPhone.
+- **Format:** JPEG, PNG eller WebP; sidor som är tvåpotenser; högst
+  2048 px; en enskild fil högst 256 kB `[antagande]`.
+- **Källa:** varje textur har en rad i `assets/textures/KALLOR.tsv`
+  (`fil`, `kalla`, `rattighet`, `samtycke`). Tillåtna rättigheter:
+  `egen-syntetisk`, `cc0`, `ubrf-foto`.
+- **UBRF-foton:** en ruta utskuren ur ett foto från anläggningen hamnar i
+  spelet och är därmed publicerad. Den kräver klubbens sparade svar,
+  `references/licenses/SAMTYCKE-UBRF-<datum>.md`, angivet i kolumnen
+  `samtycke`. Utkastet till förfrågan räknas inte. Bygget kontrollerar det.
+- **Läget 2026-11-26:** mappen innehåller ingen bildfil. Stallgångens
+  material (Batch 1.4) väntar på klubbens svar.
+
 ## Definition of done för nytt källmaterial
 
 Ett nytt referensmaterial är redo för implementation när:
