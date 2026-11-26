@@ -1170,6 +1170,26 @@ function s3RitaRyttare(bas,o){
 /* Himlen: en ring av band från horisont till zenit, plus ett lock.
    Ritas obelyst, så färgen i banden är gradienten. Centrum flyttas
    med scenen så att kupolen alltid omsluter kameran. */
+/* MOLNEN RITAS BARA UTE (miljö-grind 0.12).
+   Molnen är ett nät som ritas först, utan djupskrivning, runt kameran.
+   Inomhus ritades det också — och syntes då i varje springa mellan vägg
+   och tak, och genom allt som inte täckte hela bilden: klotmoln inne i
+   ridhuset och i stallgången.
+
+   Himlens GRADIENT (GL.himmel) ritas som förut, också inne: genom ett
+   fönster eller en öppen port ska man se himmel. Det är bara
+   molngeometrin som hör utomhus till.
+
+   EN funktion för båda ritvägarna (ritten i scen3d.js, till fots i
+   varld3d.js), så att villkoret inte kan glida isär mellan dem. */
+function s3RitaMoln(k,inne){
+  if(inne||!S3.himmel)return false;
+  const gl=GL.gl;
+  gl.depthMask(false);
+  GL.rita(S3.himmel.nat,M4.translation(k.x-S3.himmelC[0],0,k.z-S3.himmelC[1]),{platt:true,baksidor:true});
+  gl.depthMask(true);
+  return true;
+}
 function s3Himmel(centrum){
   /* Gradienten och solen ritas av GL.himmel som ett helskärmspass.
      Här byggs bara molnen — klungor av tillplattade klot högt upp. */
@@ -1725,9 +1745,7 @@ function rita3D(Gs){
      geometri ovanpå. Ingen djupskrivning. */
   const gl=GL.gl;
   GL.himmel(L);
-  gl.depthMask(false);
-  GL.rita(S3.himmel.nat,M4.translation(k.x-S3.himmelC[0],0,k.z-S3.himmelC[1]),{platt:true,baksidor:true});
-  gl.depthMask(true);
+  s3RitaMoln(k,plats==="ridhus");
   /* Anläggningen. */
   for(const s of S3.statiskt)GL.rita(s.nat,M4.ny(),{tex:s.tex});
   if(plats==="ridhus"){

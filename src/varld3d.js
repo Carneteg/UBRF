@@ -3000,10 +3000,8 @@ function ritaVandring3D(){
     GL.kamera([k.x,k.y,k.z],[k.tx,k.ty,k.tz],1.05);
     const gl=GL.gl;
     GL.himmel(L);                                 // gradient och sol
-    gl.depthMask(false);
-    GL.rita(S3.himmel.nat,M4.translation(k.x-S3.himmelC[0],0,k.z-S3.himmelC[1]),
-      {platt:true,baksidor:true});                // molnen
-    gl.depthMask(true);
+    s3RitaMoln(k,inne);                           // molnen — bara ute
+
     /* Två pass: allt som inte skymmer först, sedan det som står mellan
        kameran och spelaren, halvgenomskinligt och utan djupskrivning. */
     const tonade=[], glas=[];

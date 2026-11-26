@@ -287,6 +287,25 @@ deras beslutsspärrar är auktoritativa för det här arbetet.
     hallen låter som UBRF:s ridhus.
   **Beslutsspärr (acceptans, inte bygg):** Tobias lyssnar, helst i
   hörlurar och på telefon. `JEV_DECISION: JEV_NOT_NEEDED`.
+- Levererat: **Batch 0.12** — inga moln inomhus. Molnnätet ritades först
+  i varje scen, utan djupskrivning, och syntes därför inomhus i varje
+  springa mellan vägg och tak: klotmoln inne i ridhuset och stallgången.
+  `s3RitaMoln(k, inne)` i `src/scen3d.js` är nu EN funktion för båda
+  ritvägarna (ritten och till fots i `src/varld3d.js`) och ritar bara ute.
+  Himlens gradient ritas som förut, så fönster och portar visar himmel.
+  - **Prov** (`tools/kameratest.mjs`, riktiga bildrutor): molnnätet ritas
+    8 av 8 bildrutor på gården, 0 i stallet, 0 i ridhuset till fots och 0
+    i sadeln i ridhuset; kontrollmätning på ett direkt anrop.
+  - **INTE gjort, redovisat:** planens «flytta släpvagnsrekvisitan».
+    Hästtransportens läge (`src/site.js`, `ANL` rekvisita, `pos:[133,125]`)
+    nämns inte i `SITEPLAN.md` eller något `KORT.md`, och det finns inget
+    belagt läge att flytta den till. Att flytta den för en jämförelsebilds
+    skull bryter mot byggnadsregel 10. Den står kvar; beslutet är Tobias.
+  - **Paritet:** ingen Roblox-ändring. Roblox har inget motsvarande
+    molnnät i koden (läst `roblox/buildings`, `roblox/src`, `roblox/game`).
+  - **Visuellt:** varje innebild ändras (molnen är borta). Skärmdumps-
+    paketet behöver ses om medvetet.
+  `JEV_DECISION: JEV_NOT_NEEDED`.
 - **A2 (kantutjämning) uppskjuten, inte löst i 0.1:** en FXAA-shader
   provades i post-kompositeringen men orsakade en mätbar, reproducerbar
   CI-regression i `tools/lektion-e2e-test.mjs` (headless, mjukvaru-
