@@ -249,12 +249,27 @@ Varje dressyrbokstav har **en liten bildskylt till vänster om sig**. Barnen lä
 banan på bilderna innan de lär sig bokstäverna, och det är bilderna man känner igen
 sargen på.
 
-Fyra går att läsa i fotona: **B = banan**, **M = morot**, **C = cykel**,
-**F = fisk**. De övriga åtta är byggda med rimliga svenska ord på rätt bokstav och
-står som `[antagande]`: A = ananas, K = katt, V = vante, E = elefant, S = sol,
-H = hus, P = päron, R = ros.
+**Fem** går att läsa i fotona: **B = banan**, **M = morot**, **C = cykel**,
+**F = fisk** och **H = häst**. De övriga sju är byggda med rimliga svenska ord på
+rätt bokstav och står som `[antagande]`: A = ananas, K = katt, V = vante,
+E = elefant, S = sol, P = päron, R = ros.
 
-**Behövs:** en bild på skyltarna vid A, K, V, E, S, H, P och R. En bild per
+> **Rättat 2026-11-26 (Batch 1.1): H är en häst, inte ett hus.** Kortet hade
+> «H = hus» som `[antagande]`. `ridhus-inne-30-sargen-vid-h.jpg`, som redan låg
+> i repot, visar skylten på nära håll: ett vitt kort med svart «H» och intill
+> det ett vitt kort med en **grå häst i profil**. Samma par syns i
+> `ridhus-inne-28-langsidan-vid-h.jpg` och i den nya
+> `drive-2026-11-26/IMG_0274-ridhus-laktare-glasrum.jpg`.
+>
+> Bilden sitter **till höger** om bokstaven sedd inifrån banan — meningen ovan
+> säger «till vänster». Vid H är det alltså höger; hur det är vid de andra
+> bokstäverna är inte kontrollerat här.
+>
+> *Koden är inte ändrad:* `src/data.js` har fortfarande `bild:"hus"` vid H.
+> Bokstäverna är delad kanondata, så rättelsen ska göras på båda plattformarna
+> i samma leverans (planens Batch 2.3).
+
+**Behövs:** en bild på skyltarna vid A, K, V, E, S, P och R. En bild per
 långsida räcker — då syns fem åt gången.
 
 Banan är en **20×60** med tolv bokstäver (A-K-V-E-S-H-C-M-R-B-P-F). Spelet hade
@@ -303,6 +318,27 @@ generiskt modernt ridhus.
 `IMG_0191.MOV` (ca 31 s, ridhusinteriör från läktarsidan) är enligt indexet det
 material som ska korsrefereras innan en placering låses. Den är inte genomgången
 frame för frame ännu.
+
+## Klubbdelen, läktaren och C-änden — vad de migrerade fotona visar
+
+Tillagt 2026-11-26 (Batch 1.1). Sexton bilder under `drive-2026-11-26/`. Det här
+är en **inventering av vad som syns**, bild för bild. Den är inte avstämd rad för
+rad mot `INTERIOR-MATRIS.md` — det arbetet återstår — och färgerna är namngivna,
+inte mätta. Vilket rum i utrymningsplanen varje bild hör till är inte fastställt
+där det inte står.
+
+| Bilder | Visar |
+|---|---|
+| `IMG_0262`, `IMG_0263`, `IMG_0265`, `IMG_0266` (`-ridhus-klubbdel.jpg`) | **Korridoren i klubbdelen.** Mörkgrått plastgolv, vita släta väggar, vitt undertak med infällda lysrörsarmaturer och synliga vita kanaler. En **sittgrupp**: vita trästolar/soffor med rödmönstrad klädsel, ställda mot varandra. Längs ena väggen **inre fönster med vit karm och bred fönsterbänk** mot ett rum med hyllor i ljust trä, träns på väggen och en röd stol — rimligen kansliet `[antagande]`. I korridorens bortre del höga skåp i grått, rött och svart |
+| `IMG_0279`, `IMG_0280`, `IMG_0281` (`-ridhus-klubbdel.jpg`) | **Omklädning/skåp.** Vita plåtskåp i två våningar med hänglås, grått golv, vita väggar, vit pelare. I ett annat rum höga skåp i svart, rött och grått; synliga ventilationsrör i taket |
+| `IMG_0269`, `IMG_0270`, `IMG_0271`, `IMG_0274`, `IMG_0276` (`-ridhus-laktare-glasrum.jpg`) | **Glasrummen sedda från läktarsidan och banan sedd genom glas.** Glaspartier i träram ovanför en vit bröstning; staplade stolar innanför; grön utrymningsskylt. Från glasrummet syns hela banan: vit sarg med svart fot, brunt underlag, rader av lysrör i taket, läktarens bänkar längs långsidan. `IMG_0274` visar H-skylten, se «Bildgåtorna» |
+| `IMG_0277`, `IMG_0278` (`-ridhus-laktare-glasrum.jpg`) | **Hörnet vid en svart dörr** på läktarnivå: trägolv av plank, vit vägg med träsockellist, **anslagstavla i kork**, brandsläckare, röd brandfilt, grön utrymningsskylt, orange-vit kon, soptunna |
+| `IMG_0272`, `IMG_0273` (`-ridhus-arena.jpg`) | **Banan uppifrån**, genom glas (lätt dis i bilden): hela längden med lysrörsraderna, sarg, läktare till höger |
+
+Det som de här bilderna **bekräftar** av sådant kortet redan säger: brunt
+underlag, vit sarg med svart fot, lysrör i täta rader, läktare i trä, glasrum
+ovanför. Det som är **nytt**: klubbkorridorens sittgrupp och de inre fönstren,
+skåpens färger, och hörnet med anslagstavlan.
 
 ## Placering (från SITEPLAN.md)
 - Position: sydvästra hörnet i (118, 44), fotavtryck **25 × 75 m** `[DERIVED,

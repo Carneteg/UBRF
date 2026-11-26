@@ -519,6 +519,32 @@ deras beslutsspärrar är auktoritativa för det här arbetet.
     här ritar ~7 bilder/s med mjukvarurendering. Det säger ingenting om en
     riktig enhet.
   `JEV_DECISION: JEV_NOT_NEEDED`.
+- Levererat: **Batch 1.1, resten** — interiörerna och bokstaven H. Bara
+  dokument; **ingen kod är ändrad**.
+  - **H är en häst, inte ett hus.** Ridhuskortet hade «H = hus» som
+    `[antagande]`. `ridhus-inne-30-sargen-vid-h.jpg`, som redan låg i
+    repot, visar skylten på nära håll: svart «H» och intill den en grå häst
+    i profil. Bilden sitter till höger om bokstaven sedd inifrån banan.
+    `src/data.js` har kvar `bild:"hus"` — delad kanondata, att rätta på
+    båda plattformarna i samma leverans (planens Batch 2.3).
+  - **Stallets klubb- och servicedel:** nytt avsnitt i stallkortet som
+    inventerar sju rum ur 28 bilder (sadelkammaren, lektionssalen,
+    uppehållsrummet, besökshörnan, låneutrustningen, toaletterna,
+    servicepassagen). Matrisens rad «Rummens inredning» är inte längre
+    `[REFERENCE GAP]`; rummens läge i planen är det fortfarande.
+  - **Ridhusets klubbdel, läktare och C-ände:** nytt avsnitt i ridhuskortet
+    som inventerar sexton bilder.
+  - **Boxgångarna:** namnskyltarna på boxfronterna, storsäckarna i gången
+    och de vita rören i takhöjd är tillagda.
+  - **Gränser:** det här är inventeringar av vad som syns, inte en
+    avstämning rad för rad mot `INTERIOR-MATRIS.md` — ridhusets matris
+    (750 rader) är inte genomgången. Färger är namngivna, inte mätta.
+    Skyltar jag inte själv läst i bilden är märkta som maskinlästa.
+    Bilderna är sedda på kontaktkartor; H-skylten och en boxskylt är
+    öppnade i full upplösning.
+  - En bruten tabell i stallets matris (min egen rättelse i förra halvan
+    hade hamnat mitt i tabellen) är lagad.
+  `JEV_DECISION: JEV_NOT_NEEDED`.
 - **A2 (kantutjämning) uppskjuten, inte löst i 0.1:** en FXAA-shader
   provades i post-kompositeringen men orsakade en mätbar, reproducerbar
   CI-regression i `tools/lektion-e2e-test.mjs` (headless, mjukvaru-

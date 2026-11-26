@@ -302,6 +302,35 @@ gångar på 21 m bredd. Antalet boxar per länga och den exakta fördelningen me
 box och gång är `[ASSUMPTION]` tills en rak planbild finns; ordningen är
 `[VERIFIED]`.
 
+## Klubb- och servicedelens rum — vad de migrerade fotona visar
+
+Tillagt 2026-11-26 (Batch 1.1). `INTERIOR-MATRIS.md` hade «Rummens inredning»
+som `[REFERENCE GAP]`. Tjugoåtta bilder under `drive-2026-11-26/` visar rummen.
+Det här är en **inventering av vad som syns**. Rummens namn är satta efter
+innehållet; var i planen varje rum ligger är inte fastställt där det inte står,
+och färgerna är namngivna, inte mätta. Skyltar som anges inom «» är lästa av
+mig i bilden; övriga uppgifter om skyltar kommer ur den tidigare maskinläsningen
+och är märkta så.
+
+| Rum | Bilder | Visar |
+|---|---|---|
+| **Sadelkammaren** | `IMG_0219`–`IMG_0227` (`-stall-servicedel.jpg`) | Vit stående panel, slitet ljust betonggolv, vitt tak med synliga vita rör och lysrör. **Sadlar på väggkonsoler i två rader**, med en liten vit namnlapp vid varje. **Träns tätt på en vägg och på en mellanvägg.** Grå hyllställning med mörkgröna plastbackar. Ett litet bord med **gul skiva** och en **sadelbock i trä** med putsgrejer. Fackhylla med vikta schabrak; diskbänk i ett hörn. Jackor på krokar, bland dem orange varseljackor. **Grå ståldörr** — enligt maskinläsningen skyltad «Stall». Ett gallrat innerfönster i en kortvägg |
+| **Lektionssalen** | `IMG_0140`, `IMG_0231`–`IMG_0235` | Vit stående panel, betonggolv. **Valvfönster** på fönsterväggen, med **käpphästar på en lång hylla** under dem och små modellhästar i fönstersmygarna. **Stor anatomiplansch** (hästskalle och benens skelett). **Bokhylla** med böcker och spel. **Träbord ihopställda till ett block**, vita stolar med träben. En leksaksstall på golvet, en ridhjälm på ett bord. Kabelstegar och lysrör i taket. På kortväggen en **whiteboard** — se noten |
+| **Uppehållsrummet** | `IMG_0240`, `IMG_0241` | Ljus panel, blankt betonggolv. Två valvfönster med en tavla emellan. **Övningshästar: sadlar på träställ**, varav ett rosa. Litet svart bord med stolar. Grå ståldörr med utrymningsskylt |
+| **Besökshörnan vid entrén** | `IMG_0136`, `IMG_0218` | **Förvaringsskåp** med skylten «FÖRVARINGSSKÅP SOM FÅR ANVÄNDAS UNDER DIN RIDLEKTION», klädkrokar, runt glasbord med två svarta trådstolar vid ett valvfönster med en svart hästsiluett i, hästrasplansch, brandsläckare. Enligt maskinläsningen en plattformshiss («HISS») till höger |
+| **Låneutrustning** | `IMG_0216`, `IMG_0236`, `IMG_0237` | **Säkerhetsvästar på väggpinnar** i täta rader. **Grått skåp med ridstövlar** på hyllor. Öppning mot lektionssalen. Vilket rum eller vilken del av korridoren det är: `[REFERENCE GAP]` |
+| **Toaletter** | `IMG_0141`–`IMG_0144` | Grå dörrar med blåvit skylt «Toalett», den ena med rullstolssymbol. Vita väggar, grått klinkergolv, inramade hästbilder, stödhandtag i den tillgängliga |
+| **Servicepassagen vid spolspiltan** | `IMG_0155`, `IMG_0242` | Samma passage som `stall-inne-07`: vit vägg med rör, slang och tvättho, marksten, gaveldörr med dagsljus och utrymningsskylt. `IMG_0155` är tagen upp och ner; derivatet är roterat |
+
+> **Whiteboarden i lektionssalen finns, men bilderna av den ligger inte i
+> repot.** Fyra bilder (`IMG_0139`, `0228`, `0229`, `0230`) visar tavlan med ett
+> handskrivet lägerschema där förnamn står intill hästnamn. De är kvar i Drive,
+> se `references/DRIVE-SOURCE-INDEX.md`.
+
+**Mot bygget.** Spelet har rummen som låga volymer med namn ur utrymningsplanen
+(`STALLINNE.klubb`). Ingen av inredningarna ovan är omsatt, och inget i den här
+batchen ändrar koden. Planens Batch 3.6a/3.6b äger det.
+
 ## Stallgången invändigt — läst ur filmerna
 
 Underlaget är **37 bildrutor** ur `video/IMG_0249.mov` (13,3 s, gången norrut)
@@ -335,6 +364,12 @@ inte alls ser ut som ett vanligt trästall.
 - **Galvade stolpar** mellan boxarna går hela vägen upp till ungefär 2,2 m.
 - På fronterna hänger sadlar med underlag, täcken, grimmor, träns och
   benskydd — mycket saker, tätt. `[ej byggt i spelet ännu]`
+- **Namnskylt på varje boxfront** (tillagt 2026-11-26): ett vitt stående kort
+  med hästens namn i svart, och under det två–tre vita blad (scheman). Namnet
+  går att läsa på den närmaste boxen i
+  `drive-2026-11-26/IMG_0152-stall-boxgangar.jpg`; bladen under går inte att
+  läsa. Hjälmar hänger på några fronter, och **vita storsäckar** står i gången
+  (`IMG_0146`, `IMG_0147`).
 - Svarta reglar och handtag på boxdörrarna.
 
 ### Gångens ändar
@@ -342,6 +377,10 @@ inte alls ser ut som ett vanligt trästall.
   ovanför och en grön utrymningsskylt bredvid. `[ej byggt i spelet ännu]`
 - En vit, rundad form högt upp vid ena änden — troligen ventilationstrumma
   eller en vit gavelvägg bortom taket. `[REFERENCE GAP — inte fastställd]`
+  Tillägg 2026-11-26: `drive-2026-11-26/IMG_0146-stall-boxgangar.jpg` visar
+  **vita runda rör** som korsar gången i takhöjd och viker ner mot boxarna,
+  och gångens ände som en vit gavelvägg med grå port. Att formen ovan är just
+  de rören är troligt men inte fastställt.
 
 ### Vad som är byggt efter det här
 `v3dStall` i `src/varld3d.js`: sadeltaket i galvad plåt (ritat obelyst, för en

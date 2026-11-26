@@ -60,13 +60,13 @@ tröskeln sattes — de mätte tröskeln, inte panelen.
 | Korrugerad galvplåt som undertak | `VERIFIED` | i05 + i06 | båda |
 | Plåt `#70716E` | `MEASURED` | i05 `#6B6C68`, i06 `#767574` | `…stallgang.takplat` |
 | Takresning 2,1 m | `DERIVED` | flack sadel i bild, vinkel omätbar | `stall.takresning` |
+| Balkdelning var 4:e meter | `ASSUMPTION` | — | båda |
 
 > **Rättad rad (Batch 1.1, 2026-11-26).** Raden löd «Limträstomme, tvärbalkar +
 > snedstag + nockbalk». Samma bild som den hänvisade till, i05, visar lutande
 > sparrar och en lanternin i nocken, och det gör också de två nya bilderna.
 > Klassen `VERIFIED` står kvar för det bilderna visar; kolumnen «spelet» säger
 > nu att bygget avviker. Läsningen är min och inte bekräftad av produktägaren.
-| Balkdelning var 4:e meter | `ASSUMPTION` | — | båda |
 
 De två bildrutorna skiljer sig **mycket** på limträet — taket är belyst
 olika. Medelvärdet är det ärliga enskilda värdet; spridningen står här så
@@ -102,7 +102,8 @@ gul och för ljus. Rätt åtgärd var att mäta den, inte att ta bort den.
 | Tvärgång mitt i boxhallen | `MEASURED` | plan | båda |
 | Tvärväggar på 0,72–0,755 av längden | `MEASURED` | plan | `klubbY` |
 | Namngivna rum ur utrymningsplanen | `VERIFIED` | plan | båda, som låga volymer |
-| Rummens inredning | `[REFERENCE GAP]` | i01–i04, i07 finns men är inte omsatta | — |
+| Rummens inredning | inventerad 2026-11-26, inte omsatt | `drive-2026-11-26/`, 28 bilder — se «Klubb- och servicedelens rum» i `KORT.md`; i01–i04, i07 | — |
+| Rummens läge i planen (vilket rum som är vilket) | `[REFERENCE GAP]` | bilderna visar innehållet, inte läget | — |
 | Klockan i gångens bortre ände | `VERIFIED` | IMG_0160 + i05 | båda |
 
 ### 7. Hästgången till ridhuset
