@@ -1584,7 +1584,7 @@ do
 	for i = foreEftervard + 1, #passSync._skickat do
 		passSync.OnClientEvent:Fire(passSync._skickat[i][2])
 	end
-	check("panelen står i eftervården", PreparationController._rubrik() == "Ta hand om henne",
+	check("panelen står i eftervården", PreparationController._rubrik() == "Ta hand om hästen",
 		"rubrik: " .. PreparationController._rubrik())
 	check("och har moment att trycka på",
 		#PreparationController._synligaMoment() > 0,

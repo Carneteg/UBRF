@@ -15,7 +15,7 @@
 	         rubriken «Avancerat». På en ren pekyta finns ingen avancerad rad.
 	  3  S2  skötselpanelen visar EN handling per fas, och detaljmeningarna
 	         står i kunskapslagret — för varje handling i kedjan.
-	  4  S3  eftervården är ett VAL: «Stallet tar hand om henne» eller «Ta
+	  4  S3  eftervården är ett VAL: «Stallet tar hand om hästen» eller «Ta
 	         hand om henne själv». Själv ger en handling i taget, och stallet
 	         finns kvar som väg ut.
 
@@ -323,7 +323,7 @@ do
 	local s1 = PC._synligaMoment()
 	prova("efter avsittningen står EXAKT två val: stallet och själv",
 		#s1 == 2 and valet("efter:stallet") ~= nil and valet("efter:sjalv") ~= nil, table.concat(s1, ", "))
-	prova("de heter «Stallet tar hand om henne» och «Ta hand om henne själv»",
+	prova("de heter «Stallet tar hand om hästen» och «Ta hand om hästen själv»",
 		valet("efter:stallet").text == Sprak.t("eftervard.stallet")
 			and valet("efter:sjalv").text == Sprak.t("eftervard.sjalv"))
 	prova("stallet är det lyfta valet — ingen straffavgift för att rida först",

@@ -81,6 +81,6 @@ function humorText(hastId,humor){
   if(humor>0.78)return `${namn} möter dig i dörren. Hon är med dig idag.`;
   if(humor>0.60)return `${namn} är lugn och lyssnar.`;
   if(humor>0.42)return `${namn} är lite trög idag — du får be om det två gånger.`;
-  if(humor>0.25)return `${namn} är spänd. Ta det lugnt i början och vinn henne.`;
-  return `${namn} är inte med på noterna idag. Rid henne försiktigt.`;
+  if(humor>0.25)return `${namn} är spänd. Ta det lugnt i början och vinn hästens förtroende.`;
+  return `${namn} är inte med på noterna idag. Rid försiktigt.`;
 }

@@ -121,7 +121,7 @@ function efterHastRader(){
       ton:"bra", tal:pTecken(-dSp*100)});
   else if(dSp<-0.08)
     rad.push({txt:`Spänningen steg från ${kommatal(PASS.spanningFore)} till `
-      +`${kommatal(PASS.spanningSlut)}. Nästa gång: sakta ned innan hon hinner låsa sig.`,
+      +`${kommatal(PASS.spanningSlut)}. Nästa gång: sakta ned innan hästen hinner låsa sig.`,
       ton:"dalig", tal:pTecken(-dSp*100)});
   else
     rad.push({txt:`Spänningen låg still kring ${kommatal(PASS.spanningSlut)}.`, ton:"in"});
@@ -153,7 +153,7 @@ function efterHastRader(){
   const risker=(PASS.skotselRes&&PASS.skotselRes.risker)||[];
   if(risker.length)
     rad.push({txt:`Du lämnade ${risker.join(" och ").replaceAll("_"," ")} i morse. `
-      +`Det följer med henne till imorgon.`, ton:"dalig"});
+      +`Det följer med till imorgon.`, ton:"dalig"});
 
   return rad;
 }
@@ -164,7 +164,7 @@ function efterHastRader(){
 const VARFOR={
   sits:  "Du satt still. Mjukheten låg över 0,62 stora delar av passet.",
   hand:  "Tygeln låg i det mjuka bandet — varken slak eller hård.",
-  kansla:"Du fick ned hennes spänning medan du red. Det är timing.",
+  kansla:"Du fick ned hästens spänning medan du red. Det är timing.",
   skotsel:"Skötseln i morse höll måttet.",
 };
 function efterDuRader(){
@@ -255,7 +255,7 @@ function efterPassHTML(){
   let loftet=omd?`<p class="eLofte eRad" style="--i:${i++}">${omd}</p>`:"";
   if(L){
     const bitar=[];
-    bitar.push(`<b>${L.hamtningar}</b> gånger fick du hämta hem henne`
+    bitar.push(`<b>${L.hamtningar}</b> gånger fick du hämta hem hästen`
       +(L.tidUte>2?`, och ${Math.round(L.tidUte)} sekunder red du utanför tempobandet`:""));
     let txt=bitar.join("")+".";
     if(L.nyborjare&&L.nyborjare>L.hamtningar)
@@ -274,7 +274,7 @@ function efterPassHTML(){
   if(G.forberettPass)
     loftet+=`<p class="eLofte eRad" style="--i:${i++}">Idag hade ridläraren `
       +`gjort i ordning ${h.namn} åt dig. <b>Nästa gång gör du det själv</b> — `
-      +`visitera, rykta, kratsa och sadla. Det du gör där avgör hur hon går.</p>`;
+      +`visitera, rykta, kratsa och sadla. Det du gör där avgör hur hästen går.</p>`;
 
   return `<div class="efterPass" id="efterPass">
     <div class="eKol">

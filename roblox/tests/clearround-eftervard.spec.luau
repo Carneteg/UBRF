@@ -252,8 +252,8 @@ print("\n── 3. Resultatkortet: raden ur serverns bild ──")
 	Sprak.satVal("sv")
 	local t = A.text(bild(kanon), kontext)
 	--[[ #273 S3 (T1): raden lovar VALET, inte fem moment. ]]
-	local SV = "När ni är klara: sitt av. Sedan väljer du om stallet tar hand om henne eller om du gör det själv."
-	local EN = "When you are done: dismount. Then you choose whether the stable looks after her or you do it yourself."
+	local SV = "När ni är klara: sitt av. Sedan väljer du om stallet tar hand om hästen eller om du gör det själv."
+	local EN = "When you are done: dismount. Then you choose whether the stable looks after your horse or you do it yourself."
 	check("sv: raden säger valet — stallet eller själv", t ~= nil and string.find(t, SV, 1, true) ~= nil, t)
 	local gamla = false
 	for _, e in ipairs(Pass.EFTERVARD) do

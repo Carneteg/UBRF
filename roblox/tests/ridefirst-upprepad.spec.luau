@@ -9,7 +9,7 @@
 	hästen hon redan har. Bara `RAKNAT` släpper igenom.
 
 	Provet driver tjänsten genom hela livscykeln med de riktiga funktionerna:
-	«Rida nu» → uppsittning → avsittning → «Stallet tar hand om henne».
+	«Rida nu» → uppsittning → avsittning → «Stallet tar hand om hästen».
 
 	Kör: python3 roblox/tests/build.py tests/ridefirst-upprepad.spec.luau
 	     && luau roblox/tests/.build/ridefirst-upprepad.spec.luau
@@ -110,7 +110,7 @@ do
 	check("uppsittningen går igenom", (HorseService.tryMount(sp, modell)) == true)
 	check("avsittningen går igenom", HorseService.dismount(sp) == true)
 	local okE, skalE = GameplayService.eftervardStallet(sp)
-	check("«Stallet tar hand om henne» räknar passet", okE == true, tostring(skalE))
+	check("«Stallet tar hand om hästen» räknar passet", okE == true, tostring(skalE))
 	id1 = passId(sp)
 	check("passet är RÄKNAT", lage(sp) == Pass.LAGE.RAKNAT, tostring(lage(sp)))
 	check("och sparat exakt en gång", sparatPass(sp) == 1, tostring(sparatPass(sp)))
@@ -173,7 +173,7 @@ end
 print("\n── 4. Det andra passet räknas först när det genomförs ──")
 do
 	local okE, skalE = GameplayService.eftervardStallet(sp)
-	check("«Stallet tar hand om henne» räknar andra passet", okE == true, tostring(skalE))
+	check("«Stallet tar hand om hästen» räknar andra passet", okE == true, tostring(skalE))
 	check("andra passet RÄKNAT", lage(sp) == Pass.LAGE.RAKNAT and passId(sp) == id2)
 	check("sparat antal är nu två — vardera ritt räknad en gång", sparatPass(sp) == 2,
 		tostring(sparatPass(sp)))

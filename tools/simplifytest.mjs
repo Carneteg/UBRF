@@ -286,7 +286,7 @@ const efterKnappen = page => page.evaluate(() => {
     efter: G.efter, gamla: window.__gamla, vilar: hastVilarForSkada(G.hastId) };
 });
 
-console.log("\n── D. S3: «Stallet tar hand om henne» ──");
+console.log("\n── D. S3: «Stallet tar hand om hästen» ──");
 {
   const page = await sittUppNy();
   await bevakaGamla(page);
@@ -294,9 +294,9 @@ console.log("\n── D. S3: «Stallet tar hand om henne» ──");
   await page.keyboard.press("KeyE"); await vanta(page, 500);
   let o = await overlayLage(page);
   const sparat = () => page.evaluate(() => { try { return (JSON.parse(localStorage.getItem("ubrf-ridskolan-v1") || "{}").pass) || 0; } catch (_) { return -1; } });
-  prova("avsittningen öppnar valet «Ta hand om henne»", o.uppe && o.text.toLowerCase().includes("vill du ta hand om henne själv, eller ska stallet göra det?"), o.text.slice(0, 80).replace(/\n/g, " ¦ "));
-  prova("EXAKT två val: «Stallet tar hand om henne» och «Ta hand om henne själv»",
-    o.knappar.length === 2 && o.knappar[0] === "Stallet tar hand om henne" && o.knappar[1] === "Ta hand om henne själv",
+  prova("avsittningen öppnar valet «Ta hand om hästen»", o.uppe && o.text.toLowerCase().includes("vill du ta hand om hästen själv, eller ska stallet göra det?"), o.text.slice(0, 80).replace(/\n/g, " ¦ "));
+  prova("EXAKT två val: «Stallet tar hand om hästen» och «Ta hand om hästen själv»",
+    o.knappar.length === 2 && o.knappar[0] === "Stallet tar hand om hästen" && o.knappar[1] === "Ta hand om hästen själv",
     o.knappar.join(" | "));
   prova("inga av de fem eftervårdsmomenten står som obligatoriska steg",
     !/Lossa gjorden|Känn igenom benen|Grimma på först/.test(o.text));
@@ -312,7 +312,7 @@ console.log("\n── D. S3: «Stallet tar hand om henne» ──");
   prova("«Stallet» räknar passet — en gång, och det är sparat", efterVal.pass === fore.pass + 1 && efterVal.raknat
     && (await sparat()) === fore.pass + 1, JSON.stringify(efterVal));
   const rang0 = efterVal.passRang, rang1 = efterVal.rang;
-  prova("stallet: passet är klart, och det sägs", o.uppe && o.utfall === "Stallet tar hand om henne. Passet är klart."
+  prova("stallet: passet är klart, och det sägs", o.uppe && o.utfall === "Stallet tar hand om hästen. Passet är klart."
     && o.text.toLowerCase().includes("passet är klart och sparat"), o.utfall);
   prova("ingen straffavgift och ingen bonus: förtroendet är exakt det passet gav", rang1 === rang0 && efterVal.bonus === 0,
     `${rang0} → ${rang1}`);
@@ -335,7 +335,7 @@ console.log("\n── D. S3: «Stallet tar hand om henne» ──");
   await page.context().close();
 }
 
-console.log("\n── D2. S3: «Ta hand om henne själv» ──");
+console.log("\n── D2. S3: «Ta hand om hästen själv» ──");
 {
   const page = await sittUppNy();
   await bevakaGamla(page);
@@ -371,7 +371,7 @@ console.log("\n── D2. S3: «Ta hand om henne själv» ──");
   const rang0 = slut.passRang, rang1 = slut.rang;
   prova("när den egna eftervården är klar räknas passet — en gång", slut.pass === passFore + 1, String(slut.pass));
   prova("efter tredje handlingen: passet är klart, och hennes egen omsorg sägs",
-    o.utfall === "Du tog hand om henne själv. Det märker hon.", o.utfall);
+    o.utfall === "Du tog hand om hästen själv. Det märker hästen.", o.utfall);
   prova("liten positiv effekt: förtroendet +0,02 ovanpå det passet gav — inte mer",
     Math.abs((rang1 - rang0) - regel.bonus) < 1e-9 && regel.bonus === 0.02 && Math.abs(slut.bonus - 0.02) < 1e-9,
     `${rang0.toFixed(4)} → ${rang1.toFixed(4)}`);
@@ -410,8 +410,8 @@ console.log("\n── D3. S3: den som lämnar vid valet har inte avslutat passet
     ut.namn = EFTERVARD.flatMap(e => [e.namn, e.namnEn]);
     return ut; });
   prova("clear round-raden säger valet på svenska och engelska",
-    String(rad.sv).includes("Sedan väljer du om stallet tar hand om henne eller om du gör det själv.")
-      && String(rad.en).includes("Then you choose whether the stable looks after her or you do it yourself."), `${rad.sv} ¦ ${rad.en}`);
+    String(rad.sv).includes("Sedan väljer du om stallet tar hand om hästen eller om du gör det själv.")
+      && String(rad.en).includes("Then you choose whether the stable looks after your horse or you do it yourself."), `${rad.sv} ¦ ${rad.en}`);
   prova("…och räknar inte upp de fem momenten, på något språk",
     !rad.namn.some(n => String(rad.sv).includes(n) || String(rad.en).includes(n))
       && !/väntar|is waiting/.test(String(rad.sv) + String(rad.en)), rad.namn.join(" · "));
@@ -504,7 +504,7 @@ const tryckRad = async (page, id) => {
   const st = await p2.evaluate(() => ({ sett: G.forb.fyndSett, rapp: G.forb.fyndRapporterat, klar: !!G.forb.klara.visitera,
     plats: G.hastPlats, scen: G.scen,
     nasta: Forb.utforHandling(G.forb, "rykta", G.hastId) }));
-  prova("«Rida nu» med ett fynd: kortet blir «Du hittade något» med tre svar", fyndPass > 0 && f.id === "fynd" && f.val.length === 3,
+  prova("«Rida nu» med ett fynd: kortet blir «Stallet hittade något» med tre svar", fyndPass > 0 && f.id === "fynd" && f.val.length === 3,
     `${f.id} · ${f.val.map(v => v.text).join(" / ")}`);
   /* Stallet SÅG fyndet men rapporterade det inte: beslutet är spelarens. Hon
      flyttas inte, och det står varken en kvittens eller ett nej på kortet. */

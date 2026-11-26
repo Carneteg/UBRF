@@ -208,7 +208,7 @@ const klick = (page, borjar) => page.evaluate(t => {
   await klick(page, "Tillbaka"); await vanta(page, 120);
   await klick(page, "Raka linjer"); await vanta(page, 120);
   prova("Raka linjer: mittlinjen, diagonalen, bom på marken, Tillbaka",
-    lika((await panel(page)).knappar, ["Mittlinjen", "Diagonalen", "Bom på marken", "Tillbaka"]), (await panel(page)).knappar.join(" | "));
+    lika((await panel(page)).knappar, ["Medellinjen", "Diagonalen", "Bom på marken", "Tillbaka"]), (await panel(page)).knappar.join(" | "));
   const port = await page.evaluate(() => Lektionsmeny.panel().knappar.map(k => k.text));
   prova("DOM:en visar exakt Roblox-portens knappar", JSON.stringify(port) === JSON.stringify((await panel(page)).knappar));
   await klick(page, "Tillbaka"); await vanta(page, 120); await klick(page, "Tillbaka"); await vanta(page, 120);

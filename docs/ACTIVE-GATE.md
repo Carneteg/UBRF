@@ -306,6 +306,37 @@ deras beslutsspärrar är auktoritativa för det här arbetet.
   - **Visuellt:** varje innebild ändras (molnen är borta). Skärmdumps-
     paketet behöver ses om medvetet.
   `JEV_DECISION: JEV_NOT_NEEDED`.
+- Levererat: **Batch 0.10** — E1 (ordval och pronomen). Texterna ligger i
+  den delade språkkatalogen `src/spel/sprak.js`; `roblox/game/UBRFSprak.luau`
+  och `UBRFSkotsel.luau` är omgenererade ur den (`tools/exportera-spel.js`),
+  så båda plattformarna har samma ord i samma commit.
+  - **Ordval:** «mittlinjen» → «medellinjen» (17 rader), «ett halt» →
+    «en halt» (3 rader).
+  - **Pronomen:** 63 katalograder kallade en ospecificerad häst «hon» —
+    alltså även varje valack. De säger nu «hästen» / «din häst» (en:
+    «your horse»). Texter om en NAMNGIVEN häst behåller mekanismen som
+    redan fanns (`harledPronomen`, `hastPron`): han/hon ur hästens egen
+    beskrivning, namnet när källan saknas. Samma genomgång i webbens egna
+    rader (`humor.js`, `efter.js`, `moment.js`, `intro.js`, `scenes.js`,
+    `sysslor.js`, 22 rader).
+  - **Kvarlevor från före 2026-10-04:** «Du hittade något» → «Stallet
+    hittade något» (stallet gör visitationen), «Lös det själv och sadla» →
+    «…och rid ändå», och hästbytets «börja om med boxen, sadeln och
+    skötseln» → «stallet gör den nya hästen redo».
+  - **Spärr:** `tools/sprakgrind.mjs` steg 7 nekar «mittlinje», «ett halt»
+    och könat pronomen i katalogens strängar på båda språken. Ingen
+    undantagslista behövdes. Falsifierad: `--muter-ordval` blir röd.
+  - **Prov som uppdaterats:** sju prov citerade de gamla lydelserna
+    ordagrant (fem Luau-specar, `simplifytest`, `stegkorttest`,
+    `ridpaneltest`). Citaten är bytta till de nya texterna; inga krav är
+    ändrade. `roblox/tests/kor.sh` grön lokalt (luau hämtad som i CI).
+  - **INTE gjort, kräver beslut:** gruppnamnet «Ledlektion» och ordlistan
+    bakom «?»-knappen (ny yta på båda plattformarna, innehåll att
+    godkänna).
+  **Beslutsspärr (acceptans, inte bygg):** Tobias granskar ordvalen. De är
+  ett förslag, skrivna i egna meningar — särskilt valet att säga «hästen»
+  i stället för att lägga in hästens namn i varje rad.
+  `JEV_DECISION: JEV_NOT_NEEDED`.
 - **A2 (kantutjämning) uppskjuten, inte löst i 0.1:** en FXAA-shader
   provades i post-kompositeringen men orsakade en mätbar, reproducerbar
   CI-regression i `tools/lektion-e2e-test.mjs` (headless, mjukvaru-
