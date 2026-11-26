@@ -152,7 +152,38 @@ Avstånd mellan huvarna: **~3,5 m**, alltså en per box.
 | Långsida V (mot gården) | **liggande träpanel** | **(80, 35, 47)** "mörk falurött" | **Rad av valvbågade, flerrutiga fönster med vit karm, ett per box (~3,5 m)** | förstukvistens ockragula dörr | Vita knutbrädor, vit foder runt varje fönster, ljusgrå betongsockel |
 | Gavel N (klubbgaveln mot grusplanen, den höga, närmast förstukvisten) | samma | samma | 2 valvfönster högt, 2 lägre | **vit dörr till en liten balkong**; **klubbdörr i marknivå** `[enligt Tobias]` — se noten nedan | **Svart spiraltrappa** upp till balkongen; **rund gul lampa** bredvid dörren; vit knut i båda hörnen |
 | Gavel S (mot gårdsplanen från Husbyvägen) | samma (Street View) | samma | valvfönster i två plan | **två entrédörrar under vita spetsiga skärmtak** | **rak ståltrappa** med avsats upp till en dörr i övervåningen `[läst ur Street View på avstånd]` |
-| Långsida Ö | `[saknas foto]` | | | | |
+| **Långsida Ö (mot hagarna)** | liggande träpanel, som västra sidan | samma mörka falurött | **rad av valvbågade, flerrutiga fönster med vit karm**, gallrade — minst sex syns till höger om utbyggnaden; ovanför dem ett **sammanhängande lågt fönsterband direkt under takfoten** | **hög grå pardörr av plank med vit karm**, i gaveln på en lägre utbyggnad | **Utbyggnad med eget sadeltak** vinkelrätt ut från långsidan: röd panel, vita knutar och vita vindskivor, ett litet valvfönster på sidoväggen. Svarta stuprör. Hagstaket och körväg direkt utanför. Se noten nedan |
+
+> **Östra långsidan — fylld 2026-11-26 (Batch 1.1).** Raden var `[saknas foto]`
+> och sidan byggdes som en spegling av den västra. Foton som migrerades samma
+> dag visar den på nära håll:
+>
+> | Foto | Visar |
+> |---|---|
+> | `drive-2026-11-26/IMG_0298-stall-exterior.jpg` | Utbyggnaden med den grå pardörren, från körvägen mellan hagarna |
+> | `drive-2026-11-26/IMG_0299-stall-exterior.jpg` | Långväggen till höger om utbyggnaden: fönsterrad, tak, huvar |
+> | `drive-2026-11-26/IMG_0295-…`, `IMG_0296-stall-exterior.jpg` | Innerhörnet mellan långvägg och utbyggnad: fönsterbandet under takfoten på nära håll |
+> | `drive-2026-11-26/IMG_0290-stall-exterior.jpg` | Tak med huvar och fönsterband, bakom pallar med strö |
+> | `drive-2026-11-26/IMG_0291-…` till `IMG_0294-stall-exterior.jpg` | Utbyggnadens sidor och gavel |
+>
+> **Det som rättas:**
+>
+> 1. **Porten sitter i en utbyggnad, inte i långväggen.** Street View-läsningen
+>    under «Fotobrist» säger «en stor skjutport i blågrått ungefär mitt på
+>    längden». Närbilderna visar en **pardörr** i gaveln på en lägre, gavlad
+>    utbyggnad som skjuter ut från långsidan. Om dörren är skjutbar eller
+>    slagdörr går inte att avgöra; beslagen syns inte.
+> 2. **Fönsterbandet under takfoten** finns inte i kortet. Det löper ovanför
+>    valvfönstren längs den synliga delen av sidan.
+> 3. **Sidan är inte en spegling av den västra**: den har utbyggnaden och
+>    saknar förstukvisten.
+>
+> **Det som INTE går att avgöra** och förblir `[REFERENCE GAP]`: var längs
+> husets längd utbyggnaden sitter, dess mått, och fönstrens totala antal. Att
+> sidan är den östra följer av hagarna i förgrunden och `SITEPLAN.md`
+> `[antagande]`. Slutsatsen under «Placering» att östra porten bryter
+> boxraden mitt på längden vilar på Street View-läsningen och bör prövas om
+> när utbyggnadens läge är känt. *Koden är inte ändrad i den här batchen.*
 
 ### Stallet har TVÅ ytterdörrar i norra änden — och de bytte plats 2026-09-02
 
@@ -318,6 +349,17 @@ takundersida som bara får ambient blev nästan svart medan filmen visar den
 jämnt upplyst av armaturerna), de röda tvärbalkarna med snedstag och nockbalk,
 dragstagen, takfönstren, pendelarmaturerna, och golvets två material.
 
+> **Rättelse 2026-11-26 (Batch 1.1): taket bärs inte av tvärbalkar med
+> snedstag.** `stall-inne-05-stallgangen.jpg` och de nya
+> `drive-2026-11-26/IMG_0146-stall-boxgangar.jpg` och
+> `IMG_0159-stall-boxgangar.jpg` visar **lutande limträsparrar som följer
+> takfallet**, med korrugerad plåt emellan och en **lanternin längs nocken**
+> som släpper in dagsljus. Inga vågräta tvärbalkar och inga snedstag syns i
+> någon av de tre bilderna. De galvade bågarna över gången är rör till boxarnas
+> vatten, inte stomme. Det som byggdes ovan («tvärbalkarna med snedstag och
+> nockbalk, dragstagen») stämmer alltså inte med bilderna — en avvikelse att
+> rätta i Batch 1.6. *Koden är inte ändrad i den här batchen.*
+
 Kvar mot filmen: sakerna som hänger på boxfronterna, och porten med klockan i
 fonden.
 
@@ -387,8 +429,9 @@ fonden.
 - fodersilon vid södra gaveln
 - trästaketade hagar direkt utanför, och sandbanan bortom dem
 
-1. **Östra långsidan på nära håll** — fönstrens antal och portens mått är lästa ur
-   en Street View-bild på avstånd, inte mätta. `[antagande]`
+1. **Östra långsidan på nära håll** — **delvis löst 2026-11-26**, se noten under
+   Fasader. Kvar: en vy som visar hela sidans längd, så att utbyggnadens läge
+   och fönstrens antal går att fastställa.
 2. **Södra gaveln på nära håll** — läst ur Street View på avstånd; portarnas
    och trappans mått är uppskattade. Där ligger servicedelen enligt `STALLINNE`.
 3. **Takytan uppifrån**, för att räkna huvarna och se hela nocken.
@@ -413,8 +456,10 @@ Det som rättades mellan omgångarna:
 4. Runda fönster ritades som tolvhörningar och var för stora.
 
 - Medvetna avvikelser från verkligheten:
-  - Östra långsidan har inget fotounderlag och byggs som spegling av den
-    västra: samma fönsterrytm, ingen förstukvist. `[antagande]`
+  - Östra långsidan byggs som spegling av den västra: samma fönsterrytm,
+    ingen förstukvist. Sedan 2026-11-26 finns fotounderlag som visar att det
+    inte stämmer (utbyggnad med pardörr, fönsterband under takfoten) — se
+    noten under Fasader. Avvikelsen är känd och inte rättad i koden.
   - Södra gavelns dörr- och trappmått är lästa ur Street View på avstånd. `[antagande]`
   - Längden 54 m är inte mätt, se Volym.
   - Entrén låg tidigare på södra gaveln i spelet. Fotona visar den på

@@ -55,11 +55,17 @@ tröskeln sattes — de mätte tröskeln, inte panelen.
 
 | fakta | klass | källa | spelet |
 |---|---|---|---|
-| Limträstomme, tvärbalkar + snedstag + nockbalk | `VERIFIED` | i05 + i06 | båda |
+| Limträstomme: **lutande sparrar som följer takfallet**, lanternin längs nocken. Inga vågräta tvärbalkar och inga snedstag — rättad läsning 2026-11-26, se noten under tabellen | `VERIFIED` | i05 + `drive-2026-11-26/IMG_0146`, `IMG_0159` | **avviker** — spelet bygger tvärbalkar med snedstag |
 | Limträ `#AD8A70` | `MEASURED`, spridning ±0,15 | i05 `#987B65`, i06 `#C2987B` | `…stallgang.limtra` |
 | Korrugerad galvplåt som undertak | `VERIFIED` | i05 + i06 | båda |
 | Plåt `#70716E` | `MEASURED` | i05 `#6B6C68`, i06 `#767574` | `…stallgang.takplat` |
 | Takresning 2,1 m | `DERIVED` | flack sadel i bild, vinkel omätbar | `stall.takresning` |
+
+> **Rättad rad (Batch 1.1, 2026-11-26).** Raden löd «Limträstomme, tvärbalkar +
+> snedstag + nockbalk». Samma bild som den hänvisade till, i05, visar lutande
+> sparrar och en lanternin i nocken, och det gör också de två nya bilderna.
+> Klassen `VERIFIED` står kvar för det bilderna visar; kolumnen «spelet» säger
+> nu att bygget avviker. Läsningen är min och inte bekräftad av produktägaren.
 | Balkdelning var 4:e meter | `ASSUMPTION` | — | båda |
 
 De två bildrutorna skiljer sig **mycket** på limträet — taket är belyst

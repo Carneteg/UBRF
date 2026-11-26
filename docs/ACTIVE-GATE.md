@@ -465,6 +465,36 @@ deras beslutsspärrar är auktoritativa för det här arbetet.
   - **Inte verifierat:** bildernas innehållsbeskrivningar («visar:») är
     maskinlästa och på engelska; byggnad och zon är min läsning av bilden.
   `JEV_DECISION: JEV_NOT_NEEDED`.
+- Levererat: **Batch 1.1** (delvis) — byggnadskorten rättade mot foton som
+  migrerades i Batch 0.13. Bara det bilderna belägger; **ingen kod är
+  ändrad**, och varje ställe där bygget nu avviker från kortet är utskrivet.
+  - **Ridhuskortet:** fasadraderna «Långsida N/S, Gavel Ö» (alla
+    `[saknas foto]`, med väderstreck som inte stämde med SITEPLAN) är
+    ersatta. Långsidan mot grusvägen är fylld ur fem närbilder. Tre
+    uppgifter rättas: den svarta listen går **inte** runt huset; dörrarna
+    under entrétaket är svarta, inte vita; raden höga fönster sitter på
+    gårdssidan, inte på skyltsidan. **Takfoten är mätt till 5,5 m
+    (5,2–5,9)** mot en dörr i samma väggplan — byggt värde är 6,2 m.
+  - **Stallkortet:** östra långsidan var `[saknas foto]` och byggd som
+    spegling av den västra. Tio närbilder visar en gavlad utbyggnad med hög
+    grå pardörr och ett fönsterband under takfoten. Utbyggnadens läge
+    längs huset förblir `[REFERENCE GAP]`.
+  - **Stallets INTERIOR-MATRIS, taket:** raden «tvärbalkar + snedstag +
+    nockbalk» är rättad. Tre bilder (varav den raden själv hänvisade till)
+    visar lutande limträsparrar och en lanternin i nocken.
+  - **SITEPLAN:** underlagstabellens rader för de berörda fasaderna.
+  - **Avvikelser mot bygget som korten nu säger ut** (att rätta i 1.6, 3.3
+    och 3.4, inte här): svart list runt hela ridhuset, tvärbalkar i
+    stalltaket, speglad östfasad på stallet, takfot 6,2 m.
+  - **Inte gjort:** bokstaven H:s bild i ridhuset (ingen av de migrerade
+    bilderna visar skylten läsbart), ridhusets INTERIOR-MATRIS, stallets
+    södra gavel (underlaget är filmer, som är `[DRIVE-ONLY]`), och
+    interiörerna i klubbdelarna. Alla 92 bilder är sedda på kontaktkartor;
+    15 är öppnade var för sig för korten.
+  - **Min läsning, inte bekräftad:** att «hagsidan» är den östra följer av
+    SITEPLAN; mätningen av takfoten vilar på ett antaget dörrblad på 2,05 m.
+  Kontroller: `kolla-nyckelbilder.py`, `kolla-dorrfarg.py`,
+  `kolla-referenser.py` gröna. `JEV_DECISION: JEV_NOT_NEEDED`.
 - **A2 (kantutjämning) uppskjuten, inte löst i 0.1:** en FXAA-shader
   provades i post-kompositeringen men orsakade en mätbar, reproducerbar
   CI-regression i `tools/lektion-e2e-test.mjs` (headless, mjukvaru-
