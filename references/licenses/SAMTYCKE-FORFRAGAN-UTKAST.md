@@ -117,7 +117,7 @@ inte kan börja; «väntar delvis» att en gren av den avgörs av svaret.
 | 4. Klubbmärket | delvis | 3.4 (ridhusets exteriör), och märket som ren fil |
 | 5. Hästarna | helt | 4.1 (session 9 och referenser per häst), som i sin tur matar 4.2, 4.3 och underlaget till 4.5 |
 | 6. Ljud | helt | 6.6 (inspelningssessionen) och 6.7 (ljudbilden) |
-| Löftet om personer och skyltar | — | Batch 0.13: 51 foton där en person eller en registreringsskylt syns, och alla 24 filmer, ligger kvar som `[DRIVE-ONLY]` och används inte som texturkälla |
+| Löftet om personer och skyltar | — | Batch 0.13: 26 foton där en person, en registreringsskylt eller läsbara personnamn syns, och alla 24 filmer, ligger kvar som `[DRIVE-ONLY]` och används inte som texturkälla. 32 foton med en person eller en skylt låg redan i repot före batchen (se `references/DRIVE-SOURCE-INDEX.md`); om de ska ligga kvar avgörs av samma svar |
 
 ## Vad det här utkastet inte är
 

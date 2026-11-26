@@ -89,6 +89,7 @@ INVENTARIE = [
     ('grindar', 'tools/ljudtakttest.mjs', ['node tools/ljudtakttest.mjs']),
     ('grindar', 'tools/pre-tobias-grind.py', ['python3 tools/pre-tobias-grind.py']),
     ('grindar', 'references/CHECKSUMS.sha256', ['cd references && sha256sum -c --quiet CHECKSUMS.sha256']),
+    ('grindar', 'tools/kolla-referenser.py', ['python3 tools/kolla-referenser.py']),
     ('grindar', 'tools/build.py', ['python3 tools/build.py']),
     ('grindar', 'tools/testa-hastkanon-save.mjs', ['node tools/testa-hastkanon-save.mjs']),
     ('grindar', 'tools/studio-paket.py', ['python3 tools/studio-paket.py']),

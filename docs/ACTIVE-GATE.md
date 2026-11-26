@@ -423,6 +423,48 @@ deras beslutsspärrar är auktoritativa för det här arbetet.
   hur spelet sprids, betalning/reklam, privatägda hästar, kontaktväg).
   Inget i spelet eller referensbiblioteket är ändrat i väntan på svaret.
   `JEV_DECISION: JEV_NOT_NEEDED`.
+- Levererat: **Batch 0.13** — G1 (Drive-materialet in i
+  referensbiblioteket), den del som inte kräver samtycke.
+  - **Manifest för allt:** `references/DRIVE-MANIFEST-2026-11-26.tsv` har en
+    rad per fil i Drive-mappen — 211 foton, 24 filmer, 64 övriga — med
+    Drive-id, sha256 för originalet, byggnad och zon, om personer,
+    registreringsskyltar eller läsbara personnamn syns, status och
+    repo-filens sökväg och sha256.
+  - **92 foton migrerade** som JPEG-derivat (2048 px, kvalitet 85,
+    EXIF/XMP borttagna, 52,6 MB) till `buildings/ridhus/drive-2026-11-26/`
+    (26), `buildings/stall/drive-2026-11-26/` (60) och
+    `omnejd/drive-2026-11-26/` (6). 93 foton låg redan i repot. 185 av 211
+    har därmed en repo-motsvarighet.
+  - **26 foton och alla 24 filmer är kvar som `[DRIVE-ONLY]`** tills
+    samtycket finns: 10 foton med en person, 11 med registreringsskylt, 5
+    med läsbara personnamn.
+  - **Granskat för hand:** alla 92 på kontaktkartor, med utsnitt i full
+    upplösning av bilar, whiteboard, boxskyltar och anslag. Fem bilder som
+    maskinläsningen släppt igenom hölls tillbaka — whiteboarden i
+    teorisalen bär ett lägerschema med förnamn, och ett anslag en
+    kontaktlista. Gränsen: varje skylt och papper är inte läst i full
+    upplösning.
+  - **Ny grind:** `tools/kolla-referenser.py` (i CI). `CHECKSUMS.sha256`
+    hänvisade till verktyget utan att det fanns, och åtta bilder under
+    `references/omnejd/` stod aldrig i listan; den täcker nu alla 432
+    mediafiler. Grinden faller också om en `IN_REPO`-rad pekar fel, om ett
+    foto med person, skylt eller namn fått ett derivat, eller om ett
+    derivat bär EXIF. Falsifierad med sex manipulerade kopior.
+  - **Supabase:** raderna står som förslag i
+    `references/manifest/reference_assets-2026-11-26.sql`. **Inte körd**,
+    och med avsikt utanför `supabase/migrations/`.
+  - **Ingenting är ändrat i Drive.**
+  - **Avvikelser mot arbetsordern:** planen sade 12 felsorterade foton;
+    med definitionen «Drive-mappen säger en byggnad, bilden visar en annan»
+    är de sex. Planen räknade med upp till ~100 migrerade bilder; det blev
+    92. `Ridhuset/IMG_0098.HEIC` gick inte att hämta som original men
+    finns redan i repot.
+  - **Noterat, inte ändrat:** 28 av de tidigare migrerade bilderna visar en
+    person och 4 en registreringsskylt; `stall-inne-07-spolspiltan.jpg`
+    ligger upp och ner. Båda står i `references/DRIVE-SOURCE-INDEX.md`.
+  - **Inte verifierat:** bildernas innehållsbeskrivningar («visar:») är
+    maskinlästa och på engelska; byggnad och zon är min läsning av bilden.
+  `JEV_DECISION: JEV_NOT_NEEDED`.
 - **A2 (kantutjämning) uppskjuten, inte löst i 0.1:** en FXAA-shader
   provades i post-kompositeringen men orsakade en mätbar, reproducerbar
   CI-regression i `tools/lektion-e2e-test.mjs` (headless, mjukvaru-

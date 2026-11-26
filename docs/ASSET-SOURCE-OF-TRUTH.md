@@ -66,7 +66,37 @@ Det betyder:
 - Ingen plattform får driva spelets design i en riktning som gör den andra onödigt omöjlig att hålla spelbar.
 - Plattformsspecifik rendering/input får skilja sig, men kärnloopen, lärandet, hästlogiken och UBRF-världen ska motsvara varandra.
 
-## Nuvarande Drive-inventering 2026-08-29
+## Drive-inventering 2026-11-26 (gäller)
+
+Hela Drive-mappen `UBRF` är inventerad rad för rad i
+`references/DRIVE-MANIFEST-2026-11-26.tsv`; sammanfattningen och hur manifestet
+ska läsas står i `references/DRIVE-SOURCE-INDEX.md`.
+
+- **185 av 211 foton har en motsvarighet i repot** (93 sedan tidigare, 92
+  migrerade 2026-11-26 som JPEG-derivat utan EXIF).
+- **26 foton är `[DRIVE-ONLY]`**: en person, en registreringsskylt eller
+  läsbara personnamn syns. De får inte användas som texturkälla eller läggas
+  i repot förrän samtycket finns (`references/licenses/SAMTYCKE-FORFRAGAN-UTKAST.md`).
+- **Alla 24 filmer är `[DRIVE-ONLY]`** som originalfiler; 16 av dem har
+  nyckelrutor under `references/video/`.
+- **`1.pdf` är `[DRIVE-ONLY]` och förblir det**: häftet är upphovsrättsskyddat
+  och förbjuder kopiering. Den verifierade sammanfattningen är
+  `references/education/srf-ridning-lektionshandledning.md`.
+- `Models/` innehåller Quaternius CC0-testmodeller: tolv modeller i fyra format
+  (Blender, FBX, OBJ med MTL, glTF), en förhandsbild, en förhandsfilm och licenstexten;
+  licensen ligger i `references/licenses/quaternius-cc0.txt`. Modellen är inte
+  migrerad och är inget build-beroende.
+
+Raderna till Supabase `public.reference_assets` är skrivna som ett förslag i
+`references/manifest/reference_assets-2026-11-26.sql`. **Filen är inte körd**;
+den ligger med avsikt utanför `supabase/migrations/`.
+
+`python3 tools/kolla-referenser.py` (i CI) faller om en `IN_REPO`-rad pekar på
+en fil som saknas eller har fel kontrollsumma, om ett foto med person, skylt
+eller läsbara namn har fått ett derivat, eller om en mediafil under
+`references/` saknas i `references/CHECKSUMS.sha256`.
+
+## Drive-inventering 2026-08-29 (historisk, ersatt av den ovan)
 
 Drive-mappen `UBRF` innehåller vid senaste inventeringen:
 

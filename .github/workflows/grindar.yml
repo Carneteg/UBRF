@@ -211,6 +211,12 @@ jobs:
           test -f references/CHECKSUMS.sha256 || { echo "OBLIGATORISK KONTROLL SAKNAS: references/CHECKSUMS.sha256 (steget 'Referenschecksummor')" >&2; exit 1; }
           cd references && sha256sum -c --quiet CHECKSUMS.sha256
 
+      - name: Referenserna och Drive-manifestet stämmer med filerna (Batch 0.13)
+        run: |
+          set -euo pipefail
+          test -f tools/kolla-referenser.py || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/kolla-referenser.py (steget 'Referenserna och Drive-manifestet stämmer med filerna (Batch 0.13)')" >&2; exit 1; }
+          python3 tools/kolla-referenser.py
+
       - name: Webbygget
         run: |
           set -euo pipefail
