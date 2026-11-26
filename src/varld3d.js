@@ -1569,11 +1569,42 @@ function v3dStall(lagg,opp){
     Math.round(parseInt(h.substr(i,2),16)/LYFT).toString(16).padStart(2,"0")).join("");
   const RESN=S.takresning, NOCK=S.tak+RESN, halvB=S.bredd/2;
   const takL=Math.hypot(halvB,RESN), takV=Math.atan2(RESN,halvB);
+  /* ── BATCH 1.6: TAKET EFTER KORTET, BAKOM STRÖMBRYTAREN ───────────
+     Kortet (references/buildings/stall/KORT.md, rättat 2026-11-26) säger:
+     lutande limträsparrar som följer takfallet och en lanternin längs
+     nocken. Inga vågräta tvärbalkar, ingen nockbalk, inga takfönster i
+     fallet. Det som byggs nedan utan brytaren är den gamla läsningen.
+
+     Med `?realism=1` byggs taket efter kortet. UTAN brytaren görs exakt
+     samma anrop i samma ordning som förut — tools/stalltaktest.mjs läser
+     varje låda som byggs och jämför. Roblox bygger samma gamla stomme
+     (Anlaggningen.luau) och rättas INTE här; med brytaren av ser
+     plattformarna likadana ut. När brytaren blir standard ska Roblox
+     följa med i samma leverans.
+
+     LANT.halv är lanterninens halva bredd och LANT.glas glasets höjd.
+     Båda är lästa ur stall-inne-05 och drive-2026-11-26/IMG_0146 och
+     IMG_0159 på ögonmått: lanterninen är smal mot takets bredd och låg.
+     [antagande] — ingen bild ger ett mått. */
+  const REALTAK=(typeof REALISM!=="undefined")&&REALISM.pa;
+  const LANT={halv:0.8, glas:0.45};
+  /* Takfallet från takfoten upp till lanterninens kant. */
+  const lantX=halvB-LANT.halv, lantY=RESN*lantX/halvB, fallL=Math.hypot(lantX,lantY);
   const tak=new Bygge();
+  if(!REALTAK){
   for(const sida of [-1,1])                         // takfallen i galvad plåt
     tak.lada(takL,0.14,S.langd+0.5,damp(SG.takplat),
       M4.mul(M4.translation(vx+sida*halvB/2,S.tak+RESN/2,S.langd/2),
              M4.rotZ(-sida*takV)));
+  }else{
+    for(const sida of [-1,1])                       // takfallen slutar vid lanterninen
+      tak.lada(fallL,0.14,S.langd+0.5,damp(SG.takplat),
+        M4.mul(M4.translation(vx+sida*(halvB+LANT.halv)/2,S.tak+lantY/2,S.langd/2),
+               M4.rotZ(-sida*takV)));
+    /* Lanterninens eget lilla tak, över öppningen. */
+    tak.lada(2*LANT.halv+0.5,0.10,S.langd+0.5,damp(SG.takplat),
+      M4.translation(vx,S.tak+lantY+LANT.glas+0.05,S.langd/2));
+  }
   /* Undersidan av ett tak får bara ambient och blev nästan svart, fast
      filmen visar ljus galvplåt hela vägen upp i nocken — armaturerna
      lyser den jämnt. Den ritas därför obelyst, med sin egen ton. */
@@ -1581,14 +1612,32 @@ function v3dStall(lagg,opp){
   const stomme=new Bygge();
   for(let z=2;z<S.langd;z+=4){
     /* Tvärbalken i tegelrött, precis under takfoten. */
-    stomme.lada(S.bredd,0.26,0.22,damp(SG.limtra),M4.translation(vx,S.tak-0.13,z));
+    if(!REALTAK)stomme.lada(S.bredd,0.26,0.22,damp(SG.limtra),M4.translation(vx,S.tak-0.13,z));
     /* Nockbalken och snedstagen upp mot nocken. */
-    for(const sida of [-1,1])
+    if(!REALTAK)for(const sida of [-1,1])
       stomme.lada(takL*0.9,0.16,0.14,damp(SG.limtra),
         M4.mul(M4.translation(vx+sida*halvB*0.45,S.tak+RESN*0.45,z),
                M4.rotZ(-sida*takV)));
   }
-  stomme.lada(0.20,0.24,S.langd,damp(SG.limtra),M4.translation(vx,NOCK-0.2,S.langd/2));
+  if(!REALTAK)stomme.lada(0.20,0.24,S.langd,damp(SG.limtra),M4.translation(vx,NOCK-0.2,S.langd/2));
+  if(REALTAK){
+    /* Sparrarna: limträ som följer takfallet från takfot till lanternin,
+       hängande under plåten. Delningen är en per boxmodul — bilderna
+       visar ungefär en sparre per box, men ingen av dem är tagen så att
+       det går att räkna säkert. [antagande] Tvärsnittet 0,14 × 0,42 m är
+       läst på ögonmått mot boxfronternas stolpar. [antagande] */
+    const SPARR={b:0.14, h:0.42};
+    for(let z=S.boxB/2;z<S.langd;z+=S.boxB)
+      for(const sida of [-1,1])
+        stomme.lada(fallL,SPARR.h,SPARR.b,damp(SG.limtra),
+          M4.mul(M4.translation(vx+sida*(halvB+LANT.halv)/2,
+                   S.tak+lantY/2-(0.07+SPARR.h/2)/Math.cos(takV),z),
+                 M4.rotZ(-sida*takV)));
+    /* Lanterninens sarg: en limträbalk längs vardera kanten av öppningen. */
+    for(const sida of [-1,1])
+      stomme.lada(0.14,0.30,S.langd,damp(SG.limtra),
+        M4.translation(vx+sida*LANT.halv,S.tak+lantY-0.10,S.langd/2));
+  }
   /* Balkarna ritas OBELYSTA, av samma skäl som plåten intill dem. Mätning:
      med belysning renderades de #6A472B mot fotots #C39575 — belysningen tar
      ner den här ytan till ungefär halva värdet, och råvaran skulle behöva
@@ -1623,9 +1672,19 @@ function v3dStall(lagg,opp){
   lagg(galv,null);
   /* Takfönstren i västra takfallet — ljuset som gör gången läsbar. */
   const lykt=new Bygge();
+  if(!REALTAK)
   for(let z=5;z<S.langd-3;z+=4.5)
     lykt.lada(1.5,0.10,0.85,"#F8F5E8",
       M4.mul(M4.translation(vx-halvB*0.52,S.tak+RESN*0.52,z),M4.rotZ(takV)));
+  if(REALTAK){
+    /* Lanterninens glas: två stående ljusa band längs nocken. De ritas
+       obelysta, som plåten — det är dagsljuset man ser, inte en yta. */
+    const glas=new Bygge();
+    for(const sida of [-1,1])
+      glas.lada(0.06,LANT.glas,S.langd-1,"#F8F5E8",
+        M4.translation(vx+sida*LANT.halv,S.tak+lantY+LANT.glas/2,S.langd/2));
+    S3.statiskt.push({nat:GL.nat(glas), platt:true});
+  }
   /* Runda pendelarmaturer i rad över vardera boxraden — bara i boxhallen:
      klubbdelen norr om den genomgående väggen har platt innertak med
      infälld rund armatur (stall-inne-01), inga pendlar. */

@@ -473,6 +473,12 @@ jobs:
           test -f tools/bildmataretest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/bildmataretest.mjs (steget 'Strömbrytaren och bildrutemätaren ändrar ingenting (Batch 1.2)')" >&2; exit 1; }
           node tools/bildmataretest.mjs
 
+      - name: Stallgångens tak bakom strömbrytaren (Batch 1.6)
+        run: |
+          set -euo pipefail
+          test -f tools/stalltaktest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/stalltaktest.mjs (steget 'Stallgångens tak bakom strömbrytaren (Batch 1.6)')" >&2; exit 1; }
+          node tools/stalltaktest.mjs
+
       - name: P3 — kameran efter en flytt (Kimi Q4)
         run: |
           set -euo pipefail

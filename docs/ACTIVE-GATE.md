@@ -545,6 +545,39 @@ deras beslutsspärrar är auktoritativa för det här arbetet.
   - En bruten tabell i stallets matris (min egen rättelse i förra halvan
     hade hamnat mitt i tabellen) är lagad.
   `JEV_DECISION: JEV_NOT_NEEDED`.
+- Levererat: **Batch 1.6 (webb, bakom strömbrytaren)** — stallgångens tak
+  efter kortet. **Standardutseendet är orört.**
+  - **Med `?realism=1`:** lutande limträsparrar som följer takfallet, en
+    lanternin längs nocken med två ljusa glasband, takskivor som slutar vid
+    lanterninen. Inga vågräta tvärbalkar, ingen nockbalk, inga takfönster
+    i fallet. Allt i `v3dStall`, `src/varld3d.js`.
+  - **Utan brytaren:** exakt samma bygganrop i samma ordning som förut.
+    Mätt: stallscenens fingeravtryck (alla 1 286 lådor och cylindrar, mått,
+    färg och läge) är `fb5652bdf25b3fac` både före och efter ändringen.
+  - **Prov:** `tools/stalltaktest.mjs` (nytt i CI) lyssnar på varje del som
+    byggs. Av-läget har den gamla stommen; på-läget har 20 sparrar per
+    takfall med 3,5 m delning, lutade 11,3° åt var sitt håll, och en
+    lanternin; allt under takfoten är detsamma i båda lägena.
+    Falsifierat: `--muter-lacka` (brytaren läcker in i standardvägen) och
+    `--muter-balk` (tvärbalkarna byggs ändå) blir röda.
+  - `tools/bildmataretest.mjs` krävde att ingen fil läste brytaren. Det
+    kravet är nu en uttrycklig lista med `src/varld3d.js`, och filen får
+    läsa den på en enda rad.
+  - **Bild:** `audits/bilder/stalltak-1.6-av-pa-foto.jpg` — av, på och
+    `stall-inne-05` sida vid sida från kamera STALL-GANG-A:s läge.
+  - **Tre tal är `[antagande]`:** sparrarnas delning (en per boxmodul),
+    deras tvärsnitt (0,14 × 0,42 m) och lanterninens mått (1,6 m bred,
+    0,45 m glas). Ingen bild ger ett mått.
+  - **Det jag ser i bilden och inte har löst:** sparrarna läser bredare och
+    ljusare än på fotot. Tonen är den mätta; delningen och tvärsnittet är
+    gissade. Samma iakttagelse står redan som öppen punkt 1 i stallets
+    `INTERIOR-MATRIS.md`.
+  - **Paritet:** Roblox bygger samma gamla stomme (`Anlaggningen.luau`)
+    och är **inte** rättad. Med brytaren av ser plattformarna likadana ut.
+    När brytaren blir standard ska Roblox rättas i samma leverans.
+  - **Inte gjort:** valvfönstren per box (planens andra halva av 1.6) —
+    ordern gällde taket.
+  `JEV_DECISION: JEV_NOT_NEEDED`.
 - **A2 (kantutjämning) uppskjuten, inte löst i 0.1:** en FXAA-shader
   provades i post-kompositeringen men orsakade en mätbar, reproducerbar
   CI-regression i `tools/lektion-e2e-test.mjs` (headless, mjukvaru-

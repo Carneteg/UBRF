@@ -6,9 +6,9 @@
    1. STRÖMBRYTAREN `?realism=1`. Allt i Fas 1 (bildtexturer, bakat
       ljus, linjär färg) ska gå att slå på och av, så att gammalt och
       nytt utseende kan jämföras sida vid sida från samma kamera. AV är
-      standard. I den här batchen läser ingenting brytaren utom mätaren
-      nedan — rörledningen är tom, och tools/bildmataretest.mjs faller om
-      någon annan fil börjar läsa den utan att provet uppdateras.
+      standard. Vilka filer som läser brytaren står uppräknat i
+      tools/bildmataretest.mjs, och provet faller om någon annan börjar
+      läsa den. Först ut är stallgångens tak (Batch 1.6, src/varld3d.js).
 
    2. BILDRUTEMÄTAREN `?fps=1`. Varje prestandasiffra i planen är ett
       antagande tills den är mätt på Tobias egen iPad och iPhone. Mätaren

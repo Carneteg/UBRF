@@ -2,9 +2,9 @@
 
    Batchen ska INTE ändra något spelaren ser. Provet mäter just det:
 
-   1. Rörledningen är tom: ingen fil utom src/bildmatare.js läser
-      strömbrytaren, och spelloopen gör inget annat med mätaren än att ge
-      den bildrutans längd.
+   1. Bara de filer som står uppräknade i provet läser strömbrytaren
+      (i Batch 1.2 ingen alls; sedan 1.6 src/varld3d.js), och spelloopen
+      gör inget annat med mätaren än att ge den bildrutans längd.
    2. Mätarens räkning: bilder per sekund, sämsta rutan och antalet rutor
       som slog i dt-taket — och att ingenting räknas när den är av.
    3. I en riktig webbläsare: utan parametrar finns ingen mätare och
@@ -46,7 +46,7 @@ function kalla() {
 }
 const muterad = [...arg].some(a => a.startsWith("--muter-"));
 
-console.log("1  rörledningen är tom");
+console.log("1  vem som läser brytaren");
 {
   const filer = [];
   const ga = d => { for (const f of fs.readdirSync(path.join(ROT, d), { withFileTypes: true })) {
@@ -54,8 +54,17 @@ console.log("1  rörledningen är tom");
     if (f.isDirectory()) ga(rel); else if (rel.endsWith(".js")) filer.push(rel);
   } };
   ga("src");
+  /* VILKA SOM FÅR LÄSA BRYTAREN står här, uttryckligen. I Batch 1.2 var
+     listan tom. Varje ny läsare är en batch som ändrar vad `?realism=1`
+     visar, och ska läggas till med sitt eget prov:
+       src/varld3d.js — Batch 1.6, stallgångens tak (tools/stalltaktest.mjs). */
+  const TILLATNA = ["src/varld3d.js"];
   const lasare = filer.filter(f => f !== "src/bildmatare.js" && /\bREALISM\b/.test(las(f)));
-  prova("ingen annan källfil läser REALISM", lasare.length === 0, lasare.join(", ") || `${filer.length} filer genomsökta`);
+  prova("bara de uttryckligen listade filerna läser REALISM", JSON.stringify(lasare) === JSON.stringify(TILLATNA),
+    lasare.join(", ") || `${filer.length} filer genomsökta`);
+  const v = las("src/varld3d.js").split("\n").filter(r => /\bREALISM\b/.test(r) && !/^\s*(\/\*|\*|\/\/)/.test(r) && !/`\?realism=1`/.test(r));
+  prova("och varld3d.js läser den på EN rad", v.length === 1 && v[0].trim() === 'const REALTAK=(typeof REALISM!=="undefined")&&REALISM.pa;',
+    v.map(r => r.trim()).join(" | "));
   const anv = filer.filter(f => f !== "src/bildmatare.js" && /bildmatare|BILDMATARE/.test(las(f)));
   prova("bara spelloopen rör mätaren", JSON.stringify(anv) === JSON.stringify(["src/game.js"]), anv.join(", "));
   const g = las("src/game.js");
