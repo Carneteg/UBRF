@@ -32,10 +32,16 @@
      --muter-puls     knyter engångsljuden till brusbädden igen
      --muter-kalla    låter stallet fnysa utan häst
 
+     --muter-rum      stänger efterklangens sändning i varje rum
+     --muter-pan      vänder höger och vänster
+     --muter-ui       skickar gränssnittets toner genom rummet
+
    Sedan ljud-grind 0.7 (F2) mäter provet också upplåsningen på telefon,
    återupptagandet efter ett avbrott och att gränssnittets toner är toner.
    Sedan 0.8 (F3) också att underlaget under spelaren läses ur markdatan,
    att varje underlag har sin egen klang och att engångsljuden går att nå.
+   Sedan 0.9 (F4) också rummet: vilken efterklang som väljs var, att varje
+   ljud går genom den, och att höger är höger.
 
    Kör: node tools/ljudtakttest.mjs            (exit 1 vid avvikelse) */
 import fs from "node:fs";
@@ -72,32 +78,47 @@ function byggKontext(arg) {
     ljudKod = mutera(ljudKod, "if(!LJUD.pa||!plats)return;", "if(!LJUD.pa||!typ)return;", "engångsljudens villkor");
   if (ARG.has("--muter-kalla"))
     ljudKod = mutera(ljudKod, 'if(plats==="stall"&&hastar>0){', 'if(plats==="stall"){', "stalljudens källa");
+  if (ARG.has("--muter-rum"))
+    ljudKod = mutera(ljudKod, "mal=n===namn?LJUD_RUM[n].sand:0;", "mal=0;", "rummets sändning");
+  if (ARG.has("--muter-pan"))
+    ljudKod = mutera(ljudKod, "const hoger=(dx*Math.sin(rikt)-dy*Math.cos(rikt))", "const hoger=-(dx*Math.sin(rikt)-dy*Math.cos(rikt))", "panoreringens tecken");
+  if (ARG.has("--muter-ui"))
+    ljudKod = mutera(ljudKod, "o.connect(g);g.connect(LJUD.torr);", "o.connect(g);ljudUt(g);", "tonernas väg");
   const starter = [];
   const param = () => ({ value: 0, setValueAtTime() {}, exponentialRampToValueAtTime() {}, linearRampToValueAtTime() {} });
-  const nod = () => ({ connect() {}, start() {}, stop() {}, frequency: param(), gain: param(), Q: param(), playbackRate: param(), buffer: null, type: "" });
+  /* Varje koppling sparas: provet läser ljudgrafen, inte bara att något
+     skapades. */
+  const kanter = [];
+  const nod = (typ) => { const n = { typ: typ || "", start() {}, stop() {}, frequency: param(), gain: param(), Q: param(),
+    playbackRate: param(), pan: param(), buffer: null, type: "" };
+    n.gain.value = 1; n.connect = (m) => { kanter.push([n, m]); }; return n; };
   const ljudctx = { currentTime: 0, state: "running",
     createOscillator() { const n = nod(); n.start = (t) => starter.push(t); return n; },
     createGain: nod, createBiquadFilter: nod, createBufferSource: nod };
   /* Lyssnarna sparas, så att provet kan fyra de gester en telefon ger.
      AudioContext är en attrapp som räknar hur många som skapas och hur
      ofta de ombeds fortsätta. */
-  const lyss = {}, dlyss = {}, logg = { skapade: 0, resume: 0, noder: [] };
+  const lyss = {}, dlyss = {}, logg = { skapade: 0, resume: 0, noder: [], kanter, eko: 0, panorer: [], utanPanorer: !!(arg && arg.utanPanorer) };
   const dokument = { visibilityState: "visible", addEventListener: (t, f) => { (dlyss[t] ??= []).push(f); } };
   class AC {
     constructor() { logg.skapade++; this.state = "suspended"; this.currentTime = 0; this.sampleRate = 50; this.destination = {}; }
     resume() { logg.resume++; this.state = "running"; return Promise.resolve(); }
-    createGain() { logg.noder.push("gain"); return nod(); }
-    createBiquadFilter() { logg.noder.push("filter"); return nod(); }
-    createBufferSource() { logg.noder.push("brus"); return nod(); }
-    createOscillator() { const n = nod(); logg.noder.push(n); return n; }
-    createBuffer(k, n) { return { getChannelData: () => new Float32Array(n) }; }
+    createGain() { logg.noder.push("gain"); return nod("gain"); }
+    createBiquadFilter() { logg.noder.push("filter"); return nod("filter"); }
+    createBufferSource() { logg.noder.push("brus"); return nod("brus"); }
+    createOscillator() { const n = nod("osc"); logg.noder.push(n); return n; }
+    createConvolver() { logg.eko++; return nod("eko"); }
+    createBuffer(k, n) { const d = [new Float32Array(n), new Float32Array(n)]; return { length: n, getChannelData: (i) => d[i] }; }
   }
+  /* Äldre Safari saknar StereoPannerNode. */
+  if (!(arg && arg.utanPanorer))
+    AC.prototype.createStereoPanner = function () { const n = nod("pan"); logg.panorer.push(n); return n; };
   /* setTimeout körs direkt: fördröjda delar av ett ljud (fnysets andra
      stöt) ska räknas, inte bli hängande efter provets slut. */
   const ctx = { console, Math, Float32Array, Promise, window: { AudioContext: AC }, setTimeout: (f) => { f(); return 0; },
     addEventListener: (t, f) => { (lyss[t] ??= []).push(f); }, document: dokument };
   vm.createContext(ctx);
-  vm.runInContext(fasKod + "\n" + ljudKod + "\nthis.X={LJUD,LJUD_YTA,ljudRittSteg,ljudTon,ljudHov,ljudFotsteg,ljudPuls,gangSlag,gangPasserade,GANGFAS};", ctx);
+  vm.runInContext(fasKod + "\n" + ljudKod + "\nthis.X={LJUD,LJUD_YTA,LJUD_RUM,ljudRittSteg,ljudTon,ljudHov,ljudFotsteg,ljudPuls,ljudRumFor,ljudPlacera,ljudGnagg,gangSlag,gangPasserade,GANGFAS};", ctx);
   const fyra = (t) => { for (const f of lyss[t] || []) f({}); };
   const fyraDok = (t) => { for (const f of dlyss[t] || []) f({}); };
   const telefon = { X: ctx.X, lyss, dlyss, logg, dokument, fyra, fyraDok, ctx };
@@ -347,6 +368,104 @@ for (const [gangart, fattning, Tc, facit, ord] of FACIT) {
     `uppehåll ${gardSol.n} · regn utan hästar ${gardRegn.n} · regn med häst i hage ${gardHast.n}`);
   const hall = handelser({ scen: "ridhusinne" }, { STALLINNE: { boxar: { W: ["a"] } }, boxHast });
   prova("ridhusets inre har inga engångsljud (där står inga hästar som inte rids)", hall.n === 0, `${hall.n} ljudnoder`);
+}
+
+/* ── Rummet (ljud-grind 0.9, F4) ──────────────────────────────────── */
+{
+  const ny = (arg) => { const P = byggKontext({ ravakt: true, ...(arg || {}) });
+    P.fyra("pointerdown"); P.fyra("touchend"); P.X.LJUD.pa = true; return P; };
+  const T = ny();
+  const L = T.X.LJUD;
+  /* FACIT: var man är avgör rummet, inte koden. */
+  const rumFacit = [["stallinne", null, "stall"], ["ridhusinne", null, "hall"], ["lektion", "ridhus", "hall"],
+    ["bana", "ridhus", "hall"], ["lektion", "utebana", null], ["lektion", "stig", null], ["gard", null, null]];
+  const felRum = rumFacit.filter(([s, p, vill]) => T.X.ljudRumFor(s, p) !== vill).map(([s, p]) => `${s}/${p}`);
+  prova("rummet följer platsen: stallet, ridhuset (till fots och till häst) och torrt utomhus",
+    felRum.length === 0, felRum.length ? "fel: " + felRum.join(", ") : `${rumFacit.length} platser`);
+
+  const sandning = (G) => { Object.assign(T.ctx, { G }); T.X.ljudPuls(0.1);
+    return Object.fromEntries(Object.entries(L.rumNod).map(([n, v]) => [n, v.sand.gain.value])); };
+  const iStall = sandning({ scen: "stallinne" }), iHall = sandning({ scen: "lektion", plats: "ridhus" }),
+    ute = sandning({ scen: "gard" });
+  prova("efterklangen: bara det rum hon är i är öppet, och ute är helt torrt",
+    iStall.stall > 0 && iStall.hall === 0 && iHall.hall > 0 && iHall.stall === 0 && ute.hall === 0 && ute.stall === 0,
+    `stall ${JSON.stringify(iStall)} · ridhus ${JSON.stringify(iHall)} · gård ${JSON.stringify(ute)}`);
+  const lHall = L.rumNod.hall.eko.buffer.length, lStall = L.rumNod.stall.eko.buffer.length;
+  let energi = 0; for (const v of L.rumNod.hall.eko.buffer.getChannelData(0)) energi += v * v;
+  prova("hallen klingar längre än stallet, och impulserna är inte tomma",
+    lHall > lStall * 2 && lStall > 0 && energi > 0, `hall ${lHall} sampel · stall ${lStall} sampel`);
+
+  /* Ljudgrafen: vart går ett ljud? */
+  const mal = (n) => T.logg.kanter.filter(([a]) => a === n).map(([, b]) => b);
+  const sista = (typ) => [...new Set(T.logg.kanter.map(([a]) => a))].filter((n) => n.typ === typ).pop();
+  const sandNoder = Object.values(L.rumNod).map((v) => v.sand);
+  T.logg.kanter.length = 0; T.logg.panorer.length = 0;
+  L.kalla = null; T.X.ljudHov("fiber", false);
+  const hovUt = T.logg.kanter.filter(([, b]) => b === L.torr).map(([a]) => a);
+  prova("egna hovslag går torrt OCH till rummet, och ligger i mitten",
+    hovUt.length > 0 && hovUt.every((n) => sandNoder.every((sn) => mal(n).includes(sn))) && T.logg.panorer.length === 0,
+    `${hovUt.length} källor till den torra bussen, ${T.logg.panorer.length} panorerare`);
+  T.logg.kanter.length = 0;
+  L.kalla = { pan: 0.6, styrka: 0.4 }; T.X.ljudGnagg(); L.kalla = null;
+  const p = T.logg.panorer[0];
+  prova("ett ljud med en källa panoreras och dämpas, och går också genom rummet",
+    !!p && Math.abs(p.pan.value - 0.6) < 1e-9 && mal(p).includes(L.torr) && sandNoder.every((sn) => mal(p).includes(sn)) &&
+    T.logg.kanter.some(([a, b]) => b === p && Math.abs(a.gain.value - 0.4) < 1e-9),
+    p ? `pan ${p.pan.value}, styrka in ${T.logg.kanter.find(([, b]) => b === p)[0].gain.value}` : "ingen panorerare");
+  T.logg.kanter.length = 0;
+  T.X.ljudTon(700, 0.1, 0.05);
+  const tonUt = T.logg.kanter.filter(([a]) => a.typ === "gain").flatMap(([, b]) => [b]);
+  prova("gränssnittets toner är torra: en knapp ekar inte",
+    tonUt.includes(L.torr) && !tonUt.some((b) => sandNoder.includes(b)),
+    `${tonUt.length} koppling(ar), varav till rummet ${tonUt.filter((b) => sandNoder.includes(b)).length}`);
+
+  /* Höger är höger — åt fyra blickriktningar. Kartans regel: öster (+x)
+     ligger till höger när man ser norrut (+y). */
+  const N = Math.PI / 2;
+  const hogerFall = [[N, 5, 0, "ser norrut, källan i öster"], [0, 0, -5, "ser österut, källan i söder"],
+    [-N, -5, 0, "ser söderut, källan i väster"], [Math.PI, 0, 5, "ser västerut, källan i norr"]];
+  const felPan = hogerFall.filter(([r, x, y]) => !(T.X.ljudPlacera(0, 0, r, x, y).pan > 0.3 && T.X.ljudPlacera(0, 0, r, -x, -y).pan < -0.3))
+    .map(([, , , vad]) => vad);
+  prova("panoreringen: en källa till höger hörs till höger och en till vänster till vänster, åt fyra håll",
+    felPan.length === 0 && Math.abs(T.X.ljudPlacera(0, 0, N, 0, 8).pan) < 1e-9,
+    felPan.length ? "fel: " + felPan.join(" · ") : `rakt fram ${T.X.ljudPlacera(0, 0, N, 0, 8).pan.toFixed(3)}`);
+  const st = [2, 8, 30, 300].map((d) => T.X.ljudPlacera(0, 0, N, d, 0).styrka);
+  prova("avståndet: längre bort är svagare, aldrig helt tyst, och nära inpå dras ljudet mot mitten",
+    st[0] > st[1] && st[1] > st[2] && st[2] >= st[3] && st[3] >= 0.15 &&
+    T.X.ljudPlacera(0, 0, N, 0.3, 0).pan < T.X.ljudPlacera(0, 0, N, 5, 0).pan,
+    `styrka vid 2/8/30/300 m: ${st.map((v) => v.toFixed(2)).join(" / ")}`);
+
+  /* Efter fem minuter i stallet: fortfarande en kontext och två ekon. */
+  Object.assign(T.ctx, { G: { scen: "stallinne" }, STALLINNE: { boxar: { W: ["a", "b"] }, rader: [{ id: "W", x0: 0, djup: 4 }], boxStartY: 6.8, boxB: 3.5 },
+    boxHast: (id) => (id ? {} : null), VD: { px: 8, py: 20, rikt: N } });
+  T.logg.panorer.length = 0;
+  for (let i = 0; i < 3000; i++) T.X.ljudPuls(0.1);
+  prova("efterklangen byggs EN gång: en ljudkontext och ett eko per rum efter fem minuter i stallet",
+    T.logg.skapade === 1 && T.logg.eko === Object.keys(T.X.LJUD_RUM).length, `${T.logg.skapade} kontext, ${T.logg.eko} ekon`);
+  /* Boxraden W ligger väster om gången (x 0–4, hon står på x 8) och hon
+     ser norrut: hästarna ska höras till VÄNSTER. */
+  prova("stallets hästar hörs från sina boxar: väster om en lyssnare som ser norrut är till vänster",
+    T.logg.panorer.length > 0 && T.logg.panorer.every((n) => n.pan.value < 0),
+    `${T.logg.panorer.length} placerade ljud, pan ${Math.min(...T.logg.panorer.map((n) => n.pan.value)).toFixed(2)}…${Math.max(...T.logg.panorer.map((n) => n.pan.value)).toFixed(2)}`);
+
+  /* Äldre Safari utan StereoPannerNode: ljudet spelas ändå. */
+  const U = ny({ utanPanorer: true });
+  U.logg.kanter.length = 0;
+  U.X.LJUD.kalla = { pan: 0.6, styrka: 0.4 }; U.X.ljudGnagg(); U.X.LJUD.kalla = null;
+  prova("utan StereoPannerNode spelas ljudet ändå, opanorerat men dämpat",
+    U.logg.kanter.some(([a, b]) => b === U.X.LJUD.torr && Math.abs(a.gain.value - 0.4) < 1e-9));
+  /* Strömbrytaren. */
+  const A = ny(); A.X.LJUD.rum = false;
+  Object.assign(A.ctx, { G: { scen: "stallinne" } }); A.X.ljudPuls(0.1);
+  A.logg.kanter.length = 0; A.X.ljudHov("fiber", false);
+  const aSand = Object.values(A.X.LJUD.rumNod).map((v) => v.sand);
+  prova("strömbrytaren LJUD.rum stänger efterklangen helt (allt torrt, som förut)",
+    aSand.every((sn) => sn.gain.value === 0) && !A.logg.kanter.some(([, b]) => aSand.includes(b)));
+
+  /* Ingen ljudkälla får kopplas förbi rummet. */
+  const direkt = las("src/ljud.js").split("\n").filter((r) => r.includes("connect(LJUD.master)")).map((r) => r.trim());
+  prova("ingen ljudkälla kopplas rakt till huvudvolymen — bara bussarna gör det",
+    direkt.length === 3 && direkt.every((r) => /ambGain|torr|eko/.test(r)), direkt.join(" | "));
 }
 
 console.log(fel === 0 ? `ljudtakttest: alla ${antal} gröna — hovslagen följer gångartens takt`

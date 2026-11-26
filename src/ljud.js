@@ -49,6 +49,9 @@ const LJUD={
   master:null, ambGain:null, ambKalla:null, ambFilter:null, ambTyp:null,
   brus:null,
   hovMonster:null, hovFas:0, hovLage:0, gangAvstand:0,
+  /* Rumsklangen (ljud-grind 0.9). `rum` är strömbrytaren: stängs den
+     går allt torrt, som förut. */
+  rum:true, torr:null, rumNod:{}, rumNu:null, kalla:null,
   gnaggT:14, stallT:5, fagelT:3,
 };
 
@@ -65,6 +68,7 @@ function ljudInit(){
     LJUD.ambGain=LJUD.ctx.createGain();
     LJUD.ambGain.gain.value=0;
     LJUD.ambGain.connect(LJUD.master);
+    ljudByggRum(LJUD.ctx);
     // brunt brus som råvara för allt som susar
     const n=LJUD.ctx.sampleRate*2, buf=LJUD.ctx.createBuffer(1,n,LJUD.ctx.sampleRate);
     const d=buf.getChannelData(0); let v=0;
@@ -72,6 +76,105 @@ function ljudInit(){
     LJUD.brus=buf;
   }catch(_){LJUD.ctx=null;}
 }
+/* ── RUMMET (ljud-grind 0.9, F4) ───────────────────────────────────
+   Förut kopplades varje ljud rakt till huvudvolymen: torrt, i mitten,
+   på fast nivå. Ridhuset, stallet och gården lät identiskt.
+
+   Nu går varje ljud ut genom EN väg (ljudUt):
+     · torrt till `LJUD.torr`,
+     · och en sändning till rummets efterklang.
+   Tre rum: HALLEN (ridhuset — stort, hård plåt, lång och mörk
+   efterklang), STALLET (trä, spån och hästar — kort och ljus) och UTE,
+   som inte har någon: sändningen är noll.
+
+   IMPULSERNA ÄR GENERERADE, INTE INSPELADE. Avklingande brus med en
+   längd och en mörkhet per rum. Talen nedan är uttalade [ANTAGANDE] —
+   de är inte uppmätta i UBRF:s ridhus och inte trimmade på gehör, för
+   det kan ingen kod göra. De ska ersättas av en riktig klappinspelning
+   (G7, Batch 6.6); då byts bara bufferten, inte kopplingen.
+
+   Noderna byggs EN gång här. Inget ljud skapar en egen efterklang. */
+const LJUD_RUM={
+  hall: {sek:1.6,  mork:0.30, sand:0.30},
+  stall:{sek:0.35, mork:0.85, sand:0.18},
+};
+function ljudImpuls(c,sek,mork){
+  const n=Math.max(1,Math.round(sek*c.sampleRate));
+  const buf=c.createBuffer(2,n,c.sampleRate);
+  for(let k=0;k<2;k++){
+    const d=buf.getChannelData(k); let lp=0;
+    for(let i=0;i<n;i++){
+      /* −60 dB vid `sek`; `mork` är ett enpoligt lågpass (lägre = dovare). */
+      lp+=((Math.random()*2-1)-lp)*mork;
+      d[i]=lp*Math.exp(-6.9*i/n);
+    }
+  }
+  return buf;
+}
+function ljudByggRum(c){
+  LJUD.torr=c.createGain();
+  LJUD.torr.connect(LJUD.master);
+  LJUD.rumNod={}; LJUD.rumNu=null;
+  if(typeof c.createConvolver!=="function")return;     // äldre webbläsare: torrt
+  for(const namn in LJUD_RUM){
+    const R=LJUD_RUM[namn];
+    const sand=c.createGain(); sand.gain.value=0;
+    const eko=c.createConvolver(); eko.buffer=ljudImpuls(c,R.sek,R.mork);
+    sand.connect(eko); eko.connect(LJUD.master);
+    LJUD.rumNod[namn]={sand,eko};
+  }
+}
+/* Vilket rum hon är i, ur samma scenvillkor som resten av filen. */
+function ljudRumFor(scen,plats){
+  if(scen==="stallinne")return "stall";
+  if(scen==="ridhusinne")return "hall";
+  if((scen==="lektion"||scen==="bana")&&plats==="ridhus")return "hall";
+  return null;
+}
+/* Byter rum. Sändningarna tonas över 0,3 s på ljudklockan, så att ett
+   scenbyte inte knäpper och en efterklang som redan ljuder får klinga ut. */
+function ljudRum(namn){
+  if(!LJUD.ctx)return;
+  if(!LJUD.rum)namn=null;
+  if(namn===LJUD.rumNu)return;
+  LJUD.rumNu=namn;
+  const t=LJUD.ctx.currentTime;
+  for(const n in LJUD.rumNod){
+    const g=LJUD.rumNod[n].sand.gain, mal=n===namn?LJUD_RUM[n].sand:0;
+    if(typeof g.cancelScheduledValues==="function"){
+      g.cancelScheduledValues(t); g.setValueAtTime(g.value,t); g.linearRampToValueAtTime(mal,t+0.3);
+    }
+    g.value=mal;
+  }
+}
+/* VAR ETT LJUD KOMMER IFRÅN. Lyssnaren står i (lx, ly) och ser åt
+   `rikt`; källan står i (kx, ky). Panoreringen är källans läge längs
+   lyssnarens högervektor — (sin rikt, −cos rikt), samma kartregel som
+   gangVarv och GL.kamera — och styrkan avtar med avståndet. Nära inpå
+   dras panoreringen mot mitten: en häst en halv meter bort låter inte i
+   ena örat. Ren funktion. [ANTAGANDE]: 6 m till halv styrka. */
+function ljudPlacera(lx,ly,rikt,kx,ky){
+  const dx=kx-lx, dy=ky-ly, d=Math.hypot(dx,dy);
+  const hoger=(dx*Math.sin(rikt)-dy*Math.cos(rikt))/Math.max(d,1.5);
+  return {pan:Math.max(-1,Math.min(1,hoger))*0.85, styrka:Math.max(0.15,1/(1+d/6))};
+}
+/* ENDA VÄGEN UT för ett ljud i världen. `LJUD.kalla` ({pan, styrka})
+   sätts av den som vet var ljudet hör hemma; utan den ligger ljudet i
+   mitten — egna hovslag och fotsteg. Saknas StereoPannerNode (äldre
+   Safari) spelas ljudet opanorerat, aldrig tyst. */
+function ljudUt(nod){
+  const c=LJUD.ctx, k=LJUD.kalla;
+  let ut=nod;
+  if(k){
+    const g=c.createGain(); g.gain.value=k.styrka; nod.connect(g); ut=g;
+    if(typeof c.createStereoPanner==="function"){
+      const p=c.createStereoPanner(); p.pan.value=k.pan; g.connect(p); ut=p;
+    }
+  }
+  ut.connect(LJUD.torr);
+  if(LJUD.rum)for(const n in LJUD.rumNod)ut.connect(LJUD.rumNod[n].sand);
+}
+
 /* ── UPPLÅSNING OCH AVBROTT (ljud-grind 0.7, F2) ───────────────────
    Förut väcktes ljudet bara på `pointerdown` och `keydown`. Det räcker
    inte på iPhone: Safari räknar inte `pointerdown` som en gest som får
@@ -136,7 +239,7 @@ function ljudStot(freq,typ,tid,vol,startFreq,nar){
   const g=c.createGain();
   g.gain.setValueAtTime(vol,t);
   g.gain.exponentialRampToValueAtTime(0.001,t+tid);
-  src.connect(f);f.connect(g);g.connect(LJUD.master);
+  src.connect(f);f.connect(g);ljudUt(g);
   src.start(t);src.stop(t+tid+0.05);
 }
 /* EN REN TON — gränssnittets signaler (ljud-grind 0.7, F2).
@@ -157,7 +260,8 @@ function ljudTon(freq,tid,vol,nar){
   g.gain.setValueAtTime(0.0001,t);
   g.gain.exponentialRampToValueAtTime(Math.max(vol,0.0002),t+0.012);
   g.gain.exponentialRampToValueAtTime(0.0001,t+tid);
-  o.connect(g);g.connect(LJUD.master);
+  /* TORRT: gränssnittets toner är inte i rummet. En knapp ska inte eka. */
+  o.connect(g);g.connect(LJUD.torr);
   o.start(t);o.stop(t+tid+0.05);
 }
 /* Dov puls — hovens tyngd. */
@@ -170,7 +274,7 @@ function ljudPulsslag(freq,tid,vol,nar){
   const g=c.createGain();
   g.gain.setValueAtTime(vol,t);
   g.gain.exponentialRampToValueAtTime(0.001,t+tid);
-  o.connect(g);g.connect(LJUD.master);
+  o.connect(g);ljudUt(g);
   o.start(t);o.stop(t+tid+0.05);
 }
 
@@ -281,13 +385,16 @@ function ljudGnagg(){
   g.gain.setValueAtTime(0.001,t);
   g.gain.exponentialRampToValueAtTime(0.16,t+0.08);
   g.gain.exponentialRampToValueAtTime(0.001,t+dur);
-  o.connect(f);f.connect(g);g.connect(LJUD.master);
+  o.connect(f);f.connect(g);ljudUt(g);
   o.start(t);vib.start(t);o.stop(t+dur+0.1);vib.stop(t+dur+0.1);
 }
 /* Fnysning och stamp — stallets småprat. */
 function ljudFnys(){
   ljudStot(420,"bandpass",0.28,0.09,700);
-  setTimeout(()=>ljudStot(380,"bandpass",0.18,0.06,600),140);
+  /* Den andra stöten kommer från SAMMA häst, även om pulsen hunnit
+     släppa källan däremellan. */
+  const k=LJUD.kalla;
+  setTimeout(()=>{const f=LJUD.kalla;LJUD.kalla=k;ljudStot(380,"bandpass",0.18,0.06,600);LJUD.kalla=f;},140);
 }
 function ljudStamp(){ljudPulsslag(70,0.18,0.16);}
 /* Fågelkvitter: två snabba fallande blip. */
@@ -303,7 +410,7 @@ function ljudFagel(){
     g.gain.setValueAtTime(0.001,t);
     g.gain.exponentialRampToValueAtTime(0.05,t+0.02);
     g.gain.exponentialRampToValueAtTime(0.001,t+0.1);
-    o.connect(g);g.connect(LJUD.master);
+    o.connect(g);ljudUt(g);
     o.start(t);o.stop(t+0.12);
     t+=0.13+Math.random()*0.1;
   }
@@ -317,7 +424,7 @@ function ljudKlocka(){
     const g=c.createGain();
     g.gain.setValueAtTime(vol,t);
     g.gain.exponentialRampToValueAtTime(0.001,t+1.6);
-    o.connect(g);g.connect(LJUD.master);
+    o.connect(g);ljudUt(g);
     o.start(t);o.stop(t+1.7);
   }
 }
@@ -360,6 +467,29 @@ function ljudSynligaHastar(){
   return 0;
 }
 
+/* EN av de synliga hästarna, och var hon står — ljudet ska komma från
+   en häst, inte från mitten av huvudet. Boxens mitt i stallet, hagens
+   mitt på gården. Ger null när ingen häst syns eller lyssnarens läge är
+   okänt; då ligger ljudet i mitten. */
+function ljudKallaHast(){
+  if(typeof VD==="undefined"||!VD)return null;
+  const lage=[];
+  if(G.scen==="stallinne"&&typeof STALLINNE!=="undefined"&&typeof boxHast==="function"){
+    const S=STALLINNE;
+    for(const rad of S.rader||[]){
+      const lista=S.boxar[rad.id]||[];
+      for(let i=0;i<lista.length;i++)if(boxHast(lista[i]))
+        lage.push([rad.x0+rad.djup/2, S.boxStartY+(i+0.5)*S.boxB]);
+    }
+  }else if(G.scen==="gard"&&typeof ANL!=="undefined"){
+    for(const hg of ANL.hagar||[])if((hg.hastar||[]).length&&hg.rekt)
+      lage.push([hg.rekt.x+hg.rekt.w/2, hg.rekt.y+hg.rekt.h/2]);
+  }
+  if(!lage.length)return null;
+  const p=lage[Math.floor(Math.random()*lage.length)];
+  return ljudPlacera(VD.px,VD.py,VD.rikt||0,p[0],p[1]);
+}
+
 /* Pulsen: väljer ambiens efter scen och strör ut engångsljud.
 
    ENGÅNGSLJUDEN HÄNGER INTE LÄNGRE PÅ BRUSBÄDDEN (ljud-grind 0.8, F3).
@@ -386,6 +516,7 @@ function ljudPuls(dt){
   else if(G.scen==="gard"||ute)typ=regn?"regn":"gard";
   else if(G.scen==="ridhusinne")typ="stall";
   ljudAmbiens(typ);
+  ljudRum(ljudRumFor(G.scen,G.plats));
   if(!LJUD.pa||!plats)return;
   const hastar=ljudSynligaHastar();
   if(plats==="stall"&&hastar>0){
@@ -393,9 +524,11 @@ function ljudPuls(dt){
     if(LJUD.stallT<=0){
       LJUD.stallT=4+Math.random()*8;
       const r=Math.random();
+      LJUD.kalla=ljudKallaHast();
       if(r<0.35)ljudFnys(); else if(r<0.6)ljudStamp();
       else if(r<0.72)ljudGnagg();
       else ljudStot(2200,"bandpass",0.1,0.04,3200);   // grimskaft mot galler
+      LJUD.kalla=null;
     }
   }
   if(plats==="gard"){
@@ -405,7 +538,8 @@ function ljudPuls(dt){
     }
     if(hastar>0){
       LJUD.gnaggT-=dt;
-      if(LJUD.gnaggT<=0){LJUD.gnaggT=18+Math.random()*22;ljudGnagg();}
+      if(LJUD.gnaggT<=0){LJUD.gnaggT=18+Math.random()*22;
+        LJUD.kalla=ljudKallaHast();ljudGnagg();LJUD.kalla=null;}
     }
   }
 }

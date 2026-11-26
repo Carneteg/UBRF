@@ -254,6 +254,39 @@ deras beslutsspärrar är auktoritativa för det här arbetet.
   - **Inte verifierat:** hur underlagen låter. Klangerna är syntetiska
     `[ANTAGANDE]` tills riktiga inspelningar finns (Batch 6.6).
   `JEV_DECISION: JEV_NOT_NEEDED`.
+- Levererat: **Batch 0.9** — F4 (rumsklang: hall, stall och utomhus).
+  Varje ljud kopplades rakt till huvudvolymen: torrt, i mitten, på fast
+  nivå — ridhuset, stallet och gården lät identiskt.
+  - **En väg ut, tre rum** (`ljudUt`, `ljudByggRum`, `ljudRum` i
+    `src/ljud.js`): torr signal plus en sändning till rummets efterklang.
+    Hallen (ridhuset, till fots och till häst) lång och mörk, stallet kort
+    och ljust, ute ingen alls. Bytet tonas över 0,3 s. Noderna byggs en
+    gång.
+  - **Källa med läge:** stalljuden och gårdens gnägg (som fick en synlig
+    källa i 0.8) placeras nu vid EN av de synliga hästarna —
+    panorering ur vinkeln mot blickriktningen, styrka som avtar med
+    avståndet (`ljudPlacera`). Egna hovslag och fotsteg ligger i mitten.
+  - **Gränssnittets toner är torra**; en knapp ekar inte.
+  - **Strömbrytare** `LJUD.rum` (på som standard) om enhetsmätningen
+    (Batch 1.2) visar att efterklangen kostar för mycket.
+  - **Prov:** `tools/ljudtakttest.mjs` utökad till 47 mätningar och läser
+    nu själva ljudgrafen. Falsifierad: `--muter-rum`, `--muter-pan` och
+    `--muter-ui` blir röda (totalt tolv mutationer i filen). Rökprov i
+    riktig Chromium: rummen byggs med webbläsarens egna noder, 1,6 s och
+    0,35 s, impulsen genereras på 4 ms, inga sidfel.
+  - **Avvikelse från planen, redovisad:** fyndet sade «tuned by ear».
+    Det har inte gjorts och kan inte göras av kod. Efterklangens längd,
+    mörkhet och nivå samt avståndskurvan är uttalade `[ANTAGANDE]` och ska
+    ersättas av en riktig klappinspelning (G7, Batch 6.6).
+  - **Paritet:** webbens egen ljudmotor, ingen delad data, ingen
+    Roblox-ändring. Läst: Roblox har avståndsdämpning på sina ljud
+    (`RollOffMaxDistance` i `SoundController`) men ingen rumsklang. Det är
+    en plattformsskillnad att ta ställning till.
+  - **INTE VERIFIERAT — och det är det som avgör batchen:** hur det
+    låter. Provet visar att rätt rum väljs och att höger är höger, inte att
+    hallen låter som UBRF:s ridhus.
+  **Beslutsspärr (acceptans, inte bygg):** Tobias lyssnar, helst i
+  hörlurar och på telefon. `JEV_DECISION: JEV_NOT_NEEDED`.
 - **A2 (kantutjämning) uppskjuten, inte löst i 0.1:** en FXAA-shader
   provades i post-kompositeringen men orsakade en mätbar, reproducerbar
   CI-regression i `tools/lektion-e2e-test.mjs` (headless, mjukvaru-
