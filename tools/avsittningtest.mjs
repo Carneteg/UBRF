@@ -154,6 +154,10 @@ async function sittUpp(opt = {}) {
   const ctxB = await browser.newContext({ viewport: { width: 1366, height: 768 }, hasTouch: !!opt.pek });
   const page = await ctxB.newPage();
   page.on("pageerror", e => { console.error("PAGEERROR", e.message); fel++; });
+  if (process.env.UBRF_CPU_BROMS) {
+    const cdp = await ctxB.newCDPSession(page);
+    await cdp.send("Emulation.setCPUThrottlingRate", { rate: Number(process.env.UBRF_CPU_BROMS) });
+  }
   await page.goto(`http://localhost:${PORT}/`, { waitUntil: "load" });
   await page.waitForTimeout(700);
   /* Mutationen byter regeln i den LADDADE sidan — dist rörs inte. */
@@ -172,6 +176,17 @@ async function sittUpp(opt = {}) {
     null, { timeout: 30000 }).catch(() => {});
   return page;
 }
+/* ALLA VÄNTETIDER ÄR SPELTID, INTE VÄGGKLOCKA. CI ritar med
+   mjukvarurendering och hinner bara några bildrutor i sekunden; spelet
+   stegar då högst 0,05 s per ruta, så en väggklocksekund kan vara 0,2 s
+   i spelet. Första versionen av provet väntade 450 ms väggklocka mellan
+   två DRIV — i CI överlappade pulserna (en puls är 0,24 s speltid), det
+   blev aldrig en NY impuls, och hästen kom inte förbi skritt (rött på
+   41a72e1, grönt lokalt). Återskapas lokalt med UBRF_CPU_BROMS=20. */
+const speltid = (page, s) => page.evaluate(s => new Promise(klar => {
+  const t0 = G.t;
+  (function v() { if (G.t - t0 >= s) klar(); else requestAnimationFrame(v); })();
+}), s);
 const lage = page => page.evaluate(() => ({
   scen: G.scen, p3: G.p3, gangart: G.ride && G.ride.gangart, fart: G.ride ? G.ride.tempo : null,
   vantar: !!(G.avsitt && G.avsitt.vantar), t: G.t, bromsN: IN.bromsN,
@@ -184,12 +199,12 @@ async function ridTill(page, mal) {
     const g = await page.evaluate(() => G.ride.gangart);
     if (ORD.indexOf(g) >= ORD.indexOf(mal)) break;
     await page.evaluate(() => ridDriv());
-    await page.waitForTimeout(450);
+    await speltid(page, 1.2);            // pulsen (0,24 s) och modellens spärr (0,9 s) hinner gå ut
   }
   /* Låt övergången bli KLAR: en drivande hjälp som just getts fullföljs
      av modellen, och provet ska mäta nedtagningen från en etablerad
      gångart (fallet «DRIV strax före» mäts för sig, i del 4b). */
-  await page.waitForTimeout(1800);
+  await speltid(page, 2.0);
   return lage(page);
 }
 /* Följ en väntande avsittning bildruta för bildruta, i spelets egen tid. */
@@ -223,18 +238,18 @@ let nedtagning = null;
   prova("KONTROLL: hon rör sig i trav eller galopp", ["trav", "galopp"].includes(fore.gangart) && fore.fart > 2,
     `${fore.gangart} ${fore.fart.toFixed(2)} m/s`);
   await page.keyboard.down("KeyW");                       // spelaren håller dessutom skänkeln på
-  await page.waitForTimeout(120);
+  await speltid(page, 0.12);
   const bromsFore = (await lage(page)).bromsN;
   const spar = folj(page, 8);
   await page.keyboard.press("KeyE");
-  await page.waitForTimeout(150);
+  await speltid(page, 0.15);
   const strax = await lage(page);
   prova("E i rörelse sitter INTE av", strax.scen === "lektion" && strax.p3 === true,
     `scen ${strax.scen}, ${strax.gangart} ${strax.fart === null ? "-" : strax.fart.toFixed(2)} m/s`);
   prova("utan en begäran som väntar på halt", strax.vantar === true);
   prova("en rad säger vad som händer", strax.medd.includes("Vi stannar först"), `«${strax.medd}»`);
   await page.keyboard.press("KeyE");                      // otålig: ett tryck till
-  await page.waitForTimeout(120);
+  await speltid(page, 0.12);
   const otalig = await lage(page);
   prova("ett andra E sitter inte av i förtid", otalig.scen === "lektion" && otalig.vantar === true,
     `scen ${otalig.scen}, ${otalig.fart === null ? "-" : otalig.fart.toFixed(2)} m/s`);
@@ -268,7 +283,7 @@ console.log("4  spelet: pekknappen och engelskan");
     b.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, pointerType: "touch" }));
     return b.dataset.tap;
   });
-  await page.waitForTimeout(150);
+  await speltid(page, 0.15);
   const strax = await lage(page);
   prova("pekknappen SITT AV går samma väg", knapp === "KeyE" && fore.fart > 1 && strax.scen === "lektion" && strax.vantar === true,
     `${fore.gangart} ${fore.fart.toFixed(2)} m/s → scen ${strax.scen}, väntar ${strax.vantar}`);
@@ -286,7 +301,7 @@ console.log("4b spelet: en drivande hjälp strax före SITT AV (värsta fallet)"
   const fore = await ridTill(page, "trav");
   if (fore.gangart === "trav") {
     await page.evaluate(() => ridDriv());
-    await page.waitForTimeout(300);
+    await speltid(page, 0.3);
     const spar = folj(page, 9);
     await page.keyboard.press("KeyE");
     const prov = await spar;
