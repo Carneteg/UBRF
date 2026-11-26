@@ -214,6 +214,46 @@ deras beslutsspärrar är auktoritativa för det här arbetet.
   iPhone, och avgör om spelljudet ska lyda ljudlös-knappen (Web Audio gör
   det av sig självt på iOS; koden försöker inte kringgå det).
   `JEV_DECISION: JEV_NOT_NEEDED`.
+- Levererat: **Batch 0.8** — F3 (underlaget styr fotsteg och hovslag,
+  och engångsljuden går att nå).
+  - **Underlaget:** fotstegen visste bara «sten» i stallet och «grus»
+    överallt annars; hovslagen valde underlag ur plats och väder. Nytt
+    uppslag `ytaVid(scen, x, y, z)` i `src/site.js` läser SAMMA markdata
+    som ritas — `ANL.mark` och `ANL.cirklar` på gården («senare vinner»),
+    stallets gångar/service/klubbdel, ridhusets bana. Ingen ny geometri
+    och ingen ny exporterad nyckel (`exportera-geometri.js --kontrollera`
+    oförändrat grön).
+  - **Belägg per yta:** marksten i stallgångens mittstråk och betong
+    längs servicedelens yttervägg (`references/buildings/stall/
+    INTERIOR-MATRIS.md` rad 81–82, 121–122), ridbanans sand-/flisblandning
+    (`references/buildings/ridhus/INTERIOR-MATRIS.md` rad 73). Spån i
+    boxarna är `DERIVED` ur rad 83–84.
+  - **`[REFERENCE GAP]`, inget påhittat:** ridhusets läktare, klubbdel
+    och kafé samt skogsstigen har inget belagt underlag knutet till en yta
+    och svarar `okand`, som låter som förut (grus).
+  - **Klangen:** en rad per underlag i `LJUD_YTA` (`src/ljud.js`). Fiber,
+    grus, vått grus och stallgångens fotsteg har EXAKT sina gamla värden;
+    det nya är att sand, gräs, åker, asfalt, betong och spån inte längre
+    låter som grus. Regnet läggs ovanpå underlaget och når inte in i
+    ridhuset.
+  - **Engångsljuden:** fnys, stamp, gnägg och fågel låg bakom brusbäddens
+    typ och spelades därför aldrig (bädden är avstängd med flit och är det
+    fortfarande). De väljs nu ur scenen och kräver en synlig källa: en
+    häst i en box (`boxHast`) respektive i en hage (`ANL.hagar`). Fågeln
+    tiger i regn. Ridhusets inre har inga.
+  - **Prov:** `tools/ljudtakttest.mjs` utökad till 34 mätningar (17 kända
+    punkter mot facit ur datans kommentarer och INTERIOR-MATRIS).
+    Falsifierad: `--muter-yta`, `--muter-senare`, `--muter-puls` och
+    `--muter-kalla` blir alla röda.
+  - **Utanför batchen:** steg utlösta ur gångcykeln till fots (kräver en
+    fotfas som inte finns), stereo/avstånd/rumsklang (0.9).
+  - **Paritet:** ingen Roblox-ändring. Roblox väljer redan underlag ur
+    markens material (`SoundController.SURFACES`, raycast) i fem klasser;
+    webben har nu nio. Att samma punkt ger samma klass på båda ytorna är
+    INTE mätt — det kräver Studio.
+  - **Inte verifierat:** hur underlagen låter. Klangerna är syntetiska
+    `[ANTAGANDE]` tills riktiga inspelningar finns (Batch 6.6).
+  `JEV_DECISION: JEV_NOT_NEEDED`.
 - **A2 (kantutjämning) uppskjuten, inte löst i 0.1:** en FXAA-shader
   provades i post-kompositeringen men orsakade en mätbar, reproducerbar
   CI-regression i `tools/lektion-e2e-test.mjs` (headless, mjukvaru-

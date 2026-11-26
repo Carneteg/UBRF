@@ -27,8 +27,15 @@
      --muter-avbrott  återupptar bara `suspended`, inte iOS `interrupted`
      --muter-ton      låter ljudTon vara en brusstöt igen
 
+     --muter-yta      låter alla underlag låta som grus igen
+     --muter-senare   låter FÖRSTA markytan vinna i stället för den senaste
+     --muter-puls     knyter engångsljuden till brusbädden igen
+     --muter-kalla    låter stallet fnysa utan häst
+
    Sedan ljud-grind 0.7 (F2) mäter provet också upplåsningen på telefon,
    återupptagandet efter ett avbrott och att gränssnittets toner är toner.
+   Sedan 0.8 (F3) också att underlaget under spelaren läses ur markdatan,
+   att varje underlag har sin egen klang och att engångsljuden går att nå.
 
    Kör: node tools/ljudtakttest.mjs            (exit 1 vid avvikelse) */
 import fs from "node:fs";
@@ -57,6 +64,14 @@ function byggKontext(arg) {
   if (ARG.has("--muter-ton"))
     ljudKod = mutera(ljudKod, 'const o=c.createOscillator();o.type="sine";\n  o.frequency.setValueAtTime(freq,t);\n  const g=c.createGain();\n  g.gain.setValueAtTime(0.0001,t);',
       'ljudStot(freq,"sine",tid,vol);return;\n  const o=c.createOscillator();o.type="sine";\n  o.frequency.setValueAtTime(freq,t);\n  const g=c.createGain();\n  g.gain.setValueAtTime(0.0001,t);', "ljudTon");
+  if (ARG.has("--muter-yta")) {
+    ljudKod = mutera(ljudKod, "const y=LJUD_YTA[underlag]||LJUD_YTA.okand;", "const y=LJUD_YTA.grus;", "hovens underlag");
+    ljudKod = mutera(ljudKod, "const f=(LJUD_YTA[underlag]||LJUD_YTA.okand).fot;", "const f=LJUD_YTA.grus.fot;", "fotstegens underlag");
+  }
+  if (ARG.has("--muter-puls"))
+    ljudKod = mutera(ljudKod, "if(!LJUD.pa||!plats)return;", "if(!LJUD.pa||!typ)return;", "engångsljudens villkor");
+  if (ARG.has("--muter-kalla"))
+    ljudKod = mutera(ljudKod, 'if(plats==="stall"&&hastar>0){', 'if(plats==="stall"){', "stalljudens källa");
   const starter = [];
   const param = () => ({ value: 0, setValueAtTime() {}, exponentialRampToValueAtTime() {}, linearRampToValueAtTime() {} });
   const nod = () => ({ connect() {}, start() {}, stop() {}, frequency: param(), gain: param(), Q: param(), playbackRate: param(), buffer: null, type: "" });
@@ -77,13 +92,15 @@ function byggKontext(arg) {
     createOscillator() { const n = nod(); logg.noder.push(n); return n; }
     createBuffer(k, n) { return { getChannelData: () => new Float32Array(n) }; }
   }
-  const ctx = { console, Math, Float32Array, Promise, window: { AudioContext: AC },
+  /* setTimeout körs direkt: fördröjda delar av ett ljud (fnysets andra
+     stöt) ska räknas, inte bli hängande efter provets slut. */
+  const ctx = { console, Math, Float32Array, Promise, window: { AudioContext: AC }, setTimeout: (f) => { f(); return 0; },
     addEventListener: (t, f) => { (lyss[t] ??= []).push(f); }, document: dokument };
   vm.createContext(ctx);
-  vm.runInContext(fasKod + "\n" + ljudKod + "\nthis.X={LJUD,ljudRittSteg,ljudTon,gangSlag,gangPasserade,GANGFAS};", ctx);
+  vm.runInContext(fasKod + "\n" + ljudKod + "\nthis.X={LJUD,LJUD_YTA,ljudRittSteg,ljudTon,ljudHov,ljudFotsteg,ljudPuls,gangSlag,gangPasserade,GANGFAS};", ctx);
   const fyra = (t) => { for (const f of lyss[t] || []) f({}); };
   const fyraDok = (t) => { for (const f of dlyss[t] || []) f({}); };
-  const telefon = { X: ctx.X, lyss, dlyss, logg, dokument, fyra, fyraDok };
+  const telefon = { X: ctx.X, lyss, dlyss, logg, dokument, fyra, fyraDok, ctx };
   if (arg && arg.ravakt) return telefon;
   ctx.X.LJUD.ctx = ljudctx; ctx.X.LJUD.master = nod(); ctx.X.LJUD.brus = {}; ctx.X.LJUD.pa = true;
   return { X: ctx.X, ljudctx, starter };
@@ -222,6 +239,114 @@ for (const [gangart, fattning, Tc, facit, ord] of FACIT) {
   }
   prova("ingen ljudStot får en vågform som filtertyp (det var så tonerna blev brus)", syndare.length === 0,
     syndare.length ? syndare.join(" · ") : "0 träffar i src/");
+}
+
+/* ── Underlaget och engångsljuden (ljud-grind 0.8, F3) ────────────── */
+{
+  /* Markdatan läses som exportören gör det: model.js, data.js, site.js. */
+  let siteKod = las("src/site.js");
+  if (ARG.has("--muter-senare"))
+    siteKod = mutera(siteKod, "if(r&&x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h)typ=m.typ;",
+      "if(r&&x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h){typ=m.typ;break;}", "markytornas ordning");
+  const sc = { console, Math, JSON, window: {} };
+  vm.createContext(sc);
+  vm.runInContext(las("src/model.js") + "\n" + las("src/data.js") + "\n" + siteKod + "\n" + las("src/inredning.js")
+    + "\nthis.S={ytaVid,ytaForRitt,ANL,STALLINNE,RIDHUSINNE};", sc);
+  const { ytaVid, ytaForRitt, ANL, STALLINNE: ST, RIDHUSINNE: RH } = sc.S;
+
+  /* FACIT ur kommentarerna i ANL.mark och ur INTERIOR-MATRIS, inte ur
+     uppslagets egen kod. */
+  const gA = (ST.gangar.A.x0 + ST.gangar.A.x1) / 2, boxX = ST.rader[0].x0 + ST.rader[0].djup / 2;
+  const punkter = [
+    ["gard", 120, 130, 0, "grus", "grusplanen vid norra gavlarna"],
+    ["gard", 4, 80, 0, "asfalt", "Enköpingsvägen"],
+    ["gard", 50, 60, 0, "aker", "åkrarna"],
+    ["gard", 4, 148, 0, "grus", "Björklidsvägen korsar asfalten — den senare ytan vinner"],
+    ["gard", 100, 131, 0, "sand", "lekhagen (rund yta)"],
+    ["gard", 172, 102, 0, "betong", "betongplattan vid uppgången"],
+    ["gard", -60, -60, 0, "gras", "omgivningen"],
+    ["stallinne", gA, 30, 0, "gatsten", "markstenen i gång A"],
+    ["stallinne", boxX, 30, 0, "span", "inne i en box"],
+    ["stallinne", gA, ST.klubb.y0 + 2, 0, "betong", "klubbdelen"],
+    ["stallinne", 1.0, 3, 0, "betong", "servicedelen, remsan längs ytterväggen"],
+    ["stallinne", 10, 3, 0, "gatsten", "servicedelens genomgångsstråk"],
+    ["stallinne", gA, ST.klubbY + 1, 0, "gatsten", "tvärkorridoren, markstensstråket"],
+    ["stallinne", boxX, ST.klubbY + 1, 0, "betong", "tvärkorridoren, bredvid stråket"],
+    ["ridhusinne", RH.bana.x + 10, RH.bana.y + 30, 0, "fiber", "ridbanan"],
+    ["ridhusinne", RH.bana.x + 10, RH.bana.y + 30, 2.5, "okand", "ovanför marknivå (läktaren): inget belagt"],
+    ["ridhusinne", RH.bana.x + RH.bana.w + 2, RH.bana.y + 30, 0, "okand", "utanför sargen: inget belagt"],
+  ];
+  const felaktiga = punkter.filter(([scen, x, y, z, vill]) => ytaVid(scen, x, y, z) !== vill)
+    .map(([scen, x, y, z, vill, vad]) => `${vad}: ${ytaVid(scen, x, y, z)} (ska vara ${vill})`);
+  prova(`underlaget läses ur markdatan på ${punkter.length} kända punkter (gård, stall, ridhus)`,
+    felaktiga.length === 0, felaktiga.length ? felaktiga.join(" · ") : "alla rätt");
+  prova("ritten: ridhuset är fiber, uteridbanan sand, skogsstigen obelagd",
+    ytaForRitt("ridhus") === "fiber" && ytaForRitt("utebana") === "sand" && ytaForRitt("stig") === "okand");
+
+  const T = byggKontext({ ravakt: true });
+  /* Väcks på båda sätten, så att den här delen inte faller på upplåsningen
+     (den mäts för sig ovan). */
+  T.fyra("pointerdown"); T.fyra("touchend"); T.X.LJUD.pa = true;
+  /* Varje ytnyckel som datan kan ge ska ha en klang. */
+  const nycklar = new Set(["gatsten", "span", "betong", "fiber", "okand", "sand"]);
+  for (const m of ANL.mark) nycklar.add(m.typ);
+  for (const c of ANL.cirklar || []) nycklar.add(c.typ);
+  const utan = [...nycklar].filter((k) => !(T.X.LJUD_YTA[k] && T.X.LJUD_YTA[k].hov && T.X.LJUD_YTA[k].fot));
+  prova(`varje underlag i datan har en klang (${nycklar.size} nycklar)`, utan.length === 0,
+    utan.length ? "saknas: " + utan.join(", ") : [...nycklar].sort().join(", "));
+
+  /* Klangen läses ur det som faktiskt skickas till ljudgrafen. */
+  const c = T.X.LJUD.ctx;
+  const klang = (fn) => {
+    const ut = { osc: [], filter: [] };
+    const o0 = c.createOscillator.bind(c), f0 = c.createBiquadFilter.bind(c);
+    c.createOscillator = () => { const n = o0(); n.frequency.setValueAtTime = (f) => { ut.osc.push(f); }; return n; };
+    c.createBiquadFilter = () => { const n = f0(); ut.filter.push(n); return n; };
+    fn();
+    c.createOscillator = o0; c.createBiquadFilter = f0;
+    return { osc: ut.osc, filter: ut.filter.map((n) => `${n.type}:${n.frequency.value}`) };
+  };
+  const steg = (yta) => klang(() => { T.X.LJUD.gangAvstand = 0; T.X.ljudFotsteg(1, yta); }).filter.join("|");
+  const hov = (yta, vat) => klang(() => T.X.ljudHov(yta, false, undefined, vat));
+  const olika = new Set(["gras", "grus", "asfalt", "sand", "gatsten", "span"].map(steg));
+  prova("fotsteg: sex underlag ger sex olika klanger, och samma underlag samma klang",
+    olika.size === 6 && steg("grus") === steg("grus"), [...olika].join("  "));
+  prova("det som lät förut låter likadant: grusets och stallgångens fotsteg, fiberns och grusets hovslag",
+    steg("grus") === "lowpass:500" && steg("gatsten") === "bandpass:1400" && steg("okand") === steg("grus") &&
+    hov("fiber").osc[0] === 95 && hov("fiber").filter[0] === "lowpass:300" && hov("grus").osc[0] === 110,
+    `grus ${steg("grus")} · stallgång ${steg("gatsten")} · fiber ${hov("fiber").osc[0]} Hz · grus ${hov("grus").osc[0]} Hz`);
+  prova("hovslag: sand låter inte som grus, och asfalt inte som gräs",
+    hov("sand").filter[0] !== hov("grus").filter[0] && hov("asfalt").filter[0] !== hov("gras").filter[0],
+    `sand ${hov("sand").filter[0]} · grus ${hov("grus").filter[0]} · asfalt ${hov("asfalt").filter[0]} · gräs ${hov("gras").filter[0]}`);
+  prova("regn: vått grus låter som förut, våt sand behåller sandens klang under plasket, och ridhuset är torrt",
+    hov("grus", true).osc[0] === 75 && hov("sand", true).osc[0] === hov("sand").osc[0] &&
+    hov("sand", true).filter.length === hov("sand").filter.length + 1 &&
+    hov("fiber", true).filter.length === hov("fiber").filter.length,
+    `vått grus ${hov("grus", true).osc[0]} Hz · våt sand ${hov("sand", true).filter.join("+")}`);
+
+  /* Engångsljuden, med brusbädden AV (som i spelet). */
+  const handelser = (G, varld, sek = 300) => {
+    const P = byggKontext({ ravakt: true });
+    P.fyra("pointerdown"); P.fyra("touchend"); P.X.LJUD.pa = true;
+    Object.assign(P.ctx, { G, ...varld });
+    P.logg.noder.length = 0;
+    for (let i = 0; i < sek * 10; i++) P.X.ljudPuls(0.1);
+    return { n: P.logg.noder.length, ambiens: P.X.LJUD.ambiens };
+  };
+  const boxHast = (id) => (id ? {} : null);
+  const fullt = handelser({ scen: "stallinne" }, { STALLINNE: { boxar: { W: ["a", null, "b"] } }, boxHast });
+  const tomt = handelser({ scen: "stallinne" }, { STALLINNE: { boxar: { W: [null, null] } }, boxHast });
+  prova("stallet: med brusbädden AV hörs hästarna — när det står en häst i en box",
+    fullt.ambiens === false && fullt.n > 0, `${fullt.n} ljudnoder på 300 s, brusbädd ${fullt.ambiens ? "PÅ" : "av"}`);
+  prova("stallet: ett tomt stall fnyser inte (inget ljud utan synlig källa)", tomt.n === 0, `${tomt.n} ljudnoder`);
+  const gardSol = handelser({ scen: "gard", vader: { typ: "sol" } }, { ANL: { hagar: [] } });
+  const gardRegn = handelser({ scen: "gard", vader: { typ: "regn" } }, { ANL: { hagar: [] } });
+  const gardHast = handelser({ scen: "gard", vader: { typ: "regn" } }, { ANL: { hagar: [{ hastar: ["a"] }] } });
+  prova("gården: fågeln hörs i uppehåll men inte i regn, och gnägget kräver en häst i en hage",
+    gardSol.n > 0 && gardRegn.n === 0 && gardHast.n > 0,
+    `uppehåll ${gardSol.n} · regn utan hästar ${gardRegn.n} · regn med häst i hage ${gardHast.n}`);
+  const hall = handelser({ scen: "ridhusinne" }, { STALLINNE: { boxar: { W: ["a"] } }, boxHast });
+  prova("ridhusets inre har inga engångsljud (där står inga hästar som inte rids)", hall.n === 0, `${hall.n} ljudnoder`);
 }
 
 console.log(fel === 0 ? `ljudtakttest: alla ${antal} gröna — hovslagen följer gångartens takt`

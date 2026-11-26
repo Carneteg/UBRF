@@ -267,7 +267,8 @@ function stegaVandring(dt){
   [nx,ny]=vandringKollision(nx,ny,GA.radie,VD.px,VD.py);
   VD.px=nx; VD.py=ny; VD.pz=nivaHojd(nx,ny,VD.pz);
   if(VD.fart>0.05){
-    ljudFotsteg(VD.fart*dt,G.scen==="stallinne"?"sten":"grus");
+    /* Underlaget läses ur samma markdata som ritas (ytaVid, src/site.js). */
+    ljudFotsteg(VD.fart*dt,typeof ytaVid==="function"?ytaVid(G.scen,VD.px,VD.py,VD.pz||0):"okand");
     VD.fas=(VD.fas+VD.fart*dt*1.9)%1;
     const sp=VD.spår;
     if(!sp.length||Math.hypot(nx-sp[sp.length-1][0],ny-sp[sp.length-1][1])>0.35)

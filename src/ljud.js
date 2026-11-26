@@ -174,12 +174,52 @@ function ljudPulsslag(freq,tid,vol,nar){
   o.start(t);o.stop(t+tid+0.05);
 }
 
-/* Hovslag i sadeln: klangen följer underlaget. */
-function ljudHov(underlag,tung,nar){
+/* ── UNDERLAGENS KLANG (ljud-grind 0.8, F3) ────────────────────────
+   En rad per ytnyckel ur ytaVid (src/site.js). `hov` är pulsen (frekvens,
+   längd, styrka) och bruset över den (frekvens, filter, längd, styrka,
+   startfrekvens); `fot` är ett fotsteg (samma brusfält).
+
+   Fiber, grus och det våta gruset har EXAKT de värden de hade förut, och
+   stallets fotsteg är det gamla «sten»: ridhuset, gården och stallgången
+   låter som de gjorde. Det nya är att sand, gräs, asfalt, betong och spån
+   inte längre låter som grus.
+
+   Klangerna är syntetiska och stiliserade [ANTAGANDE] — mjukt och dovt
+   för det som ger efter, kort och ljust för det som är hårt. De ska
+   ersättas av riktiga inspelningar (Batch 6.6). "okand" är grus, alltså
+   det som lät förut där inget underlag är belagt. */
+const LJUD_YTA={
+  fiber:    {hov:[95,0.13,0.20, 300,"lowpass",0.09,0.10],        fot:[380,"lowpass",0.07,0.05]},
+  sand:     {hov:[88,0.13,0.18, 420,"lowpass",0.10,0.11],        fot:[440,"lowpass",0.08,0.055]},
+  span:     {hov:[78,0.14,0.14, 240,"lowpass",0.10,0.06],        fot:[280,"lowpass",0.08,0.035]},
+  gras:     {hov:[80,0.14,0.15, 260,"lowpass",0.10,0.07],        fot:[300,"lowpass",0.08,0.04]},
+  aker:     {hov:[76,0.15,0.15, 230,"lowpass",0.11,0.07],        fot:[270,"lowpass",0.09,0.04]},
+  grus:     {hov:[110,0.10,0.16, 1200,"bandpass",0.08,0.14,1900], fot:[500,"lowpass",0.07,0.06]},
+  gatsten:  {hov:[125,0.08,0.16, 1300,"bandpass",0.07,0.15,2100], fot:[900,"bandpass",0.06,0.07,1400]},
+  betong:   {hov:[130,0.08,0.15, 1500,"bandpass",0.06,0.15,2300], fot:[850,"bandpass",0.06,0.065,1300]},
+  asfalt:   {hov:[140,0.07,0.15, 1800,"bandpass",0.05,0.16,2600], fot:[1000,"bandpass",0.05,0.06,1500]},
+};
+LJUD_YTA.okand=LJUD_YTA.grus;
+/* Äldre namn som anropare kan bära med sig. */
+LJUD_YTA.sten=LJUD_YTA.gatsten;
+/* Det våta gruset, som det lät förut. */
+const LJUD_VATT_GRUS=[75,0.16,0.18, 1500,"bandpass",0.12,0.09,2600];
+/* Vilka ytor regnet når. Inomhus och i ridhuset är det torrt. */
+const LJUD_UTE=new Set(["grus","sand","gras","aker","asfalt","betong","okand"]);
+
+/* Hovslag i sadeln: klangen följer underlaget. `vat` lägger regnet
+   OVANPÅ underlaget i stället för att ersätta det: vått grus låter som
+   förut, och våt sand, vått gräs och våt asfalt behåller sin egen klang
+   under plasket. */
+function ljudHov(underlag,tung,nar,vat){
   const v=tung?1.25:1;
-  if(underlag==="fiber"){ ljudPulsslag(95,0.13,0.20*v,nar); ljudStot(300,"lowpass",0.09,0.10*v,undefined,nar); }
-  else if(underlag==="vat"){ ljudPulsslag(75,0.16,0.18*v,nar); ljudStot(1500,"bandpass",0.12,0.09*v,2600,nar); }
-  else { ljudPulsslag(110,0.10,0.16*v,nar); ljudStot(1200,"bandpass",0.08,0.14*v,1900,nar); }
+  if(underlag==="vat"){underlag="grus";vat=true;}       // gamla anropare
+  const y=LJUD_YTA[underlag]||LJUD_YTA.okand;
+  const blott=vat&&LJUD_UTE.has(underlag in LJUD_YTA?underlag:"okand");
+  const h=blott&&(y===LJUD_YTA.grus)?LJUD_VATT_GRUS:y.hov;
+  ljudPulsslag(h[0],h[1],h[2]*v,nar);
+  ljudStot(h[3],h[4],h[5],h[6]*v,h[7],nar);
+  if(blott&&h!==LJUD_VATT_GRUS)ljudStot(1500,"bandpass",0.12,0.05*v,2600,nar);
 }
 /* ── HOVSLAGENS TAKT (ljud-grind 0.6, F1) ──────────────────────────
    Anropas varje bildruta under ritt. Förut delades fasen jämnt i
@@ -202,7 +242,7 @@ function ljudHov(underlag,tung,nar){
        och det hörs tydligast i en galopp vid låg bildfrekvens.
 
    Betoningen på galoppens första slag är kvar som förut [ANTAGANDE]. */
-function ljudRittSteg(fas,gangart,underlag,fattning,dt){
+function ljudRittSteg(fas,gangart,underlag,fattning,dt,vat){
   const namn=gangMonsterNamn(gangart,fattning), m=namn&&GANGFAS[namn];
   if(!m){LJUD.hovMonster=null;LJUD.hovFas=fas;return;}
   let steg=(fas-(LJUD.hovFas||0))%1; if(steg<0)steg+=1;
@@ -213,15 +253,15 @@ function ljudRittSteg(fas,gangart,underlag,fattning,dt){
   if(!(steg>0))return;
   const nu=LJUD.ctx?LJUD.ctx.currentTime:0, ruta=dt>0?Math.min(dt,0.1):0;
   for(const sl of gangPasserade(m,fran,till))
-    ljudHov(underlag,m.takt===3&&sl.fas===0,nu+ruta*(sl.lage-fran)/steg);
+    ljudHov(underlag,m.takt===3&&sl.fas===0,nu+ruta*(sl.lage-fran)/steg,vat);
 }
-/* Fotsteg till fots: ett steg var 0,8 m. */
+/* Fotsteg till fots: ett steg var 0,8 m, med underlagets klang. */
 function ljudFotsteg(avstand,underlag){
   LJUD.gangAvstand+=avstand;
   if(LJUD.gangAvstand>=0.8){
     LJUD.gangAvstand=0;
-    if(underlag==="sten")ljudStot(900,"bandpass",0.06,0.07,1400);
-    else ljudStot(500,"lowpass",0.07,0.06);
+    const f=(LJUD_YTA[underlag]||LJUD_YTA.okand).fot;
+    ljudStot(f[0],f[1],f[2],f[3],f[4]);
   }
 }
 
@@ -305,11 +345,38 @@ function ljudAmbiens(typ){
   LJUD.ambKalla=src;
 }
 
-/* Pulsen: väljer ambiens efter scen och strör ut engångsljud. */
+/* Hur många hästar spelaren kan SE där hon står: boxarnas hästar i
+   stallet, hagarnas på gården. Samma data som ritar dem (boxHast,
+   ANL.hagar) — ett fnys utan häst vore ett ljud utan källa. */
+function ljudSynligaHastar(){
+  if(G.scen==="stallinne"&&typeof STALLINNE!=="undefined"&&typeof boxHast==="function"){
+    let n=0;
+    for(const k in STALLINNE.boxar)for(const id of STALLINNE.boxar[k]||[])if(boxHast(id))n++;
+    return n;
+  }
+  if(G.scen==="gard"&&typeof ANL!=="undefined"){
+    let n=0; for(const hg of ANL.hagar||[])n+=(hg.hastar||[]).length; return n;
+  }
+  return 0;
+}
+
+/* Pulsen: väljer ambiens efter scen och strör ut engångsljud.
+
+   ENGÅNGSLJUDEN HÄNGER INTE LÄNGRE PÅ BRUSBÄDDEN (ljud-grind 0.8, F3).
+   Bädden är avstängd med flit (se LJUD.ambiens), och fnys, stamp, gnägg
+   och fågel låg bakom bäddens `typ` — de spelades alltså aldrig: noll
+   händelser på tjugo sekunder, i varje scen. Nu väljs de ur scenen. Bädden
+   är fortfarande AV.
+
+   Varje ljud har en synlig källa: stalljuden kräver en häst i en box,
+   gnägget på gården en häst i en hage. Fågeln sjunger inte i regn.
+   Ridhusets inre har inga engångsljud — där står inga hästar som inte
+   rids. */
 function ljudPuls(dt){
   if(!LJUD.ctx)return;
   const regn=G.vader&&G.vader.typ==="regn";
   const ute=(G.scen==="lektion"||G.scen==="bana")&&G.plats!=="ridhus";
+  const plats=G.scen==="stallinne"?"stall":(G.scen==="gard"||ute)?"gard":null;
   let typ=null;
   /* Brusbädden begärs bara om den uttryckligen är påslagen. Beräkningen
      nedan står kvar så att platsvalet inte hinner ruttna medan flaggan
@@ -319,8 +386,9 @@ function ljudPuls(dt){
   else if(G.scen==="gard"||ute)typ=regn?"regn":"gard";
   else if(G.scen==="ridhusinne")typ="stall";
   ljudAmbiens(typ);
-  if(!LJUD.pa)return;
-  if(typ==="stall"){
+  if(!LJUD.pa||!plats)return;
+  const hastar=ljudSynligaHastar();
+  if(plats==="stall"&&hastar>0){
     LJUD.stallT-=dt;
     if(LJUD.stallT<=0){
       LJUD.stallT=4+Math.random()*8;
@@ -330,10 +398,14 @@ function ljudPuls(dt){
       else ljudStot(2200,"bandpass",0.1,0.04,3200);   // grimskaft mot galler
     }
   }
-  if(typ==="gard"){
-    LJUD.fagelT-=dt;
-    if(LJUD.fagelT<=0){LJUD.fagelT=3+Math.random()*7;ljudFagel();}
-    LJUD.gnaggT-=dt;
-    if(LJUD.gnaggT<=0){LJUD.gnaggT=18+Math.random()*22;ljudGnagg();}
+  if(plats==="gard"){
+    if(!regn){
+      LJUD.fagelT-=dt;
+      if(LJUD.fagelT<=0){LJUD.fagelT=3+Math.random()*7;ljudFagel();}
+    }
+    if(hastar>0){
+      LJUD.gnaggT-=dt;
+      if(LJUD.gnaggT<=0){LJUD.gnaggT=18+Math.random()*22;ljudGnagg();}
+    }
   }
 }

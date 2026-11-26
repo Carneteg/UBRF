@@ -2652,3 +2652,73 @@ const INTERIORYTOR = Object.freeze({
     kalla:"ridhus-klubb-20-grona-skapen.jpg, IMG_0268.MOV",
     klass:"FOTO", fargKlass:"UPPSKATTNING"}
 });
+
+/* ── UNDERLAGET UNDER EN PUNKT (ljud-grind 0.8, F3) ────────────────
+   Ljudet ska fråga SAMMA markdata som ritas, så att det hon hör är det
+   hon går på. Förut visste fotstegen bara «sten» i stallet och «grus»
+   överallt annars, och hovslagen valde underlag ur plats och väder.
+
+   INGEN NY GEOMETRI och inga nya ytor: uppslaget läser det som redan
+   står i den här filen. Varje svar bär sitt belägg:
+
+     gården      ANL.mark och ANL.cirklar, «senare vinner» som i ritningen
+     stallet     marksten i gångarnas mittstråk — VERIFIED/MEASURED,
+                 references/buildings/stall/INTERIOR-MATRIS.md rad 81–82
+                 (STALLINNE.gangSten); slät betong längs servicedelens
+                 yttervägg — rad 121–122 (serviceGolv, serviceGolvBredd);
+                 klubbdelen matt betong — INTERIORYTOR.stallKlubb;
+                 tvärkorridoren ljus betong med markstensstråken
+                 fortsatta (golvytans `tvar`); spån i boxarna — DERIVED
+                 ur rad 83–84 (spånet ligger ut från boxarna)
+     ridhuset    banans «bruna sand-/flisblandning» — VERIFIED,
+                 references/buildings/ridhus/INTERIOR-MATRIS.md rad 73
+
+   Allt annat är "okand": läktaren, ridhusets klubbdel och kafé har inget
+   belagt golvmaterial knutet till en yta här, och då hittas inget på
+   ([REFERENCE GAP]). "okand" låter som det lät förut.
+
+   Koordinaterna är scenens egna, samma som spelaren går i. `z` är höjden
+   över golvet; ovanför marknivå svarar ridhuset "okand". */
+function ytaVid(scen,x,y,z){
+  if(scen==="gard"){
+    let typ="gras";
+    for(const m of ANL.mark){
+      const r=m.rekt;
+      if(r&&x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h)typ=m.typ;
+    }
+    for(const c of ANL.cirklar||[])
+      if(Math.hypot(x-c.c[0],y-c.c[1])<=c.r)typ=c.typ;
+    return typ;
+  }
+  if(scen==="stallinne"){
+    const S=STALLINNE;
+    const iGang=()=>{for(const k in S.gangar){const g=S.gangar[k];if(x>=g.x0&&x<=g.x1)return true;}return false;};
+    if(y>=S.klubb.y0)return "betong";
+    if(y>=S.klubbY)return iGang()?"gatsten":"betong";
+    if(y<S.serviceY){
+      for(const b of S.service){
+        const r=b.rekt;
+        if(x<r.x||x>r.x+r.w||y<r.y||y>r.y+r.h)continue;
+        /* Betongen är en remsa längs ytterväggen, inte hela bukten. */
+        const franVagg=r.x<S.bredd/2?x-r.x:(r.x+r.w)-x;
+        if(franVagg<=S.serviceGolvBredd)return "betong";
+      }
+      return "gatsten";
+    }
+    return iGang()?"gatsten":"span";
+  }
+  if(scen==="ridhusinne"){
+    const b=RIDHUSINNE.bana;
+    if(!(z>0.5)&&x>=b.x&&x<=b.x+b.w&&y>=b.y&&y<=b.y+b.h)return "fiber";
+    return "okand";
+  }
+  return "okand";
+}
+/* Underlaget under en ridande häst. Ritten har en plats, inte en punkt
+   på tomten: ridhusets bana, uteridbanan (ANL.mark: sand) eller
+   skogsstigen, som inte har något belagt underlag. */
+function ytaForRitt(plats){
+  if(plats==="ridhus")return "fiber";
+  if(plats==="utebana")return "sand";
+  return "okand";
+}
