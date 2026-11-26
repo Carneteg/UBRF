@@ -396,6 +396,22 @@ deras beslutsspärrar är auktoritativa för det här arbetet.
     och 120 bilder/s) men inte hela vägen i webbläsaren: inget prov får
     där en häst att vägra halt i sex sekunder.
   `JEV_DECISION: JEV_NOT_NEEDED`.
+- Levererat: **Batch 0.15** — G8 (lektionshandledningens sammanfattning
+  rättad). `references/education/srf-ridning-lektionshandledning.md`
+  påstod att Drive-filen `1.pdf` var 2026 års uppdaterade upplaga och gav
+  stöd för lektionens upplägg och säkerhet. Alla 32 sidor är lästa som
+  bilder: det är «Ridning – lektionshandledning, dressyr» av Bo Tibblin,
+  © 2005 Svenska Ridsportförbundet (tryckort s. 4), ett övningshäfte för
+  instruktören. Det har **inget** om lektionens upplägg, uppsittning,
+  avsittning, uppvärmning, hjälm, avstånd eller lättridning — filen säger
+  nu det uttryckligen, sida för sida, och bär i stället de fakta häftet
+  faktiskt innehåller (volter, serpentin, galoppfattning, halvhalt,
+  övergångar, skänkelvikning), med sidhänvisning och egna ord. UBRF:s
+  eget lektionsformat är märkt `[REFERENCE GAP]`. PDF:en förblir
+  `[DRIVE-ONLY]`: s. 4 förbjuder kopiering utan förbundets medgivande.
+  Tryckorten och s. 9 är kontrollerade två gånger, oberoende; övriga
+  sidor en gång. Ingen kod, inget spelbeteende ändrat.
+  `JEV_DECISION: JEV_NOT_NEEDED`.
 - **A2 (kantutjämning) uppskjuten, inte löst i 0.1:** en FXAA-shader
   provades i post-kompositeringen men orsakade en mätbar, reproducerbar
   CI-regression i `tools/lektion-e2e-test.mjs` (headless, mjukvaru-
