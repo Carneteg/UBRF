@@ -495,6 +495,30 @@ deras beslutsspärrar är auktoritativa för det här arbetet.
     SITEPLAN; mätningen av takfoten vilar på ett antaget dörrblad på 2,05 m.
   Kontroller: `kolla-nyckelbilder.py`, `kolla-dorrfarg.py`,
   `kolla-referenser.py` gröna. `JEV_DECISION: JEV_NOT_NEEDED`.
+- Levererat: **Batch 1.2, kodhalvan** — strömbrytaren och bildrutemätaren.
+  Enhetsmätningen (Tobias iPad och iPhone) och valet av lägsta stödda
+  enhet är INTE gjorda; de är batchens andra halva och kräver beslut.
+  - **`?realism=1`** — strömbrytaren för allt Fas 1 ska bygga. AV som
+    standard. I den här batchen läser ingenting den: provet faller om någon
+    annan källfil än `src/bildmatare.js` nämner `REALISM`.
+  - **`?fps=1`** — bildrutemätaren: bilder per sekund över de senaste 60
+    rutorna, sämsta rutan i millisekunder, och hur många rutor som slog i
+    spelets dt-tak på 0,05 s (det tak som fällde FXAA-försöket i 0.1).
+    Syns bara när den är påslagen och tar inga tryck från spelet.
+  - **Spelet är orört:** spelloopen har fått EN rad, som lämnar över
+    bildrutans längd; `dt` räknas som förut. `tools/bildmataretest.mjs`
+    (nytt i CI) mäter det statiskt, räknar mätarens tal i regeln och
+    öppnar spelet med och utan parametrarna. Falsifierad: `--muter-pa`,
+    `--muter-synlig`, `--muter-klipp` blir röda. Hela ridsviten går också
+    med brytaren på: `UBRF_FRAGA='?realism=1&fps=1' node tools/ridtest.mjs`.
+  - **Paritet:** ren webbteknik för mätning och jämförelse; ingen
+    spelregel, ingen text och inget spelaren ser utan att be om det. Ingen
+    Roblox-motsvarighet behövs för ett mätverktyg, men varje senare batch
+    som låter brytaren ändra bilden behöver det undantag planen beskriver.
+  - **Ett tal ur provet, inte en mätning:** den huvudlösa provwebbläsaren
+    här ritar ~7 bilder/s med mjukvarurendering. Det säger ingenting om en
+    riktig enhet.
+  `JEV_DECISION: JEV_NOT_NEEDED`.
 - **A2 (kantutjämning) uppskjuten, inte löst i 0.1:** en FXAA-shader
   provades i post-kompositeringen men orsakade en mätbar, reproducerbar
   CI-regression i `tools/lektion-e2e-test.mjs` (headless, mjukvaru-

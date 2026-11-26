@@ -467,6 +467,12 @@ jobs:
           test -f tools/avsittningtest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/avsittningtest.mjs (steget 'Avsittning bara från halt (Batch 0.11)')" >&2; exit 1; }
           node tools/avsittningtest.mjs
 
+      - name: Strömbrytaren och bildrutemätaren ändrar ingenting (Batch 1.2)
+        run: |
+          set -euo pipefail
+          test -f tools/bildmataretest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/bildmataretest.mjs (steget 'Strömbrytaren och bildrutemätaren ändrar ingenting (Batch 1.2)')" >&2; exit 1; }
+          node tools/bildmataretest.mjs
+
       - name: P3 — kameran efter en flytt (Kimi Q4)
         run: |
           set -euo pipefail

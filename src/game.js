@@ -1566,6 +1566,9 @@ let last=performance.now();
 function loop(now){
   /* 3D-modulerna laddas efter den här filen — vänta tills de finns. */
   if(typeof gl3dLage!=="function"){requestAnimationFrame(loop);return;}
+  /* Batch 1.2: mätaren får rutans VERKLIGA längd, före dt-taket. Den
+     läser bara; spelets `dt` räknas exakt som förut. */
+  if(typeof bildmatareSteg==="function")bildmatareSteg((now-last)/1000,now);
   const dt=Math.min((now-last)/1000,0.05);last=now;G.t+=dt;
   ljudPuls(dt);
   /* Väntande avsittning stegas FÖRE scenvalet: sitter hon av i den här

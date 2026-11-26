@@ -22,7 +22,10 @@ const browser = await chromium.launch({ executablePath: fs.existsSync(exe) ? exe
   args: ["--use-angle=swiftshader", "--no-sandbox", "--enable-unsafe-swiftshader"] });
 const page = await browser.newPage();
 page.on("pageerror", e => console.log("PAGEERROR", e.message));
-await page.goto(`http://localhost:${PORT}/`, { waitUntil: "load" });
+/* Batch 1.2: UBRF_FRAGA lägger en frågesträng på adressen, t.ex.
+   UBRF_FRAGA='?realism=1&fps=1', så att hela sviten kan köras med
+   strömbrytaren PÅ. Utan variabeln är adressen exakt som förut. */
+await page.goto(`http://localhost:${PORT}/${process.env.UBRF_FRAGA || ""}`, { waitUntil: "load" });
 await page.waitForTimeout(1500);
 const resultat = [];
 const prova = (namn, ok, detalj) => { resultat.push({ namn, ok }); console.log(ok ? "  OK  " : "  FEL ", namn, "—", detalj); };
