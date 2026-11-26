@@ -261,6 +261,28 @@ const RID_KANON = {
      Marginalerna är oberoende av hästen: både taket och insvängningen
      skalar med kurvaturtaket, så kvoten står still oavsett smidighet. */
   KAPPA_RAT_TID: 0.32,
+  /* ── AVSITTNING BARA FRÅN HALT (Batch 0.11, E2) ──────────────────
+     Man sitter av en häst som STÅR. Begärs avsittning i rörelse tar
+     stallet ner henne genom de nedåtgående övergångar som redan finns,
+     och avsittningen sker när hon står.
+
+     STILLA är gränsen för «står»: gångarten är halt OCH markfarten är
+     högst så här många m/s. Samma 0,05 m/s som bilden använder för att
+     skilja stilla ben från skritt (VIS_STA i src/game.js).
+
+     NODUTGANG_S är hur länge spelaren som mest väntar. Går tiden ut
+     sitter hon av ändå — ingen ska bli fast i sadeln av en häst som
+     inte kommer till halt.
+
+     Talet är satt ur MÄTNING (tools/avsittningtest.mjs, 2026-11-26):
+       skritt → halt 1,30 s · trav → halt 2,65 s · galopp → halt 4,00 s
+       trav, med en drivande hjälp given strax före trycket: 5,35 s —
+       modellen tappar aldrig bort en hjälp, så hästen fullföljer
+       övergången UPP till galopp innan stallet tar ner henne.
+     6 s rymmer det värsta uppmätta fallet med marginal, så att
+     nödutgången förblir just en nödutgång. [ANTAGANDE] Arbetsordern
+     sade 5 s; det räckte inte för det sista fallet. */
+  AVSITTNING: { STILLA: 0.05, NODUTGANG_S: 6 },
 };
 
 /* Läsare. Fanns som `ridAB()` medan A/B levde; namnet säger nu vad det

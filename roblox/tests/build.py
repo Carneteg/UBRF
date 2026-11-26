@@ -425,6 +425,8 @@ KLIENT = SPEL + [
     ("Naromrade",           "src/client/Naromrade.luau"),
     #[[ #264: Ugnetas ridrad utanfor lektionen. Bara init.client require:ar den. ]]
     ("UgnetaRad",           "src/client/UgnetaRad.luau"),
+    #[[ Batch 0.11: avsittning bara fran halt. Bara init.client require:ar den. ]]
+    ("Avsittning",          "src/client/Avsittning.luau"),
     ("Init",                "src/client/init.client.luau"),
 ]
 

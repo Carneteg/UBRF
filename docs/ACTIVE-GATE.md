@@ -337,6 +337,65 @@ deras beslutsspärrar är auktoritativa för det här arbetet.
   ett förslag, skrivna i egna meningar — särskilt valet att säga «hästen»
   i stället för att lägga in hästens namn i varje rad.
   `JEV_DECISION: JEV_NOT_NEEDED`.
+- Levererat: **Batch 0.11** — E2 (avsittning bara från halt), **båda
+  plattformarna i samma leverans**. Före batchen satt SITT AV av i vilken
+  fart som helst — uppmätt galopp 5,76 m/s på webben, och Roblox klient
+  hade samma väg (`begarAvsittning` direkt ur knappen).
+  - **Regeln, samma på båda ytorna:** står hästen (gångart halt och högst
+    0,05 m/s) sker avsittningen direkt, som förut. Rör hon sig blir trycket
+    en BEGÄRAN: stallet tar ner henne genom de nedåtgående steg som redan
+    finns, en rad säger «Vi stannar först. Du sitter av när hästen står
+    still.», och avsittningen sker när hon står. Efter 6 s sitter spelaren
+    av ändå (nödutgång). Ett andra tryck startar inte om klockan och
+    sitter inte av i förtid; ett DRIV från spelaren tar henne inte upp
+    igen; stallets broms besvarar inget lektionskort och räknas inte som
+    spelarens hjälp.
+  - **Webb:** regeln i `src/riding/avsittning.js` (ren, tre funktioner);
+    `ridAvsittning`/`ridAvsittSteg`/`ridAvsittningNu` i `src/game.js`;
+    nedtagningen är samma halvhaltsförlopp som BROMS/S. Pekknappen
+    SITT AV går samma väg (`data-tap="KeyE"`).
+  - **Roblox:** samma tre funktioner i `roblox/src/client/Avsittning.luau`;
+    `init.client.luau` låter `E`, styrkorset ned och pekytans SITT AV gå
+    genom `onskarAvsittning`, och bildrutans steg ger ridtrappans egna
+    BROMS-impulser genom `Input`s spärr (ryggar hon: ett DRIV upp till
+    halt, aldrig ett BROMS till). `UgnetaController.sakerhetsrad` går före
+    allt annat hon säger. **Servern är orörd** — `HorseService.dismount`
+    måste kunna sätta av vid frånkoppling och städning oavsett fart.
+  - **Delade tal:** `RID_KANON.AVSITTNING` (webb) → exporteras som
+    `RidKanon.AVSITTNING`; Roblox egna tal i `Config.AVSITTNING`, och
+    specen faller om de glider isär. Ny språknyckel `avsittning.bromsar`
+    (sv/en) i den delade katalogen.
+  - **Mätt (webb, `tools/avsittningtest.mjs`):** skritt → halt 1,30 s,
+    trav → halt 2,65 s, galopp → halt 3,85–4,00 s; hon står (0,02 m/s)
+    när ritten lämnas. Falsifierad: `--muter-halt`, `--muter-nod`,
+    `--muter-omstart` blir röda, och kontrollmätningen med den gamla
+    regeln sitter av i 5,76 m/s.
+  - **Mätt (Roblox-bänken, `klient-sittav-halt.spec`):** galopp → halt
+    2,27 s i tre BROMS-steg, `DismountRequest` först vid 0,04 m/s; ur
+    ryggning ett DRIV; nödutgången vid 6,03 s. Kontrollmätning med den
+    gamla regeln: `DismountRequest` vid 5,73 m/s.
+  - **Avvikelse mot arbetsordern:** nödutgången är 6 s, inte 5. Mätningen
+    visade ett fall på 5,20–5,35 s (trav, drivande hjälp given strax före
+    SITT AV: modellen tappar aldrig bort en hjälp, så hästen fullföljer
+    övergången upp till galopp innan stallet tar ner henne). Med 5 s
+    löste nödutgången ut vid 0,37 m/s i just det fallet.
+  - **Ändrat prov:** ett fall i `klient-ridhandlingar.spec` satt av i
+    skritt och väntade sig avsittning i samma tryck. Kravet på vad som ska
+    vara rivet efteråt är oförändrat; fallet stegar nu fram till halten.
+  - **Känd begränsning, lika på båda ytorna:** ett pågående lektionsförsök
+    bedöms som vanligt under de sekunder stallet bromsar och avbryts först
+    vid själva avsittningen. En halt som stallet rider kan alltså i
+    princip räknas som ryttarens i en haltövning. I Roblox bedöms försöken
+    av servern, som den här batchen inte rör; därför är webben lämnad
+    likadan i stället för att bli ensam strängare. Föreslagen följd:
+    servern får veta att avsittning är begärd och avbryter försöket då.
+  - **Inte verifierbart härifrån:** Roblox-delen är stubbad Luau-evidens.
+    Att servern godtar BROMS-stegen i klientens takt, att nedtagningen
+    känns rätt och att pekknappen beter sig på en riktig enhet är ett
+    Studio-prov — NOT TESTED. På webben mäts nödutgången i regeln (30, 60
+    och 120 bilder/s) men inte hela vägen i webbläsaren: inget prov får
+    där en häst att vägra halt i sex sekunder.
+  `JEV_DECISION: JEV_NOT_NEEDED`.
 - **A2 (kantutjämning) uppskjuten, inte löst i 0.1:** en FXAA-shader
   provades i post-kompositeringen men orsakade en mätbar, reproducerbar
   CI-regression i `tools/lektion-e2e-test.mjs` (headless, mjukvaru-

@@ -219,6 +219,10 @@ local radArgs: { any } = {}
 local radTid = -math.huge
 local RAD_FARSK = 0.6
 local lektionSteg = -math.huge
+--[[ Batch 0.11: säkerhetsraden. Matas varje bildruta medan den gäller
+     (som ridraden) och går FÖRE allt annat Ugneta säger. ]]
+local sakerNyckel: string? = nil
+local sakerTid = -math.huge
 
 local LARARE_BREDD = 280
 local LARARE_TOPP = 8
@@ -1305,8 +1309,15 @@ end
 	  2. lektionens besked (bannerns text medan den står uppe),
 	  3. lektionens övning (vägledningen, så länge lektionen pågår),
 	  4. ridraden utanför lektionen (nyckel + argument, översätts vid ritning).
-	Uppgiftens nej står INTE här: det hör till handlingen, i panelen. ]]
+	Uppgiftens nej står INTE här: det hör till handlingen, i panelen.
+
+	FÖRE ALLA FYRA (Batch 0.11): säkerhetsraden. Medan stallet tar ner
+	hästen inför en avsittning är det det enda hon säger — en lektions
+	beröm eller nästa instruktion ska inte stå över «vi stannar först». ]]
 local function lararMeddelande(): string?
+	if sakerNyckel and os.clock() - sakerTid < RAD_FARSK then
+		return Sprak.t(sakerNyckel)
+	end
 	local extra = lektionsExtra()
 	if extra and extra.ersatt then return extra.text end
 	local c = chip
@@ -1503,6 +1514,14 @@ sprakBytt = function()
 	end
 	ritaLarare()
 	if vard then vard() end
+end
+
+--[[ Säkerhetsraden (Batch 0.11), som NYCKEL. Matas varje bildruta medan
+     den gäller; slutar matningen försvinner raden av sig själv, så den
+     kan aldrig bli stående över en ritt som tagit slut. ]]
+function UgnetaController.sakerhetsrad(nyckel: string?)
+	sakerNyckel = nyckel
+	sakerTid = if nyckel then os.clock() else -math.huge
 end
 
 --[[ Ridraden utanför lektionen, som NYCKEL och argument. Matas varje

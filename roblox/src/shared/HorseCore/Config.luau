@@ -224,6 +224,21 @@ Config.RIDINPUT = {
 	SkopaPafyll = 6,        -- påfyllning per sekund
 }
 
+--[[ ── Avsittning bara från halt (Batch 0.11, E2) ─────────────────────
+
+     `Stilla` är gränsen för «står»: gångarten är halt OCH farten är högst
+     så här många m/s. `Nodutgang` är hur många sekunder spelaren som mest
+     väntar efter ett SITT AV i rörelse innan hon sitter av ändå.
+
+     KANON ÄR WEBBENS `RID_KANON.AVSITTNING` (src/riding/telemetri.js),
+     exporterad som `RidKanon.AVSITTNING`. Talen står här för att
+     RidKanon inte styr något i Roblox — men de ska vara IDENTISKA, och
+     `klient-sittav-halt.spec` faller om de glider isär. ]]
+Config.AVSITTNING = {
+	Stilla = 0.05,   -- m/s
+	Nodutgang = 6,   -- sekunder
+}
+
 --[[ ── Studs per meter ──────────────────────────────────────────────
      All spellogik räknar i meter för att matcha den befintliga
      ridmodellen. Roblox räknar i studs. Omräkningen sker på ett ställe. ]]

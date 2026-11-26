@@ -46,6 +46,9 @@ local LektionController = require(script.LektionController)
 local KontrollHjalp = require(script.KontrollHjalp)
 --[[ #264 GAIT_READABILITY_AND_UGNETA: Ugnetas ridrad utanför lektionen. ]]
 local UgnetaRad = require(script.UgnetaRad)
+--[[ Batch 0.11: avsittning bara från halt. Regeln är ren och delad med
+     webben (src/riding/avsittning.js). ]]
+local Avsittning = require(script.Avsittning)
 --[[ #263: vilken build sitter jag i? Egen liten yta, se modulhuvudet. ]]
 local Byggidentitet = require(script.Byggidentitet)
 --[[ #162: världens prompter skrivs om till spelarens språk på klienten —
@@ -189,6 +192,9 @@ local function dismount(skal: Slutskal?)
 	     uppsittningen. Lärarytan släcks här, i samma andetag som resten av
 	     ekipaget rivs, så att "Bra rytm" aldrig blir kvar på skärmen. ]]
 	local summering = LektionController.avbryt(skal)
+	--[[ Batch 0.11: «vi stannar först» hör till en ritt som pågår. Den
+	     släcks här och väntar inte på att matningen ska bli gammal. ]]
+	UgnetaController.sakerhetsrad(nil)
 	--[[ Hjälpen hör till ritten. Den ska inte ligga kvar över en spelare
 	     som just klivit av. ]]
 	KontrollHjalp.dolj()
@@ -325,6 +331,26 @@ local function begarAvsittning()
 	end)
 end
 
+--[[ ══ SITT AV BARA FRÅN HALT (Batch 0.11, E2) ═══════════════════════
+
+	`E`, styrkorset ned och pekknappen SITT AV går HIT, inte längre rakt
+	till `begarAvsittning`. Står hästen sker avsittningen direkt, exakt
+	som förut. Rör hon sig blir trycket en BEGÄRAN: bildrutans steg
+	(nedan, i `RenderStepped`) tar ner henne med ridtrappans egna
+	BROMS-steg och sitter av när hon står — eller när nödutgången löser
+	ut. Regeln själv bor i `Avsittning` och är densamma på webben.
+
+	`begarAvsittning` är oförändrad och är fortfarande den enda väg som
+	river ritten och frågar servern. ]]
+local function onskarAvsittning()
+	local r = ride
+	if not r then return end
+	local loco = r.movement.loco
+	if Avsittning.begar(r.avsitt, loco.gait, loco.speed) == "nu" then
+		begarAvsittning()
+	end
+end
+
 local function mount(model: Model, rittId: string?)
 	--[[ EN NY RITT GOR VARJE VANTANDE SVAR INERT. Se noten vid
 	     `sessionGen`: en coroutine som star och vantar pa serverns
@@ -361,6 +387,9 @@ local function mount(model: Model, rittId: string?)
 		rider = RiderController.new(rig),
 		--[[ #264: Ugnetas ridrad börjar om för varje ritt. ]]
 		ugnetaRad = UgnetaRad.ny(),
+		--[[ Batch 0.11: en väntande avsittning hör till ritten och börjar
+		     om med den. ]]
+		avsitt = Avsittning.ny(),
 		--[[ G02-A: ridningens tillstånd och telemetri, samma kontrakt som
 		     webbens src/riding/telemetri.js. Sätts FÖRE första bildrutan
 		     av samma skäl som på webben — annars finns ett fönster där
@@ -416,7 +445,7 @@ local function mount(model: Model, rittId: string?)
 	     fri till fots — det var den förut också, genom `if not ride`. ]]
 	ContextActionService:BindAction(Input.AVSITT,
 		function(_, inputState: Enum.UserInputState)
-			if inputState == Enum.UserInputState.Begin then begarAvsittning() end
+			if inputState == Enum.UserInputState.Begin then onskarAvsittning() end
 			return Enum.ContextActionResult.Sink
 		end, true, Enum.KeyCode.E, KontrollHjalp.AVSITTNING_GAMEPAD)
 	--[[ Pekkontrollerna byggs först här, och bara på en pekenhet: en
@@ -426,7 +455,7 @@ local function mount(model: Model, rittId: string?)
 	--[[ `blick` går till kameran och INGEN ANNANSTANS: pekytan vrider
 	     bilden, inte hästen. ]]
 	TouchControls.mount(Input, {
-		dismount = begarAvsittning,
+		dismount = onskarAvsittning,
 		blick = function(dYaw, dPitch)
 			local r = ride
 			if r then r.camera:vridBlick(dYaw, dPitch) end
@@ -1157,7 +1186,56 @@ RunService.RenderStepped:Connect(function(dt)
 	     engångsflankerna (gångart upp/ner, parad); låg de kvar hade varje
 	     tryck under pausen fyrat på en gång när pausen släppte. En impuls
 	     ska verka en gång, i den bildruta den gjordes — inte sparas. ]]
+	--[[ ══ EN VÄNTANDE AVSITTNING (Batch 0.11) ═══════════════════════
+
+	     Står hon nu — eller har nödutgången löst ut — sitter spelaren av
+	     i den här bildrutan, genom samma `begarAvsittning` som förut.
+
+	     Annars tar STALLET ner hästen, med ridtrappans egna steg och
+	     genom `Input`s egen spärr: en impuls i taget, i samma takt som
+	     servern godtar. Över halt är det BROMS; ryggar hon är det ett
+	     DRIV, som är trappans väg från rygga upp till halt. Står trappan
+	     redan på halt ges INGENTING — ett BROMS till hade fått henne att
+	     börja rygga — och farten får sjunka av sig själv.
+
+	     Impulsen läggs FÖRE `Input.consume()`, så att den är med i
+	     bildrutans avsikt och går hela den vanliga vägen: `movement:step`,
+	     trappan, `RidingIntent` till servern. Ingen ny ridfysik. ]]
+	local avsittVantar = false
+	local avsittMot = 0 -- −1 = trappan ska ned, +1 = upp (ur rygga), 0 = står på halt
+	do
+		local l = ride.movement.loco
+		local svar = Avsittning.steg(ride.avsitt, l.gait, l.speed, dt)
+		if svar == "sitt_av" then
+			begarAvsittning()
+			return
+		end
+		if svar == "bromsa" then
+			avsittVantar = true
+			local haltIndex = Core.Gaits.index("halt")
+			local nu = Ridtrappa.index(l.beddGangart or l.targetGait, ride.movement.ryggar)
+			if nu > haltIndex then
+				avsittMot = -1
+				Input.bromsImpuls()
+			elseif nu < haltIndex then
+				avsittMot = 1
+				Input.drivImpuls()
+			end
+			UgnetaController.sakerhetsrad("avsittning.bromsar")
+		end
+	end
+
 	local intent = Input.consume()
+	--[[ Medan stallet tar ner henne går bara steg MOT halt igenom. En
+	     hållen framåttangent driver inte emot, en parad stegar inte förbi
+	     halt ned i ryggning, och ett DRIV från spelaren tar henne inte
+	     upp igen. ]]
+	if avsittVantar then
+		if avsittMot >= 0 then intent.gaitDown = false end
+		if avsittMot <= 0 then intent.gaitUp = false end
+		intent.parad = 0
+		intent.forward = 0
+	end
 	--[[ Vad ryttaren bad om den här bildrutan. Räknas FÖRE pausgrenen
 	     sedan #263: grenen behöver veta om det kom en hjälp. Samma
 	     uttryck som förut, bara flyttat hit. ]]
@@ -1262,7 +1340,9 @@ RunService.RenderStepped:Connect(function(dt)
 	     innan spelaren hunnit läsa en rad. Ett kort ska besvaras av ett
 	     SVAR — en hjälp eller ett tryck på knappen — och en tygel är
 	     inget svar. Mätt i `klient-lektionspaus.spec` punkt 5b. ]]
-	if hjalp and LektionController.vantar() then LektionController.fortsatt() end
+	--[[ Batch 0.11: stallets broms inför en avsittning är inte ryttarens
+	     hjälp och besvarar inget kort. ]]
+	if hjalp and not avsittVantar and LektionController.vantar() then LektionController.fortsatt() end
 
 	--[[ ── AVSIKTEN SKICKAS, INTE RESULTATET (#233 Fas 4b) ─────────────
 

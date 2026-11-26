@@ -1209,9 +1209,12 @@ function stegaP3(dt){
      en ny gångartsbegäran. */
   const cue=G.ride?G.ride.cueTid:null;
   const parad=RIDIN.parad||0, sk=RIDIN.skankel||0, skF=G.p3Sk||0;
-  const hjalp=(cue!==G.p3CueTid)||(parad>0.05&&G.p3Parad<=0.05)
+  /* Batch 0.11: medan stallet tar ner hästen inför en avsittning är
+     bromsen stallets, inte ryttarens — den besvarar inget kort (samma
+     vakt som i Roblox init.client). */
+  const hjalp=!ridAvsittVantar()&&((cue!==G.p3CueTid)||(parad>0.05&&G.p3Parad<=0.05)
     ||(sk>0.5&&skF<=0.5)||(sk<-0.5&&skF>=-0.5)
-    ||(IN.bromsN!==G.p3BromsN)||(IN.drivN!==G.p3DrivN);
+    ||(IN.bromsN!==G.p3BromsN)||(IN.drivN!==G.p3DrivN));
   G.p3CueTid=cue;G.p3Parad=parad;G.p3Sk=sk;G.p3BromsN=IN.bromsN;G.p3DrivN=IN.drivN;
   /* Över ett av ridhusets stående hinder hoppar hästen — bara bilden
      (samma G.luft som banans hopp). Passagen bedöms av HinderObs, inte här. */
@@ -1220,11 +1223,46 @@ function stegaP3(dt){
   if(!Lektionsmeny.tarOver())FriPass.steg(dt,hjalp);
   if(typeof ridpanelSteg==="function")ridpanelSteg(dt);
 }
-/* SITT AV (E, pek SITT AV). Ritten tar slut: ett pågående försök blir
-   avbrutet (clear round: «avbruten»), fri träning släpps, och spelet
-   lämnar över till den befintliga vägen efter ritten (P4 ersätter den). */
+/* ── SITT AV BARA FRÅN HALT (Batch 0.11, E2) ─────────────────────────
+   E och pekknappen SITT AV går hit. Står hästen sker avsittningen
+   direkt. Rör hon sig BER trycket om halt: stallet tar ner henne, en rad
+   säger vad som händer, och `ridAvsittSteg` sitter av när hon står —
+   eller när nödutgången löser ut. Regeln själv bor i
+   src/riding/avsittning.js och är densamma i Roblox.
+
+   Svarar true när trycket togs emot (direkt eller som begäran). */
+function ridAvsittVantar(){return !!(G.avsitt&&G.avsitt.vantar);}
 function ridAvsittning(){
   if(G.scen!=="lektion"||!G.p3)return false;
+  if(!G.avsitt)G.avsitt=Avsittning.ny();
+  const r=G.ride||{};
+  if(Avsittning.begar(G.avsitt,r.gangart,r.tempo)==="nu")return ridAvsittningNu();
+  return true;
+}
+/* En bildruta av väntan. Anropas FÖRE ridsteget, så att bromsen den
+   begär läses av samma bildrutas inmatning.
+
+   NEDTAGNINGEN ÄR DEN SOM REDAN FINNS: samma halvhaltsförlopp som BROMS
+   och S, med modellens egen spärr — en begäran som kommer medan ett
+   förlopp pågår förbrukas utan att starta ett till. Ingen ny ridfysik.
+   Skänkeln släpps, annars driver en hållen W-tangent emot bromsen.
+   `IN.bromsN` rörs INTE: den räknar spelarens egna tryck, och det här
+   är stallets hand, inte hennes. */
+function ridAvsittSteg(dt){
+  if(!ridAvsittVantar())return null;
+  if(G.scen!=="lektion"||!G.p3){G.avsitt=null;return null;}
+  const r=G.ride||{};
+  const svar=Avsittning.steg(G.avsitt,r.gangart,r.tempo,dt);
+  if(svar==="sitt_av"){ridAvsittningNu();return svar;}
+  RIDIN.skankel=0;IN.driv=0;IN.broms=true;
+  return svar;
+}
+/* SJÄLVA AVSITTNINGEN. Ritten tar slut: ett pågående försök blir
+   avbrutet (clear round: «avbruten»), fri träning släpps, och spelet
+   lämnar över till den befintliga vägen efter ritten (P4 ersätter den). */
+function ridAvsittningNu(){
+  if(G.scen!=="lektion"||!G.p3)return false;
+  G.avsitt=null;
   const X=RittLektion.kontext(G.t,RittLektion.tillRoblox(G.ride&&G.ride.gangart));
   Lektionsmeny.avbryt(X);
   FriPass.avbryt();
@@ -1530,6 +1568,10 @@ function loop(now){
   if(typeof gl3dLage!=="function"){requestAnimationFrame(loop);return;}
   const dt=Math.min((now-last)/1000,0.05);last=now;G.t+=dt;
   ljudPuls(dt);
+  /* Väntande avsittning stegas FÖRE scenvalet: sitter hon av i den här
+     bildrutan ska resten av rutan rita den nya scenen, inte en ritt som
+     just tog slut. Pausen håller även den här klockan. */
+  if(!G.paus&&iSadeln())ridAvsittSteg(dt);
   if(G.scen==="lektion"||G.scen==="bana"){
     /* PAUS: världen ritas fortfarande — spelaren ska se var hon står —
        men ingenting stegas. Utan det red hästen vidare medan replayen

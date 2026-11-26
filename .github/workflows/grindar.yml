@@ -455,6 +455,12 @@ jobs:
           test -f tools/ridpaneltest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/ridpaneltest.mjs (steget 'P3 — ridpanelen (hierarki, meny, Text, tangenter, layout)')" >&2; exit 1; }
           node tools/ridpaneltest.mjs
 
+      - name: Avsittning bara från halt (Batch 0.11)
+        run: |
+          set -euo pipefail
+          test -f tools/avsittningtest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/avsittningtest.mjs (steget 'Avsittning bara från halt (Batch 0.11)')" >&2; exit 1; }
+          node tools/avsittningtest.mjs
+
       - name: P3 — kameran efter en flytt (Kimi Q4)
         run: |
           set -euo pipefail

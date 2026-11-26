@@ -327,6 +327,9 @@ const SPRAK = {
   "bygg.server": { sv: "Publicerad server", en: "Published server" },
 
   "touch.sitt_av": { sv: "SITT AV", en: "DISMOUNT" },
+  /* Batch 0.11: avsittning bara från halt. Raden står medan stallet tar
+     ner hästen efter ett SITT AV i rörelse. */
+  "avsittning.bromsar": { sv: "Vi stannar först. Du sitter av när hästen står still.", en: "We stop first. You dismount once your horse stands still." },
   "touch.lugnare": { sv: "▼ LUGNARE", en: "▼ SLOWER" },
   "touch.framat": { sv: "▲ FRAMÅT", en: "▲ FORWARD" },
 

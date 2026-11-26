@@ -745,6 +745,10 @@ Sprak.text = {
 		sv = "SITT AV",
 		en = "DISMOUNT",
 	},
+	["avsittning.bromsar"] = {
+		sv = "Vi stannar först. Du sitter av när hästen står still.",
+		en = "We stop first. You dismount once your horse stands still.",
+	},
 	["touch.lugnare"] = {
 		sv = "▼ LUGNARE",
 		en = "▼ SLOWER",
