@@ -412,6 +412,17 @@ deras beslutsspärrar är auktoritativa för det här arbetet.
   Tryckorten och s. 9 är kontrollerade två gånger, oberoende; övriga
   sidor en gång. Ingen kod, inget spelbeteende ändrat.
   `JEV_DECISION: JEV_NOT_NEEDED`.
+- Levererat: **Batch 0.14** — G2, så långt det går utan Tobias: ett
+  **utkast** till samtyckesförfrågan till klubben,
+  `references/licenses/SAMTYCKE-FORFRAGAN-UTKAST.md`. Sex frågor som kan
+  besvaras var för sig (fotografera/mäta, igenkännbar återgivning,
+  sponsorskyltar, klubbmärket, hästarna, ljud), tre utfästelser (inga
+  personer, inga barnröster, fotona publiceras inte), hur svaret ska
+  sparas, och en tabell över vilka batcher som väntar på vilket svar.
+  **Ingenting är skickat.** Fem fält är lämnade åt Tobias (mottagare,
+  hur spelet sprids, betalning/reklam, privatägda hästar, kontaktväg).
+  Inget i spelet eller referensbiblioteket är ändrat i väntan på svaret.
+  `JEV_DECISION: JEV_NOT_NEEDED`.
 - **A2 (kantutjämning) uppskjuten, inte löst i 0.1:** en FXAA-shader
   provades i post-kompositeringen men orsakade en mätbar, reproducerbar
   CI-regression i `tools/lektion-e2e-test.mjs` (headless, mjukvaru-
