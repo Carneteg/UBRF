@@ -29,7 +29,9 @@ const prova = (namn, villkor, detalj = "") => {
 
 const KANON = { A: "S", C: "N", K: "W", V: "W", E: "W", S: "W", H: "W", F: "E", P: "E", B: "E", R: "E", M: "E" };
 const VAST = ["K", "V", "E", "S", "H"], OST = ["F", "P", "B", "R", "M"];
-const FOTO = new Set(["C", "F", "B", "M"]);
+/* H lades till 2026-11-26 (Batch 2.3, delen H): ridhus-inne-30-sargen-vid-h.jpg
+   visar en grå häst vid H. */
+const FOTO = new Set(["C", "F", "B", "M", "H"]);
 
 /* data.js + site.js i samma sandlåda som exporten. */
 const ctx = { console, Math, JSON, window: {} };
@@ -63,7 +65,13 @@ const stigande = (rad, namn) => {
 stigande(VAST, "västra långsidan K → V → E → S → H, y växer från A mot C");
 stigande(OST, "östra långsidan F → P → B → R → M, y växer från A mot C");
 prova("A söder om C", sida.A.y < sida.C.y, `${sida.A.y} < ${sida.C.y}`);
-prova("bildgåtans källa: foto bara för C, F, B, M",
+{ const h = lista.find(b => b.b === "H");
+  prova("H är en häst ur foto, inte ett antaget hus", !!h && h.bild === "hast" && h.bildKalla === "foto", h ? `${h.bild} (${h.bildKalla})` : "saknas");
+  prova("ingen bokstav har kvar bilden «hus»", lista.every(b => b.bild !== "hus"), lista.filter(b => b.bild === "hus").map(b => b.b).join(","));
+  const ritare = las("src/scen3d.js");
+  const saknar = lista.filter(b => !ritare.includes(`case"${b.bild}"`)).map(b => b.b + ":" + b.bild);
+  prova("varje bild i listan har en ritning i s3BokstavsBild", saknar.length === 0, saknar.join(" ") || `${lista.length} bilder`); }
+prova("bildgåtans källa: foto bara för C, F, B, M och H",
   lista.every(b => (b.bildKalla === "foto") === FOTO.has(b.b) && ["foto", "antagande"].includes(b.bildKalla)),
   lista.map(b => b.b + ":" + b.bildKalla).join(" "));
 

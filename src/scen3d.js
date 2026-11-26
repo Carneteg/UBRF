@@ -136,6 +136,25 @@ function s3BokstavsBild(c,id,x,y,s){
       F("#B0332E",()=>{c.rect(x-r*0.52,y-r*0.12,r*1.04,r*0.94);});
       F("#3A3E44",()=>{c.moveTo(x-r*0.72,y-r*0.12);c.lineTo(x,y-r*0.86);c.lineTo(x+r*0.72,y-r*0.12);});
       break;
+    /* H = HÄST (Batch 2.3, delen H). Skylten vid H visar en grå häst i
+       profil, vänd åt vänster — references/buildings/ridhus/
+       ridhus-inne-30-sargen-vid-h.jpg. «hus» ovan var ett antagande och
+       används inte längre av någon bokstav; fallet står kvar så att en
+       äldre sparad lista inte ritas tom. */
+    case"hast":{
+      const G="#9EA4AB";
+      F(G,()=>{c.ellipse(x+r*0.10,y+r*0.02,r*0.56,r*0.30,0,0,7);});            // bålen
+      F(G,()=>{c.moveTo(x-r*0.36,y+r*0.02);c.lineTo(x-r*0.70,y-r*0.70);       // halsen
+        c.lineTo(x-r*0.34,y-r*0.86);c.lineTo(x+r*0.06,y-r*0.22);});
+      F(G,()=>{c.ellipse(x-r*0.70,y-r*0.62,r*0.28,r*0.15,0.55,0,7);});         // huvudet
+      F(G,()=>{c.moveTo(x-r*0.52,y-r*0.80);c.lineTo(x-r*0.42,y-r*1.04);       // örat
+        c.lineTo(x-r*0.34,y-r*0.82);});
+      for(const bx of [-0.30,-0.12,0.38,0.56])                                 // benen
+        F(G,()=>{c.rect(x+r*bx-r*0.07,y+r*0.14,r*0.14,r*0.80);});
+      F(G,()=>{c.moveTo(x+r*0.60,y-r*0.14);c.quadraticCurveTo(x+r*0.92,y+r*0.10, // svansen
+        x+r*0.78,y+r*0.62);c.lineTo(x+r*0.66,y+r*0.58);
+        c.quadraticCurveTo(x+r*0.74,y+r*0.14,x+r*0.52,y-r*0.02);});
+      break;}
     case"katt":
       F("#E09A3E",()=>{c.arc(x,y+r*0.14,r*0.60,0,7);});
       for(const d of [-1,1])F("#E09A3E",()=>{c.moveTo(x+d*r*0.18,y-r*0.34);

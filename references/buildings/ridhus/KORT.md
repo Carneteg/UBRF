@@ -265,9 +265,10 @@ E = elefant, S = sol, P = päron, R = ros.
 > säger «till vänster». Vid H är det alltså höger; hur det är vid de andra
 > bokstäverna är inte kontrollerat här.
 >
-> *Koden är inte ändrad:* `src/data.js` har fortfarande `bild:"hus"` vid H.
-> Bokstäverna är delad kanondata, så rättelsen ska göras på båda plattformarna
-> i samma leverans (planens Batch 2.3).
+> *Koden följde efter samma dag* (Batch 2.3, delen H): `src/data.js` har nu
+> `bild:"hast"` med källan `foto`, webben ritar en grå häst i profil, och
+> Roblox-exporten `UBRFKomplex.luau` är genererad om ur samma lista. Skyltens
+> sida är inte ändrad.
 
 **Behövs:** en bild på skyltarna vid A, K, V, E, S, P och R. En bild per
 långsida räcker — då syns fem åt gången.

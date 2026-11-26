@@ -578,6 +578,33 @@ deras beslutsspärrar är auktoritativa för det här arbetet.
   - **Inte gjort:** valvfönstren per box (planens andra halva av 1.6) —
     ordern gällde taket.
   `JEV_DECISION: JEV_NOT_NEEDED`.
+- Levererat: **Batch 2.3, delen H** — bilden vid bokstaven H är en häst,
+  på **båda plattformarna i samma leverans**. Det enda ur 2.3 som går att
+  bygga utan att ridhallen byts ut (2.2), och den enda ändringen i den här
+  omgången som syns utan strömbrytaren.
+  - **Före:** `src/data.js` hade `bild:"hus"` vid H, märkt `[antagande]`.
+  - **Belägg:** `references/buildings/ridhus/ridhus-inne-30-sargen-vid-h.jpg`
+    (låg redan i repot) visar skylten: svart «H» och intill den en grå
+    häst i profil. Samma par i `ridhus-inne-28` och `drive-2026-11-26/IMG_0274`.
+  - **Webb:** `bild:"hast"`, `bildKalla:"foto"` i `src/data.js`; en ny
+    ritning `case"hast"` i `s3BokstavsBild` (`src/scen3d.js`) — grå häst i
+    profil, vänd åt vänster som på skylten.
+  - **Roblox:** `roblox/buildings/UBRFKomplex.luau` genererad om ur samma
+    lista (`tools/exportera-geometri.js`); skyltens attribut `Bild` blir
+    `hast`. Roblox ritar ingen bild på skylten i dag, varken före eller
+    efter — det är en skillnad som fanns redan och inte rörs här.
+    `roblox/game/UBRFBuild.luau` omräknad.
+  - **Prov:** `tools/dressyrbokstavertest.mjs` kräver nu att H är en häst
+    ur foto, att ingen bokstav har kvar «hus», att varje bild i listan har
+    en ritning, och att Roblox-exporten säger samma sak.
+  - **Inte ändrat:** skyltens SIDA. Vid H sitter bilden till höger om
+    bokstaven sedd inifrån banan; spelet lägger alla bilder till vänster.
+    Det är belagt för H men inte kontrollerat för de andra, och en flytt
+    av en enda skylt hade gjort raden ojämn. Sju bokstäver har kvar
+    antagna bilder (A, K, V, E, S, P, R).
+  - Ritningen är min, gjord för att läsas på håll. Den är inte bedömd av
+    någon.
+  `JEV_DECISION: JEV_NOT_NEEDED`.
 - **A2 (kantutjämning) uppskjuten, inte löst i 0.1:** en FXAA-shader
   provades i post-kompositeringen men orsakade en mätbar, reproducerbar
   CI-regression i `tools/lektion-e2e-test.mjs` (headless, mjukvaru-
