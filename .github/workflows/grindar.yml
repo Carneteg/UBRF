@@ -508,6 +508,12 @@ jobs:
           test -f tools/boxhasttest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/boxhasttest.mjs (steget 'Mjuka figurer och hela hästar i de närmaste boxarna (Batch 1.8)')" >&2; exit 1; }
           node tools/boxhasttest.mjs
 
+      - name: Innerljuset i stallgången — ljuskartan (Batch 1.7)
+        run: |
+          set -euo pipefail
+          test -f tools/ljuskartatest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/ljuskartatest.mjs (steget 'Innerljuset i stallgången — ljuskartan (Batch 1.7)')" >&2; exit 1; }
+          node tools/ljuskartatest.mjs
+
       - name: P3 — kameran efter en flytt (Kimi Q4)
         run: |
           set -euo pipefail

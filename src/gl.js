@@ -337,8 +337,9 @@ const GL={
       uniform vec3 uSol, uSolFarg, uHimmel, uMark, uDimFarg, uTon, uOga, uKantFarg;
       uniform float uKant, uSolStyrka, uHalvskugga, uAmbient;
       uniform float uAoHojd, uAoStyrka, uDimStyrka;
-      uniform float uDimNara, uDimFjarr, uAlfa, uAnvTex, uPlatt, uLinjar;
-      uniform sampler2D uTex;
+      uniform float uDimNara, uDimFjarr, uAlfa, uAnvTex, uPlatt, uLinjar, uLjuskartaPa;
+      uniform vec4 uLjusRam;
+      uniform sampler2D uTex, uLjuskarta;
       void main(){
         vec3 bas = vCol * uTon;
         if(uAnvTex > 0.5) bas *= texture2D(uTex, vUv).rgb;
@@ -369,6 +370,15 @@ const GL={
           clamp(vPos.y / max(uAoHojd, 0.001), 0.0, 1.0));
         vec3 ljus = amb * ao + uSolFarg *
           (d * uSolStyrka + wrap * wrap * uSolStyrka * 0.72 + fyll * 0.16) * ao;
+        // INNERLJUS (Batch 1.7): en karta över planytan säger hur mycket ljus
+        // som når just den här platsen — R vid golvet, G i brösthöjd, 1,0
+        // vid 0,5. Den skalar scenens ljus, så att det är ljusare under en
+        // lampa än i ett hörn. Utan kartan: exakt som förut.
+        if(uLjuskartaPa > 0.5){
+          vec2 kp = clamp((vPos.xz - uLjusRam.xy) * uLjusRam.zw, 0.0, 1.0);
+          vec3 lk = texture2D(uLjuskarta, kp).rgb;
+          ljus *= mix(lk.r, lk.g, clamp(vPos.y / 1.6, 0.0, 1.0)) * 2.0;   // KARTAN
+        }
         vec3 farg = bas * ljus;
         // konturen tänds av ljuset bakifrån och ger volym åt runda former
         float fres = 1.0 - abs(dot(N, mot));
@@ -388,7 +398,7 @@ const GL={
     for(const n of ["uProj","uVy","uModell","uNM","uSol","uSolFarg","uHimmel","uMark",
       "uDimFarg","uDimNara","uDimFjarr","uAlfa","uAnvTex","uPlatt","uTex","uTon","uOga",
       "uKantFarg","uKant","uSolStyrka","uHalvskugga","uAmbient",
-      "uAoHojd","uAoStyrka","uDimStyrka","uLinjar"])
+      "uAoHojd","uAoStyrka","uDimStyrka","uLinjar","uLjuskartaPa","uLjusRam","uLjuskarta"])
       this.u[n]=gl.getUniformLocation(p,n);
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
@@ -401,6 +411,7 @@ const GL={
     gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,
       new Uint8Array([255,255,255,255]));
     gl.uniform1i(this.u.uTex,0);
+    gl.uniform1i(this.u.uLjuskarta,2);          // enhet 2; enhet 1 hör till efterbehandlingen
     this.redo=true;
     return true;
   },
@@ -513,6 +524,28 @@ const GL={
     img.src=uri;
     return t;
   },
+  /* LJUSKARTA (Batch 1.7). `byte` är RGBA, b×h texlar, över en rektangel
+     i planet. Gör en textur av den; `anvandLjuskarta` slår sedan på den
+     för resten av bildrutan — GL.start slår alltid av den igen. */
+  ljuskartaTex(byte,b,h,gammal){
+    const gl=this.gl, t=gammal||gl.createTexture();
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D,t);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,b,h,0,gl.RGBA,gl.UNSIGNED_BYTE,byte);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+    return t;
+  },
+  anvandLjuskarta(tex,x0,z0,bredd,langd){
+    const gl=this.gl;
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D,tex);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.uniform4f(this.u.uLjusRam,x0,z0,1/bredd,1/langd);
+    gl.uniform1f(this.u.uLjuskartaPa,1);
+  },
   /* För prov och felsökning: namn → vantar | klar | saknas | fel. */
   texturLage(){
     const ut={};
@@ -547,6 +580,7 @@ const GL={
     const lin=ljus.linjar===true;
     const ljusFarg=lin?(h=>glFarg(h).map(v=>Math.pow(v,2.2))):glFarg;
     gl.uniform1f(this.u.uLinjar,lin?1:0);
+    gl.uniform1f(this.u.uLjuskartaPa,0);        // ingen ljuskarta förrän någon ber om den
     gl.uniform3f(this.u.uSol,s[0]/l,s[1]/l,s[2]/l);
     gl.uniform3fv(this.u.uSolFarg,ljusFarg(ljus.solFarg));
     gl.uniform3fv(this.u.uHimmel,ljusFarg(ljus.himmel));

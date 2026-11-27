@@ -67,7 +67,9 @@ console.log("1  vem som läser brytaren");
                                  kopplas förbi (tools/stalltaktest.mjs, del 3);
                                  Batch 1.8, hela hästar i de närmaste boxarna
                                  och en mjuk skugga under den svepta figuren
-                                 (tools/boxhasttest.mjs)
+                                 (tools/boxhasttest.mjs);
+                                 Batch 1.7, stallets ljuskarta och lysande
+                                 pendelskärmar (tools/ljuskartatest.mjs)
        src/varld3d.js REALTAK  — Batch 1.6, stallgångens tak
                                  (tools/stalltaktest.mjs) */
   const LAS = n => `const ${n}=(typeof REALISM!=="undefined")&&REALISM.pa;`;

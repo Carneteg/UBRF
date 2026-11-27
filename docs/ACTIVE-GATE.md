@@ -736,6 +736,55 @@ deras beslutsspärrar är auktoritativa för det här arbetet.
   - **Inte verifierbart härifrån:** kostnaden för sex hela hästar på en
     telefon, och om hästarna ser rätt ut. Det senare är Tobias bedömning.
   - Status `READY_FOR_REVIEW`. `JEV_DECISION: JEV_NOT_NEEDED`.
+- Levererat: **Batch 1.7 (webb, bakom strömbrytaren)** — innerljus i
+  stallgången. **Utan `?realism=1` räknas ingen karta och ingen läses.**
+  - **Ljuskällorna** (`src/varld3d.js`, `v3dStallLampor`): EN funktion
+    ger pendlarnas och lanterninens lägen. `v3dStall` ritar armaturerna
+    ur den och ljuskartan räknas ur den — de kan inte glida isär.
+    `src/site.js` är orörd, så ingenting exporteras om till Roblox.
+  - **Ljuskartan** (`v3dStallLjuskarta`): 64×256 texlar över stallets
+    planyta, ljusnivån vid golvet och i brösthöjd, räknad när stallet
+    byggs. 26 pendlar och lanterninen bidrar efter avstånd och
+    infallsvinkel, plus en jämn grundnivå. 1,0 är medelnivån på gångens
+    golv. Räknetid på den här maskinen: 29–46 ms.
+  - **Motorn** (`src/gl.js`): skuggaren skalar scenens ljus med kartan
+    efter var ytan ligger. Det gäller allt som ritas i stallet — också
+    hästar och figurer. Pendelskärmarna ritas som lysande ytor.
+  - **Uppmätt i kartan:** rakt under en pendel 1,05, mitt emellan två
+    1,01, i brösthöjd under pendeln 1,48, i en boxes bakre hörn 0,55.
+  - **Avvikelse från planen, sagd i förväg i arbetsordern:** kartan
+    räknas vid start i webbläsaren och läses per bildpunkt — inte bakad i
+    byggsteget och inte per hörn med uppdelade ytor.
+  - **Förenklingar, sagda rakt ut:** boxarnas skiljeväggar skuggar inte.
+    Klubbdelen norr om den genomgående väggen har inga belagda
+    armaturlägen och får en jämn nivå `[REFERENCE GAP]`. Alla styrkor är
+    `[antagande]`.
+  - **Känd brist som syns i bilden:** ytterväggarna blir mörka (138/126/117
+    mot kortets 193/192/195). Kortet säger ett fönster per box längs båda
+    långsidorna, men de är inte byggda på insidan (Batch 3.2). Ljus från
+    en källa som inte syns har jag inte lagt in.
+  - **Prov:** `tools/ljuskartatest.mjs` — 20 mätningar: av → ingen karta;
+    på → två räkningar ger samma byte, ljusare under en pendel än
+    emellan, gången ljusare än boxens hörn, avtagande ut mot ytterväggen,
+    bara grundnivån bakom den genomgående väggen, de 26 pendlar som
+    ljussätter är de 26 som ritas, och samma yta RITAS 1,94 gånger
+    ljusare under pendeln än i hörnet mot kartans 1,91. Falsifierat:
+    `--muter-lacka` 2 FEL, `--muter-lampa` 1 FEL.
+    `tools/stalltaktest.mjs` har kvar fingeravtrycket `fb5652bdf25b3fac`.
+  - **Underlaget till Batch 1.10:**
+    `audits/bilder/fas1-stallgangen-av-pa-foto.jpg` — i dag, provet och
+    fotot sida vid sida från `STALL-GANG-A`. Bildrutetakt på den här
+    maskinen (mjukvarurendering, säger inget om en telefon): 6,3 bilder/s
+    utan brytaren, 5,7 med.
+  - **Min läsning av bilden, inte en bedömning:** provet är neutralare,
+    hästarna står hela i boxarna och figurerna är mjuka — men det är
+    fortfarande långt från fotot. Golvet är ljusare och varmare än
+    fotots mörka marksten, boxfronterna saknar fotots stående galler och
+    dörrar, och alla ytor är målade, inte fotograferade (1.4 väntar på
+    klubben). **Om det övertygar avgör Tobias.**
+  - **Paritet:** webb bakom brytaren; inget levererat skiljer
+    plattformarna åt. Inga Roblox-filer rörda.
+  - Status `READY_FOR_REVIEW`. `JEV_DECISION: JEV_NOT_NEEDED`.
 - **A2 (kantutjämning) uppskjuten, inte löst i 0.1:** en FXAA-shader
   provades i post-kompositeringen men orsakade en mätbar, reproducerbar
   CI-regression i `tools/lektion-e2e-test.mjs` (headless, mjukvaru-

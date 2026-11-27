@@ -22,7 +22,9 @@ const V3D={ plats:null, nyckel:null, statiskt:[], oppningar:null,
   figurGolv:0,
   /* Produktvyn visar ingen SPELABSTRAKTION-markering. Sätts av QA/grind
      (`?abstraktion=1`) — se v3dAbstraktionSynlig. */
-  visaAbstraktion:false };
+  visaAbstraktion:false,
+  /* Stallets ljuskarta (Batch 1.7) — bara med brytaren, annars null. */
+  ljuskarta:null };
 
 /* SKA SPELABSTRAKTIONERNAS MARKÖRER RITAS?
 
@@ -830,6 +832,94 @@ function v3dStallYttre(bg,d,opp){
     d.lada(0.09,tz+1.1,0.09,"#9AA0A6",FS(tu0,0.55,tut+tbr-0.03));
     d.lada(0.09,1.15,0.09,"#9AA0A6",FS(tu1+1.3,tz+0.58,tut+tbr-0.03));
   }
+}
+
+/* ── Stallets ljuskällor och ljuskarta (Batch 1.7) ────────────── */
+/* VAR LAMPORNA SITTER — en enda källa. `v3dStall` RITAR armaturerna ur
+   den här listan och `v3dStallLjuskarta` LJUSSÄTTER ur samma lista, så
+   att det som lyser och det som syns lysa inte kan glida isär.
+
+   Pendlarna: en rad över vardera gången, var 4,5:e meter, bara i
+   boxhallen (stall-inne-05). Lanterninen: ett ljusband längs nocken,
+   över boxhallen — klubbdelen har platt innertak (stall-inne-01). */
+function v3dStallLampor(S){
+  const klubbGrans=(S.klubb.vaggar.find(v=>v.id==="genomgaende")||{y:S.klubbY}).y;
+  const pendlar=[];
+  for(let z=3;z<klubbGrans;z+=4.5)
+    for(const g of [S.gangar.A,S.gangar.B])
+      pendlar.push({x:(g.x0+g.x1)/2, y:S.tak-0.23, z});
+  return {klubbGrans, pendlar,
+    lanternin:{x:S.bredd/2, y:S.tak+S.takresning, z0:0.5, z1:klubbGrans}};
+}
+/* LJUSKARTAN: hur mycket ljus som når varje plats i stallet, räknat en
+   gång när stallet byggs. En liten textur över planytan med två nivåer —
+   vid golvet (R) och i brösthöjd, 1,6 m (G) — som skuggaren läser efter
+   var ytan ligger. 1,0 är medelnivån på gångens golv; den lagras som 0,5.
+
+   Varje pendel bidrar efter avstånd och infallsvinkel, lanterninen som en
+   rad ljuspunkter längs nocken, och ovanpå ligger en jämn grundnivå för
+   allt ljus som studsar runt. Alla styrkor är [antagande].
+
+   FÖRENKLINGAR, sagda rakt ut: boxarnas skiljeväggar skuggar inte (de är
+   lägre än lamporna och delvis galler). Klubbdelen norr om den
+   genomgående väggen har inga belagda armaturlägen och får en jämn nivå
+   [REFERENCE GAP] — väggen «skuggar» alltså genom att området bakom den
+   inte ljussätts av hallens lampor alls. */
+const V3D_KARTA={b:64, h:256, hojd:1.6, max:2.0,
+  pendel:1.0, mjuk:1.5,       // en pendels styrka, och dess utbredning (m²)
+  lanternin:0.5,              // per meter ljusband
+  grund:0.10,                 // studsat ljus, överallt i hallen
+  klubb:1.0};                 // jämn nivå i klubbdelen [REFERENCE GAP]
+function v3dStallLjuskarta(S){
+  const K=V3D_KARTA, t0=(typeof performance!=="undefined")?performance.now():0;
+  const L=v3dStallLampor(S);                                    // LAMPORNA
+  const ra=(x,z,hojd)=>{
+    let e=K.grund;
+    for(const p of L.pendlar){
+      const dy=p.y-hojd; if(dy<=0)continue;
+      const d2=(p.x-x)*(p.x-x)+dy*dy+(p.z-z)*(p.z-z);
+      e+=K.pendel*(dy/Math.sqrt(d2))/(d2+K.mjuk);
+    }
+    const dyL=L.lanternin.y-hojd, a2=(L.lanternin.x-x)*(L.lanternin.x-x)+dyL*dyL;
+    for(let lz=L.lanternin.z0+0.5;lz<L.lanternin.z1;lz+=1){
+      const d2=a2+(lz-z)*(lz-z);
+      e+=K.lanternin*(dyL/Math.sqrt(d2))/d2;
+    }
+    return e;
+  };
+  /* Måttstocken: medelnivån längs gångarnas mittlinje, på golvet. */
+  let summa=0, antal=0;
+  for(const g of [S.gangar.A,S.gangar.B])
+    for(let z=S.boxStartY;z<S.klubbY;z+=0.5){ summa+=ra((g.x0+g.x1)/2,z,0); antal++; }
+  const ref=summa/antal;
+  const data=new Uint8Array(K.b*K.h*4);
+  const byte=e=>Math.round(Math.max(0,Math.min(1,e/K.max))*255);
+  for(let j=0;j<K.h;j++){
+    const z=(j+0.5)/K.h*S.langd;
+    for(let i=0;i<K.b;i++){
+      const x=(i+0.5)/K.b*S.bredd, o=(j*K.b+i)*4;
+      const hall=z<L.klubbGrans;
+      data[o]  =byte(hall?ra(x,z,0)/ref:K.klubb);
+      data[o+1]=byte(hall?ra(x,z,K.hojd)/ref:K.klubb);
+      data[o+2]=0; data[o+3]=255;
+    }
+  }
+  return {data, b:K.b, h:K.h, x0:0, z0:0, bredd:S.bredd, langd:S.langd, lampor:L,
+    ms:(typeof performance!=="undefined")?performance.now()-t0:0};
+}
+/* Ljusnivån på en plats, läst ur kartan på samma sätt som skuggaren gör
+   (linjär blandning mellan texlarna, och mellan golv och brösthöjd).
+   Används av proven — och går att använda av allt som vill veta hur
+   ljust det är där en häst står. */
+function v3dLjusVid(k,x,z,hojd){
+  const u=Math.max(0,Math.min(1,(x-k.x0)/k.bredd))*k.b-0.5, v=Math.max(0,Math.min(1,(z-k.z0)/k.langd))*k.h-0.5;
+  const i0=Math.max(0,Math.min(k.b-1,Math.floor(u))), j0=Math.max(0,Math.min(k.h-1,Math.floor(v)));
+  const i1=Math.min(k.b-1,i0+1), j1=Math.min(k.h-1,j0+1);
+  const fu=Math.max(0,Math.min(1,u-i0)), fv=Math.max(0,Math.min(1,v-j0));
+  const las=(i,j,c)=>k.data[(j*k.b+i)*4+c]/255;
+  const kanal=c=>(las(i0,j0,c)*(1-fu)+las(i1,j0,c)*fu)*(1-fv)+(las(i0,j1,c)*(1-fu)+las(i1,j1,c)*fu)*fv;
+  const t=Math.max(0,Math.min(1,(hojd||0)/V3D_KARTA.hojd));
+  return (kanal(0)*(1-t)+kanal(1)*t)*V3D_KARTA.max;
 }
 
 /* ── Boxhästarna (Batch 1.8) ──────────────────────────────────── */
@@ -1731,13 +1821,22 @@ function v3dStall(lagg,opp){
   /* Runda pendelarmaturer i rad över vardera boxraden — bara i boxhallen:
      klubbdelen norr om den genomgående väggen har platt innertak med
      infälld rund armatur (stall-inne-01), inga pendlar. */
-  for(let z=3;z<klubbGrans;z+=4.5)
-    for(const g of [S.gangar.A,S.gangar.B]){
-      const ax=(g.x0+g.x1)/2;
-      lykt.cyl(0.012,0.012,0.16,"#8E939B",M4.translation(ax,S.tak-0.16,z),5);
-      lykt.cyl(0.20,0.20,0.09,"#FBF6E4",M4.translation(ax,S.tak-0.23,z),10);
-    }
+  /* Batch 1.7: lägena kommer ur v3dStallLampor — samma lista som
+     ljuskartan räknas ur. Utan brytaren blir anropen exakt de förra. Med
+     den ritas skärmarna som lysande ytor (obelysta, som lanterninens
+     glas), och kartan räknas. */
+  const sken=new Bygge();
+  for(const p of v3dStallLampor(S).pendlar){
+    lykt.cyl(0.012,0.012,0.16,"#8E939B",M4.translation(p.x,S.tak-0.16,p.z),5);
+    (V3DREAL?sken:lykt).cyl(0.20,0.20,0.09,"#FBF6E4",M4.translation(p.x,p.y,p.z),10);
+  }
   lagg(lykt,null);
+  if(V3DREAL){                                                  // LJUSKARTAN RÄKNAS
+    S3.statiskt.push({nat:GL.nat(sken), platt:true});
+    const k=v3dStallLjuskarta(S);
+    k.tex=GL.ljuskartaTex(k.data,k.b,k.h,V3D.ljuskarta&&V3D.ljuskarta.tex);
+    V3D.ljuskarta=k;
+  }
 
   /* Klockan i gångens bortre ände — IMG_0160 och stall-inne-05. */
   if(S.klocka){const K=S.klocka, kl=new Bygge();
@@ -2653,6 +2752,8 @@ function v3dBygg(scen){
   if(!S3.tex.skyltar)s3Texturer();
   const lagg=(bygge,tex)=>S3.statiskt.push({nat:GL.nat(bygge),tex});
   const opp=new Bygge();
+  /* Ljuskartan hör till stallet. Lämnar man det ska den inte följa med. */
+  if(V3D.ljuskarta&&scen!=="stallinne"){GL.gl.deleteTexture(V3D.ljuskarta.tex);V3D.ljuskarta=null;}
   if(scen==="gard")v3dGard(lagg,opp);
   else if(scen==="stallinne")v3dStall(lagg,opp);
   else v3dRidhus(lagg,opp);
@@ -3110,6 +3211,10 @@ function ritaVandring3D(){
     const gl=GL.gl;
     GL.himmel(L);                                 // gradient och sol
     s3RitaMoln(k,inne);                           // molnen — bara ute
+    /* Innerljuset: i stallet, och bara om kartan är räknad (brytaren på). */
+    if(G.scen==="stallinne"&&V3D.ljuskarta){
+      const K=V3D.ljuskarta; GL.anvandLjuskarta(K.tex,K.x0,K.z0,K.bredd,K.langd);
+    }
 
     /* Två pass: allt som inte skymmer först, sedan det som står mellan
        kameran och spelaren, halvgenomskinligt och utan djupskrivning. */
