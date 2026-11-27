@@ -337,7 +337,7 @@ const GL={
       uniform vec3 uSol, uSolFarg, uHimmel, uMark, uDimFarg, uTon, uOga, uKantFarg;
       uniform float uKant, uSolStyrka, uHalvskugga, uAmbient;
       uniform float uAoHojd, uAoStyrka, uDimStyrka;
-      uniform float uDimNara, uDimFjarr, uAlfa, uAnvTex, uPlatt;
+      uniform float uDimNara, uDimFjarr, uAlfa, uAnvTex, uPlatt, uLinjar;
       uniform sampler2D uTex;
       void main(){
         vec3 bas = vCol * uTon;
@@ -346,6 +346,11 @@ const GL={
           gl_FragColor = vec4(bas, uAlfa);
           return;
         }
+        // LINJÄRT LJUS (Batch 1.5): färgerna står kodade för skärmen. Med
+        // uLinjar avkodas ytfärgen här, belysningen räknas i ljusets egen
+        // skala, och resultatet kodas tillbaka sist. Ljusets färger är
+        // redan avkodade i GL.start. Utan uLinjar: exakt som förut.
+        if(uLinjar > 0.5) bas = pow(bas, vec3(2.2));
         vec3 N = normalize(vNrm);
         float nd = dot(N, uSol);
         float d = max(nd, 0.0);
@@ -372,6 +377,7 @@ const GL={
         farg += uKantFarg * (fres * uKant * (0.30 + 0.70 * d));
         float dim = clamp((vDjup - uDimNara) / max(uDimFjarr - uDimNara, 0.001), 0.0, 1.0);
         farg = mix(farg, uDimFarg, dim * uDimStyrka);
+        if(uLinjar > 0.5) farg = pow(max(farg, vec3(0.0)), vec3(1.0/2.2));   // ÅTERKODNING
         gl_FragColor = vec4(farg, uAlfa);
       }`;
     const p=this._program(vs,fs);
@@ -382,7 +388,7 @@ const GL={
     for(const n of ["uProj","uVy","uModell","uNM","uSol","uSolFarg","uHimmel","uMark",
       "uDimFarg","uDimNara","uDimFjarr","uAlfa","uAnvTex","uPlatt","uTex","uTon","uOga",
       "uKantFarg","uKant","uSolStyrka","uHalvskugga","uAmbient",
-      "uAoHojd","uAoStyrka","uDimStyrka"])
+      "uAoHojd","uAoStyrka","uDimStyrka","uLinjar"])
       this.u[n]=gl.getUniformLocation(p,n);
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
@@ -535,16 +541,22 @@ const GL={
     gl.disable(gl.BLEND);
     gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
     const s=ljus.sol, l=Math.hypot(s[0],s[1],s[2])||1;
+    /* Batch 1.5: en förinställning med `linjar:true` får sina ljusfärger
+       avkodade till linjärt ljus här, en gång per bildruta, och skuggaren
+       räknar då belysningen där (uLinjar). Utan fältet: som förut. */
+    const lin=ljus.linjar===true;
+    const ljusFarg=lin?(h=>glFarg(h).map(v=>Math.pow(v,2.2))):glFarg;
+    gl.uniform1f(this.u.uLinjar,lin?1:0);
     gl.uniform3f(this.u.uSol,s[0]/l,s[1]/l,s[2]/l);
-    gl.uniform3fv(this.u.uSolFarg,glFarg(ljus.solFarg));
-    gl.uniform3fv(this.u.uHimmel,glFarg(ljus.himmel));
-    gl.uniform3fv(this.u.uMark,glFarg(ljus.mark));
-    gl.uniform3fv(this.u.uDimFarg,glFarg(ljus.dimFarg));
+    gl.uniform3fv(this.u.uSolFarg,ljusFarg(ljus.solFarg));
+    gl.uniform3fv(this.u.uHimmel,ljusFarg(ljus.himmel));
+    gl.uniform3fv(this.u.uMark,ljusFarg(ljus.mark));
+    gl.uniform3fv(this.u.uDimFarg,ljusFarg(ljus.dimFarg));
     gl.uniform1f(this.u.uDimNara,ljus.dimNara);
     gl.uniform1f(this.u.uDimFjarr,ljus.dimFjarr);
     gl.uniform1f(this.u.uAlfa,1);
     gl.uniform1f(this.u.uPlatt,0);
-    gl.uniform3fv(this.u.uKantFarg,glFarg(ljus.kantFarg||ljus.solFarg));
+    gl.uniform3fv(this.u.uKantFarg,ljusFarg(ljus.kantFarg||ljus.solFarg));
     const tal=(v,d)=>v===undefined?d:v;
     gl.uniform1f(this.u.uKant,tal(ljus.kant,0.20));
     gl.uniform1f(this.u.uSolStyrka,tal(ljus.solStyrka,0.62));

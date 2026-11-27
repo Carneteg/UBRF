@@ -157,10 +157,25 @@ const pa = await bygg("?realism=1");
     `${T.skivor.map(x => x[1].toFixed(2)).join(" · ")} m av ${full.toFixed(2)}`);
 }
 
-console.log("3  det som inte är tak är detsamma i båda lägena");
+console.log("3  det som inte är tak har samma FORM i båda lägena");
 {
+  /* Sedan Batch 1.5 byter brytaren medvetet FÄRGEN på boxfrontens täta
+     panel: lyftet 1,58 hörde till det gamla ljuset och kopplas förbi med
+     provljuset (src/varld3d.js, PANELLYFT). Formen — typ, mått och läge —
+     ska fortfarande vara exakt densamma, och ingen ANNAN del under
+     takfoten får ha bytt färg. */
+  const form = L => L.map(x => [x[0], x[1], x[2], x[3], x[5]]);
   const a = underTak(av), p = underTak(pa);
-  prova("samma delar under takfoten", avtryck(a) === avtryck(p), `${a.length} / ${p.length} delar, ${avtryck(a)} / ${avtryck(p)}`);
+  prova("samma delar under takfoten (typ, mått och läge)", avtryck(form(a)) === avtryck(form(p)),
+    `${a.length} / ${p.length} delar, ${avtryck(form(a))} / ${avtryck(form(p))}`);
+  const bytt = a.map((x, i) => [x, p[i]]).filter(([x, y]) => y && x[4] !== y[4]);
+  /* Panelens färg bärs av flera delar (fronten, och de täta fälten i
+     skiljeväggar och gavlar). Kravet är ETT färgbyte — från den lyfta
+     tonen till kortets — och att alla delar som bytt har panelens höjd. */
+  const par = [...new Set(bytt.map(([x, y]) => `${x[4]} → ${y[4]}`))];
+  const hojder = [...new Set(bytt.map(([x]) => x[2]))];
+  prova("bara boxfrontens täta panel har bytt färg: ETT färgbyte, EN höjd", bytt.length > 0 && par.length === 1 && hojder.length === 1,
+    `${bytt.length} delar · ${par.join(" | ")} · höjd ${hojder.join(", ")} m`);
 }
 
 await browser.close(); srv.close();

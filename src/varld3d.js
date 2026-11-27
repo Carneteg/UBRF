@@ -8,6 +8,11 @@
    ══════════════════════════════════════════════════════════════════ */
 "use strict";
 
+/* Strömbrytaren för hela filen (Batch 1.5 och framåt). `v3dStall` har
+   dessutom sin egen läsning, REALTAK, från Batch 1.6 — den står kvar
+   ordagrant. Provet för brytaren håller listan över läsarna. */
+const V3DREAL=(typeof REALISM!=="undefined")&&REALISM.pa;
+
 const V3D={ plats:null, nyckel:null, statiskt:[], oppningar:null,
   kam:{x:0,y:2.2,z:0, tx:0,ty:1.3,tz:0, satt:false},
   /* Den höjd figuren SENAST RITADES på. Sätts i v3dFigurGolv, av samma
@@ -1441,8 +1446,14 @@ function v3dStall(lagg,opp){
      (0,940/0,841/0,598). Ändras texturerna eller src/ljus.js måste de
      mätas om. */
   const golvKomp=golvKompStall;
-  const STEN=golvKomp(S.gangSten,[0.655,0.620,0.537]);
-  const SPAN=golvKomp(S.gangSpan,[0.940,0.841,0.598]);
+  /* Batch 1.5, bara med brytaren: talen ovan tar bort BÅDE texturens och
+     det gamla ljusets dämpning. Med provljuset ska ljuset inte räknas
+     bort — det är ju det som ska synas — så här delas bara med texturens
+     egen medelton (TEXMEDEL, uppmätt ur texturen), och ytan bär kortets
+     färg under ljus 1,0. */
+  const TEXMEDEL={marksten:[0.592,0.577,0.547], span:[0.826,0.774,0.629]};
+  const STEN=golvKomp(S.gangSten,V3DREAL?TEXMEDEL.marksten:[0.655,0.620,0.537]);
+  const SPAN=golvKomp(S.gangSpan,V3DREAL?TEXMEDEL.span:[0.940,0.841,0.598]);
   for(const g of S.gangytor){
     if(g.tvar){
       /* Tvärkorridoren (zonen efter pausrummet): ljus betong (bottenplattan)
@@ -1564,7 +1575,9 @@ function v3dStall(lagg,opp){
      Plåten ritas obelyst (platt:true), så dess ton sätts nära det mätta
      värdet direkt. Balkarna är belysta, så råvaran ligger ljusare än fotot
      och belysningen tar ner den — samma princip som ridhusets fasadfärg. */
-  const SG=IDENTITET.stall.stallgang, LYFT=1.05;
+  /* Batch 1.5: provljuset har ingen höjd exponering och ingen höjd
+     mättnad, så med brytaren på finns inget överskott att ta bort. */
+  const SG=IDENTITET.stall.stallgang, LYFT=V3DREAL?1.0:1.05;
   const damp=(h)=>"#"+[1,3,5].map(i=>
     Math.round(parseInt(h.substr(i,2),16)/LYFT).toString(16).padStart(2,"0")).join("");
   const RESN=S.takresning, NOCK=S.tak+RESN, halvB=S.bredd/2;
@@ -1729,7 +1742,9 @@ function v3dStall(lagg,opp){
      Lyftet är en egenskap hos webbrenderarens ljus, inte hos byggnaden, och
      hör därför hemma här och inte i site.js. Ändras src/ljus.js måste det
      mätas om — det står i auditen. */
-  const PANELLYFT=1.58;
+  /* Batch 1.5: lyftet hör till det GAMLA ljuset. Med brytaren på bär
+     panelen kortets färg och provljuset avgör hur mörk den blir. */
+  const PANELLYFT=V3DREAL?1.0:1.58;
   const BF_HELDEL="#"+[1,3,5].map(i=>
     Math.min(255,Math.round(parseInt(BF.heldel.substr(i,2),16)*PANELLYFT))
       .toString(16).padStart(2,"0")).join("");

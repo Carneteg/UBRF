@@ -647,6 +647,62 @@ deras beslutsspärrar är auktoritativa för det här arbetet.
     telefon. 4 MB och 256 kB är `[antagande]` tills Batch 1.2:s mätning
     på Tobias egna enheter är gjord.
   - Status `READY_FOR_REVIEW`. `JEV_DECISION: JEV_NOT_NEEDED`.
+- Levererat: **Batch 1.5 (webb, bakom strömbrytaren)** — linjär färg,
+  neutral ton och neutralt omgivningsljus. **Utan `?realism=1` är
+  ingenting ändrat.**
+  - **Beslut, Tobias 2026-11-27:** «Resten av Fas 1 bakom brytaren».
+    Mulet ljus och mjuka figurer får PROVAS bakom `?realism=1`; om de ska
+    bli standard avgörs i jämförelsen sida vid sida (Batch 1.10).
+  - **Motorn** (`src/gl.js`): en ljusförinställning med `linjar:true` får
+    sin belysning räknad i linjärt ljus (`uLinjar`): ytfärgen avkodas,
+    ljuset läggs på, resultatet kodas tillbaka. Utan fältet går skuggaren
+    samma väg som förut. `gl.js` läser inte brytaren.
+  - **Ljuset** (`src/ljus.js`): tre provförinställningar — `realUte`
+    (mulet), `realStall`, `realInne` — utan höjd mättnad, utan extra
+    exponering och med grått i stället för grönt återsken. `ljusFor`
+    väljer dem bara med brytaren på. De fyra gamla är orörda. Alla tal
+    `[antagande]`.
+  - **Stallet** (`src/varld3d.js`): handkompensationerna mot det gamla
+    ljuset (`LYFT`, `PANELLYFT`, golvets dämpning) kopplas förbi med
+    brytaren på. Golvet delas då bara med texturens egen medelton
+    (uppmätt: marksten 0,592/0,577/0,547, spån 0,826/0,774/0,629).
+  - **Mätt på skärmdump från `STALL-GANG-A` med brytaren på**, mot kortets
+    färger: markstenen 133/122/103 (kort 134/125/108), spånremsan
+    171/151/118 (167/150/121), boxpanelen 64/67/69 (69/74/79), ramen
+    166/163/158 (154/155/147), takplåten 111/112/109 (112/113/110).
+    Limträet 150/125/106 mot 173/138/112 och väggen 177/164/154 mot
+    193/192/195 ligger för mörkt — väntar på innerljuset (1.7).
+    **Utan brytaren** ligger boxpanelen på 101/104/101 mot kortets
+    69/74/79: provljuset träffar alltså kortet bättre utan någon
+    handjustering.
+  - **Bevis för «oförändrat utan brytare»:** `tools/linjartest.mjs`
+    (fryst avtryck av de fyra gamla förinställningarna, `uLinjar` = 0 i
+    alla scener); `tools/stalltaktest.mjs` har kvar fingeravtrycket
+    `fb5652bdf25b3fac`. Samma tre kameror renderade på commiten före och
+    efter: medelavvikelsen före↔efter (0,0026 / 0,0023 / 0,0039) ligger
+    inom bruset mellan två körningar av SAMMA bygge (0,0032 / 0,0021 /
+    0,0039), och bildernas medelfärg är lika på 0,1 enheter när.
+    **Renderingen är inte reproducerbar pixel för pixel** — slumpade
+    texturer och animation — så en exakt pixeljämförelse går inte att göra.
+  - **Prov:** `tools/linjartest.mjs` — 15 mätningar; räkningen i båda
+    lägena stämmer exakt mot det handräknade (184/156/211 som förut,
+    200/189/217 linjärt). Falsifierat: `--muter-lacka` 3 FEL,
+    `--muter-kodning` 1 FEL.
+  - **Två befintliga prov är ändrade, medvetet:**
+    `tools/bildmataretest.mjs` — regeln «en fil, en rad» är nu en
+    uttrycklig lista av filer och rader (`src/ljus.js`: `REALLJUS`;
+    `src/varld3d.js`: `V3DREAL`, `REALTAK`).
+    `tools/stalltaktest.mjs` del 3 — jämför FORMEN under takfoten (typ,
+    mått, läge) och kräver att bara boxpanelen bytt färg, i stället för
+    att kräva identisk färg överallt.
+  - **Med brytaren på är ridhuset och gården halvfärdiga:** de får
+    provljuset men har kvar sina handkompensationer. Bara stallgången är
+    milstolpen.
+  - **Paritet:** webb bakom brytaren; inget levererat skiljer
+    plattformarna åt. Inga Roblox-filer rörda.
+  - **Inte verifierbart härifrån:** om det ser rätt ut. Det är Tobias
+    bedömning, i jämförelsen efter Batch 1.7.
+  - Status `READY_FOR_REVIEW`. `JEV_DECISION: JEV_NOT_NEEDED`.
 - **A2 (kantutjämning) uppskjuten, inte löst i 0.1:** en FXAA-shader
   provades i post-kompositeringen men orsakade en mätbar, reproducerbar
   CI-regression i `tools/lektion-e2e-test.mjs` (headless, mjukvaru-
