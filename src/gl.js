@@ -337,9 +337,8 @@ const GL={
       uniform vec3 uSol, uSolFarg, uHimmel, uMark, uDimFarg, uTon, uOga, uKantFarg;
       uniform float uKant, uSolStyrka, uHalvskugga, uAmbient;
       uniform float uAoHojd, uAoStyrka, uDimStyrka;
-      uniform float uDimNara, uDimFjarr, uAlfa, uAnvTex, uPlatt, uLinjar, uLjuskartaPa;
-      uniform vec4 uLjusRam;
-      uniform sampler2D uTex, uLjuskarta;
+      uniform float uDimNara, uDimFjarr, uAlfa, uAnvTex, uPlatt;
+      uniform sampler2D uTex;
       void main(){
         vec3 bas = vCol * uTon;
         if(uAnvTex > 0.5) bas *= texture2D(uTex, vUv).rgb;
@@ -347,11 +346,6 @@ const GL={
           gl_FragColor = vec4(bas, uAlfa);
           return;
         }
-        // LINJÄRT LJUS (Batch 1.5): färgerna står kodade för skärmen. Med
-        // uLinjar avkodas ytfärgen här, belysningen räknas i ljusets egen
-        // skala, och resultatet kodas tillbaka sist. Ljusets färger är
-        // redan avkodade i GL.start. Utan uLinjar: exakt som förut.
-        if(uLinjar > 0.5) bas = pow(bas, vec3(2.2));
         vec3 N = normalize(vNrm);
         float nd = dot(N, uSol);
         float d = max(nd, 0.0);
@@ -370,15 +364,6 @@ const GL={
           clamp(vPos.y / max(uAoHojd, 0.001), 0.0, 1.0));
         vec3 ljus = amb * ao + uSolFarg *
           (d * uSolStyrka + wrap * wrap * uSolStyrka * 0.72 + fyll * 0.16) * ao;
-        // INNERLJUS (Batch 1.7): en karta över planytan säger hur mycket ljus
-        // som når just den här platsen — R vid golvet, G i brösthöjd, 1,0
-        // vid 0,5. Den skalar scenens ljus, så att det är ljusare under en
-        // lampa än i ett hörn. Utan kartan: exakt som förut.
-        if(uLjuskartaPa > 0.5){
-          vec2 kp = clamp((vPos.xz - uLjusRam.xy) * uLjusRam.zw, 0.0, 1.0);
-          vec3 lk = texture2D(uLjuskarta, kp).rgb;
-          ljus *= mix(lk.r, lk.g, clamp(vPos.y / 1.6, 0.0, 1.0)) * 2.0;   // KARTAN
-        }
         vec3 farg = bas * ljus;
         // konturen tänds av ljuset bakifrån och ger volym åt runda former
         float fres = 1.0 - abs(dot(N, mot));
@@ -387,19 +372,66 @@ const GL={
         farg += uKantFarg * (fres * uKant * (0.30 + 0.70 * d));
         float dim = clamp((vDjup - uDimNara) / max(uDimFjarr - uDimNara, 0.001), 0.0, 1.0);
         farg = mix(farg, uDimFarg, dim * uDimStyrka);
-        if(uLinjar > 0.5) farg = pow(max(farg, vec3(0.0)), vec3(1.0/2.2));   // ÅTERKODNING
         gl_FragColor = vec4(farg, uAlfa);
       }`;
-    const p=this._program(vs,fs);
-    if(!p){this.trasig=true;return false;}
-    this.prog=p;
-    gl.useProgram(p);
-    for(const n of ["aPos","aNrm","aCol","aUv"])this.a[n]=gl.getAttribLocation(p,n);
-    for(const n of ["uProj","uVy","uModell","uNM","uSol","uSolFarg","uHimmel","uMark",
-      "uDimFarg","uDimNara","uDimFjarr","uAlfa","uAnvTex","uPlatt","uTex","uTon","uOga",
-      "uKantFarg","uKant","uSolStyrka","uHalvskugga","uAmbient",
-      "uAoHojd","uAoStyrka","uDimStyrka","uLinjar","uLjuskartaPa","uLjusRam","uLjuskarta"])
-      this.u[n]=gl.getUniformLocation(p,n);
+    /* TVÅ SKUGGARE (Batch 1.5 och 1.7). `fs` ovan är standardskuggaren —
+       ordagrant den som fanns före Batch 1.5. Provskuggaren görs av SAMMA
+       text med fem tillägg: linjärt ljus (avkodning och återkodning) och
+       ljuskartan. Vilken som används avgörs en gång per bildruta, i
+       GL.start, av ljusförinställningens `linjar`.
+
+       Varför två: tilläggen låg först i den enda skuggaren, bakom
+       `if(uLinjar…)`/`if(uLjuskartaPa…)`. Mjukvarurenderaren räknar ändå
+       båda grenarna, och standardläget blev 6–12 % långsammare — nog för
+       att CI:s lektionsprov inte skulle hinna fram (run 45944571668).
+       Med en egen skuggare kostar provet ingenting när det är av. */
+    const fsProv=(()=>{
+      let t=fs;
+      const byt=(fran,till)=>{
+        if(t.split(fran).length!==2)throw new Error("provskuggaren: ankaret finns inte exakt en gång: "+fran);
+        t=t.replace(fran,till);
+      };
+      byt("uniform float uDimNara, uDimFjarr, uAlfa, uAnvTex, uPlatt;",
+          "uniform float uDimNara, uDimFjarr, uAlfa, uAnvTex, uPlatt, uLjuskartaPa;\n      uniform vec4 uLjusRam;");
+      byt("uniform sampler2D uTex;","uniform sampler2D uTex, uLjuskarta;");
+      /* LINJÄRT LJUS: färgerna står kodade för skärmen. Ytfärgen avkodas,
+         belysningen räknas i ljusets egen skala, och resultatet kodas
+         tillbaka sist. Ljusets färger är redan avkodade i GL.start. */
+      byt("vec3 N = normalize(vNrm);","bas = pow(bas, vec3(2.2));\n        vec3 N = normalize(vNrm);");
+      /* INNERLJUS: en karta över planytan säger hur mycket ljus som når
+         platsen — R vid golvet, G i brösthöjd, 1,0 lagrat som 0,5. Den
+         skalar scenens ljus. */
+      byt("vec3 farg = bas * ljus;",
+          "if(uLjuskartaPa > 0.5){\n"+
+          "          vec2 kp = clamp((vPos.xz - uLjusRam.xy) * uLjusRam.zw, 0.0, 1.0);\n"+
+          "          vec3 lk = texture2D(uLjuskarta, kp).rgb;\n"+
+          "          ljus *= mix(lk.r, lk.g, clamp(vPos.y / 1.6, 0.0, 1.0)) * 2.0;   // KARTAN\n"+
+          "        }\n        vec3 farg = bas * ljus;");
+      byt("gl_FragColor = vec4(farg, uAlfa);",
+          "farg = pow(max(farg, vec3(0.0)), vec3(1.0/2.2));   // ÅTERKODNING\n        gl_FragColor = vec4(farg, uAlfa);");
+      return t;
+    })();
+    const ATTRIBUT=["aPos","aNrm","aCol","aUv"];
+    const satt=(kalla,extra)=>{
+      const p=this._program(vs,kalla,ATTRIBUT);
+      if(!p)return null;
+      const a={}, u={};
+      gl.useProgram(p);
+      for(const n of ATTRIBUT)a[n]=gl.getAttribLocation(p,n);
+      for(const n of ["uProj","uVy","uModell","uNM","uSol","uSolFarg","uHimmel","uMark",
+        "uDimFarg","uDimNara","uDimFjarr","uAlfa","uAnvTex","uPlatt","uTex","uTon","uOga",
+        "uKantFarg","uKant","uSolStyrka","uHalvskugga","uAmbient",
+        "uAoHojd","uAoStyrka","uDimStyrka"].concat(extra))
+        u[n]=gl.getUniformLocation(p,n);
+      gl.uniform1i(u.uTex,0);
+      return {prog:p,a,u};
+    };
+    this._std=satt(fs,[]);
+    if(!this._std){this.trasig=true;return false;}
+    this._prov=satt(fsProv,["uLjuskartaPa","uLjusRam","uLjuskarta"]);
+    if(this._prov)gl.uniform1i(this._prov.u.uLjuskarta,2);   // enhet 2; enhet 1 hör till efterbehandlingen
+    this.prog=this._std.prog; this.a=this._std.a; this.u=this._std.u;
+    gl.useProgram(this.prog);
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
     gl.enable(gl.CULL_FACE);
@@ -410,12 +442,10 @@ const GL={
     gl.bindTexture(gl.TEXTURE_2D,this.vitTex);
     gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,
       new Uint8Array([255,255,255,255]));
-    gl.uniform1i(this.u.uTex,0);
-    gl.uniform1i(this.u.uLjuskarta,2);          // enhet 2; enhet 1 hör till efterbehandlingen
     this.redo=true;
     return true;
   },
-  _program(vsK,fsK){
+  _program(vsK,fsK,attribut){
     const gl=this.gl;
     const bygg=(typ,kod)=>{
       const s=gl.createShader(typ);
@@ -427,7 +457,10 @@ const GL={
     const v=bygg(gl.VERTEX_SHADER,vsK), f=bygg(gl.FRAGMENT_SHADER,fsK);
     if(!v||!f)return null;
     const p=gl.createProgram();
-    gl.attachShader(p,v);gl.attachShader(p,f);gl.linkProgram(p);
+    gl.attachShader(p,v);gl.attachShader(p,f);
+    /* Två program som delar nät ska ha attributen på samma platser. */
+    if(attribut)attribut.forEach((n,i)=>gl.bindAttribLocation(p,i,n));
+    gl.linkProgram(p);
     if(!gl.getProgramParameter(p,gl.LINK_STATUS)){
       console.warn("länkfel:",gl.getProgramInfoLog(p));return null;}
     return p;
@@ -540,6 +573,7 @@ const GL={
   },
   anvandLjuskarta(tex,x0,z0,bredd,langd){
     const gl=this.gl;
+    if(!this._prov||this.prog!==this._prov.prog)return;   // bara provskuggaren har en ljuskarta
     gl.activeTexture(gl.TEXTURE2);
     gl.bindTexture(gl.TEXTURE_2D,tex);
     gl.activeTexture(gl.TEXTURE0);
@@ -568,19 +602,21 @@ const GL={
       gl.bindFramebuffer(gl.FRAMEBUFFER,this.post.scenFB);
     }
     gl.viewport(0,0,w,h);
+    /* Skuggaren väljs här, en gång per bildruta: provskuggaren för en
+       förinställning med `linjar:true`, annars standardskuggaren. */
+    const lin=ljus.linjar===true&&!!this._prov;
+    const P=lin?this._prov:this._std;
+    this.prog=P.prog; this.a=P.a; this.u=P.u;
     gl.useProgram(this.prog);
     gl.clearColor(0,0,0,0);
     gl.depthMask(true);
     gl.disable(gl.BLEND);
     gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
     const s=ljus.sol, l=Math.hypot(s[0],s[1],s[2])||1;
-    /* Batch 1.5: en förinställning med `linjar:true` får sina ljusfärger
-       avkodade till linjärt ljus här, en gång per bildruta, och skuggaren
-       räknar då belysningen där (uLinjar). Utan fältet: som förut. */
-    const lin=ljus.linjar===true;
+    /* Batch 1.5: med provskuggaren avkodas ljusfärgerna till linjärt
+       ljus här, en gång per bildruta. Annars: som förut. */
     const ljusFarg=lin?(h=>glFarg(h).map(v=>Math.pow(v,2.2))):glFarg;
-    gl.uniform1f(this.u.uLinjar,lin?1:0);
-    gl.uniform1f(this.u.uLjuskartaPa,0);        // ingen ljuskarta förrän någon ber om den
+    if(lin)gl.uniform1f(this.u.uLjuskartaPa,0);  // ingen ljuskarta förrän någon ber om den
     gl.uniform3f(this.u.uSol,s[0]/l,s[1]/l,s[2]/l);
     gl.uniform3fv(this.u.uSolFarg,ljusFarg(ljus.solFarg));
     gl.uniform3fv(this.u.uHimmel,ljusFarg(ljus.himmel));

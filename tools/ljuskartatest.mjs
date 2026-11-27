@@ -80,7 +80,10 @@ async function scen(page, namn) {
     else gaTill("gard", { x: VD.px, y: VD.py, rikt: 0 });
     return V3D.bild || 0; }, namn);
   await page.waitForFunction(({ b0, n }) => V3D.plats === n && (V3D.bild || 0) >= b0 + 3, { b0, n: namn }, { timeout: 60000, polling: 50 });
-  return page.evaluate(() => ({ karta: !!V3D.ljuskarta, pa: GL.gl.getUniform(GL.prog, GL.u.uLjuskartaPa), skarmar: __skarmar.slice() }));
+  /* Bara provskuggaren har en ljuskarta att läsa. Med standardskuggaren
+     finns ingen sådan ingång alls — då är svaret 0 per definition. */
+  return page.evaluate(() => { const prov = !!GL._prov && GL.prog === GL._prov.prog;
+    return { karta: !!V3D.ljuskarta, prov, pa: prov ? GL.gl.getUniform(GL.prog, GL.u.uLjuskartaPa) : 0, skarmar: __skarmar.slice() }; });
 }
 
 try {
@@ -89,7 +92,7 @@ try {
     const { page, sidfel } = await oppna("");
     const s = await scen(page, "stallinne");
     prova("ingen ljuskarta räknas i stallet", s.karta === false, `karta: ${s.karta}`);
-    prova("skuggaren läser ingen karta (uLjuskartaPa = 0)", s.pa === 0, `${s.pa}`);
+    prova("bilden ritas med standardskuggaren, som inte har någon ljuskarta", s.prov === false && s.pa === 0, `provskuggare: ${s.prov}`);
     prova("KONTROLL: pendelskärmarna ritas som förut", s.skarmar.length >= 10, `${s.skarmar.length} skärmar`);
     prova("inga fel på sidan", sidfel.length === 0, sidfel.join(" | ") || "inga");
     await page.close();

@@ -6,10 +6,12 @@
 
    1. De fyra gamla förinställningarna (dag, mulet, regn, ridhus) är byte
       för byte desamma som när batchen skrevs — ett fryst avtryck.
-   2. Brytaren av: varje scen får en av de fyra gamla, och skuggaren
-      räknar som förut (uLinjar = 0).
+   2. Brytaren av: varje scen får en av de fyra gamla, och bilden ritas
+      med STANDARDSKUGGAREN — vars källtext är ordagrant den som fanns
+      före batchen (fryst avtryck). Provet kostar alltså ingenting när
+      det är av.
    3. Brytaren på: stallet, ridhuset och gården får var sin
-      provförinställning, och skuggaren räknar linjärt (uLinjar = 1).
+      provförinställning, och bilden ritas med provskuggaren.
    4. RÄKNINGEN: en yta med känd färg under känt ljus, halvvägs in i en
       vit dimma, ritas genom motorn och läses tillbaka. Värdet jämförs med
       det handräknade — i båda lägena. De två lägena ger olika svar
@@ -71,7 +73,8 @@ const byt = (fran, till) => {
 if (arg.has("--muter-lacka")) { console.log("MUTATION: provljuset väljs utan brytare");
   byt('const REALLJUS=(typeof REALISM!=="undefined")&&REALISM.pa;', "const REALLJUS=true;"); }
 if (arg.has("--muter-kodning")) { console.log("MUTATION: resultatet kodas inte tillbaka");
-  byt("if(uLinjar > 0.5) farg = pow(max(farg, vec3(0.0)), vec3(1.0/2.2));   // ÅTERKODNING", ""); }
+  byt('"farg = pow(max(farg, vec3(0.0)), vec3(1.0/2.2));   // ÅTERKODNING\\n        gl_FragColor = vec4(farg, uAlfa);"',
+      '"gl_FragColor = vec4(farg, uAlfa);"'); }
 
 const srv = http.createServer((req, res) => { res.writeHead(200, { "content-type": "text/html" }); res.end(html); });
 await new Promise(r => srv.listen(PORT, r));
@@ -95,8 +98,11 @@ async function scen(page, namn) {
       ridhusinne: () => { const R = RIDHUSINNE; gaTill("ridhusinne", { x: (R.bana.x0 + R.bana.x1) / 2, y: (R.bana.y0 + R.bana.y1) / 2, rikt: 0 }); },
       gard: () => gaTill("gard", { x: VD.px, y: VD.py, rikt: 0 }) }; m[n](); return V3D.bild || 0; }, namn);
   await page.waitForFunction(({ b0, n }) => V3D.plats === n && (V3D.bild || 0) >= b0 + 2, { b0, n: namn }, { timeout: 60000, polling: 50 });
-  return page.evaluate(() => ({ ljus: Object.keys(LJUS).find(k => LJUS[k] === GL.ljus) || "(okänd)",
-    linjar: GL.gl.getUniform(GL.prog, GL.u.uLinjar), vader: (G.vader && G.vader.typ) || "sol" }));
+  return page.evaluate(() => { const gl = GL.gl;
+    const fs = gl.getAttachedShaders(GL._std.prog).find(sh => gl.getShaderParameter(sh, gl.SHADER_TYPE) === gl.FRAGMENT_SHADER);
+    return { ljus: Object.keys(LJUS).find(k => LJUS[k] === GL.ljus) || "(okänd)",
+      skuggare: GL.prog === GL._std.prog ? "standard" : (GL._prov && GL.prog === GL._prov.prog ? "prov" : "(okänd)"),
+      kalla: gl.getShaderSource(fs), vader: (G.vader && G.vader.typ) || "sol" }; });
 }
 
 try {
@@ -107,7 +113,12 @@ try {
     const uteGammal = ["dag", "mulet", "regn"].includes(g.ljus);
     prova("stallet och ridhuset får den gamla förinställningen «ridhus»", s.ljus === "ridhus" && r.ljus === "ridhus", `stall ${s.ljus} · ridhus ${r.ljus}`);
     prova("gården får en av de gamla väderförinställningarna", uteGammal, `${g.ljus} (väder: ${g.vader})`);
-    prova("skuggaren räknar som förut (uLinjar = 0) i alla tre", s.linjar === 0 && r.linjar === 0 && g.linjar === 0, `${s.linjar} · ${r.linjar} · ${g.linjar}`);
+    prova("alla tre ritas med standardskuggaren", s.skuggare === "standard" && r.skuggare === "standard" && g.skuggare === "standard",
+      `${s.skuggare} · ${r.skuggare} · ${g.skuggare}`);
+    /* Avtrycket togs på commiten före Batch 1.5 (2ac2942): källtexten som
+       standardskuggaren kompileras ur är ordagrant den gamla. */
+    const avtryck = crypto.createHash("sha256").update(s.kalla).digest("hex").slice(0, 16);
+    prova("standardskuggarens källtext är ordagrant den före Batch 1.5", avtryck === "c720b40d803d602b", avtryck);
   }
 
   console.log("3  brytaren på");
@@ -116,7 +127,8 @@ try {
     const s = await scen(pa.page, "stallinne"), r = await scen(pa.page, "ridhusinne"), g = await scen(pa.page, "gard");
     prova("stallet får «realStall», ridhuset «realInne», gården «realUte»",
       s.ljus === "realStall" && r.ljus === "realInne" && g.ljus === "realUte", `${s.ljus} · ${r.ljus} · ${g.ljus}`);
-    prova("skuggaren räknar linjärt (uLinjar = 1) i alla tre", s.linjar === 1 && r.linjar === 1 && g.linjar === 1, `${s.linjar} · ${r.linjar} · ${g.linjar}`);
+    prova("alla tre ritas med provskuggaren", s.skuggare === "prov" && r.skuggare === "prov" && g.skuggare === "prov",
+      `${s.skuggare} · ${r.skuggare} · ${g.skuggare}`);
     prova("inga fel på sidan med brytaren på", pa.sidfel.length === 0, pa.sidfel.join(" | ") || "inga");
     await pa.page.close();
   }

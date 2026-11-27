@@ -785,6 +785,32 @@ deras beslutsspärrar är auktoritativa för det här arbetet.
   - **Paritet:** webb bakom brytaren; inget levererat skiljer
     plattformarna åt. Inga Roblox-filer rörda.
   - Status `READY_FOR_REVIEW`. `JEV_DECISION: JEV_NOT_NEEDED`.
+- **Rättelse 2026-11-27 — två skuggare i stället för en** (efter rött
+  `ridning` på `09e87bc`, run 45944571668: `lektion-e2e-test`, «fram till
+  X i skritt», hästen hann inte fram på 60 s).
+  - **Orsak, mätt:** Batch 1.5 och 1.7 lade sina tillägg i den enda
+    skuggaren, bakom `if(uLinjar…)` och `if(uLjuskartaPa…)`.
+    Mjukvarurenderaren räknar ändå båda grenarna. Bildrutetakt UTAN
+    brytare, samma maskin, två mätningar var: före provarbetet
+    (`2ac2942`) 12,8/12,9 i ridhuset och 8,9/8,4 i stallet; på `09e87bc`
+    9,0/9,0 och 7,3/6,0 — **ungefär 30 % långsammare i ridhuset.**
+    Påståendet «utan brytaren är ingenting ändrat» i posterna för 1.5,
+    1.8 och 1.7 var alltså sant för UTSEENDET men inte för HASTIGHETEN,
+    och det hade jag inte mätt. 1.5 och 1.8 gick igenom CI på marginalen.
+  - **Rättning** (`src/gl.js`): två skuggare. Standardskuggaren är
+    ordagrant den som fanns före Batch 1.5; provskuggaren görs av samma
+    text med fem tillägg (avkodning, återkodning, ljuskartan). Vilken som
+    används väljs en gång per bildruta i `GL.start`, av förinställningens
+    `linjar`. Efter rättningen: 12,3/11,9 i ridhuset och 8,7/8,2 i
+    stallet — tillbaka på nivån före provarbetet, inom mätbruset.
+  - **Prov:** `tools/linjartest.mjs` kräver nu att scenerna utan brytare
+    ritas med standardskuggaren OCH att dess källtext har det frysta
+    avtrycket `c720b40d803d602b` från `2ac2942`. `tools/ljuskartatest.mjs`
+    kräver standardskuggaren när brytaren är av. Alla fyra mutationer i de
+    två proven är fortfarande röda.
+  - **Lärdom för resten av Fas 1:** «bakom brytaren» ska betyda en egen
+    kodväg, inte en gren i den gemensamma — och «oförändrat» ska mätas i
+    bildrutetakt också, inte bara i färg.
 - **A2 (kantutjämning) uppskjuten, inte löst i 0.1:** en FXAA-shader
   provades i post-kompositeringen men orsakade en mätbar, reproducerbar
   CI-regression i `tools/lektion-e2e-test.mjs` (headless, mjukvaru-
