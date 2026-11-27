@@ -502,6 +502,12 @@ jobs:
           test -f tools/linjartest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/linjartest.mjs (steget 'Linjär färg och provljuset bakom strömbrytaren (Batch 1.5)')" >&2; exit 1; }
           node tools/linjartest.mjs
 
+      - name: Mjuka figurer och hela hästar i de närmaste boxarna (Batch 1.8)
+        run: |
+          set -euo pipefail
+          test -f tools/boxhasttest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/boxhasttest.mjs (steget 'Mjuka figurer och hela hästar i de närmaste boxarna (Batch 1.8)')" >&2; exit 1; }
+          node tools/boxhasttest.mjs
+
       - name: P3 — kameran efter en flytt (Kimi Q4)
         run: |
           set -euo pipefail

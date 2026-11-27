@@ -60,9 +60,14 @@ console.log("1  vem som läser brytaren");
      eget prov. En läsare som inte står här, eller en rad som inte står
      här, gör provet rött:
 
-       src/ljus.js    REALLJUS — Batch 1.5, provljuset (tools/linjartest.mjs)
+       src/ljus.js    REALLJUS — Batch 1.5, provljuset (tools/linjartest.mjs);
+                                 Batch 1.8, formspråket «svept»
+                                 (tools/boxhasttest.mjs)
        src/varld3d.js V3DREAL  — Batch 1.5, stallets handkompensationer
-                                 kopplas förbi (tools/stalltaktest.mjs, del 3)
+                                 kopplas förbi (tools/stalltaktest.mjs, del 3);
+                                 Batch 1.8, hela hästar i de närmaste boxarna
+                                 och en mjuk skugga under den svepta figuren
+                                 (tools/boxhasttest.mjs)
        src/varld3d.js REALTAK  — Batch 1.6, stallgångens tak
                                  (tools/stalltaktest.mjs) */
   const LAS = n => `const ${n}=(typeof REALISM!=="undefined")&&REALISM.pa;`;

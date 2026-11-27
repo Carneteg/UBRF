@@ -703,6 +703,39 @@ deras beslutsspärrar är auktoritativa för det här arbetet.
   - **Inte verifierbart härifrån:** om det ser rätt ut. Det är Tobias
     bedömning, i jämförelsen efter Batch 1.7.
   - Status `READY_FOR_REVIEW`. `JEV_DECISION: JEV_NOT_NEEDED`.
+- Levererat: **Batch 1.8 (webb, bakom strömbrytaren)** — mjuka figurer,
+  och hela hästar i de närmaste boxarna. **Utan `?realism=1` är ingenting
+  ändrat.**
+  - **Formspråket** (`src/ljus.js`): `STIL` är «svept» med brytaren på,
+    annars «kloss» som förut. Hästen, ryttaren och figurerna hade redan
+    en svept form — ingen ny geometri är byggd.
+  - **Boxhästarna** (`src/varld3d.js`): de sex bebodda boxar som ligger
+    närmast spelaren visar en HEL stående häst (`s3RitaHast`, pose
+    «halt») i stället för det lösa huvudet. Boxar längre bort behåller
+    huvudet. VILKA boxar som har en häst avgörs av samma villkor som
+    förut; bara formen byts. Hästen står vänd mot gången med mitten
+    1,35 m från bakre väggen — 2,39–3,04 m från fronten, så att mulen
+    också ryms innanför. Sex åt gången och 1,35 m är `[antagande]`.
+  - **Skuggan under figuren:** den svepta figuren kastade en projicerad
+    skugga per kroppsdel, som överlappade till en fläckig klump under
+    fötterna. Med brytaren på får den samma mjuka fläck som klossfiguren.
+    Det syntes först när formspråket byttes.
+  - **Utgår ur planen:** «släpp mättnadsförstärkningen på pälsar». Någon
+    sådan finns inte; pälsen följer den neutrala efterbehandlingen i 1.5.
+  - **Inte gjort:** hela hästar i varje box (beslutet om svaga enheter,
+    Batch 4.2), vilobeteenden, variation i hur hästarna står.
+  - **Prov:** `tools/boxhasttest.mjs` — 15 mätningar: av → 33 huvuden,
+    inga hela hästar, «kloss»; på → sex hela hästar i de närmaste
+    boxarna, 27 huvuden i de övriga, aldrig båda i samma box, varje häst
+    innanför sin box och samma häst som boxen hade; 30 m längre in är det
+    sex ANDRA boxar. Falsifierat: `--muter-lacka` 2 FEL, `--muter-dubbel`
+    1 FEL. `tools/stalltaktest.mjs` har kvar fingeravtrycket
+    `fb5652bdf25b3fac`.
+  - **Paritet:** webb bakom brytaren; inget levererat skiljer
+    plattformarna åt. Inga Roblox-filer rörda.
+  - **Inte verifierbart härifrån:** kostnaden för sex hela hästar på en
+    telefon, och om hästarna ser rätt ut. Det senare är Tobias bedömning.
+  - Status `READY_FOR_REVIEW`. `JEV_DECISION: JEV_NOT_NEEDED`.
 - **A2 (kantutjämning) uppskjuten, inte löst i 0.1:** en FXAA-shader
   provades i post-kompositeringen men orsakade en mätbar, reproducerbar
   CI-regression i `tools/lektion-e2e-test.mjs` (headless, mjukvaru-

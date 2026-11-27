@@ -194,5 +194,10 @@ function glTonRGBA(hex,a){
 
 /* Världens formspråk. "kloss" bygger häst, ryttare, figurer och träd
    av rätblock; "svept" är den äldre handbyggda geometrin. Byt här —
-   allt annat läser den här raden. */
-let STIL="kloss";
+   allt annat läser den här raden.
+
+   Batch 1.8 (Tobias 2026-11-27): med `?realism=1` PROVAS "svept" —
+   mjuka former i stället för klossar. Standard är fortfarande "kloss".
+   Raden läses när näten byggs, så valet måste vara gjort före första
+   bildrutan; det är det, eftersom brytaren läses när sidan laddas. */
+let STIL=REALLJUS?"svept":"kloss";

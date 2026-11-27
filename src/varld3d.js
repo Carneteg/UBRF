@@ -832,6 +832,36 @@ function v3dStallYttre(bg,d,opp){
   }
 }
 
+/* ── Boxhästarna (Batch 1.8) ──────────────────────────────────── */
+const V3D_HELA=6;            // hela hästar åt gången [antagande]
+/* Var en hel häst står i sin box: vänd mot gången, med bakdelen
+   V3D_BAKOM från boxens bakre vägg. Boxarna är 3,7–4,4 m djupa och hästen
+   knappt 2,8 m lång, så hela kroppen — mulen också — ryms innanför
+   fronten. Fysisk sanning om var hästen står gäller också här. */
+const V3D_BAKOM=1.35;        // från bakre väggen till hästens mitt [antagande]
+function v3dBoxHastLage(rad,i){
+  const fx=boxFrontX(rad), ut=rad.vetter;
+  return {x:fx-ut*(rad.djup-V3D_BAKOM), z:boxY(i,rad.id), rikt:ut>0?0:Math.PI};
+}
+/* De V3D_HELA bebodda boxar som ligger närmast spelaren, som en mängd
+   av "rad:fack". Samma villkor som ritningen: facket ligger före
+   klubbdelen och boxHast ger en häst. */
+function v3dNarmasteBoxar(S){
+  const kand=[];
+  for(const rad of S.rader){
+    const boxar=S.boxar[rad.id]||[];
+    for(let i=0;i<antalFack(rad.id);i++){
+      const my=boxY(i,rad.id);
+      if(my+S.boxB/2>S.klubbY)break;
+      if(!boxHast(boxar[i]))continue;
+      const l=v3dBoxHastLage(rad,i);
+      kand.push({k:rad.id+":"+i, a:Math.hypot(l.x-VD.px,l.z-VD.py)});
+    }
+  }
+  kand.sort((p,q)=>p.a-q.a||(p.k<q.k?-1:1));
+  return new Set(kand.slice(0,V3D_HELA).map(p=>p.k));
+}
+
 /* ── Stallet invändigt ────────────────────────────────────────── */
 /* Uppmätt dämpning från renderarens ljus, inverterad. Mätta färger står i
    site.js; den här hör till renderaren, precis som LYFT. */
@@ -3002,8 +3032,13 @@ function v3dFigur(o){
   const g=Math.sin(fas*Math.PI*2)*rr, g2=Math.cos(fas*Math.PI*2)*rr;
   const gung=0.018*Math.abs(Math.sin(fas*Math.PI*2))*rr;
   const jacka=o.jacka||"#3E5F7A", BYXA="#3C4A63";
+  /* Batch 1.8: den svepta figuren kastar en projicerad skugga PER
+     KROPPSDEL — ett femtontal halvgenomskinliga avtryck som överlappar
+     till en fläckig klump under fötterna. Med brytaren på får den
+     samma mjuka fläck som klossfiguren, på golvet den står på. */
   const rita=(nat,mat,ton)=>{const m=M4.mul(bas,mat);
-    GL.rita(nat,m,{ton}); GL.skugga(nat,m,0);};
+    GL.rita(nat,m,{ton}); if(!V3DREAL)GL.skugga(nat,m,0);};
+  if(V3DREAL&&typeof s3Skuggflack==="function")s3Skuggflack(o.x,o.z,0.42,0.85,v3dFigurGolv(o));
   const H=1.02+gung;                       // midjans höjd
   /* Bålen och höften är byggda i figurens egna mått med fötterna i
      y=0, så de flyttas bara med gungningen och lutas kring höften. */
@@ -3108,6 +3143,13 @@ function ritaVandring3D(){
       }
     }else if(G.scen==="stallinne"){
       const S=STALLINNE;
+      /* HELA HÄSTAR I DE NÄRMASTE BOXARNA (Batch 1.8, bara med brytaren).
+         Ett löst huvud över boxdörren läser som en trofé på en vägg. De
+         boxar som ligger närmast spelaren får i stället en hel, stående
+         häst — högst V3D_HELA åt gången, så att kostnaden är begränsad
+         tills den är mätt på en telefon [antagande]. VILKA boxar som har
+         en häst avgörs av exakt samma villkor som huvudet nedan. */
+      const hela=V3DREAL?v3dNarmasteBoxar(S):null;
       for(const rad2 of S.rader){                  // hästhuvuden över boxdörrarna
         const rad=S.boxar[rad2.id]||[], fx=boxFrontX(rad2);
         for(let i=0;i<antalFack(rad2.id);i++){
@@ -3115,6 +3157,12 @@ function ritaVandring3D(){
           if(my+S.boxB/2>S.klubbY)break;
           const h=boxHast(rad[i]); if(!h)continue;
           const ut=rad2.vetter;
+          if(hela&&hela.has(rad2.id+":"+i)){       // HEL HÄST, INGET HUVUD
+            const lage=v3dBoxHastLage(rad2,i);
+            s3RitaHast({hast:HORSES[rad[i]]||h, x:lage.x, z:lage.z, rikt:lage.rikt,
+              gangart:"halt", fas:0, samling:-0.15, skugga:true, box:rad2.id+":"+i});
+            continue;
+          }
           const nick=Math.sin(VD.tid*0.9+i*1.7+(ut>0?2:0))*0.06;
           const m=M4.mul(M4.mul(M4.translation(fx+ut*0.22,1.62+nick*0.4,my),
             M4.rotY(ut>0?-Math.PI/2:Math.PI/2)),M4.rotZ(-0.55));
