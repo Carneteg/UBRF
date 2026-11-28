@@ -12,7 +12,8 @@
       den byggda filen frågar ALDRIG nätet efter en textur.
    4. Texturen är inställd som anroparen bad om (upprepning, mipmaps) och
       uppladdningen lämnar inget kvar i grafikkortets inställningar.
-   5. Det vanliga bygget (inga texturer) har ett tomt manifest.
+   5. Det vanliga bygget har exakt stallgångens fem fotorutor i manifestet
+      (Batch 1.4), och utan ?realism=1 begärs ingen av dem.
    6. Utvecklingsversionen (obyggd index.html) läser assets/textures/.
 
    Avläsningen görs rakt ur texturen (ett rambuffertfäste), inte ur en
@@ -187,9 +188,10 @@ try {
   console.log("5  det vanliga bygget");
   {
     const { page, sidfel } = await oppna("/utan.html");
-    const u = await page.evaluate(() => ({ data: JSON.stringify(window.TEXTUR_DATA), lage: JSON.stringify(GL.texturLage()) }));
-    prova("manifestet är tomt och ingen textur har begärts", u.data === "{}" && u.lage === "{}" && sidfel.length === 0,
-      `TEXTUR_DATA ${u.data} · lägen ${u.lage}`);
+    const u = await page.evaluate(() => ({ namn: Object.keys(window.TEXTUR_DATA || {}).sort().join(","), lage: JSON.stringify(GL.texturLage()) }));
+    const fem = fs.readdirSync(path.join(ROT, "assets/textures")).filter(f => /\.(jpe?g|png|webp)$/i.test(f)).sort().join(",");
+    prova("manifestet har exakt filerna i assets/textures/, och ingen textur har begärts", u.namn === fem && u.lage === "{}" && sidfel.length === 0,
+      `TEXTUR_DATA ${u.namn || "tomt"} · lägen ${u.lage}`);
     await page.close();
   }
 

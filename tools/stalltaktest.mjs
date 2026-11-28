@@ -159,23 +159,26 @@ const pa = await bygg("?realism=1");
 
 console.log("3  det som inte är tak har samma FORM i båda lägena");
 {
-  /* Sedan Batch 1.5 byter brytaren medvetet FÄRGEN på boxfrontens täta
-     panel: lyftet 1,58 hörde till det gamla ljuset och kopplas förbi med
-     provljuset (src/varld3d.js, PANELLYFT). Formen — typ, mått och läge —
-     ska fortfarande vara exakt densamma, och ingen ANNAN del under
-     takfoten får ha bytt färg. */
+  /* Brytaren byter medvetet FÄRGEN på boxfrontens panel och ram (se
+     nedan). Formen — typ, mått och läge — ska fortfarande vara exakt
+     densamma, och ingen ANNAN del under takfoten får ha bytt färg. */
   const form = L => L.map(x => [x[0], x[1], x[2], x[3], x[5]]);
   const a = underTak(av), p = underTak(pa);
   prova("samma delar under takfoten (typ, mått och läge)", avtryck(form(a)) === avtryck(form(p)),
     `${a.length} / ${p.length} delar, ${avtryck(form(a))} / ${avtryck(form(p))}`);
   const bytt = a.map((x, i) => [x, p[i]]).filter(([x, y]) => y && x[4] !== y[4]);
-  /* Panelens färg bärs av flera delar (fronten, och de täta fälten i
-     skiljeväggar och gavlar). Kravet är ETT färgbyte — från den lyfta
-     tonen till kortets — och att alla delar som bytt har panelens höjd. */
-  const par = [...new Set(bytt.map(([x, y]) => `${x[4]} → ${y[4]}`))];
-  const hojder = [...new Set(bytt.map(([x]) => x[2]))];
-  prova("bara boxfrontens täta panel har bytt färg: ETT färgbyte, EN höjd", bytt.length > 0 && par.length === 1 && hojder.length === 1,
-    `${bytt.length} delar · ${par.join(" | ")} · höjd ${hojder.join(", ")} m`);
+  /* Två medvetna färgbyten med brytaren, inget annat:
+     · Batch 1.5: panelens lyft mot det gamla ljuset kopplas förbi;
+     · Batch 1.4: panelen och den galvade ramen får sina foton, som bär
+       färgen — ytorna blir då VITA.
+     Kravet: varje del som bytt färg var panel eller ram utan brytaren och är
+     vit med den, och båda slagen finns med. */
+  const PANEL_AV = "#6d757d", RAM_AV = "#9A9B93";
+  const avvik = bytt.filter(([x, y]) => ![PANEL_AV, RAM_AV].includes(x[4]) || y[4] !== "#FFFFFF");
+  const slag = new Set(bytt.map(([x]) => x[4]));
+  prova("bara boxfrontens panel och galvade ram har bytt färg, och då till vitt (fotot bär färgen)",
+    bytt.length > 0 && avvik.length === 0 && slag.has(PANEL_AV) && slag.has(RAM_AV),
+    `${bytt.length} delar · ${[...new Set(bytt.map(([x, y]) => x[4] + " → " + y[4]))].join(" | ")}${avvik.length ? " · AVVIKER: " + avvik.slice(0, 3).map(([x, y]) => x[4] + "→" + y[4]).join(", ") : ""}`);
 }
 
 await browser.close(); srv.close();

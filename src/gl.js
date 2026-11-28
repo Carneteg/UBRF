@@ -393,7 +393,20 @@ const GL={
       };
       byt("uniform float uDimNara, uDimFjarr, uAlfa, uAnvTex, uPlatt;",
           "uniform float uDimNara, uDimFjarr, uAlfa, uAnvTex, uPlatt, uLjuskartaPa;\n      uniform vec4 uLjusRam;");
-      byt("uniform sampler2D uTex;","uniform sampler2D uTex, uLjuskarta;");
+      byt("uniform sampler2D uTex;","uniform sampler2D uTex, uLjuskarta;\n      uniform vec2 uTexVarld;");
+      /* FOTOTEXTUR I METER (Batch 1.4): en yta med `varld` får sin textur
+         lagd efter läget i världen — planet väljs efter normalen — så att
+         en fotoruta har samma storlek i meter på varje yta, hur stor ytan
+         än är. uTexVarld är rutans bredd och höjd i meter; 0 = ytans egna
+         texturkoordinater, som förut. */
+      byt("if(uAnvTex > 0.5) bas *= texture2D(uTex, vUv).rgb;",
+          "vec2 tuv = vUv;\n"+
+          "        if(uTexVarld.x > 0.0){\n"+
+          "          vec3 an = abs(normalize(vNrm));\n"+
+          "          tuv = (an.y >= an.x && an.y >= an.z) ? vPos.xz : (an.x >= an.z ? vPos.zy : vPos.xy);\n"+
+          "          tuv /= uTexVarld;\n"+
+          "        }\n"+
+          "        if(uAnvTex > 0.5) bas *= texture2D(uTex, tuv).rgb;");
       /* LINJÄRT LJUS: färgerna står kodade för skärmen. Ytfärgen avkodas,
          belysningen räknas i ljusets egen skala, och resultatet kodas
          tillbaka sist. Ljusets färger är redan avkodade i GL.start. */
@@ -428,7 +441,7 @@ const GL={
     };
     this._std=satt(fs,[]);
     if(!this._std){this.trasig=true;return false;}
-    this._prov=satt(fsProv,["uLjuskartaPa","uLjusRam","uLjuskarta"]);
+    this._prov=satt(fsProv,["uLjuskartaPa","uLjusRam","uLjuskarta","uTexVarld"]);
     if(this._prov)gl.uniform1i(this._prov.u.uLjuskarta,2);   // enhet 2; enhet 1 hör till efterbehandlingen
     this.prog=this._std.prog; this.a=this._std.a; this.u=this._std.u;
     gl.useProgram(this.prog);
@@ -686,6 +699,8 @@ const GL={
     gl.uniform3fv(this.u.uTon,o.ton?glFarg(o.ton):[1,1,1]);
     gl.uniform1f(this.u.uAnvTex,o.tex?1:0);
     gl.bindTexture(gl.TEXTURE_2D,o.tex||this.vitTex);
+    /* Bara provskuggaren lägger texturer i meter (Batch 1.4). */
+    if(this._prov&&this.prog===this._prov.prog){const v=o.varld;gl.uniform2f(this.u.uTexVarld,v?v[0]:0,v?v[1]:0);}
     if(o.alfa!==undefined&&o.alfa<1){gl.enable(gl.BLEND);gl.depthMask(false);}
     if(o.baksidor)gl.disable(gl.CULL_FACE);
     const bind=(buf,attr,storlek)=>{

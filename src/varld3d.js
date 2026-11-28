@@ -834,6 +834,32 @@ function v3dStallYttre(bg,d,opp){
   }
 }
 
+/* ── Stallgångens fotomaterial (Batch 1.4) ────────────────────── */
+/* Fem rutor ur stallfotona (tools/gor-stalltexturer.py; källor och samtycke
+   i assets/textures/KALLOR.tsv). Medelfärgen i varje ruta är satt till
+   kortets uppmätta värde, så ytan som bär rutan ritas VIT — annars räknas
+   färgen två gånger. `meter` är rutans storlek i världen [antagande].
+   Bara med brytaren; utan den används de målade texturerna som förut. */
+const V3D_FOTO={
+  marksten:{fil:"stall-marksten.jpg", kort:"#867D6C", meter:[0.90,0.45]},
+  boxpanel:{fil:"stall-boxpanel.jpg", kort:"#454A4F", meter:[0.72,0.72]},
+  galv:    {fil:"stall-galv.jpg",     kort:"#9A9B93", meter:[0.12,0.48]},
+  takplat: {fil:"stall-takplat.jpg",  kort:"#70716E", meter:[3.0,3.0]},
+  limtra:  {fil:"stall-limtra.jpg",   kort:"#AD8A70", meter:[1.6,0.4]},
+};
+/* Texturen för ett fotomaterial. Reserven — det som syns tills fotot är
+   avkodat, eller om det saknas — är kortets färg rakt av. */
+function v3dFoto(namn){
+  const T=S3.tex, F=V3D_FOTO[namn];
+  T.foto=T.foto||{};
+  if(!T.foto[namn]){
+    const c=document.createElement("canvas"); c.width=c.height=4;
+    const k=c.getContext("2d"); k.fillStyle=F.kort; k.fillRect(0,0,4,4);
+    T.foto[namn]=GL.bildTextur(F.fil,c,true);
+  }
+  return T.foto[namn];
+}
+
 /* ── Stallets ljuskällor och ljuskarta (Batch 1.7) ────────────── */
 /* VAR LAMPORNA SITTER — en enda källa. `v3dStall` RITAR armaturerna ur
    den här listan och `v3dStallLjuskarta` LJUSSÄTTER ur samma lista, så
@@ -1571,8 +1597,8 @@ function v3dStall(lagg,opp){
      bort — det är ju det som ska synas — så här delas bara med texturens
      egen medelton (TEXMEDEL, uppmätt ur texturen), och ytan bär kortets
      färg under ljus 1,0. */
-  const TEXMEDEL={marksten:[0.592,0.577,0.547], span:[0.826,0.774,0.629]};
-  const STEN=golvKomp(S.gangSten,V3DREAL?TEXMEDEL.marksten:[0.655,0.620,0.537]);
+  const TEXMEDEL={span:[0.826,0.774,0.629]};   // markstenen har fotot sedan Batch 1.4
+  const STEN=V3DREAL?"#FFFFFF":golvKomp(S.gangSten,[0.655,0.620,0.537]);  // Batch 1.4: fotot bär färgen
   const SPAN=golvKomp(S.gangSpan,V3DREAL?TEXMEDEL.span:[0.940,0.841,0.598]);
   for(const g of S.gangytor){
     if(g.tvar){
@@ -1591,7 +1617,8 @@ function v3dStall(lagg,opp){
       remsa.yta(rb,g.h,SPAN,
         M4.translation(g.x+g.w/2+sida*(gangSten/2+rb/2),0.025,g.y+g.h/2),4);
   }
-  lagg(sten,T.marksten);
+  if(V3DREAL)S3.statiskt.push({nat:GL.nat(sten), tex:v3dFoto("marksten"), varld:V3D_FOTO.marksten.meter});
+  else lagg(sten,T.marksten);
   lagg(remsa,T.span);
   const span=new Bygge();
   for(const rad of S.rader){
@@ -1730,18 +1757,20 @@ function v3dStall(lagg,opp){
       M4.mul(M4.translation(vx+sida*halvB/2,S.tak+RESN/2,S.langd/2),
              M4.rotZ(-sida*takV)));
   }else{
+    /* Batch 1.4: plåten får fotot, som bär färgen — ytan ritas vit. */
     for(const sida of [-1,1])                       // takfallen slutar vid lanterninen
-      tak.lada(fallL,0.14,S.langd+0.5,damp(SG.takplat),
+      tak.lada(fallL,0.14,S.langd+0.5,"#FFFFFF",
         M4.mul(M4.translation(vx+sida*(halvB+LANT.halv)/2,S.tak+lantY/2,S.langd/2),
                M4.rotZ(-sida*takV)));
     /* Lanterninens eget lilla tak, över öppningen. */
-    tak.lada(2*LANT.halv+0.5,0.10,S.langd+0.5,damp(SG.takplat),
+    tak.lada(2*LANT.halv+0.5,0.10,S.langd+0.5,"#FFFFFF",
       M4.translation(vx,S.tak+lantY+LANT.glas+0.05,S.langd/2));
   }
   /* Undersidan av ett tak får bara ambient och blev nästan svart, fast
      filmen visar ljus galvplåt hela vägen upp i nocken — armaturerna
      lyser den jämnt. Den ritas därför obelyst, med sin egen ton. */
-  S3.statiskt.push({nat:GL.nat(tak), tex:T.takplat, platt:true});
+  if(REALTAK)S3.statiskt.push({nat:GL.nat(tak), tex:v3dFoto("takplat"), platt:true, varld:V3D_FOTO.takplat.meter});
+  else S3.statiskt.push({nat:GL.nat(tak), tex:T.takplat, platt:true});
   const stomme=new Bygge();
   for(let z=2;z<S.langd;z+=4){
     /* Tvärbalken i tegelrött, precis under takfoten. */
@@ -1762,13 +1791,13 @@ function v3dStall(lagg,opp){
     const SPARR={b:0.14, h:0.42};
     for(let z=S.boxB/2;z<S.langd;z+=S.boxB)
       for(const sida of [-1,1])
-        stomme.lada(fallL,SPARR.h,SPARR.b,damp(SG.limtra),
+        stomme.lada(fallL,SPARR.h,SPARR.b,"#FFFFFF",                 // Batch 1.4: fotot bär färgen
           M4.mul(M4.translation(vx+sida*(halvB+LANT.halv)/2,
                    S.tak+lantY/2-(0.07+SPARR.h/2)/Math.cos(takV),z),
                  M4.rotZ(-sida*takV)));
     /* Lanterninens sarg: en limträbalk längs vardera kanten av öppningen. */
     for(const sida of [-1,1])
-      stomme.lada(0.14,0.30,S.langd,damp(SG.limtra),
+      stomme.lada(0.14,0.30,S.langd,"#FFFFFF",
         M4.translation(vx+sida*LANT.halv,S.tak+lantY-0.10,S.langd/2));
   }
   /* Balkarna ritas OBELYSTA, av samma skäl som plåten intill dem. Mätning:
@@ -1792,7 +1821,8 @@ function v3dStall(lagg,opp){
      webbrenderaren, inte hos byggnaden, och hör därför hemma här och inte i
      site.js. Kontrollerat genom att räkna de vanligaste tonerna i takzonen
      på en skärmdump. */
-  S3.statiskt.push({nat:GL.nat(stomme), platt:true});
+  if(REALTAK)S3.statiskt.push({nat:GL.nat(stomme), tex:v3dFoto("limtra"), platt:true, varld:V3D_FOTO.limtra.meter});
+  else S3.statiskt.push({nat:GL.nat(stomme), platt:true});
   const galv=new Bygge();
   /* Dragstagen hör till boxhallens öppna takstol; i klubbdelen (platt
      innertak) hängde de som lösa rör under taket — bara söder om den
@@ -1877,16 +1907,21 @@ function v3dStall(lagg,opp){
   const BF_HELDEL="#"+[1,3,5].map(i=>
     Math.min(255,Math.round(parseInt(BF.heldel.substr(i,2),16)*PANELLYFT))
       .toString(16).padStart(2,"0")).join("");
-  const BF_RAM=BF.ram;
-  const front=new Bygge(), galler=new Bygge();
+  /* Batch 1.4: med brytaren bär fotona färgen och ytorna ritas vita. Ramen
+     läggs då i samma nät som stolparna och reglarna, så att hela den galvade
+     delen får galvfotot och hela panelen panelfotot. Anropen och deras
+     ordning är desamma — bara vilket nät de hamnar i skiljer. */
+  const BF_RAM=V3DREAL?"#FFFFFF":BF.ram;
+  const BF_PANEL=V3DREAL?"#FFFFFF":BF_HELDEL;
+  const front=new Bygge(), galler=new Bygge(), ramNat=V3DREAL?galler:front;
   for(const rad2 of S.rader){
     const rad=S.boxar[rad2.id]||[], fx=boxFrontX(rad2), sida=rad2.vetter>0?"W":"E";
     for(let i=0;i<antalFack(rad2.id);i++){
       const my=boxY(i, rad2.id), y0=my-S.boxB/2, y1=my+S.boxB/2;
       if(y1>S.klubbY)break;
-      front.lada(0.12,BF.heldelH,S.boxB-0.04,BF_HELDEL,
+      front.lada(0.12,BF.heldelH,S.boxB-0.04,BF_PANEL,
         M4.translation(fx,BF.heldelH/2,my));
-      front.lada(0.16,0.10,S.boxB,BF_RAM,M4.translation(fx,BF.ramZ,my));
+      ramNat.lada(0.16,0.10,S.boxB,BF_RAM,M4.translation(fx,BF.ramZ,my));
       for(const dy of [y0,y1])
         galler.lada(0.14,BF.stolpH,0.14,BF_RAM,
           M4.translation(fx,BF.stolpH/2,dy));
@@ -1900,7 +1935,7 @@ function v3dStall(lagg,opp){
       galler.lada(0.14,0.10,S.boxB,BF_RAM,M4.translation(fx,BF.toppregelZ,my));
       /* Skiljeväggar mellan boxarna. */
       const ut=sida==="W"?-1:1;
-      front.lada(rad2.djup,BF.heldelH,0.10,BF_HELDEL,
+      front.lada(rad2.djup,BF.heldelH,0.10,BF_PANEL,
         M4.translation(fx+ut*rad2.djup/2,BF.heldelH/2,y0));
       const h=boxHast(rad[i]);
       const b=new Bygge();
@@ -1909,7 +1944,10 @@ function v3dStall(lagg,opp){
       S3.statiskt.push({nat:GL.nat(b), tex:v3dNamnTex(h?h.namn.toUpperCase():"—")});
     }
   }
-  lagg(front,null); lagg(galler,null);
+  if(V3DREAL){
+    S3.statiskt.push({nat:GL.nat(front), tex:v3dFoto("boxpanel"), varld:V3D_FOTO.boxpanel.meter});
+    S3.statiskt.push({nat:GL.nat(galler), tex:v3dFoto("galv"), varld:V3D_FOTO.galv.meter});
+  }else{ lagg(front,null); lagg(galler,null); }
 
   /* Rummen i klubbdelen och servicedelen. */
   const rum=new Bygge();
@@ -3222,11 +3260,11 @@ function ritaVandring3D(){
     for(const s of S3.statiskt){
       if(s.glas){glas.push(s);continue;}
       if((s.tona||s.tona3d)&&v3dTonas(s,k.x,k.z,VD.px,VD.py)){tonade.push(s);continue;}
-      GL.rita(s.nat,M4.ny(),{tex:s.tex,baksidor:s.baksidor,platt:s.platt});
+      GL.rita(s.nat,M4.ny(),{tex:s.tex,baksidor:s.baksidor,platt:s.platt,varld:s.varld});
     }
     V3D.tonade=tonade.length;
     for(const s of glas)GL.rita(s.nat,M4.ny(),{alfa:s.alfa,baksidor:true});
-    for(const s of tonade)GL.rita(s.nat,M4.ny(),{tex:s.tex,alfa:TONING});
+    for(const s of tonade)GL.rita(s.nat,M4.ny(),{tex:s.tex,alfa:TONING,varld:s.varld});
     if(V3D.oppningar)GL.rita(V3D.oppningar.nat,M4.ny(),{baksidor:true});
     /* Levande figurer och hästar. */
     if(G.scen==="gard"){

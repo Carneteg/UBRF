@@ -69,9 +69,13 @@ console.log("1  vem som läser brytaren");
                                  och en mjuk skugga under den svepta figuren
                                  (tools/boxhasttest.mjs);
                                  Batch 1.7, stallets ljuskarta och lysande
-                                 pendelskärmar (tools/ljuskartatest.mjs)
+                                 pendelskärmar (tools/ljuskartatest.mjs);
+                                 Batch 1.4, fotomaterial i golvet och på
+                                 boxfronterna (tools/fototexturtest.mjs)
        src/varld3d.js REALTAK  — Batch 1.6, stallgångens tak
-                                 (tools/stalltaktest.mjs) */
+                                 (tools/stalltaktest.mjs); Batch 1.4,
+                                 fotomaterial i takplåten och limträet
+                                 (tools/fototexturtest.mjs) */
   const LAS = n => `const ${n}=(typeof REALISM!=="undefined")&&REALISM.pa;`;
   const TILLATNA = {
     "src/ljus.js": [LAS("REALLJUS")],

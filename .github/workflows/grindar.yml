@@ -514,6 +514,12 @@ jobs:
           test -f tools/ljuskartatest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/ljuskartatest.mjs (steget 'Innerljuset i stallgången — ljuskartan (Batch 1.7)')" >&2; exit 1; }
           node tools/ljuskartatest.mjs
 
+      - name: Stallgångens fotomaterial (Batch 1.4)
+        run: |
+          set -euo pipefail
+          test -f tools/fototexturtest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/fototexturtest.mjs (steget 'Stallgångens fotomaterial (Batch 1.4)')" >&2; exit 1; }
+          node tools/fototexturtest.mjs
+
       - name: P3 — kameran efter en flytt (Kimi Q4)
         run: |
           set -euo pipefail

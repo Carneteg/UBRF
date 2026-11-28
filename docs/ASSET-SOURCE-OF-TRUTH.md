@@ -130,6 +130,16 @@ ingenting över nätet när det körs.
 - **Läget 2026-11-28:** klubbens samtycke finns
   (`references/licenses/SAMTYCKE-UBRF-2026-11-28.md`, noterat enligt Tobias). Stallgångens material (Batch 1.4) är de
   första UBRF-fotorutorna.
+- **Stallgångens fem rutor (Batch 1.4):** `stall-marksten.jpg`,
+  `stall-boxpanel.jpg`, `stall-galv.jpg`, `stall-takplat.jpg`,
+  `stall-limtra.jpg`. De görs om ur källfotona med
+  `tools/gor-stalltexturer.py`, som också skriver deras rader i
+  `KALLOR.tsv` (källfoto och utsnittets fyrhörning i originalets pixlar).
+  En ruta får bara skäras ur ett foto som ligger i repot och som
+  Drive-manifestet anger utan personer, registreringsskyltar och läsbara
+  namn — `tools/testa-texturbygge.py` och `tools/fototexturtest.mjs`
+  kontrollerar det. Rutans medelfärg sätts till kortets uppmätta färg:
+  kortet är facit för färgen, fotot för strukturen.
 
 ## Definition of done för nytt källmaterial
 

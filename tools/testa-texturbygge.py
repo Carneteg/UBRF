@@ -162,10 +162,17 @@ def main():
     pa = subprocess.run([sys.executable, str(skript), "--rot", str(ROT), "--ut", str(a)], capture_output=True, text=True)
     pb = subprocess.run([sys.executable, str(skript), "--rot", str(ROT), "--texturer", str(tom), "--ut", str(b)],
                         capture_output=True, text=True)
-    lika = pa.returncode == 0 and pb.returncode == 0 and a.read_bytes() == b.read_bytes()
-    prova("det riktiga spelet: assets/textures/ är tom, och bygget är byte för byte lika med en tom provmapp",
-          lika and manifest(a) == {}, "%d byte · %s" % (a.stat().st_size if a.exists() else -1,
-                                                        (pa.stdout.strip().splitlines() or [pa.stderr[:100]])[1 if pa.stdout else 0].strip()))
+    # Sedan Batch 1.4 har det riktiga spelet fem fotorutor. Utan dem är bygget
+    # byte för byte samma som med en tom provmapp, så när som på manifestet:
+    # texturerna lägger till data, aldrig kod.
+    def utan_manifest(f):
+        return re.sub(r"<script>window\.TEXTUR_DATA=\{.*?\};</script>", "", f.read_text(encoding="utf-8"), flags=re.S)
+    lika = pa.returncode == 0 and pb.returncode == 0 and utan_manifest(a) == utan_manifest(b) and manifest(b) == {}
+    prova("det riktiga spelet: bygget skiljer sig från ett med tom texturmapp bara i manifestet",
+          lika and sorted(manifest(a) or {}) == sorted(f.name for f in (ROT / "assets" / "textures").iterdir()
+                                                    if f.suffix.lower() in (".png", ".jpg", ".jpeg", ".webp")),
+          "%d byte · %s" % (a.stat().st_size if a.exists() else -1,
+                            (pa.stdout.strip().splitlines() or [pa.stderr[:100]])[1 if pa.stdout else 0].strip()))
     prova("och det riktiga spelet ligger under taket 4 MB", a.exists() and a.stat().st_size <= 4 * 1024 * 1024,
           "%d byte" % (a.stat().st_size if a.exists() else -1))
 
@@ -224,11 +231,34 @@ def main():
     prova("med klubbens sparade svar på plats går samma UBRF-ruta igenom", p.returncode == 0 and ut.exists(),
           "avslutskod %d" % p.returncode)
 
-    # Det riktiga repot: ingen bildfil och bara rubrikraden.
-    riktiga = [f.name for f in (ROT / "assets" / "textures").iterdir() if f.suffix.lower() in (".png", ".jpg", ".jpeg", ".webp")]
-    prova("repot: assets/textures/ innehåller ingen bildfil (Batch 1.3 är bara röret)", riktiga == [], str(riktiga))
-    prova("repot: assets/textures/KALLOR.tsv finns och har rätt rubrikrad",
-          (ROT / "assets" / "textures" / "KALLOR.tsv").read_text(encoding="utf-8").splitlines()[:1] == [RUBRIK.strip("\n")])
+    # Det riktiga repot. Sedan Batch 1.4 ligger stallgångens fotorutor där.
+    # Varje bildfil ska ha en källrad; en UBRF-fotoruta ska peka på ett foto
+    # som finns i repot och som Drive-manifestet säger är utan personer,
+    # registreringsskyltar och läsbara namn.
+    textmapp = ROT / "assets" / "textures"
+    riktiga = sorted(f.name for f in textmapp.iterdir() if f.suffix.lower() in (".png", ".jpg", ".jpeg", ".webp"))
+    kallrader = (textmapp / "KALLOR.tsv").read_text(encoding="utf-8").splitlines()
+    prova("repot: assets/textures/KALLOR.tsv finns och har rätt rubrikrad", kallrader[:1] == [RUBRIK.strip("\n")])
+    kallor = {r.split("\t")[0]: r.split("\t") for r in kallrader[1:] if r.strip()}
+    prova("repot: varje bildfil i assets/textures/ har en källrad, och varje källrad en fil",
+          sorted(kallor) == riktiga, "%d filer · %d rader" % (len(riktiga), len(kallor)))
+    drive = sorted(ROT.glob("references/DRIVE-MANIFEST-*.tsv"))[-1].read_text(encoding="utf-8").splitlines()
+    kol = drive[0].split("\t")
+    rena = {dict(zip(kol, r.split("\t")))["repo_sokvag"] for r in drive[1:] if r.strip()
+            and dict(zip(kol, r.split("\t")))["personer"] == "nej" and dict(zip(kol, r.split("\t")))["skyltar"] == "nej"
+            and dict(zip(kol, r.split("\t")))["lasbara_namn"] != "ja"}
+    smutsiga = []
+    for namn, r in kallor.items():
+        if r[2] != "ubrf-foto":
+            continue
+        foto = r[1].split(",")[0].strip()
+        if not (ROT / foto).is_file() or foto not in rena:
+            smutsiga.append("%s ← %s" % (namn, foto))
+    prova("repot: varje UBRF-fotoruta kommer ur ett foto i repot utan personer, skyltar eller läsbara namn",
+          not smutsiga, "; ".join(smutsiga) or "%d rutor kontrollerade" % sum(1 for r in kallor.values() if r[2] == "ubrf-foto"))
+    pb = subprocess.run([sys.executable, str(skript), "--rot", str(ROT), "--ut", str(tmp / "repo.html")], capture_output=True, text=True)
+    prova("repot: bygget går igenom sin egen källkontroll med de riktiga texturerna", pb.returncode == 0,
+          (pb.stdout.strip().splitlines() or [pb.stderr.strip()[:200]])[0])
 
     shutil.rmtree(tmp, ignore_errors=True)
     fel = resultat.count(False)

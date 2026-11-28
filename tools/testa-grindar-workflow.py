@@ -120,6 +120,7 @@ INVENTARIE = [
     ('ridning', 'tools/linjartest.mjs', ['node tools/linjartest.mjs']),
     ('ridning', 'tools/boxhasttest.mjs', ['node tools/boxhasttest.mjs']),
     ('ridning', 'tools/ljuskartatest.mjs', ['node tools/ljuskartatest.mjs']),
+    ('ridning', 'tools/fototexturtest.mjs', ['node tools/fototexturtest.mjs']),
     ('ridning', 'tools/kameratest.mjs', ['node tools/kameratest.mjs']),
     ('ridning', 'tools/lektion-e2e-test.mjs', ['node tools/lektion-e2e-test.mjs']),
     ('ridning', 'tools/simplifytest.mjs', ['node tools/simplifytest.mjs']),

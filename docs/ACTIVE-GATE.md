@@ -829,6 +829,51 @@ deras beslutsspärrar är auktoritativa för det här arbetet.
     Privatägda hästar omfattas inte.
   - **Följd:** stallgångens fotomaterial (Batch 1.4) kan byggas; byggets
     spärr släpper in UBRF-fotorutor som pekar på samtyckesfilen.
+- **Batch 1.4 — stallgångens fotomaterial, bakom `?realism=1`
+  (2026-11-28, READY_FOR_REVIEW).** Tobias: «Bygg Batch 1.4 på riktigt».
+  - **Fem rutor ur repots egna foton** (`assets/textures/`, 53 816 byte
+    totalt): marksten och limträ ur `stall-inne-05-stallgangen.jpg`;
+    boxpanel, galvad ram och takplåt ur
+    `drive-2026-11-26/IMG_0153-stall-boxgangar.jpg`. Båda är enligt
+    Drive-manifestet utan personer, skyltar och läsbara namn. Varje ruta har
+    en rad i `KALLOR.tsv` med källa, utsnittets fyrhörning och samtycket.
+    Rutorna görs om med `tools/gor-stalltexturer.py` (Pillow): uträtat
+    utsnitt, ljusfallet bortdelat, sömlösa kanter, och medelfärgen satt till
+    kortets uppmätta färg — **fotot ger strukturen, kortet färgen.**
+  - **Motorn:** provskuggaren (bara den, `GL._prov`) kan lägga en ruta efter
+    läget i meter i stället för efter nätets UV (`varld:[bredd,höjd]`), så
+    att en ruta får samma storlek på varje yta. Standardskuggaren är
+    oförändrad. I `v3dStall` tar golvet, boxfronternas panel och ram,
+    takplåten och sparrarna sin ruta via `GL.bildTextur` med kortets färg som
+    reserv; ytans egen färg blir vit där fotot bär färgen. Allt på raderna
+    `V3DREAL`/`REALTAK` som redan får läsa brytaren.
+  - **Utan brytaren:** samma nät och samma skuggare som förut; ingen ruta
+    begärs. Bildrutetakten här (SwiftShader, 960×540, två omgångar):
+    stallgången 16,4/16,5 b/s före, 16,1/16,4 efter; ridhuset 24,0/25,5
+    före, 23,5/24,3 efter — inom spridningen mellan omgångarna. **Filen
+    växer i alla byggen**, också utan brytare: 1 765 512 → 1 841 167 byte
+    (44 % av taket 4 MB). Med brytaren på i stallgången: 9,7 → 8,7 b/s.
+  - **Prov:** nytt `tools/fototexturtest.mjs` (CI, jobb `ridning`): AV
+    ingen ruta begärs eller ritas; PÅ alla fem «klar», på sina ytor med sin
+    storlek i meter, rutornas medelfärg = kortets (avvikelse 0), och från
+    `STALL-GANG-A` har golv och boxpanel samma medelfärg som reserven
+    (skillnad ≤ 3) men 5–20 gånger så mycket struktur. Källorna: varje rad
+    pekar på ett foto i repot utan personer. Mutationerna `--muter-lacka`
+    (2 FEL) och `--muter-kalla` (1 FEL) blir röda.
+  - **Medvetet ändrade prov:** `tools/testa-texturbygge.py` krävde att
+    `assets/textures/` var tom — nu kräver det att varje bildfil har en
+    källrad, att varje UBRF-ruta kommer ur ett foto utan personer, och att
+    det riktiga bygget bara skiljer sig från ett tomt i manifestet.
+    `tools/stalltaktest.mjs` del 3 tillåter nu, utöver panelen, att ramen
+    blir vit med brytaren på — inget annat; fingeravtrycket AV
+    `fb5652bdf25b3fac` står kvar.
+  - **Inte gjort:** boxfronternas FORM (stående galler, skjutdörrar —
+    Batch 3.2, kräver mått), andra rum, Roblox. Rutorna är grova: ljusfall,
+    förvrängning och upprepning kan synas, och färgerna är relativa tills
+    gråkortsproverna (G4) finns. **Paritet:** webb bakom brytaren; inget
+    levererat skiljer plattformarna åt. Samtycket öppnar också för texturer
+    i Roblox, som en egen leverans.
+  - `JEV_DECISION: JEV_NOT_NEEDED` — deterministisk rendering och data.
 - **A2 (kantutjämning) uppskjuten, inte löst i 0.1:** en FXAA-shader
   provades i post-kompositeringen men orsakade en mätbar, reproducerbar
   CI-regression i `tools/lektion-e2e-test.mjs` (headless, mjukvaru-
