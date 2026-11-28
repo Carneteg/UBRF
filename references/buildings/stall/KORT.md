@@ -152,7 +152,38 @@ Avstånd mellan huvarna: **~3,5 m**, alltså en per box.
 | Långsida V (mot gården) | **liggande träpanel** | **(80, 35, 47)** "mörk falurött" | **Rad av valvbågade, flerrutiga fönster med vit karm, ett per box (~3,5 m)** | förstukvistens ockragula dörr | Vita knutbrädor, vit foder runt varje fönster, ljusgrå betongsockel |
 | Gavel N (klubbgaveln mot grusplanen, den höga, närmast förstukvisten) | samma | samma | 2 valvfönster högt, 2 lägre | **vit dörr till en liten balkong**; **klubbdörr i marknivå** `[enligt Tobias]` — se noten nedan | **Svart spiraltrappa** upp till balkongen; **rund gul lampa** bredvid dörren; vit knut i båda hörnen |
 | Gavel S (mot gårdsplanen från Husbyvägen) | samma (Street View) | samma | valvfönster i två plan | **två entrédörrar under vita spetsiga skärmtak** | **rak ståltrappa** med avsats upp till en dörr i övervåningen `[läst ur Street View på avstånd]` |
-| Långsida Ö | `[saknas foto]` | | | | |
+| **Långsida Ö (mot hagarna)** | liggande träpanel, som västra sidan | samma mörka falurött | **rad av valvbågade, flerrutiga fönster med vit karm**, gallrade — minst sex syns till höger om utbyggnaden; ovanför dem ett **sammanhängande lågt fönsterband direkt under takfoten** | **hög grå pardörr av plank med vit karm**, i gaveln på en lägre utbyggnad | **Utbyggnad med eget sadeltak** vinkelrätt ut från långsidan: röd panel, vita knutar och vita vindskivor, ett litet valvfönster på sidoväggen. Svarta stuprör. Hagstaket och körväg direkt utanför. Se noten nedan |
+
+> **Östra långsidan — fylld 2026-11-26 (Batch 1.1).** Raden var `[saknas foto]`
+> och sidan byggdes som en spegling av den västra. Foton som migrerades samma
+> dag visar den på nära håll:
+>
+> | Foto | Visar |
+> |---|---|
+> | `drive-2026-11-26/IMG_0298-stall-exterior.jpg` | Utbyggnaden med den grå pardörren, från körvägen mellan hagarna |
+> | `drive-2026-11-26/IMG_0299-stall-exterior.jpg` | Långväggen till höger om utbyggnaden: fönsterrad, tak, huvar |
+> | `drive-2026-11-26/IMG_0295-…`, `IMG_0296-stall-exterior.jpg` | Innerhörnet mellan långvägg och utbyggnad: fönsterbandet under takfoten på nära håll |
+> | `drive-2026-11-26/IMG_0290-stall-exterior.jpg` | Tak med huvar och fönsterband, bakom pallar med strö |
+> | `drive-2026-11-26/IMG_0291-…` till `IMG_0294-stall-exterior.jpg` | Utbyggnadens sidor och gavel |
+>
+> **Det som rättas:**
+>
+> 1. **Porten sitter i en utbyggnad, inte i långväggen.** Street View-läsningen
+>    under «Fotobrist» säger «en stor skjutport i blågrått ungefär mitt på
+>    längden». Närbilderna visar en **pardörr** i gaveln på en lägre, gavlad
+>    utbyggnad som skjuter ut från långsidan. Om dörren är skjutbar eller
+>    slagdörr går inte att avgöra; beslagen syns inte.
+> 2. **Fönsterbandet under takfoten** finns inte i kortet. Det löper ovanför
+>    valvfönstren längs den synliga delen av sidan.
+> 3. **Sidan är inte en spegling av den västra**: den har utbyggnaden och
+>    saknar förstukvisten.
+>
+> **Det som INTE går att avgöra** och förblir `[REFERENCE GAP]`: var längs
+> husets längd utbyggnaden sitter, dess mått, och fönstrens totala antal. Att
+> sidan är den östra följer av hagarna i förgrunden och `SITEPLAN.md`
+> `[antagande]`. Slutsatsen under «Placering» att östra porten bryter
+> boxraden mitt på längden vilar på Street View-läsningen och bör prövas om
+> när utbyggnadens läge är känt. *Koden är inte ändrad i den här batchen.*
 
 ### Stallet har TVÅ ytterdörrar i norra änden — och de bytte plats 2026-09-02
 
@@ -271,6 +302,35 @@ gångar på 21 m bredd. Antalet boxar per länga och den exakta fördelningen me
 box och gång är `[ASSUMPTION]` tills en rak planbild finns; ordningen är
 `[VERIFIED]`.
 
+## Klubb- och servicedelens rum — vad de migrerade fotona visar
+
+Tillagt 2026-11-26 (Batch 1.1). `INTERIOR-MATRIS.md` hade «Rummens inredning»
+som `[REFERENCE GAP]`. Tjugoåtta bilder under `drive-2026-11-26/` visar rummen.
+Det här är en **inventering av vad som syns**. Rummens namn är satta efter
+innehållet; var i planen varje rum ligger är inte fastställt där det inte står,
+och färgerna är namngivna, inte mätta. Skyltar som anges inom «» är lästa av
+mig i bilden; övriga uppgifter om skyltar kommer ur den tidigare maskinläsningen
+och är märkta så.
+
+| Rum | Bilder | Visar |
+|---|---|---|
+| **Sadelkammaren** | `IMG_0219`–`IMG_0227` (`-stall-servicedel.jpg`) | Vit stående panel, slitet ljust betonggolv, vitt tak med synliga vita rör och lysrör. **Sadlar på väggkonsoler i två rader**, med en liten vit namnlapp vid varje. **Träns tätt på en vägg och på en mellanvägg.** Grå hyllställning med mörkgröna plastbackar. Ett litet bord med **gul skiva** och en **sadelbock i trä** med putsgrejer. Fackhylla med vikta schabrak; diskbänk i ett hörn. Jackor på krokar, bland dem orange varseljackor. **Grå ståldörr** — enligt maskinläsningen skyltad «Stall». Ett gallrat innerfönster i en kortvägg |
+| **Lektionssalen** | `IMG_0140`, `IMG_0231`–`IMG_0235` | Vit stående panel, betonggolv. **Valvfönster** på fönsterväggen, med **käpphästar på en lång hylla** under dem och små modellhästar i fönstersmygarna. **Stor anatomiplansch** (hästskalle och benens skelett). **Bokhylla** med böcker och spel. **Träbord ihopställda till ett block**, vita stolar med träben. En leksaksstall på golvet, en ridhjälm på ett bord. Kabelstegar och lysrör i taket. På kortväggen en **whiteboard** — se noten |
+| **Uppehållsrummet** | `IMG_0240`, `IMG_0241` | Ljus panel, blankt betonggolv. Två valvfönster med en tavla emellan. **Övningshästar: sadlar på träställ**, varav ett rosa. Litet svart bord med stolar. Grå ståldörr med utrymningsskylt |
+| **Besökshörnan vid entrén** | `IMG_0136`, `IMG_0218` | **Förvaringsskåp** med skylten «FÖRVARINGSSKÅP SOM FÅR ANVÄNDAS UNDER DIN RIDLEKTION», klädkrokar, runt glasbord med två svarta trådstolar vid ett valvfönster med en svart hästsiluett i, hästrasplansch, brandsläckare. Enligt maskinläsningen en plattformshiss («HISS») till höger |
+| **Låneutrustning** | `IMG_0216`, `IMG_0236`, `IMG_0237` | **Säkerhetsvästar på väggpinnar** i täta rader. **Grått skåp med ridstövlar** på hyllor. Öppning mot lektionssalen. Vilket rum eller vilken del av korridoren det är: `[REFERENCE GAP]` |
+| **Toaletter** | `IMG_0141`–`IMG_0144` | Grå dörrar med blåvit skylt «Toalett», den ena med rullstolssymbol. Vita väggar, grått klinkergolv, inramade hästbilder, stödhandtag i den tillgängliga |
+| **Servicepassagen vid spolspiltan** | `IMG_0155`, `IMG_0242` | Samma passage som `stall-inne-07`: vit vägg med rör, slang och tvättho, marksten, gaveldörr med dagsljus och utrymningsskylt. `IMG_0155` är tagen upp och ner; derivatet är roterat |
+
+> **Whiteboarden i lektionssalen finns, men bilderna av den ligger inte i
+> repot.** Fyra bilder (`IMG_0139`, `0228`, `0229`, `0230`) visar tavlan med ett
+> handskrivet lägerschema där förnamn står intill hästnamn. De är kvar i Drive,
+> se `references/DRIVE-SOURCE-INDEX.md`.
+
+**Mot bygget.** Spelet har rummen som låga volymer med namn ur utrymningsplanen
+(`STALLINNE.klubb`). Ingen av inredningarna ovan är omsatt, och inget i den här
+batchen ändrar koden. Planens Batch 3.6a/3.6b äger det.
+
 ## Stallgången invändigt — läst ur filmerna
 
 Underlaget är **37 bildrutor** ur `video/IMG_0249.mov` (13,3 s, gången norrut)
@@ -304,6 +364,12 @@ inte alls ser ut som ett vanligt trästall.
 - **Galvade stolpar** mellan boxarna går hela vägen upp till ungefär 2,2 m.
 - På fronterna hänger sadlar med underlag, täcken, grimmor, träns och
   benskydd — mycket saker, tätt. `[ej byggt i spelet ännu]`
+- **Namnskylt på varje boxfront** (tillagt 2026-11-26): ett vitt stående kort
+  med hästens namn i svart, och under det två–tre vita blad (scheman). Namnet
+  går att läsa på den närmaste boxen i
+  `drive-2026-11-26/IMG_0152-stall-boxgangar.jpg`; bladen under går inte att
+  läsa. Hjälmar hänger på några fronter, och **vita storsäckar** står i gången
+  (`IMG_0146`, `IMG_0147`).
 - Svarta reglar och handtag på boxdörrarna.
 
 ### Gångens ändar
@@ -311,12 +377,27 @@ inte alls ser ut som ett vanligt trästall.
   ovanför och en grön utrymningsskylt bredvid. `[ej byggt i spelet ännu]`
 - En vit, rundad form högt upp vid ena änden — troligen ventilationstrumma
   eller en vit gavelvägg bortom taket. `[REFERENCE GAP — inte fastställd]`
+  Tillägg 2026-11-26: `drive-2026-11-26/IMG_0146-stall-boxgangar.jpg` visar
+  **vita runda rör** som korsar gången i takhöjd och viker ner mot boxarna,
+  och gångens ände som en vit gavelvägg med grå port. Att formen ovan är just
+  de rören är troligt men inte fastställt.
 
 ### Vad som är byggt efter det här
 `v3dStall` i `src/varld3d.js`: sadeltaket i galvad plåt (ritat obelyst, för en
 takundersida som bara får ambient blev nästan svart medan filmen visar den
 jämnt upplyst av armaturerna), de röda tvärbalkarna med snedstag och nockbalk,
 dragstagen, takfönstren, pendelarmaturerna, och golvets två material.
+
+> **Rättelse 2026-11-26 (Batch 1.1): taket bärs inte av tvärbalkar med
+> snedstag.** `stall-inne-05-stallgangen.jpg` och de nya
+> `drive-2026-11-26/IMG_0146-stall-boxgangar.jpg` och
+> `IMG_0159-stall-boxgangar.jpg` visar **lutande limträsparrar som följer
+> takfallet**, med korrugerad plåt emellan och en **lanternin längs nocken**
+> som släpper in dagsljus. Inga vågräta tvärbalkar och inga snedstag syns i
+> någon av de tre bilderna. De galvade bågarna över gången är rör till boxarnas
+> vatten, inte stomme. Det som byggdes ovan («tvärbalkarna med snedstag och
+> nockbalk, dragstagen») stämmer alltså inte med bilderna — en avvikelse att
+> rätta i Batch 1.6. *Koden är inte ändrad i den här batchen.*
 
 Kvar mot filmen: sakerna som hänger på boxfronterna, och porten med klockan i
 fonden.
@@ -387,8 +468,9 @@ fonden.
 - fodersilon vid södra gaveln
 - trästaketade hagar direkt utanför, och sandbanan bortom dem
 
-1. **Östra långsidan på nära håll** — fönstrens antal och portens mått är lästa ur
-   en Street View-bild på avstånd, inte mätta. `[antagande]`
+1. **Östra långsidan på nära håll** — **delvis löst 2026-11-26**, se noten under
+   Fasader. Kvar: en vy som visar hela sidans längd, så att utbyggnadens läge
+   och fönstrens antal går att fastställa.
 2. **Södra gaveln på nära håll** — läst ur Street View på avstånd; portarnas
    och trappans mått är uppskattade. Där ligger servicedelen enligt `STALLINNE`.
 3. **Takytan uppifrån**, för att räkna huvarna och se hela nocken.
@@ -413,8 +495,10 @@ Det som rättades mellan omgångarna:
 4. Runda fönster ritades som tolvhörningar och var för stora.
 
 - Medvetna avvikelser från verkligheten:
-  - Östra långsidan har inget fotounderlag och byggs som spegling av den
-    västra: samma fönsterrytm, ingen förstukvist. `[antagande]`
+  - Östra långsidan byggs som spegling av den västra: samma fönsterrytm,
+    ingen förstukvist. Sedan 2026-11-26 finns fotounderlag som visar att det
+    inte stämmer (utbyggnad med pardörr, fönsterband under takfoten) — se
+    noten under Fasader. Avvikelsen är känd och inte rättad i koden.
   - Södra gavelns dörr- och trappmått är lästa ur Street View på avstånd. `[antagande]`
   - Längden 54 m är inte mätt, se Volym.
   - Entrén låg tidigare på södra gaveln i spelet. Fotona visar den på

@@ -8,6 +8,13 @@
 
    Justera här, ingen annanstans. Varje värde har en kommentar om vad
    det gör så att det går att skruva utan att läsa shadern.
+
+   PROVFÖRINSTÄLLNINGARNA (Batch 1.5, Tobias 2026-11-27). Det ovan gäller
+   standardutseendet och är oförändrat. `realUte`, `realStall` och
+   `realInne` längst ner är ett medvetet och PROVISORISKT undantag: mulet,
+   omättat, neutralt ljus räknat i linjär färg. De nås bara med
+   `?realism=1` och finns för jämförelsen mot fotona (Batch 1.10). Att de
+   provas är inte ett beslut om att de ska bli standard.
    ══════════════════════════════════════════════════════════════════ */
 "use strict";
 
@@ -94,6 +101,55 @@ const LJUS={
     kantFarg:"#FFF4D8", kant:0.16,
     mattnad:1.12, exponering:1.04, bloomTroskel:0.84, bloomStyrka:0.22,
   },
+
+  /* ══ PROV, bara med `?realism=1` ═══════════════════════════════
+     Gemensamt: `linjar:true` (belysningen räknas i linjärt ljus),
+     ingen höjd mättnad, ingen extra exponering, och ett omgivningsljus
+     utan grönt återsken — skuggsidan är grå, inte grön. Alla tal är
+     [antagande], trimmade mot skärmdumpar från STALL-GANG-A bredvid
+     references/buildings/stall/stall-inne-05-stallgangen.jpg. */
+
+  /* Mulet ute: jämnt ljus från hela himlen, svag sol, ljusgrå himmel. */
+  realUte:{
+    linjar:true,
+    sol:[-0.28,0.84,0.46], solFarg:"#F4F2EC", solStyrka:0.42, halvskugga:0.60,
+    himmel:"#E2E5E8", mark:"#A3A29C", ambient:0.92,
+    himmelTopp:"#AEB8C2", himmelMitt:"#C6CDD3", himmelBotten:"#DDE1E4",
+    solskiva:"#D2D8DD", solGloria:"#D6DBDF",
+    dimFarg:"#D3D8DC", dimNara:60, dimFjarr:185, dimStyrka:0.94,
+    skuggAlfa:0.20, skuggFarg:"#3A3C3A", skuggMjukhet:0.09,
+    aoHojd:0.90, aoStyrka:0.24,
+    kantFarg:"#E8ECEE", kant:0.05,
+    mattnad:1.00, exponering:1.00, bloomTroskel:0.92, bloomStyrka:0.10,
+  },
+
+  /* Stallet invändigt: dagsljus från lanterninen och pendlar i gången. */
+  realStall:{
+    linjar:true,
+    sol:[0.10,0.97,0.22], solFarg:"#FFF8EC", solStyrka:0.38, halvskugga:0.62,
+    himmel:"#E4E3DE", mark:"#BDBAB2", ambient:0.90,
+    himmelTopp:"#E6E6E2", himmelMitt:"#EAEAE6", himmelBotten:"#EEEEEA",
+    solskiva:"#EEEEEA", solGloria:"#EEEEEA",
+    dimFarg:"#CFCDC6", dimNara:40, dimFjarr:160, dimStyrka:0.35,
+    skuggAlfa:0.26, skuggFarg:"#3A3835", skuggMjukhet:0.06,
+    aoHojd:1.00, aoStyrka:0.26,
+    kantFarg:"#F2EEE4", kant:0.04,
+    mattnad:1.00, exponering:1.00, bloomTroskel:0.90, bloomStyrka:0.12,
+  },
+
+  /* Ridhuset invändigt: fönsterband och lysrör, svalt och jämnt. */
+  realInne:{
+    linjar:true,
+    sol:[0.22,0.92,0.30], solFarg:"#FBF7EE", solStyrka:0.40, halvskugga:0.60,
+    himmel:"#E2E3E2", mark:"#A6A39C", ambient:0.90,
+    himmelTopp:"#E6E6E2", himmelMitt:"#EAEAE6", himmelBotten:"#EEEEEA",
+    solskiva:"#EEEEEA", solGloria:"#EEEEEA",
+    dimFarg:"#D6D3CA", dimNara:60, dimFjarr:180, dimStyrka:0.45,
+    skuggAlfa:0.28, skuggFarg:"#3E3A33", skuggMjukhet:0.05,
+    aoHojd:1.10, aoStyrka:0.28,
+    kantFarg:"#F2EEE4", kant:0.04,
+    mattnad:1.00, exponering:1.00, bloomTroskel:0.90, bloomStyrka:0.12,
+  },
 };
 
 /* ── Marken och naturen: samma palett som himlen är stämd mot. ─── */
@@ -114,8 +170,16 @@ const MARKFARG={
 /* Lövverket: mättade höstfärger vid sidan av det gröna. */
 const LOVFARG=["#4E9B3A","#3F8A30","#6BB84A","#D97B2A","#E8A33C","#C25A22"];
 
+/* Strömbrytaren `?realism=1` (definieras i en fil som laddas före den
+   här). Läses på EN rad; provet för brytaren håller listan över läsarna. */
+const REALLJUS=(typeof REALISM!=="undefined")&&REALISM.pa;
+
 /* Vilket ljus som gäller just nu. */
 function ljusFor(plats,vader){
+  if(REALLJUS){                                   // PROVFÖRINSTÄLLNINGARNA
+    if(plats!=="ridhus")return LJUS.realUte;
+    return (typeof G!=="undefined"&&G&&G.scen==="stallinne")?LJUS.realStall:LJUS.realInne;
+  }
   if(plats==="ridhus")return LJUS.ridhus;
   if(vader==="regn")return LJUS.regn;
   if(vader==="mulet")return LJUS.mulet;
@@ -130,5 +194,10 @@ function glTonRGBA(hex,a){
 
 /* Världens formspråk. "kloss" bygger häst, ryttare, figurer och träd
    av rätblock; "svept" är den äldre handbyggda geometrin. Byt här —
-   allt annat läser den här raden. */
-let STIL="kloss";
+   allt annat läser den här raden.
+
+   Batch 1.8 (Tobias 2026-11-27): med `?realism=1` PROVAS "svept" —
+   mjuka former i stället för klossar. Standard är fortfarande "kloss".
+   Raden läses när näten byggs, så valet måste vara gjort före första
+   bildrutan; det är det, eftersom brytaren läses när sidan laddas. */
+let STIL=REALLJUS?"svept":"kloss";

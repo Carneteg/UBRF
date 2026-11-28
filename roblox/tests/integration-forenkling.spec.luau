@@ -8,8 +8,8 @@
 	      hälsa → kolla → rykta → kratsa → sadla → tränsa → leda → sitt upp.
 	      Detaljtexterna är inga obligatoriska stopp. Säkerhets- och
 	      välfärdsgrindarna står kvar.
-	  T1  efter avsittningen ett enkelt val: «Stallet tar hand om henne»
-	      (passet räknas, ingen straffavgift) eller «Ta hand om henne själv»
+	  T1  efter avsittningen ett enkelt val: «Stallet tar hand om hästen»
+	      (passet räknas, ingen straffavgift) eller «Ta hand om hästen själv»
 	      (frivilligt, liten positiv effekt). Fem obligatoriska klick är borta.
 
 	Allt mäts genom `GameplayService`, mot den RIKTIGA riggen ur `HastRigg`
@@ -25,9 +25,9 @@
 	  C  fyndet stoppar kollen, blockerar allt annat, nekar fel svar och
 	     nekar uppsittningen,
 	  D  uppsittningsgrinden nekar som förut när något återstår,
-	  E  «Stallet tar hand om henne»: passet räknas en gång, utrustningen tas
+	  E  «Stallet tar hand om hästen»: passet räknas en gång, utrustningen tas
 	     av på riktigt, relationen får grundtalet — ingen straffavgift,
-	  F  «Ta hand om henne själv»: tre handlingar, samma kanoniska ordning,
+	  F  «Ta hand om hästen själv»: tre handlingar, samma kanoniska ordning,
 	     liten extra relation,
 	  G  valet kan inte räkna ett pass som aldrig reds.
 
@@ -383,7 +383,7 @@ local function relationFor(S)
 	return save and Sparning.hastminne(save, S.hastId).relation or -1, save
 end
 
-print("\n── E. «Stallet tar hand om henne»: passet räknas, ingen straffavgift ──")
+print("\n── E. «Stallet tar hand om hästen»: passet räknas, ingen straffavgift ──")
 do
 	local S = nySession("Stallet", 9304)
 	local sp = S.spelare
@@ -405,7 +405,7 @@ do
 	stall(sp, vec(400, 0, 400))
 	local relFore = relationFor(S)
 	local ok, skal = GameplayService.eftervardStallet(sp)
-	check("«Stallet tar hand om henne» går igenom, även på avstånd",
+	check("«Stallet tar hand om hästen» går igenom, även på avstånd",
 		ok == true and skal == "eftervard.stallet_klar", tostring(skal))
 	local p = GameplayService.passFor(sp)
 	check("passet är RÄKNAT", p.lage == Pass.LAGE.RAKNAT, tostring(p.lage))
@@ -426,7 +426,7 @@ do
 	stadaSession(S)
 end
 
-print("\n── F. «Ta hand om henne själv»: tre handlingar, liten extra relation ──")
+print("\n── F. «Ta hand om hästen själv»: tre handlingar, liten extra relation ──")
 do
 	local S = nySession("Sjalv", 9305)
 	local sp = S.spelare

@@ -131,9 +131,9 @@ function visaTilldelning(){
     hamilton:"Arbetsvillig men känslig — sitt stilla, så växer han.",
     crokino:"Stor men lättriden. Och du såg lappen om spöet, va?",
     conor:"Du får Conor idag. Mjuk hand, balanserad sits — Conor ger tillbaka exakt vad du ger.",
-    lady:"Lady kan det här bättre än vi båda. Din uppgift är att inte störa henne.",
+    lady:"Lady kan det här bättre än vi båda. Din uppgift är att inte störa.",
     chip:"Chip testar dig direkt — var vänlig men bestämd, annars bestämmer han.",
-    tina:"Tina har stallets finaste trav. Rykta försiktigt, hon är kittlig.",
+    tina:"Tina har stallets finaste trav. Rykta försiktigt, Tina är kittlig.",
     westside:"Westside gör jobbet om du gör ditt. Rak och ärlig — som en lektionshäst ska vara.",
     makadu:"Makadu är snäll som få. Men kolla gjorden en extra gång innan du sitter upp.",
     mara:"Bry dig inte om minen i boxen. Mara ger dig allt när ni väl är på banan.",
@@ -261,7 +261,7 @@ function visaSkotsel(){
 }
 function groomHint(){
   const h=HORSES[G.hastId];
-  let t=["Gå fram till henne först — hon ska se dig komma. Sedan de fem ställena i tur och ordning, framifrån och bakåt: ögon, mungipor, sadelläge, gjordläge, ben. De flesta dagar är allt bra, och det är därför man slutar titta.",
+  let t=["Gå fram först — hästen ska se dig komma. Sedan de fem ställena i tur och ordning, framifrån och bakåt: ögon, mungipor, sadelläge, gjordläge, ben. De flesta dagar är allt bra, och det är därför man slutar titta.",
     "Tre redskap, i den ordningen: gummiskrapan i cirklar på musklerna, kardborsten i korta drag med hårets riktning, och den mjuka borsten över hela hästen. Ringen runt varje fläck visar vilka redskap som varit där.",
     "Klicka på en hov. Bilden går ner till sulan, och där kratsar du från trakten mot tån — längs fårorna på var sida om strålen. Alla fyra.",
     "Fyra moment i ordning: underlägget högt på manken och bakåt, sadeln bakåt på plats bakom bogbladet, lyft upp underlägget i sadelbommen, och gjorda i tre tag med paus emellan."][SK.steg];
@@ -472,15 +472,15 @@ function avslutaSkotsel(){
     res.dagsform=clamp(res.dagsform-0.03*Math.min(G.felUtrustning,3),0,1);
     utrRad=`fel utrustning ${G.felUtrustning} gång${G.felUtrustning>1?"er":""} `
       +`(−${(0.03*Math.min(G.felUtrustning,3)).toFixed(2).replace(".",",")}) — `
-      +`hon stod uppbunden och väntade`;
+      +`hästen stod uppbunden och väntade`;
   }
   /* Att komma rakt bakifrån skrämmer henne, och det sitter i hela
      passet. Det är den enda regeln på en ridskola som kan sluta illa. */
-  let gangRad="du gick fram där hon kunde se dig";
+  let gangRad="du gick fram där hästen kunde se dig";
   if(visitSkrammd()){
     res.dagsform=clamp(res.dagsform-0.07,0,1);
     res.risker.push("skrammd_bakifran");
-    gangRad="du kom rakt bakifrån (−0,07) — hon rycker till";
+    gangRad="du kom rakt bakifrån (−0,07) — hästen rycker till";
   }else if(VIS.gang<0)gangRad="du gick rakt på utan att hälsa";
   /* Visiteringen ska löna sig, inte bara straffa. Hittade du något och
      sa till får hon en bättre dag — det är hela poängen med att titta. */
@@ -725,6 +725,9 @@ function nollstall(){
      platsen. Förut stod `G.leder=false` här och kunde knuffa läget. */
   G.auto=false;G.sysslor={mockat:0,fodrat:0};G.plats="ridhus";
   G.kappa=0;G.gaitSpar=0;G.gaitFas=0;G.accel=0;G.forraTempo=0;G.banLut=0;G.ryttarPitch=0;G.ryttarRoll=0;
+  G._fastDt=0;
+  G.varv=null;G.fattning=null;G.visGang=null;G.visCykel=0;G.visFattning=null;
+  G.luft=0;G.luftT=0;G.hoppLyft=0;G.hoppVantar=null;G.avsitt=null;
   G.tavling=null;BANA.hojd=0.60;
   G.hinderAktiva=false;G.rivna.clear();G.handelser=[];G.nastaHinder=0;
   G.momentIx=0;G.moment=null;G.betyg={};G.scen="meny";

@@ -59,6 +59,11 @@ const IN={
      bildrutorna, så att ett håll räknas även när bildtakten är låg. */
   nedT:{},slappt:{},
   styrDigital:null,styrKansla:{v:0},
+  /* D3: ackumulerad hålltid (simulerad tid, se stegaInput) för den
+     nuvarande styrDigital-riktningen, och vilken riktning den gällde
+     förra bildrutan — så ett riktningsbyte kan upptäckas och nollställa
+     rampen. */
+  styrHallt:0,_styrForra:null,
   joy:null,          // pekskärmens analoga spak: {x,y,styrka} eller null
 };
 
@@ -72,6 +77,7 @@ const IN={
 function ridNollstallHjalp(){
   RIDIN.skankel=0; RIDIN.tygel=0; RIDIN.sits=0; RIDIN.styr=0; RIDIN.parad=0; RIDIN.pek=false;
   IN.styrDigital=null; IN.styrKansla.v=0;
+  IN.styrHallt=0; IN._styrForra=null;
   IN.broms=false; IN.driv=0;
   ridAvsiktTillHjalp();
   for(const n in IN.kan)IN.kan[n].v=IN.kan[n].mal;
@@ -242,7 +248,17 @@ function stegaInput(dt){
   // Direkta modellprov och analog spak behåller hela sitt omfång.
   if(RIDIN.pek){IN.styrDigital=null;IN.styrKansla.v=RIDIN.styr;}
   else if(IN.styrDigital!==null){
-    RIDIN.styr=InputFeel.ride(IN.styrDigital,dt,IN.styrKansla);
+    /* D3: hur länge den nuvarande styrriktningen hållits, räknat i
+       SIMULERAD tid (ackumulerad dt) — inte väggklocka. Allt annat i
+       den här kedjan är dt-drivet och bildrutetaksoberoende (CLAUDE.md:s
+       släppspärr), och väggklocka hade gjort rampen beroende av hur
+       snabbt bildrutor faktiskt hinner köras, inte hur länge spelaren
+       bett om styrning. Byter riktning (eller släpper) nollställs
+       räknaren — ett nytt tryck startar alltid om på digitalGain. */
+    if(IN.styrDigital!==IN._styrForra)IN.styrHallt=0;
+    IN.styrHallt=IN.styrDigital===0?0:(IN.styrHallt||0)+dt;
+    IN._styrForra=IN.styrDigital;
+    RIDIN.styr=InputFeel.ride(IN.styrDigital,dt,IN.styrKansla,IN.styrHallt);
   }
   ridAvsiktTillHjalp();          // avsikt → hjälpmål, en gång per bildruta
   for(const n in IN.kan){const k=IN.kan[n];
@@ -473,6 +489,50 @@ function stegaNPC(dt){
 
 /* ── Ritt-fysik på planen ── */
 let kursHist=[];
+/* ── DEN VISUELLA GÅNGARTEN (rörelse-grind 0.4, C3) ───────────────
+   Benen ritades rakt ur modellens etikett, och det gav tre fel:
+     · ett gångartsbyte poppade på EN bildruta,
+     · hon gled iväg ur halt med stilla ben (etiketten är «halt» ända
+       upp till 0,25 m/s),
+     · fastklämd mot sargen galopperade benen på stället.
+
+   Här avgörs vad som RITAS, och bara det. Underlaget är den faktiska
+   markfarten (förflyttning per sekund, lågpassad som i Roblox HastGang),
+   inte tempot i modellen:
+     · står hon i praktiken still → halt, vad etiketten än säger,
+     · rör hon sig med etiketten «halt» → skritt.
+   Två trösklar (gå över 0,06, stanna under 0,04 m/s) så att benen inte
+   fladdrar kring gränsen.
+
+   BYTET korsblandas: varje gångart har en vikt som går linjärt mot 1
+   eller 0 över ett halvt steg (0,5 × cykellängd ÷ tempo, 0,15–0,45 s).
+   Linjärt i TID, så resultatet är detsamma vid 30 som vid 120 bilder per
+   sekund. Vikterna är råa och normeras först när de läses.
+
+   [ANTAGANDE] Trösklarna och blandningstiden är designvärden, inte
+   uppmätta; de trimmas om när rörelseklippen (G5) finns.
+
+   Ingenting i fysiken, bedömningen, telemetrin eller ljudet läser det
+   här. Ren funktion av sina argument, så att provet kan köra den. */
+const VIS_FART_TAU=0.16, VIS_GA=0.06, VIS_STA=0.04;
+function ridVisNy(){return {mal:"halt",fart:0,ra:{halt:1,skritt:0,trav:0,galopp:0}};}
+function ridVisGang(V,etikett,markfart,tempo,cykel,dt){
+  V.fart+=(markfart-V.fart)*(1-Math.exp(-dt/VIS_FART_TAU));
+  const stilla=V.mal==="halt"?V.fart<VIS_GA:V.fart<VIS_STA;
+  let vill=etikett in V.ra?etikett:"halt";
+  if(stilla)vill="halt"; else if(vill==="halt")vill="skritt";
+  V.mal=vill;
+  const T=clamp(0.5*(cykel>0.05?cykel:1.6)/Math.max(tempo,0.3),0.15,0.45);
+  const steg=dt/T;
+  for(const g in V.ra)V.ra[g]=clamp(V.ra[g]+(g===vill?steg:-steg),0,1);
+  return V;
+}
+function ridVisVikter(V){
+  let sum=0; for(const g in V.ra)sum+=V.ra[g];
+  const ut={}; for(const g in V.ra)ut[g]=sum>0?V.ra[g]/sum:(g===V.mal?1:0);
+  return ut;
+}
+
 function stegaRitt(dt){
   G.aids=stegaInput(dt);
   if(G.auto)autopilot(dt);
@@ -617,10 +677,57 @@ function stegaRitt(dt){
   const KB=(typeof ridKanon==="function")?ridKanon():null;
   const HB=KB?KB.HAST_HALVBREDD:0.35;
   const BB=KB?KB.BANA_BREDD:20, BL=KB?KB.BANA_LANGD:60;
-  if(nx<HB){nx=HB;G.rikt=lerpAngle(G.rikt,ny>G.py?Math.PI/2:-Math.PI/2,vaggT);}
-  if(nx>BB-HB){nx=BB-HB;G.rikt=lerpAngle(G.rikt,ny>G.py?Math.PI/2:-Math.PI/2,vaggT);}
-  if(ny<HB){ny=HB;G.rikt=lerpAngle(G.rikt,nx>G.px?0:Math.PI,vaggT);}
-  if(ny>BL-HB){ny=BL-HB;G.rikt=lerpAngle(G.rikt,nx>G.px?0:Math.PI,vaggT);}
+  /* D1 (ridmekanik-grind 0.2), "begränsa väggstyrd sväng till gångartens
+     egen gräns": en tvingad vägg-/hörnomriktning får aldrig vrida hästen
+     snävare än hon själv kan böja sig i den här gångarten — annars känns
+     smällen mot sargen som ett fordon, inte en häst. kappaTak är samma
+     kurvaturtak styrningen lyder under, räknat tidigare i den här
+     funktionen. Golvet på tempot (0,4 m/s) är ett ANTAGANDE: utan det
+     blir taket ~0 för en nästan stillastående häst, och varken
+     hörnflykten eller mittvakten nedan skulle hinna verka. */
+  const vridMotRiktning=(mal)=>{
+    let d=mal-G.rikt; while(d>Math.PI)d-=2*Math.PI; while(d<-Math.PI)d+=2*Math.PI;
+    let steg=d*vaggT;
+    const maxDTheta=kappaTak*Math.max(G.ride.tempo,0.4)*dt;
+    if(Math.abs(steg)>maxDTheta)steg=steg>0?maxDTheta:-maxDTheta;
+    G.rikt+=steg;
+  };
+  const xLag=nx<HB, xHog=nx>BB-HB, yLag=ny<HB, yHog=ny>BL-HB;
+  if(xLag)nx=HB; if(xHog)nx=BB-HB;
+  if(yLag)ny=HB; if(yHog)ny=BL-HB;
+  if(xLag||xHog||yLag||yHog){
+    if((xLag||xHog)&&(yLag||yHog)){
+      /* HÖRN (D1, uppmätt: fast i hörnet i 18/18 försök efter ~25 s utan
+         styrning). De gamla, separata en-väggs-grenarna kördes EFTER
+         varandra och skrev över varandras riktning: den andra grenens
+         tie-break (`nx>G.px`) jämförde DEN HÄR BILDRUTANS redan klippta
+         nx mot FÖREGÅENDE bildrutas G.px — i ett riktigt hörn är de
+         nästan identiska, så tie-breaket kunde peka rakt in i hörnet
+         lika ofta som ut ur det, och hästen satt fast permanent.
+         Riktningen mot öppen bana är i stället en ren geometrisk diagonal
+         ut från just DET hörnet, oberoende av vilken väg hästen kom
+         ifrån eller vad gårdagens bildruta råkade stå på. */
+      vridMotRiktning(Math.atan2(yLag?1:-1, xLag?1:-1));
+    }else if(xLag||xHog){
+      vridMotRiktning(ny>G.py?Math.PI/2:-Math.PI/2);
+    }else{
+      vridMotRiktning(nx>G.px?0:Math.PI);
+    }
+  }
+  /* D1, "vakt på långvarig låg markfart → sväng mot centrum": ett sista
+     skyddsnät, oberoende av exakt VARFÖR hästen råkat fastna (en NPC-häst
+     i vägen precis vid sargen, ett hörn geometrin ovan ändå inte löser).
+     Står hon i praktiken still i mer än FASTTID sekunder utan att
+     spelaren styr bort henne, svänger hon mjukt mot banans mitt —
+     samma rate-begränsade vridning som hörnflykten, aldrig en snäpp.
+     Trösklarna är ANTAGANDEN, inte uppmätta; sänk FASTTID hellre än att
+     ta bort vakten om den visar sig trög i provet. */
+  {
+    const FASTFART=0.05, FASTTID=2.5;
+    const fart=Math.hypot(nx-G.px,ny-G.py)/Math.max(dt,1e-4);
+    G._fastDt=(fart<FASTFART&&Math.abs(G.aids.styrning)<0.05)?(G._fastDt||0)+dt:0;
+    if(G._fastDt>FASTTID)vridMotRiktning(Math.atan2(BL/2-ny,BB/2-nx));
+  }
   /* Ekipagen framför är också väggar. Man kan inte rida genom en häst,
      och kommer man för nära blir hon spänd — avståndsregeln i ridhuset
      är till för hästarnas skull, inte för ordningens. */
@@ -673,10 +780,10 @@ function stegaRitt(dt){
 
      CYKELLÄNGD betyder EN sak, på båda plattformarna: sträckan hästen
      färdas under ett helt normaliserat fasvarv, fas 0 → 1. Det är inte
-     samma sak som en hovs kliv. S3FAS i scen3d.js lägger alla fyra ben
-     inuti samma fasvarv med var sin förskjutning — vf 0, hf 0,25, vb
-     0,50, hb 0,75 i skritt — så ett ben hinner precis en stance och en
-     sving per varv. Antalet hovnedslag är alltså redan inbakat i
+     samma sak som en hovs kliv. GANGFAS (src/riding/gangfas.js) lägger
+     alla fyra ben inuti samma fasvarv med var sin isättning — vb 0, vf
+     0,25, hb 0,50, hf 0,75 i skritt — så ett ben hinner precis ett stöd
+     och en sväng per varv. Antalet hovnedslag är alltså redan inbakat i
      benens förskjutningar och får inte multipliceras in en gång till.
 
      Gait.steglangd är just den sträckan: SPRANG-basen gånger gångartens
@@ -687,7 +794,18 @@ function stegaRitt(dt){
   const strackaSteg=Math.hypot(nx-G.px, ny-G.py);
   G.px=nx;G.py=ny;
   G.gaitSpar+=strackaSteg;
-  {const cykelLangd=G.ride.steglangd;
+  {/* Den visuella gångarten först: den avgör om hon går i skritt fast
+      modellen ännu säger «halt», och då ska fasen stegas med skrittens
+      cykellängd i stället för att frysa. */
+   const V=G.visGang||(G.visGang=ridVisNy());
+   let cykelLangd=G.ride.steglangd;
+   ridVisGang(V,G.ride.gangart,strackaSteg/Math.max(dt,1e-4),G.ride.tempo,cykelLangd,dt);
+   if(!(cykelLangd>0.05)&&V.mal==="skritt")
+     cykelLangd=Gait.steglangd(h.kategori,"skritt",G.ride.skala.schvung,G.ride.spanning);
+   /* Cykellängden som benen sveper med jämnas ut över bytet, så att
+      hoven inte hoppar när skrittens 1,6 m blir travens 2,2. */
+   if(cykelLangd>0.05)
+     G.visCykel=G.visCykel>0.05?G.visCykel+(cykelLangd-G.visCykel)*(1-Math.exp(-dt/0.15)):cykelLangd;
    if(cykelLangd>0.05){
      G.gaitFas=(G.gaitFas+strackaSteg/cykelLangd)%1;
    }else if(G.ride.gangart!=="halt"){
@@ -696,6 +814,35 @@ function stegaRitt(dt){
         fryser mitt i ett steg. */
      G.gaitFas=(G.gaitFas+G.ride.tempo*dt*0.5)%1;
    }}
+  /* ── VARV OCH FATTNING (rörelse-grind 0.4, C1) ────────────────────
+     Port av MovementController._varvOchLedande i Roblox. VARVET är
+     vilken hand hon rider på: ligger banans mitt till höger eller
+     vänster om kursen (gangVarv). Rakt mot eller från mitten finns
+     inget svar, och då behålls det senast giltiga.
+
+     FATTNINGEN är galoppens ledande framben, och den väljs i själva
+     galoppfattningen: varvets hand, i andra hand svängens håll. Den
+     hålls sedan tills galoppen lämnas — en häst byter inte fattning av
+     att man svänger, och gör hon det är det en rörelse för sig.
+
+     BARA BILD. Ingenting i fysiken, bedömningen eller telemetrin läser
+     de här två fälten; de avgör vilket ben som ritas först och vilket
+     framben ryttaren reser sig med. */
+  {/* I EN BÅGE ÄR INSIDAN DIT HON SVÄNGER. Banans mitt avgör bara på
+      rakt spår. Utan den ordningen byter en volt som rids en bit från
+      mittlinjen varv två gånger per varv (mitten ligger omväxlande till
+      höger och vänster om kursen), och ryttaren hade bytt sittben mitt
+      i volten. Positiv krökning är en högersväng (`G.rikt-=omega*dt`).
+      [PLATTFORMSSKILLNAD att ta ställning till: Roblox läser bara
+      banans mitt — se docs/ACTIVE-GATE.md, rörelse-grind 0.4.] */
+   const varv=G.kappa>0.05?"hoger":G.kappa<-0.05?"vanster"
+     :gangVarv(G.px,G.py,G.rikt,BB/2,BL/2);
+   if(varv)G.varv=varv;
+   const galopp=G.ride.gangart==="galopp";
+   if(galopp&&!G.fattning)
+     G.fattning=G.varv||(G.kappa<-0.02?"vanster":"hoger");
+   else if(!galopp)G.fattning=null;
+   if(G.fattning)G.visFattning=G.fattning;}
   /* G02-A: gångarten följs av övergångskontraktet och telemetrin läggs
      på G.telemetri, så att G02-B/C har en enda avläsningspunkt. Ren
      avläsning — inget här får påverka ridkänslan. */
@@ -703,8 +850,13 @@ function stegaRitt(dt){
     ridFoljGangart(G.ride.gangart);
     G.telemetri=ridTelemetri(G.ride,G.aids,{kappa:G.kappa,fas:G.gaitFas});
   }
-  ljudRittSteg(G.gaitFas,G.ride.gangart,
-    G.plats==="ridhus"?"fiber":(G.vader&&G.vader.typ==="regn"?"vat":"grus"));
+  /* Hovslagen följer det som RITAS (den visuella gångarten och dess
+     fattning) och tystnar i luften — ljud och ben läser samma rad i
+     GANGFAS med samma fas. */
+  ljudRittSteg(G.gaitFas,G.luft>0?"halt":(G.visGang?G.visGang.mal:G.ride.gangart),
+    ytaForRitt(G.plats),G.fattning||G.visFattning||null,dt,
+    /* Regnet ligger OVANPÅ underlaget och når inte in i ridhuset. */
+    !!(G.vader&&G.vader.typ==="regn")&&G.plats!=="ridhus");
   G.spanningPuls=clamp(G.ride.spanning-0.55,0,1)/0.45;
 
   /* ── Kroppens lutning i svängen ───────────────────────────────────
@@ -800,6 +952,84 @@ function hinderRel(h){
   const sida=-dx*ay+dy*ax;
   return{fram,sida};
 }
+/* ── SPRÅNGET SOM BILD (hopp-grind 0.5, D4) ────────────────────────
+   Förut började språnget när hon KORSADE hindret: bågen låg efter
+   bommen, så hon gick igenom den på marken och flög sedan över tom sand.
+   Alla hinder fick dessutom samma 1,15 m höga och 0,55 s långa båge.
+
+   Nu räknas tre saker ur ritten och hindret:
+     · AVSTAMPET ligger FÖRE hindret. Avståndet är samma avsprångszon som
+       anridningsmodellen redan använder (Approach.zon: halva steget plus
+       en del av höjden) — en sanning om var hon lämnar marken.
+     · BÅGENS LÄNGD följer farten: hon är i luften från avstampet till
+       lika långt bakom hindret, och tiden är sträckan delad med farten
+       (klämd till 0,45–0,85 s så att ett skritthopp inte svävar).
+     · LYFTET följer hinderhöjden.
+   Toppen hamnar då över bommen, vilket är hela poängen.
+
+   BARA BILD. Vägran, rivning, felpoäng och HinderObs avgörs som förut;
+   det här bestämmer bara när och hur högt ekipaget ritas i luften.
+
+   [ANTAGANDE] Tidsklämman och lyftets 0,25 + 0,9 × höjd är stiliserade
+   första värden, inte uppmätta. */
+function ridHoppMatt(hojd,fart,steglangd){
+  const zon=Approach.zon(Math.max(steglangd||0,0.6),hojd);
+  const v=Math.max(fart,0.5);
+  const T=clamp(2*zon/v,0.45,0.85);
+  return {T, avstamp:v*T/2, lyft:clamp(0.25+0.9*hojd,0.45,1.60)};
+}
+/* `fart` är farten MOT hindret; utelämnad gäller ridtempot. */
+function ridHoppStarta(hojd,fart){
+  const m=ridHoppMatt(hojd,fart>0?fart:G.ride.tempo,G.ride.steglangd);
+  G.luft=G.luftT=m.T; G.hoppLyft=m.lyft; G.hoppVantar=null;
+}
+/* Banans språng är redan AVGJORT när det begärs (utfallet räknas i
+   avsprångszonen). Bilden väntar bara tills hon är framme vid sitt
+   avstamp. (ax, ay) är språngets riktning; hindret står i (x, y). */
+function ridHoppBegar(x,y,ax,ay,hojd){G.hoppVantar={x,y,ax,ay,hojd,tid:0};}
+function ridHoppSteg(dt){
+  if(G.luft>0){G.luft-=dt; if(G.luft<0)G.luft=0; return;}
+  const v=G.hoppVantar; if(!v)return;
+  v.tid+=dt;
+  const avst=(v.x-G.px)*v.ax+(v.y-G.py)*v.ay;
+  const m=ridHoppMatt(v.hojd,G.ride.tempo,G.ride.steglangd);
+  /* Framme vid avstampet — eller redan förbi, eller väntat orimligt
+     länge: ett begärt språng ska aldrig bli hängande. */
+  if(avst<=m.avstamp||v.tid>2.5)ridHoppStarta(v.hojd);
+}
+/* Luften i den GAMLA skalan (0,55 s), för de ritvägar som räknar bågen
+   ur det talet: 2D-vyn, kartan och 3D-kroppen. Språngets verkliga längd
+   varierar nu; formen på bågen gör det inte. */
+function ridLuftNorm(){return G.luft>0?0.55*G.luft/(G.luftT>0?G.luftT:0.55):0;}
+/* Ridhusets stående hinder: avstampet räknas ur hennes verkliga fart mot
+   bommen. `fore` är förra bildrutans läge. */
+function ridHinderSprang(fore,dt){
+  if(!fore||G.plats!=="ridhus"||G.luft>0)return;
+  const steg=Math.hypot(G.px-fore.x,G.py-fore.y);
+  /* En flytt (ny ritt, teleport) är inget hopp. */
+  if(steg>=1||!(dt>0))return;
+  const vx=(G.px-fore.x)/dt, vy=(G.py-fore.y)/dt;
+  for(const hi of ((typeof RIDHUSINNE!=="undefined"&&RIDHUSINNE.hinder)||[])){
+    if(!(hi.h>0.02))continue;
+    const y0=fore.y-hi.y, y1=G.py-hi.y;
+    /* Reserven, som förut: korsar hon bommen utan att ha stampat av
+       (nästan stillastående, eller snett in) hoppar hon där. */
+    if((y0<0&&y1>=0)||(y0>0&&y1<=0)){
+      const k=y0/(y0-y1), x=fore.x+(G.px-fore.x)*k;
+      if(Math.abs(x-hi.x)<=hi.b/2){ridHoppStarta(hi.h);return;}
+      continue;
+    }
+    if(Math.abs(vy)<0.3)continue;
+    const avst=(hi.y-G.py)*Math.sign(vy);
+    if(avst<=0)continue;
+    const m=ridHoppMatt(hi.h,Math.abs(vy),G.ride.steglangd);
+    if(avst>m.avstamp)continue;
+    /* Var hon korsar bommen om hon håller kursen. */
+    const x=G.px+vx*(avst/Math.abs(vy));
+    if(Math.abs(x-hi.x)<=hi.b/2){ridHoppStarta(hi.h,Math.abs(vy));return;}
+  }
+}
+
 let protT=0;
 function stegaBana(dt){
   protT+=dt; if(protT>0.5){protT=0;uppdateraProt();}
@@ -832,7 +1062,7 @@ function stegaBana(dt){
       const dom=domaRitt(G.handelser,G.t-G.banStart,true);
       if(dom.utesluten){avslutaBana(dom);return;}
     }else{
-      G.luft=0.55; // hopp-animation
+      ridHoppBegar(h.x,h.y,Math.cos(h.rot),Math.sin(h.rot),BANA.hojd); // språngets bild
       if(utfall.resultat==="rivning"){G.rivna.add(h.nr);G.handelser.push({typ:"nedslag",hinder:h.nr});
         flash("4 FEL");saga(utfall.kommentar,2.6);
         /* Vägran prövade uteslutning direkt, nedslag gjorde det inte —
@@ -979,32 +1209,60 @@ function stegaP3(dt){
      en ny gångartsbegäran. */
   const cue=G.ride?G.ride.cueTid:null;
   const parad=RIDIN.parad||0, sk=RIDIN.skankel||0, skF=G.p3Sk||0;
-  const hjalp=(cue!==G.p3CueTid)||(parad>0.05&&G.p3Parad<=0.05)
+  /* Batch 0.11: medan stallet tar ner hästen inför en avsittning är
+     bromsen stallets, inte ryttarens — den besvarar inget kort (samma
+     vakt som i Roblox init.client). */
+  const hjalp=!ridAvsittVantar()&&((cue!==G.p3CueTid)||(parad>0.05&&G.p3Parad<=0.05)
     ||(sk>0.5&&skF<=0.5)||(sk<-0.5&&skF>=-0.5)
-    ||(IN.bromsN!==G.p3BromsN)||(IN.drivN!==G.p3DrivN);
+    ||(IN.bromsN!==G.p3BromsN)||(IN.drivN!==G.p3DrivN));
   G.p3CueTid=cue;G.p3Parad=parad;G.p3Sk=sk;G.p3BromsN=IN.bromsN;G.p3DrivN=IN.drivN;
   /* Över ett av ridhusets stående hinder hoppar hästen — bara bilden
      (samma G.luft som banans hopp). Passagen bedöms av HinderObs, inte här. */
-  /* En flytt (ny ritt, teleport) är inget hopp: bara en bildrutas verkliga
-     förflyttning under en meter räknas. */
-  if(G.p3Fore&&G.plats==="ridhus"&&Math.hypot(G.px-G.p3Fore.x,G.py-G.p3Fore.y)<1)
-    for(const hi of ((typeof RIDHUSINNE!=="undefined"&&RIDHUSINNE.hinder)||[])){
-      if(!(hi.h>0.02))continue;
-      const y0=G.p3Fore.y-hi.y, y1=G.py-hi.y;
-      if((y0<0&&y1>=0)||(y0>0&&y1<=0)){
-        const k=y0/(y0-y1), x=G.p3Fore.x+(G.px-G.p3Fore.x)*k;
-        if(Math.abs(x-hi.x)<=hi.b/2&&G.luft<=0)G.luft=0.55;
-      }
-    }
+  ridHinderSprang(G.p3Fore,dt);
   G.p3Fore={x:G.px,y:G.py};
   if(!Lektionsmeny.tarOver())FriPass.steg(dt,hjalp);
   if(typeof ridpanelSteg==="function")ridpanelSteg(dt);
 }
-/* SITT AV (E, pek SITT AV). Ritten tar slut: ett pågående försök blir
-   avbrutet (clear round: «avbruten»), fri träning släpps, och spelet
-   lämnar över till den befintliga vägen efter ritten (P4 ersätter den). */
+/* ── SITT AV BARA FRÅN HALT (Batch 0.11, E2) ─────────────────────────
+   E och pekknappen SITT AV går hit. Står hästen sker avsittningen
+   direkt. Rör hon sig BER trycket om halt: stallet tar ner henne, en rad
+   säger vad som händer, och `ridAvsittSteg` sitter av när hon står —
+   eller när nödutgången löser ut. Regeln själv bor i
+   src/riding/avsittning.js och är densamma i Roblox.
+
+   Svarar true när trycket togs emot (direkt eller som begäran). */
+function ridAvsittVantar(){return !!(G.avsitt&&G.avsitt.vantar);}
 function ridAvsittning(){
   if(G.scen!=="lektion"||!G.p3)return false;
+  if(!G.avsitt)G.avsitt=Avsittning.ny();
+  const r=G.ride||{};
+  if(Avsittning.begar(G.avsitt,r.gangart,r.tempo)==="nu")return ridAvsittningNu();
+  return true;
+}
+/* En bildruta av väntan. Anropas FÖRE ridsteget, så att bromsen den
+   begär läses av samma bildrutas inmatning.
+
+   NEDTAGNINGEN ÄR DEN SOM REDAN FINNS: samma halvhaltsförlopp som BROMS
+   och S, med modellens egen spärr — en begäran som kommer medan ett
+   förlopp pågår förbrukas utan att starta ett till. Ingen ny ridfysik.
+   Skänkeln släpps, annars driver en hållen W-tangent emot bromsen.
+   `IN.bromsN` rörs INTE: den räknar spelarens egna tryck, och det här
+   är stallets hand, inte hennes. */
+function ridAvsittSteg(dt){
+  if(!ridAvsittVantar())return null;
+  if(G.scen!=="lektion"||!G.p3){G.avsitt=null;return null;}
+  const r=G.ride||{};
+  const svar=Avsittning.steg(G.avsitt,r.gangart,r.tempo,dt);
+  if(svar==="sitt_av"){ridAvsittningNu();return svar;}
+  RIDIN.skankel=0;IN.driv=0;IN.broms=true;
+  return svar;
+}
+/* SJÄLVA AVSITTNINGEN. Ritten tar slut: ett pågående försök blir
+   avbrutet (clear round: «avbruten»), fri träning släpps, och spelet
+   lämnar över till den befintliga vägen efter ritten (P4 ersätter den). */
+function ridAvsittningNu(){
+  if(G.scen!=="lektion"||!G.p3)return false;
+  G.avsitt=null;
   const X=RittLektion.kontext(G.t,RittLektion.tillRoblox(G.ride&&G.ride.gangart));
   Lektionsmeny.avbryt(X);
   FriPass.avbryt();
@@ -1308,8 +1566,15 @@ let last=performance.now();
 function loop(now){
   /* 3D-modulerna laddas efter den här filen — vänta tills de finns. */
   if(typeof gl3dLage!=="function"){requestAnimationFrame(loop);return;}
+  /* Batch 1.2: mätaren får rutans VERKLIGA längd, före dt-taket. Den
+     läser bara; spelets `dt` räknas exakt som förut. */
+  if(typeof bildmatareSteg==="function")bildmatareSteg((now-last)/1000,now);
   const dt=Math.min((now-last)/1000,0.05);last=now;G.t+=dt;
   ljudPuls(dt);
+  /* Väntande avsittning stegas FÖRE scenvalet: sitter hon av i den här
+     bildrutan ska resten av rutan rita den nya scenen, inte en ritt som
+     just tog slut. Pausen håller även den här klockan. */
+  if(!G.paus&&iSadeln())ridAvsittSteg(dt);
   if(G.scen==="lektion"||G.scen==="bana"){
     /* PAUS: världen ritas fortfarande — spelaren ska se var hon står —
        men ingenting stegas. Utan det red hästen vidare medan replayen
@@ -1317,7 +1582,7 @@ function loop(now){
     if(!G.paus){
       stegaRitt(dt);stegaNPC(dt);
       if(G.p3)stegaP3(dt);else stegaLektion(dt);
-      if(G.luft>0)G.luft-=dt;
+      ridHoppSteg(dt);
     }
     if(G.vy==="2d"){gl3dLage(false);draw2D(G);}else draw3D(G);
     ritaHUD(); ritaVaxer();

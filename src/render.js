@@ -247,7 +247,7 @@ function drawHorse2D(x,y,rikt,farg,s,arSpelare,G){
   const[a,b]=w2s(x,y);
   cx.save();cx.translate(a,b);cx.rotate(rikt+Math.PI/2);
   if(arSpelare&&G&&G.luft>0){ // språnget: hästen "lyfter" ur planet
-    const f=1+0.38*Math.sin(Math.PI*(1-G.luft/0.55));
+    const f=1+0.38*Math.sin(Math.PI*(1-ridLuftNorm()/0.55));
     cx.scale(f,f);}
   const L=s*1.5,W=s*0.62;
   // skugga
@@ -443,7 +443,7 @@ function drawOwnHorse3D(G){
   let bob=g==="trav"?Math.abs(Math.sin(fas*Math.PI*2))*10
     :g==="galopp"?Math.sin(fas*Math.PI*2)*13
     :g==="skritt"?Math.sin(fas*Math.PI*2)*4:0;
-  if(G.luft>0)bob-=64*Math.sin(Math.PI*(1-G.luft/0.55)); // språnget lyfter framdelen
+  if(G.luft>0)bob-=64*Math.sin(Math.PI*(1-ridLuftNorm()/0.55)); // språnget lyfter framdelen
   const sv=Math.sin(fas*Math.PI*4)*(g==="halt"?0:3);
   const y0=CH*0.985+bob*0.35, cxm=CW/2+sv;
   // hals

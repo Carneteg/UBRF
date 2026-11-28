@@ -2492,8 +2492,8 @@ return {
 				b = "H",
 				x = 0,
 				y = 54,
-				bildKalla = "antagande",
-				bild = "hus",
+				bildKalla = "foto",
+				bild = "hast",
 			},
 			{
 				b = "F",

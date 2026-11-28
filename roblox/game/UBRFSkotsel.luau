@@ -214,9 +214,9 @@ return {
 				tEn = "It will probably be fine today",
 			},
 			{
-				t = "Lös det själv och sadla",
+				t = "Lös det själv och rid ändå",
 				ratt = false,
-				tEn = "Sort it out yourself and tack up",
+				tEn = "Sort it out yourself and ride anyway",
 			},
 		},
 	},

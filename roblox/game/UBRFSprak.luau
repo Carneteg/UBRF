@@ -354,7 +354,7 @@ Sprak.text = {
 		en = "wrong horse",
 	},
 	["forb.oppet_fynd"] = {
-		sv = "Du hittade något. Bestäm vad du gör åt det först.",
+		sv = "Stallet hittade något. Bestäm vad du gör åt det först.",
 		en = "You found something. Decide what to do about it first.",
 	},
 	["forb.okand_fas"] = {
@@ -430,8 +430,8 @@ Sprak.text = {
 		en = "The instructor takes over",
 	},
 	["hud.du_hittade_nagot"] = {
-		sv = "Du hittade något",
-		en = "You found something",
+		sv = "Stallet hittade något",
+		en = "The stable found something",
 	},
 	["hud.fortsatt_med"] = {
 		sv = "Fortsätt med %s",
@@ -450,8 +450,8 @@ Sprak.text = {
 		en = "The instructor has no healthy horse for you right now. Come back tomorrow — you can still look after the horses in the stable.",
 	},
 	["hud.ta_hand_om_henne"] = {
-		sv = "Ta hand om henne",
-		en = "Take care of her",
+		sv = "Ta hand om hästen",
+		en = "Take care of your horse",
 	},
 	["hud.passet_sparat"] = {
 		sv = "Passet är klart och sparat",
@@ -466,8 +466,8 @@ Sprak.text = {
 		en = "Waiting for your horse",
 	},
 	["hud.hast_inte_i_varlden"] = {
-		sv = "Hon är tilldelad men står inte i världen än.",
-		en = "She has been assigned to you but is not in the world yet.",
+		sv = "Hästen är tilldelad men står inte i världen än.",
+		en = "Your horse has been assigned to you but is not in the world yet.",
 	},
 	["hud.du_rider"] = {
 		sv = "Du rider",
@@ -745,6 +745,10 @@ Sprak.text = {
 		sv = "SITT AV",
 		en = "DISMOUNT",
 	},
+	["avsittning.bromsar"] = {
+		sv = "Vi stannar först. Du sitter av när hästen står still.",
+		en = "We stop first. You dismount once your horse stands still.",
+	},
 	["touch.lugnare"] = {
 		sv = "▼ LUGNARE",
 		en = "▼ SLOWER",
@@ -858,7 +862,7 @@ Sprak.text = {
 		en = "Finish start and halt",
 	},
 	["haltlektion.intro"] = {
-		sv = "Stå still i halt, skritta fram och gör ett halt vid X – mitt på dressyrbanan.",
+		sv = "Stå still i halt, skritta fram och gör en halt vid X – mitt på dressyrbanan.",
 		en = "Stand still in halt, walk on and halt at X – the centre of the dressage arena.",
 	},
 	["haltlektion.halt_first"] = {
@@ -878,8 +882,8 @@ Sprak.text = {
 		en = "Walk towards X, the green ring in the middle of the arena.",
 	},
 	["haltlektion.hold"] = {
-		sv = "Halt vid X – håll henne stilla en stund.",
-		en = "Halt at X – keep her still for a moment.",
+		sv = "Halt vid X – håll hästen stilla en stund.",
+		en = "Halt at X – keep your horse still for a moment.",
 	},
 	["haltlektion.halt_outside"] = {
 		sv = "Ett fint halt! Skritta vidare och prova att stanna inne i ringen vid X.",
@@ -890,7 +894,7 @@ Sprak.text = {
 		en = "Ask for halt when you are inside the ring at X.",
 	},
 	["haltlektion.unknown"] = {
-		sv = "Jag tappade en bit av ritten. Vi börjar om från ett halt.",
+		sv = "Jag tappade en bit av ritten. Vi börjar om från en halt.",
 		en = "I missed part of the ride. Let us start again from a halt.",
 	},
 	["haltlektion.complete"] = {
@@ -898,7 +902,7 @@ Sprak.text = {
 		en = "Halt at X completed! You walked on and stopped in the right place.",
 	},
 	["haltlektion.timeout"] = {
-		sv = "Vi hann inte fram till ett halt vid X. Ta en paus eller prova igen.",
+		sv = "Vi hann inte fram till en halt vid X. Ta en paus eller prova igen.",
 		en = "We did not reach a halt at X yet. Take a break or try again.",
 	},
 	["haltlektion.closed"] = {
@@ -922,7 +926,7 @@ Sprak.text = {
 		en = "Finish transitions",
 	},
 	["overganglektion.intro"] = {
-		sv = "Skritta, trava vid första gröna ringen och skritta igen vid den andra. Ringarna ligger på mittlinjen.",
+		sv = "Skritta, trava vid första gröna ringen och skritta igen vid den andra. Ringarna ligger på medellinjen.",
 		en = "Walk, trot at the first green ring and walk again at the second. The rings are on the centre line.",
 	},
 	["overganglektion.walk_on"] = {
@@ -974,12 +978,12 @@ Sprak.text = {
 		en = "The walk came when you had already passed the second ring. Ask for walk a little earlier, as you ride into the ring. We start again from walk.",
 	},
 	["overganglektion.walk_calm"] = {
-		sv = "Skritt! Låt henne gå lugnt en bit.",
-		en = "Walk! Let her walk calmly for a while.",
+		sv = "Skritt! Låt hästen gå lugnt en bit.",
+		en = "Walk! Let your horse walk calmly for a while.",
 	},
 	["overganglektion.tired"] = {
-		sv = "Hon blev trött och föll av sig själv. Vila en stund och börja om från skritt.",
-		en = "She got tired and dropped on her own. Rest a while and start again from walk.",
+		sv = "Hästen blev trött och föll av sig själv. Vila en stund och börja om från skritt.",
+		en = "Your horse got tired and dropped on its own. Rest a while and start again from walk.",
 	},
 	["overganglektion.walk_only"] = {
 		sv = "Håll skritten – vi börjar om därifrån.",
@@ -1022,19 +1026,19 @@ Sprak.text = {
 		en = "Finish the serpentine",
 	},
 	["serpentinlektion.intro"] = {
-		sv = "Tre bågar som byter sida vid mittlinjen. Börja i startringen nära A och följ de gröna strecken till slutringen.",
+		sv = "Tre bågar som byter sida vid medellinjen. Börja i startringen nära A och följ de gröna strecken till slutringen.",
 		en = "Three loops that change side at the centre line. Begin in the start ring near A and follow the green dashes to the end ring.",
 	},
 	["serpentinlektion.to_start"] = {
-		sv = "Rid in i startringen på mittlinjen nära A.",
+		sv = "Rid in i startringen på medellinjen nära A.",
 		en = "Ride into the start ring on the centre line near A.",
 	},
 	["serpentinlektion.loop1"] = {
-		sv = "Följ första bågen ut mot långsidan och tillbaka till mittlinjen.",
+		sv = "Följ första bågen ut mot långsidan och tillbaka till medellinjen.",
 		en = "Follow the first loop out towards the long side and back to the centre line.",
 	},
 	["serpentinlektion.loop2"] = {
-		sv = "Över mittlinjen! Följ andra bågen åt andra hållet.",
+		sv = "Över medellinjen! Följ andra bågen åt andra hållet.",
 		en = "Across the centre line! Follow the second loop the other way.",
 	},
 	["serpentinlektion.loop3"] = {
@@ -1042,7 +1046,7 @@ Sprak.text = {
 		en = "Last loop – the same way as the first.",
 	},
 	["serpentinlektion.to_end"] = {
-		sv = "Nästan klart! Rid in i slutringen på mittlinjen.",
+		sv = "Nästan klart! Rid in i slutringen på medellinjen.",
 		en = "Almost done! Ride into the end ring on the centre line.",
 	},
 	["serpentinlektion.off_route"] = {
@@ -1062,7 +1066,7 @@ Sprak.text = {
 		en = "I missed part of the ride. Ride to the start ring and we begin again.",
 	},
 	["serpentinlektion.complete"] = {
-		sv = "Serpentinen klar! Tre bågar och två fina byten över mittlinjen.",
+		sv = "Serpentinen klar! Tre bågar och två fina byten över medellinjen.",
 		en = "Serpentine completed! Three loops and two nice changes across the centre line.",
 	},
 	["serpentinlektion.timeout"] = {
@@ -1162,7 +1166,7 @@ Sprak.text = {
 		en = "Choose exercise",
 	},
 	["vaglektion.choose_mitt"] = {
-		sv = "Mittlinjen",
+		sv = "Medellinjen",
 		en = "Centre line",
 	},
 	["vaglektion.choose_diag"] = {
@@ -1178,7 +1182,7 @@ Sprak.text = {
 		en = "Finish the riding path",
 	},
 	["vaglektion.intro_mitt"] = {
-		sv = "Rid rakt längs mittlinjen från startringen nära A till slutringen nära C. Pilarna visar hållet.",
+		sv = "Rid rakt längs medellinjen från startringen nära A till slutringen nära C. Pilarna visar hållet.",
 		en = "Ride straight along the centre line from the start ring near A to the end ring near C. The arrows show the way.",
 	},
 	["vaglektion.intro_diag"] = {
@@ -1190,7 +1194,7 @@ Sprak.text = {
 		en = "Ride into the start ring and face the arrows.",
 	},
 	["vaglektion.ride_mitt"] = {
-		sv = "Bra! Håll dig på mittlinjen mot slutringen.",
+		sv = "Bra! Håll dig på medellinjen mot slutringen.",
 		en = "Good! Stay on the centre line towards the end ring.",
 	},
 	["vaglektion.ride_diag"] = {
@@ -1290,8 +1294,8 @@ Sprak.text = {
 		en = "The route goes the way of the arrows. Ride to the start ring and begin again.",
 	},
 	["halvvoltlektion.halt_moved"] = {
-		sv = "Hon flyttade sig under halten. Rid till startringen och börja om.",
-		en = "She moved during the halt. Ride to the start ring and begin again.",
+		sv = "Hästen flyttade sig under halten. Rid till startringen och börja om.",
+		en = "Your horse moved during the halt. Ride to the start ring and begin again.",
 	},
 	["halvvoltlektion.walk_or_trot"] = {
 		sv = "Rid halvvolten i skritt eller trav. Rid till startringen och börja om.",
@@ -1338,7 +1342,7 @@ Sprak.text = {
 		en = "Finish the canter departure",
 	},
 	["galopplektion.intro"] = {
-		sv = "Trava en bit, be om galopp inne i den gröna ringen på mittlinjen och galoppera vidare. Galoppsidan bedöms inte här.",
+		sv = "Trava en bit, be om galopp inne i den gröna ringen på medellinjen och galoppera vidare. Galoppsidan bedöms inte här.",
 		en = "Trot for a while, ask for canter inside the green ring on the centre line and canter on. The canter lead is not judged here.",
 	},
 	["galopplektion.trot_on"] = {
@@ -1374,8 +1378,8 @@ Sprak.text = {
 		en = "Canter a little longer next time. Trot again and we start over.",
 	},
 	["galopplektion.tired"] = {
-		sv = "Hon blev trött och föll av sig själv. Vila en stund och börja om i trav.",
-		en = "She got tired and dropped on her own. Rest a while and start again in trot.",
+		sv = "Hästen blev trött och föll av sig själv. Vila en stund och börja om i trav.",
+		en = "Your horse got tired and dropped on its own. Rest a while and start again in trot.",
 	},
 	["galopplektion.unknown"] = {
 		sv = "Jag tappade en bit av ritten. Trava vidare så börjar vi om.",
@@ -1518,28 +1522,28 @@ Sprak.text = {
 		en = "Lead your horse on foot all the way onto the arena track. The horse should be outside when you start.",
 	},
 	["ledlektion.lead_first"] = {
-		sv = "Ta din häst och börja leda henne.",
-		en = "Take your horse and start leading her.",
+		sv = "Ta din häst och börja leda.",
+		en = "Take your horse and start leading.",
 	},
 	["ledlektion.outside_first"] = {
-		sv = "Hon står redan på ridbanan. Led ut henne först.",
-		en = "She is already on the arena track. Lead her out first.",
+		sv = "Hästen står redan på ridbanan. Led ut hästen först.",
+		en = "Your horse is already on the arena track. Lead your horse out first.",
 	},
 	["ledlektion.lead_on"] = {
-		sv = "Fint! Led henne lugnt mot ridhuset.",
-		en = "Nice! Lead her calmly towards the arena.",
+		sv = "Fint! Led hästen lugnt mot ridhuset.",
+		en = "Nice! Lead your horse calmly towards the arena.",
 	},
 	["ledlektion.into_arena"] = {
-		sv = "Bra! Led in henne på ridbanan.",
-		en = "Good! Lead her onto the arena track.",
+		sv = "Bra! Led in hästen på ridbanan.",
+		en = "Good! Lead your horse onto the arena track.",
 	},
 	["ledlektion.settle"] = {
-		sv = "Framme! Låt henne stå kvar en stund.",
-		en = "You are there! Let her stand for a moment.",
+		sv = "Framme! Låt hästen stå kvar en stund.",
+		en = "You are there! Let your horse stand for a moment.",
 	},
 	["ledlektion.released"] = {
-		sv = "Du släppte henne. Ta henne igen och led henne hela vägen.",
-		en = "You let go of her. Take her again and lead her all the way.",
+		sv = "Du släppte hästen. Ta hästen igen och led hela vägen.",
+		en = "You let go of your horse. Take your horse again and lead all the way.",
 	},
 	["ledlektion.wrong_horse"] = {
 		sv = "Det där är inte din häst. Led din egen häst.",
@@ -1550,8 +1554,8 @@ Sprak.text = {
 		en = "I cannot find your horse right now.",
 	},
 	["ledlektion.mounted"] = {
-		sv = "Den här övningen gör du till fots. Sitt av och led henne.",
-		en = "You do this exercise on foot. Dismount and lead her.",
+		sv = "Den här övningen gör du till fots. Sitt av och led hästen.",
+		en = "You do this exercise on foot. Dismount and lead your horse.",
 	},
 	["ledlektion.character"] = {
 		sv = "Vänta tills du är tillbaka, så fortsätter vi.",
@@ -1562,12 +1566,12 @@ Sprak.text = {
 		en = "The arena track cannot be found right now.",
 	},
 	["ledlektion.inside"] = {
-		sv = "Hon står redan på ridbanan. Led ut henne först.",
-		en = "She is already on the arena track. Lead her out first.",
+		sv = "Hästen står redan på ridbanan. Led ut hästen först.",
+		en = "Your horse is already on the arena track. Lead your horse out first.",
 	},
 	["ledlektion.unknown"] = {
-		sv = "Jag tappade en bit av vägen. Led henne vidare så börjar vi om.",
-		en = "I missed part of the way. Keep leading her and we start over.",
+		sv = "Jag tappade en bit av vägen. Led hästen vidare så börjar vi om.",
+		en = "I missed part of the way. Keep leading your horse and we start over.",
 	},
 	["ledlektion.active"] = {
 		sv = "Avsluta ledningen först.",
@@ -1590,8 +1594,8 @@ Sprak.text = {
 		en = "I could not reach the stable. Try again.",
 	},
 	["ledlektion.complete"] = {
-		sv = "Snyggt ledd! Du ledde henne hela vägen in på ridbanan.",
-		en = "Nicely led! You led her all the way onto the arena track.",
+		sv = "Snyggt ledd! Du ledde hästen hela vägen in på ridbanan.",
+		en = "Nicely led! You led your horse all the way onto the arena track.",
 	},
 	["ledlektion.timeout"] = {
 		sv = "Vi hann inte hela vägen. Ta en paus eller försök igen.",
@@ -1626,8 +1630,8 @@ Sprak.text = {
 		en = "Good! You walked %s m and stood still for %s s at X.",
 	},
 	["aterkoppling.halt.nasta"] = {
-		sv = "Nästa gång: bromsa lite tidigare så att hon stannar mitt i ringen.",
-		en = "Next time: ask a little earlier so she stops in the middle of the ring.",
+		sv = "Nästa gång: bromsa lite tidigare så att hästen stannar mitt i ringen.",
+		en = "Next time: ask a little earlier so your horse stops in the middle of the ring.",
 	},
 	["aterkoppling.halt.igen"] = {
 		sv = "Stå still först, skritta sedan fram och be om halt inne i ringen vid X.",
@@ -1646,7 +1650,7 @@ Sprak.text = {
 		en = "Walk a little, trot at the first ring and walk at the second.",
 	},
 	["aterkoppling.serpentin.klar"] = {
-		sv = "Snyggt! Alla tre bågarna, %s m, och %s byten över mittlinjen.",
+		sv = "Snyggt! Alla tre bågarna, %s m, och %s byten över medellinjen.",
 		en = "Nice! All three loops, %s m, and %s changes across the centre line.",
 	},
 	["aterkoppling.serpentin.nasta"] = {
@@ -1670,7 +1674,7 @@ Sprak.text = {
 		en = "Walk forward at a calm speed without speeding up or slowing down.",
 	},
 	["aterkoppling.vag_mitt.klar"] = {
-		sv = "Snyggt! Du red %s m av mittlinjens %s m.",
+		sv = "Snyggt! Du red %s m av medellinjens %s m.",
 		en = "Nice! You rode %s m of the centre line's %s m.",
 	},
 	["aterkoppling.vag_mitt.nasta"] = {
@@ -1686,7 +1690,7 @@ Sprak.text = {
 		en = "Nice! You rode %s m of the diagonal's %s m.",
 	},
 	["aterkoppling.vag_diag.nasta"] = {
-		sv = "Nästa gång: prova mittlinjen i trav.",
+		sv = "Nästa gång: prova medellinjen i trav.",
 		en = "Next time: try the centre line in trot.",
 	},
 	["aterkoppling.vag_diag.igen"] = {
@@ -1698,8 +1702,8 @@ Sprak.text = {
 		en = "Nice! Track, half-circle and back to the track – %s m ridden and %s joins.",
 	},
 	["aterkoppling.halvvolt.skuld"] = {
-		sv = "(%s m som hon flyttade sig under en halt räknades inte.)",
-		en = "(%s m she moved during a halt did not count.)",
+		sv = "(%s m som hästen flyttade sig under en halt räknades inte.)",
+		en = "(%s m your horse moved during a halt did not count.)",
 	},
 	["aterkoppling.halvvolt.nasta"] = {
 		sv = "Nästa gång: rid halvvolten i trav.",
@@ -1738,12 +1742,12 @@ Sprak.text = {
 		en = "Nicely led! %s m in %s s, all the way onto the arena track.",
 	},
 	["aterkoppling.leda.nasta"] = {
-		sv = "Nästa steg: gör i ordning henne och sitt upp.",
-		en = "Next step: get her ready and mount.",
+		sv = "Nästa steg: gör i ordning hästen och sitt upp.",
+		en = "Next step: get your horse ready and mount.",
 	},
 	["aterkoppling.leda.igen"] = {
-		sv = "Ta din häst utanför ridbanan och led henne lugnt hela vägen in.",
-		en = "Take your horse outside the arena track and lead her calmly all the way in.",
+		sv = "Ta din häst utanför ridbanan och led lugnt hela vägen in.",
+		en = "Take your horse outside the arena track and lead calmly all the way in.",
 	},
 	["aterkoppling.leda.annan"] = {
 		sv = "Den övningen gjordes med en annan häst eller före ett byte av karaktär, så jag visar inte de siffrorna här. Led igen med den häst du har nu.",
@@ -1814,7 +1818,7 @@ Sprak.text = {
 		en = "Good – a steady walk all the way!",
 	},
 	["aterkoppling.vag_mitt.kort"] = {
-		sv = "Snyggt – mittlinjen är riden!",
+		sv = "Snyggt – medellinjen är riden!",
 		en = "Nice – the centre line is ridden!",
 	},
 	["aterkoppling.vag_diag.kort"] = {
@@ -1867,11 +1871,11 @@ Sprak.text = {
 	},
 	["skotselminne.halsa"] = {
 		sv = "Hälsa lugnt",
-		en = "Greet her calmly",
+		en = "Greet your horse calmly",
 	},
 	["skotselminne.visitera"] = {
 		sv = "Visitera",
-		en = "Check her over",
+		en = "Check your horse over",
 	},
 	["skotselminne.rykta"] = {
 		sv = "Rykta",
@@ -1906,12 +1910,12 @@ Sprak.text = {
 		en = " · done now",
 	},
 	["ledminne.sparad"] = {
-		sv = "Du har lett henne hela vägen förut.",
-		en = "You have led her all the way before.",
+		sv = "Du har lett hästen hela vägen förut.",
+		en = "You have led your horse all the way before.",
 	},
 	["ledminne.vantar"] = {
-		sv = "Du har lett henne hela vägen förut (inte sparat än).",
-		en = "You have led her all the way before (not saved yet).",
+		sv = "Du har lett hästen hela vägen förut (inte sparat än).",
+		en = "You have led your horse all the way before (not saved yet).",
 	},
 	["ledminne.okand"] = {
 		sv = "Jag kan inte läsa din ledningshistorik just nu.",
@@ -1919,11 +1923,11 @@ Sprak.text = {
 	},
 	["tempocoach.too_slow"] = {
 		sv = "Håll framåt (W eller spaken) lite mer – det ökar farten inom skritten.",
-		en = "Hold forward (W or the stick) a little more – it speeds her up within the walk.",
+		en = "Hold forward (W or the stick) a little more – it speeds your horse up within the walk.",
 	},
 	["tempocoach.too_fast"] = {
-		sv = "Släpp lite på framåt (W eller spaken) – då går hon i lugnare skritt.",
-		en = "Ease off forward (W or the stick) – she then walks at a calmer pace.",
+		sv = "Släpp lite på framåt (W eller spaken) – då går hästen i lugnare skritt.",
+		en = "Ease off forward (W or the stick) – your horse then walks at a calmer pace.",
 	},
 	["tempocoach.steadier"] = {
 		sv = "Håll framåt (W eller spaken) jämnt, utan ryck, så farten håller sig jämn.",
@@ -2190,8 +2194,8 @@ Sprak.text = {
 		en = "Next time: ride the course again – blue, red, blue, red.",
 	},
 	["aterkoppling.clearround.eftervard"] = {
-		sv = "När ni är klara: sitt av. Sedan väljer du om stallet tar hand om henne eller om du gör det själv.",
-		en = "When you are done: dismount. Then you choose whether the stable looks after her or you do it yourself.",
+		sv = "När ni är klara: sitt av. Sedan väljer du om stallet tar hand om hästen eller om du gör det själv.",
+		en = "When you are done: dismount. Then you choose whether the stable looks after your horse or you do it yourself.",
 	},
 	["aterkoppling.clearround.kort"] = {
 		sv = "Ritten är bedömd (förenklat).",
@@ -2246,7 +2250,7 @@ Sprak.text = {
 		en = "Now for a steady walk: keep the same calm speed all the way.",
 	},
 	["halsning.vag_mitt"] = {
-		sv = "Nu rider vi mittlinjen: håll dig på linjen från startringen till slutringen.",
+		sv = "Nu rider vi medellinjen: håll dig på linjen från startringen till slutringen.",
 		en = "Now for the centre line: stay on the line from the start ring to the end ring.",
 	},
 	["halsning.vag_diag"] = {
@@ -2366,8 +2370,8 @@ Sprak.text = {
 		en = "The horse has no body to follow with",
 	},
 	["led.for_langt"] = {
-		sv = "Gå fram till henne först",
-		en = "Walk up to her first",
+		sv = "Gå fram till hästen först",
+		en = "Walk up to the horse first",
 	},
 	["led.leder_redan"] = {
 		sv = "Du leder redan",
@@ -2378,36 +2382,36 @@ Sprak.text = {
 		en = "You are not leading a horse",
 	},
 	["led.rids"] = {
-		sv = "Hon rids just nu",
-		en = "She is being ridden right now",
+		sv = "Hästen rids just nu",
+		en = "This horse is being ridden right now",
 	},
 	["hast.leds_nu"] = {
-		sv = "Hon leds av någon annan just nu",
-		en = "Someone else is leading her right now",
+		sv = "Hästen leds av någon annan just nu",
+		en = "Someone else is leading this horse right now",
 	},
 	["led.upptagen"] = {
-		sv = "Någon annan leder henne",
-		en = "Someone else is leading her",
+		sv = "Någon annan leder hästen",
+		en = "Someone else is leading this horse",
 	},
 	["led.tappade_bort"] = {
-		sv = "Hon kom efter — gå tillbaka och ta henne igen",
-		en = "She fell behind — go back and take her again",
+		sv = "Hästen kom efter — gå tillbaka och ta hästen igen",
+		en = "Your horse fell behind — go back and take your horse again",
 	},
 	["led.tappad"] = {
-		sv = "Du tappade henne",
-		en = "You lost her",
+		sv = "Du tappade hästen",
+		en = "You lost your horse",
 	},
 	["led.kvar_i_boxen"] = {
-		sv = "Hon står kvar i boxen",
-		en = "She is still in her stall",
+		sv = "Hästen står kvar i boxen",
+		en = "Your horse is still in the stall",
 	},
 	["led.inte_framme"] = {
-		sv = "Hon är inte framme i ridhuset än",
-		en = "She is not in the arena yet",
+		sv = "Hästen är inte framme i ridhuset än",
+		en = "Your horse is not in the arena yet",
 	},
 	["led.fastnat"] = {
-		sv = "Hon kommer inte fram där — prova en annan väg",
-		en = "She cannot get through there — try another way",
+		sv = "Hästen kommer inte fram där — prova en annan väg",
+		en = "Your horse cannot get through there — try another way",
 	},
 	["tack.fel_sadel"] = {
 		sv = "Fel sadel — den är formad efter en annan rygg. På fel häst trycker den på manken eller på njurarna",
@@ -2415,7 +2419,7 @@ Sprak.text = {
 	},
 	["tack.fel_trans"] = {
 		sv = "Fel träns — det är inställt efter ett annat huvud. Bettet hamnar för högt eller för lågt och skaver i mungiporna",
-		en = "Wrong bridle — it is fitted to another head. The bit sits too high or too low and chafes the corners of her mouth",
+		en = "Wrong bridle — it is fitted to another head. The bit sits too high or too low and chafes the corners of the mouth",
 	},
 	["tack.fel_hast"] = {
 		sv = "Det är inte din häst",
@@ -2434,28 +2438,28 @@ Sprak.text = {
 		en = "The numnah first — the saddle goes on top of it",
 	},
 	["tack.sadeln_av_forst"] = {
-		sv = "Sadeln av först — tränset håller henne så länge",
-		en = "Take the saddle off first — the bridle holds her meanwhile",
+		sv = "Sadeln av först — tränset håller hästen så länge",
+		en = "Take the saddle off first — the bridle holds your horse meanwhile",
 	},
 	["tack.saknar_sadel"] = {
-		sv = "Hon är inte sadlad än",
-		en = "She is not saddled yet",
+		sv = "Hästen är inte sadlad än",
+		en = "Your horse is not saddled yet",
 	},
 	["tack.saknar_underlagg"] = {
 		sv = "Underlägget ligger inte på",
 		en = "The numnah is not on",
 	},
 	["tack.saknar_trans"] = {
-		sv = "Hon är inte tränsad än",
-		en = "She is not bridled yet",
+		sv = "Hästen är inte tränsad än",
+		en = "Your horse is not bridled yet",
 	},
 	["tack.for_langt"] = {
-		sv = "Gå fram till henne först",
-		en = "Walk up to her first",
+		sv = "Gå fram till hästen först",
+		en = "Walk up to the horse first",
 	},
 	["tack.inget_pa"] = {
-		sv = "Det sitter inget sådant på henne",
-		en = "She has none of that on",
+		sv = "Det sitter inget sådant på hästen",
+		en = "Your horse has none of that on",
 	},
 	["tack.ingen_hast"] = {
 		sv = "Ingen häst att utrusta",
@@ -2518,8 +2522,8 @@ Sprak.text = {
 		en = "%s bridle",
 	},
 	["tack.bar_inget_trans"] = {
-		sv = "Du bär inget träns — hämta hennes på boxfronten först",
-		en = "You are not carrying a bridle — fetch hers from the stall front first",
+		sv = "Du bär inget träns — hämta hästens på boxfronten först",
+		en = "You are not carrying a bridle — fetch your horse's from the stall front first",
 	},
 	["tack.redan_tagen"] = {
 		sv = "Någon annan bär den redan",
@@ -2538,11 +2542,11 @@ Sprak.text = {
 		en = "You are already carrying another horse's saddle — put it back first",
 	},
 	["tack.rattelse_sadel"] = {
-		sv = "Du bär %ss sadel – den passar inte %s. Häng tillbaka den på hans eller hennes boxfront och hämta rätt sadel.",
+		sv = "Du bär %ss sadel – den passar inte %s. Häng tillbaka den på den hästens boxfront och hämta rätt sadel.",
 		en = "You are carrying %s's saddle – it does not fit %s. Hang it back on that horse's box front and fetch the right saddle.",
 	},
 	["tack.rattelse_trans"] = {
-		sv = "Du bär %ss träns – det passar inte %s. Häng tillbaka det på hans eller hennes boxfront och hämta rätt träns.",
+		sv = "Du bär %ss träns – det passar inte %s. Häng tillbaka det på den hästens boxfront och hämta rätt träns.",
 		en = "You are carrying %s's bridle – it does not fit %s. Hang it back on that horse's box front and fetch the right bridle.",
 	},
 	["tack.lamna_sadel"] = {
@@ -2634,20 +2638,20 @@ Sprak.text = {
 		en = "%s is on %s",
 	},
 	["tack.leds_nu"] = {
-		sv = "Hon leds just nu — släpp henne först",
-		en = "She is being led right now — let her go first",
+		sv = "Hästen leds just nu — släpp taget först",
+		en = "This horse is being led right now — let go first",
 	},
 	["tack.rids_nu"] = {
-		sv = "Hon är uppsutten — sitt av först",
-		en = "She is being ridden — dismount first",
+		sv = "Hästen är uppsutten — sitt av först",
+		en = "This horse is being ridden — dismount first",
 	},
 	["tack.inte_pa_fronten"] = {
 		sv = "Den hänger inte på boxfronten längre",
 		en = "It is no longer hanging on the stall front",
 	},
 	["tack.bar_ingen_sadel"] = {
-		sv = "Du bär ingen sadel — hämta hennes på boxfronten först",
-		en = "You are not carrying a saddle — fetch hers from the stall front first",
+		sv = "Du bär ingen sadel — hämta hästens på boxfronten först",
+		en = "You are not carrying a saddle — fetch your horse's from the stall front first",
 	},
 	["ugneta.ovning.halt_skritt.rubrik"] = {
 		sv = "Halt → skritt",
@@ -2858,8 +2862,8 @@ Sprak.text = {
 		en = "Today you ride %s.",
 	},
 	["led.stangd_boxdorr"] = {
-		sv = "Boxdörren är stängd — öppna hennes boxdörr först, så kan hon gå ut",
-		en = "Her stall door is shut — open her stall door first so she can walk out",
+		sv = "Boxdörren är stängd — öppna den först, så kan hästen gå ut",
+		en = "The stall door is shut — open it first so your horse can walk out",
 	},
 	["hjalp.webb.driv"] = {
 		sv = "Ett steg upp i gångarterna",
@@ -2878,20 +2882,20 @@ Sprak.text = {
 		en = "Say hello",
 	},
 	["handling.halsa_text"] = {
-		sv = "Hon ska se och höra dig innan du rör henne.",
-		en = "Let her see and hear you before you touch her.",
+		sv = "Hästen ska se och höra dig innan du rör vid hästen.",
+		en = "Let your horse see and hear you before any touch.",
 	},
 	["handling.halsa_klar"] = {
-		sv = "Nu vet hon att du är där.",
-		en = "Now she knows you are there.",
+		sv = "Nu vet hästen att du är där.",
+		en = "Now your horse knows you are there.",
 	},
 	["handling.kolla"] = {
-		sv = "Kolla henne",
-		en = "Check her over",
+		sv = "Kolla hästen",
+		en = "Check your horse over",
 	},
 	["handling.kolla_text"] = {
-		sv = "Se efter att hon mår bra innan ni börjar.",
-		en = "Make sure she is well before you start.",
+		sv = "Se efter att hästen mår bra innan ni börjar.",
+		en = "Make sure your horse is well before you start.",
 	},
 	["handling.kolla_klar"] = {
 		sv = "Allt ser bra ut.",
@@ -2902,8 +2906,8 @@ Sprak.text = {
 		en = "Groom",
 	},
 	["handling.rykta_text"] = {
-		sv = "Borsta henne ren innan sadeln läggs på.",
-		en = "Brush her clean before the saddle goes on.",
+		sv = "Borsta hästen ren innan sadeln läggs på.",
+		en = "Brush your horse clean before the saddle goes on.",
 	},
 	["handling.kratsa"] = {
 		sv = "Kratsa hovarna",
@@ -2938,36 +2942,36 @@ Sprak.text = {
 		en = "You are riding %s. Follow the arrow to the box.",
 	},
 	["eftervard.val_text"] = {
-		sv = "Bra ridet. Vill du ta hand om henne själv, eller ska stallet göra det?",
-		en = "Well ridden. Do you want to look after her yourself, or shall the stable do it?",
+		sv = "Bra ridet. Vill du ta hand om hästen själv, eller ska stallet göra det?",
+		en = "Well ridden. Do you want to look after your horse yourself, or shall the stable do it?",
 	},
 	["eftervard.stallet_text"] = {
-		sv = "Bra ridet. Stallet tar hand om henne.",
-		en = "Well ridden. The stable looks after her.",
+		sv = "Bra ridet. Stallet tar hand om hästen.",
+		en = "Well ridden. The stable looks after your horse.",
 	},
 	["pass.stallet_gor_det"] = {
-		sv = "Stallet tar hand om henne",
-		en = "The stable looks after her",
+		sv = "Stallet tar hand om hästen",
+		en = "The stable looks after your horse",
 	},
 	["eftervard.stallet"] = {
-		sv = "Stallet tar hand om henne",
-		en = "The stable looks after her",
+		sv = "Stallet tar hand om hästen",
+		en = "The stable looks after your horse",
 	},
 	["eftervard.stallet_resten"] = {
 		sv = "Stallet tar hand om resten",
 		en = "The stable does the rest",
 	},
 	["eftervard.sjalv"] = {
-		sv = "Ta hand om henne själv",
-		en = "Look after her myself",
+		sv = "Ta hand om hästen själv",
+		en = "Look after my horse myself",
 	},
 	["eftervard.stallet_klar"] = {
-		sv = "Stallet tar hand om henne. Passet är klart.",
-		en = "The stable looks after her. The session is done.",
+		sv = "Stallet tar hand om hästen. Passet är klart.",
+		en = "The stable looks after your horse. The session is done.",
 	},
 	["eftervard.egen_klar"] = {
-		sv = "Du tog hand om henne själv. Det märker hon.",
-		en = "You looked after her yourself. She notices.",
+		sv = "Du tog hand om hästen själv. Det märker hästen.",
+		en = "You looked after your horse yourself. Your horse notices.",
 	},
 	["eftervard.sadla_av"] = {
 		sv = "Ta av sadeln",
@@ -2990,8 +2994,8 @@ Sprak.text = {
 		en = "Water and hay",
 	},
 	["eftervard.ta_hand_text"] = {
-		sv = "Känn över benen och ge henne vatten och hö.",
-		en = "Feel her legs over and give her water and hay.",
+		sv = "Känn över benen och ge hästen vatten och hö.",
+		en = "Feel the legs over and give your horse water and hay.",
 	},
 	["hjalp.webb.sits"] = {
 		sv = "Sits lätt / djup",

@@ -122,6 +122,62 @@ const st = () => page.evaluate(() => ({ vy: G.vy, scen: G.scen, ov: overlayUppe(
   prova("panelen stängd: samma 3D-vy som före", s.vy === "3d" && !s.ov, JSON.stringify(s));
 }
 
+/* 5. MOLNEN RITAS BARA UTE (miljö-grind 0.12). Molnnätet ritades i varje
+   scen, och syntes inomhus i varje springa mellan vägg och tak. Här räknas
+   hur många gånger nätet faktiskt ritas under riktiga bildrutor, till fots
+   på gården, i stallet och i ridhuset, och i sadeln i ridhuset.
+
+   KONTROLLMÄTNING: samma räknare på ett direkt anrop med «ute». Räknar den
+   inte det, mäter provet ingenting. */
+{
+  const rakna = async (stall) => {
+    await page.evaluate(stall);
+    await page.waitForTimeout(500);
+    return page.evaluate(async () => {
+      if (G.vy !== "3d") vaxlaVy();
+      const orig = GL.rita.bind(GL); let n = 0, rutor = 0;
+      GL.rita = (nat, ...r) => { if (S3.himmel && nat === S3.himmel.nat) n++; return orig(nat, ...r); };
+      const b0 = (typeof V3D !== "undefined" && V3D.bild) || 0;
+      await new Promise((klar) => { let i = 0; const steg = () => { if (++i >= 8) klar(); else requestAnimationFrame(steg); }; requestAnimationFrame(steg); });
+      rutor = ((typeof V3D !== "undefined" && V3D.bild) || 0) - b0;
+      GL.rita = orig;
+      return { n, scen: G.scen, plats: G.plats, vy: G.vy, rutor };
+    });
+  };
+  const gard = await rakna(() => { overlay(false); gaTill("gard", { x: 130, y: 128, rikt: 0 }); });
+  const stall = await rakna(() => { const d = STALLINNE.dorrar[0]; gaTill("stallinne", { x: d.pos[0], y: d.pos[1], rikt: 0 }); });
+  const hall = await rakna(() => { gaTill("ridhusinne", { x: RIDHUSINNE.bana.x + 10, y: RIDHUSINNE.bana.y + 20, rikt: 0 }); });
+  prova("molnen ritas ute på gården", gard.scen === "gard" && gard.vy === "3d" && gard.n > 0, JSON.stringify(gard));
+  prova("molnen ritas INTE i stallet", stall.scen === "stallinne" && stall.vy === "3d" && stall.rutor > 0 && stall.n === 0, JSON.stringify(stall));
+  prova("molnen ritas INTE i ridhuset till fots", hall.scen === "ridhusinne" && hall.vy === "3d" && hall.rutor > 0 && hall.n === 0, JSON.stringify(hall));
+  const k = await page.evaluate(() => {
+    const orig = GL.rita.bind(GL); let n = 0;
+    GL.rita = (nat, ...r) => { if (S3.himmel && nat === S3.himmel.nat) n++; return orig(nat, ...r); };
+    const kam = { x: 10, y: 2, z: 30 };
+    const ute = s3RitaMoln(kam, false), efterUte = n; const inne = s3RitaMoln(kam, true);
+    GL.rita = orig;
+    return { ute, inne, efterUte, efterInne: n };
+  });
+  prova("kontrollmätning: räknaren ser ett molnanrop ute och inget inne",
+    k.ute === true && k.efterUte === 1 && k.inne === false && k.efterInne === 1, JSON.stringify(k));
+  /* I sadeln i ridhuset — den andra ritvägen (rita3D). */
+  const sadel = await page.evaluate(async () => {
+    G.hastId = G.hastId || valbaraHastar()[0];
+    if (typeof Forb !== "undefined") { let p = 1; while (Forb.fyndFor(G.hastId, p + 1)) p++; SPAR.pass = p; sattAktivHast(G.hastId); }
+    if (typeof stegkortRidaNu === "function") stegkortRidaNu();
+    G.hastPlats = "box"; G.ride = nyState(G.dagsform, 0.5, G.sadellage); sittUpp("ridhus");
+    await new Promise((r) => setTimeout(r, 900));
+    if (G.vy !== "3d") vaxlaVy();
+    const orig = GL.rita.bind(GL); let n = 0, alla = 0;
+    GL.rita = (nat, ...r) => { alla++; if (S3.himmel && nat === S3.himmel.nat) n++; return orig(nat, ...r); };
+    await new Promise((klar) => { let i = 0; const steg = () => { if (++i >= 8) klar(); else requestAnimationFrame(steg); }; requestAnimationFrame(steg); });
+    GL.rita = orig;
+    return { n, alla, scen: G.scen, plats: G.plats, vy: G.vy };
+  });
+  prova("molnen ritas INTE i sadeln i ridhuset", sadel.scen === "lektion" && sadel.plats === "ridhus" && sadel.alla > 0 && sadel.n === 0,
+    JSON.stringify(sadel));
+}
+
 await browser.close(); srv.close();
 console.log(fel ? `KAMERAPROVET (Q4): ${fel} FEL` : "KAMERAPROVET (Q4): alla gröna");
 process.exit(fel ? 1 : 0);

@@ -304,9 +304,22 @@ local UTGANGAR = {
 	{ namn = "riggen lämnar workspace",
 		ut = function(h) h.Parent = nil; bildrutor(1) end },
 	{ namn = "SITT AV-handlingen (DismountRequest)",
+		--[[ Batch 0.11 (avsittning bara från halt): `sittUpp` ställer
+			ritten i SKRITT, så trycket är numera en begäran — stallet tar
+			ner hästen och avsittningen går till servern när hon står.
+			Kravet på vad som ska vara rivet efteråt är oförändrat; det
+			som ändrats är att vägen dit tar några bildrutor, och att
+			stallets eget BROMS-steg får synas på tråden. Regeln själv
+			mäts i `klient-sittav-halt.spec`. ]]
+		stalletBromsar = true,
 		ut = function()
 			avsittning._skickat = {}
 			tryck(Input.AVSITT)
+			for _ = 1, 30 * 8 do
+				if bundna() == 0 then break end
+				klocka += dt
+				bildrutor(1)
+			end
 		end,
 		efter = function()
 			prova("   avsittningen gick till servern", #avsittning._skickat == 1,
@@ -341,8 +354,20 @@ for _, ug in ipairs(UTGANGAR) do
 		("(forward %.2f · steer %.2f · upp %s)"):format(i.forward, i.steer, tostring(i.gaitUp)))
 	prova("   ett tryck efteråt når inte CAS", tryck(Input.DRIV) == false)
 	bildrutor(3)
+	--[[ Den obehandlade flanken är ett DRIV, och det får aldrig nå tråden.
+		Vid SITT AV i rörelse (Batch 0.11) går stallets egna BROMS-steg ut
+		— de är nedtagningen, inte spelarens flank — och inget annat. ]]
+	local drivPaket, ovriga = 0, 0
+	for _, paket in ipairs(remote._skickat) do
+		if paket[2] == Ridtrappa.DRIV then
+			drivPaket += 1
+		elseif not (ug.stalletBromsar and paket[2] == Ridtrappa.BROMS) then
+			ovriga += 1
+		end
+	end
 	prova("   och den obehandlade flanken nådde aldrig tråden",
-		#remote._skickat == 0, ("(%d paket)"):format(#remote._skickat))
+		drivPaket == 0 and ovriga == 0,
+		("(%d paket, varav %d driv)"):format(#remote._skickat, drivPaket))
 end
 
 --[[ ══ 5. HÄSTBYTE: RIVS OCH BINDS OM EXAKT EN GÅNG ═════════════════ ]]

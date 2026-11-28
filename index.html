@@ -430,11 +430,18 @@ tr:last-child td{border-bottom:0}
 
   <div id="ov"><div class="sheet" id="sheet"></div></div>
 </div>
+<!-- Batch 1.2: strömbrytaren ?realism=1 (av som standard) och
+     bildrutemätaren ?fps=1. Före allt som en dag ska läsa brytaren. -->
+<script src="src/bildmatare.js"></script>
 <script src="src/model.js"></script>
 <script src="src/riding/kameralage.js"></script>
 <script src="src/riding/hjalper.js"></script>
 <script src="src/riding/svar.js"></script>
 <script src="src/riding/telemetri.js"></script>
+<!-- Rörelse-grind 0.4: gångarternas benföljd — samma tabell som Roblox
+     läser genom RidKanon.GANGFAS. Måste ligga före game.js och scen3d.js. -->
+<script src="src/riding/gangfas.js"></script>
+<script src="src/riding/avsittning.js"></script>
 <script src="src/riding/ovningsdef.js"></script>
 <script src="src/riding/inspelning.js"></script>
 <script src="src/riding/ridanalys.js"></script>

@@ -219,7 +219,7 @@ console.log("\n── D. En dag med fynd ──");
   await vanta(page);
   await klicka(page, "start:rida_nu");
   let k = await kort(page);
-  prova("«Rida nu» stannar vid fyndet: «Du hittade något»", k.id === "fynd" && k.rubrik === "Du hittade något", `${k.id} · ${k.rubrik}`);
+  prova("«Rida nu» stannar vid fyndet: «Stallet hittade något»", k.id === "fynd" && k.rubrik === "Stallet hittade något", `${k.id} · ${k.rubrik}`);
   prova("tre svar i kanonens ordning, inget framhävt",
     k.knappar.length === 3 && k.knappar.every(b => !b.primar) && k.knappar[0].text === "Säg till ridläraren",
     k.knappar.map(b => b.text).join(" / "));

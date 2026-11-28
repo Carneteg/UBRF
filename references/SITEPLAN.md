@@ -179,13 +179,14 @@ vad som är antaget. `[antagande]` = härlett men inte sett; `[REFERENCE GAP]`
 |---|---|---|
 | Husens inbördes läge och riktning | Satellitbild + Street View + utrymningsplanernas återsamlingsplats | Verifierat |
 | Ridhusets gavel mot grusplanen | `buildings/ridhus/ridhus-gavel-01..03.jpg` (ur `video/IMG_0246.mov`) | Verifierat |
-| Ridhusets långsida mot Enköpingsvägen | Street View sep 2024 + juli 2026 | Verifierat, ej mätt |
-| Ridhusets östra gavel och norra långsida | — | `[REFERENCE GAP]` — husets färg och list, inga öppningar utöver de nödvändiga |
+| Ridhusets långsida mot grusvägen och åkern (västra) | `buildings/ridhus/drive-2026-11-26/IMG_0065…0071` (2026-11-26); Street View som historik | Fotograferad på nära håll; takfoten mätt till 5,5 m (5,2–5,9). Längden ej mätt |
+| Ridhusets långsida mot gården (östra) | `buildings/stall/drive-2026-11-26/IMG_0210`, `IMG_0211`, snett | Delvis: plåt och en rad höga fönster. Rak vy `[REFERENCE GAP]` |
+| Ridhusets bortre gavel (södra) | — | `[REFERENCE GAP]` — bara hörnet syns |
 | Ridhuset invändigt, mått | Utrymningsplan (Presto 2025-10-11) + bekräftad 20×60-bana | Uträknat, se ridhuskortet |
 | Ridhusets entréhall, rumsindelning | Utrymningsplanen, otydlig i mitten | `[antagande]` — väggar antydda, inte rum för rum |
 | Stallets klubbgavel och västra långsida | `buildings/stall/stall-fasad-01..05.jpg`, `stall-entre-*.jpg` | Verifierat |
 | Stallets södra gavel | Street View, på avstånd | `[antagande]` — dörrarnas och trappans mått uppskattade |
-| Stallets östra långsida | Street View, på avstånd | `[antagande]` — spegling av västra sidan |
+| Stallets östra långsida | `buildings/stall/drive-2026-11-26/IMG_0290…0299` (2026-11-26) | Fotograferad på nära håll: utbyggnad med pardörr och fönsterband under takfoten — **inte** en spegling av västra sidan. Utbyggnadens läge längs huset `[REFERENCE GAP]` |
 | Stallgången invändigt | `video/IMG_0249.mov` + `IMG_0250.mov`, 37 bildrutor | Verifierat, se stallkortet |
 | Stallets planform (dubbelstall) | Utrymningsplanen | **Byggd 2026-08-30** — fyra boxlängor och två gångar. Bandens ordning och andelar är mätta i planen `[VERIFIED]`; totalbredden 21 m är ett arbetsantagande i intervallet 15–23 m, se stallkortet |
 | Hagar, banor, paddock | Satellitbild | Verifierat läge, mått ej mätta |

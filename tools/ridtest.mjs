@@ -22,7 +22,10 @@ const browser = await chromium.launch({ executablePath: fs.existsSync(exe) ? exe
   args: ["--use-angle=swiftshader", "--no-sandbox", "--enable-unsafe-swiftshader"] });
 const page = await browser.newPage();
 page.on("pageerror", e => console.log("PAGEERROR", e.message));
-await page.goto(`http://localhost:${PORT}/`, { waitUntil: "load" });
+/* Batch 1.2: UBRF_FRAGA lägger en frågesträng på adressen, t.ex.
+   UBRF_FRAGA='?realism=1&fps=1', så att hela sviten kan köras med
+   strömbrytaren PÅ. Utan variabeln är adressen exakt som förut. */
+await page.goto(`http://localhost:${PORT}/${process.env.UBRF_FRAGA || ""}`, { waitUntil: "load" });
 await page.waitForTimeout(1500);
 const resultat = [];
 const prova = (namn, ok, detalj) => { resultat.push({ namn, ok }); console.log(ok ? "  OK  " : "  FEL ", namn, "—", detalj); };
@@ -151,7 +154,7 @@ const via = await page.evaluate(() => {
   G.npcs = [];
   const dt = 1 / 60;
   const nyRitt = () => { G.ride = nyState(G.dagsform, 0.5, G.sadellage);
-    G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0;
+    G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0; G._fastDt = 0;
     if (typeof ridNollstallHjalp === "function") ridNollstallHjalp(); };
   const sedda = [];
   const kor = (o, sek) => { for (let i = 0; i < sek * 60; i++) {
@@ -250,7 +253,7 @@ const hj = await page.evaluate(() => {
   G.hastId = G.hastId || Object.keys(HORSES)[0]; G.hastPlats = "box"; G.npcs = [];
   const dt = 1 / 60;
   const nyRitt = () => { G.ride = nyState(G.dagsform, 0.5, G.sadellage);
-    G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0; ridNollstallHjalp(); };
+    G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0; G._fastDt = 0; ridNollstallHjalp(); };
   const kor = (o, sek) => { for (let i = 0; i < sek * 60; i++) {
     RIDIN.skankel = o.skankel ?? 0; RIDIN.tygel = o.tygel ?? 0; RIDIN.sits = o.sits ?? 0;
     RIDIN.styr = o.styr ?? 0; RIDIN.parad = o.parad ?? 0; stegaRitt(dt); } };
@@ -376,7 +379,7 @@ const svar = await page.evaluate(() => {
   G.hastId = G.hastId || Object.keys(HORSES)[0]; G.hastPlats = "box"; G.npcs = [];
   const dt = 1 / 60;
   const nyRitt = () => { G.ride = nyState(G.dagsform, 0.5, G.sadellage);
-    G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0; ridNollstallHjalp(); };
+    G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0; G._fastDt = 0; ridNollstallHjalp(); };
   const kor = (o, sek) => { for (let i = 0; i < sek * 60; i++) {
     RIDIN.skankel = o.skankel ?? 0; RIDIN.tygel = o.tygel ?? 0; RIDIN.sits = o.sits ?? 0;
     RIDIN.styr = o.styr ?? 0; RIDIN.parad = o.parad ?? 0; stegaRitt(dt); } };
@@ -558,7 +561,7 @@ prova("balansen tappas i en ostödd volt, hästen FALLER IN, och den hämtar sig
 const prof = await page.evaluate(() => {
   const dt = 1 / 60;
   const nyRitt = () => { G.ride = nyState(0.7, 0.5, 0.8);
-    G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0; ridNollstallHjalp(); };
+    G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0; G._fastDt = 0; ridNollstallHjalp(); };
   const kor = (o, sek) => { for (let i = 0; i < sek * 60; i++) {
     RIDIN.skankel = o.skankel ?? 0; RIDIN.tygel = o.tygel ?? 0; RIDIN.sits = o.sits ?? 0;
     RIDIN.styr = o.styr ?? 0; RIDIN.parad = o.parad ?? 0; stegaRitt(dt); } };
@@ -662,7 +665,7 @@ const kontraktG02C = await page.evaluate(() => {
   G.hastId = G.hastId || Object.keys(HORSES)[0]; G.hastPlats = "box"; G.npcs = [];
   const dt = 1 / 60;
   G.ride = nyState(G.dagsform, 0.5, G.sadellage);
-  G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0; ridNollstallHjalp();
+  G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0; G._fastDt = 0; ridNollstallHjalp();
   const kor = (o, sek) => { for (let i = 0; i < sek * 60; i++) {
     RIDIN.skankel = o.skankel ?? 0; RIDIN.tygel = o.tygel ?? 0; RIDIN.sits = o.sits ?? 0;
     RIDIN.styr = o.styr ?? 0; RIDIN.parad = o.parad ?? 0; stegaRitt(dt); } };
@@ -732,7 +735,7 @@ const tider = await page.evaluate(() => {
   G.hastId = G.hastId || Object.keys(HORSES)[0]; G.hastPlats = "box"; G.npcs = [];
   const dt = 1 / 240;
   G.ride = nyState(G.dagsform, 0.5, G.sadellage);
-  G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0; ridNollstallHjalp();
+  G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0; G._fastDt = 0; ridNollstallHjalp();
   /* Klocka allt utifrån, oberoende av vad modellen påstår. */
   let t0 = null, tSvar = null, tGang = null, tOv = null;
   for (let i = 0; i < 240 * 4; i++) {
@@ -798,7 +801,7 @@ const volt20 = await page.evaluate(() => {
   const KN = ridKanon();
   const HB = KN.HAST_HALVBREDD, BB = KN.BANA_BREDD;
   const nyRitt = (x, y, r) => { G.ride = nyState(G.dagsform, 0.5, G.sadellage);
-    G.px = x; G.py = y; G.rikt = r; G.kappa = 0; ridNollstallHjalp(); };
+    G.px = x; G.py = y; G.rikt = r; G.kappa = 0; G._fastDt = 0; ridNollstallHjalp(); };
   const kor = (o, sek) => { for (let i = 0; i < sek * 60; i++) {
     RIDIN.skankel = o.skankel ?? 0; RIDIN.tygel = o.tygel ?? 0; RIDIN.sits = o.sits ?? 0;
     RIDIN.styr = o.styr ?? 0; RIDIN.parad = o.parad ?? 0; stegaRitt(dt); } };
@@ -903,6 +906,491 @@ const volt20 = await page.evaluate(() => {
 }
 
 /* ══════════════════════════════════════════════════════════════════
+   D1 (ridmekanik-grind 0.2, motor-engineering): HÄSTEN FASTNAR ALDRIG
+   PERMANENT I ETT HÖRN
+
+   Uppmätt bugg: en nybörjare som bad om skritt och sedan släppte ALLA
+   hjälper (ingen styrning alls) körde in i ett hörn och satt fast där
+   permanent i 18 av 18 försök, mätt efter ~25 s. Orsaken låg i
+   stegaRitt (src/game.js): de två en-väggs-grenarna kördes efter
+   varandra, och vid ett riktigt hörn skrev den andra grenen över den
+   första grenens riktning med ett tie-break som jämförde SAMMA
+   bildrutas redan klippta position mot FÖREGÅENDE bildrutas — i ett
+   hörn nästan identiska, så tie-breaket kunde peka rakt in i hörnet
+   lika ofta som ut ur det.
+
+   Provet startar hästen rakt i hörnet (låg x, låg y), riktad in i det,
+   ber om skritt två gånger ("W, W") och släpper sedan all styrning i
+   60 simulerade sekunder — exakt nybörjarfallet ur arbetsordern. Hon
+   ska vända bort och fortsätta röra sig; hon får aldrig stå och nupa
+   i hörnet resten av passet. ══════════════════════════════════════ */
+const horn = await page.evaluate(() => {
+  G.hastId = G.hastId || Object.keys(HORSES)[0]; G.hastPlats = "box"; G.npcs = [];
+  const dt = 1 / 60;
+  const KN = ridKanon();
+  const HB = KN.HAST_HALVBREDD;
+  G.ride = nyState(G.dagsform, 0.5, G.sadellage);
+  G.px = HB + 0.05; G.py = HB + 0.05; G.rikt = -3 * Math.PI / 4; G.kappa = 0; G._fastDt = 0;
+  ridNollstallHjalp();
+  const satt = (o) => { RIDIN.skankel = o?.skankel ?? 0; RIDIN.tygel = o?.tygel ?? 0;
+    RIDIN.sits = o?.sits ?? 0; RIDIN.styr = o?.styr ?? 0; RIDIN.parad = o?.parad ?? 0; };
+  const stega = (sek) => { for (let i = 0; i < Math.round(sek * 60); i++) stegaRitt(dt); };
+  /* "W, W": två framåtimpulser mot skritt. Därefter ingenting — aldrig
+     mer styrning, exakt nybörjaren som släpper allt. */
+  satt({ skankel: 1 }); stega(0.5);
+  satt({});             stega(0.3);
+  satt({ skankel: 1 }); stega(0.5);
+  satt({});
+  const spar = [];
+  for (let i = 0; i < 60 * 60; i++) { stegaRitt(dt); spar.push([G.px, G.py]); }
+  const sistaTio = spar.slice(-600);
+  let strackaSista = 0;
+  for (let i = 1; i < sistaTio.length; i++)
+    strackaSista += Math.hypot(sistaTio[i][0] - sistaTio[i - 1][0], sistaTio[i][1] - sistaTio[i - 1][1]);
+  const slut = spar[spar.length - 1];
+  const avstFranHorn = Math.hypot(slut[0] - HB, slut[1] - HB);
+  return { strackaSista, avstFranHorn, gangart: G.ride.gangart, slut };
+});
+prova("nybörjarritt mot ett hörn: fastnar aldrig permanent (W, W, sedan ingen styrning, 60 s)",
+  horn.strackaSista > 1.0 && horn.avstFranHorn > 1.0,
+  `sista 10 s: ${nf(horn.strackaSista, 2)} m rest · ${nf(horn.avstFranHorn, 2)} m från hörnet · ` +
+  `${horn.gangart} vid (${nf(horn.slut[0], 2)}, ${nf(horn.slut[1], 2)})`);
+
+/* ══════════════════════════════════════════════════════════════════
+   D2 (ridmekanik-grind 0.2): "HALT" ÄR STILLASTÅENDE
+
+   Uppmätt bugg: i halt gled hästen 6,8 cm/s — ett STABILT, inte
+   avklingande, läckage. Orsaken låg i src/model.js: tempots mål
+   (`mal`) klampades till lägst 0, men formeln adderade fortfarande
+   spänning × framåtbjudning ovanpå ett redan nollat `eget`, så en
+   stilla men lite spänd häst med god framåtbjudning jagade ett litet
+   men stadigt positivt mål och stod aldrig riktigt still.
+
+   Provet ber om skritt, släpper sedan allt och låter henne falla
+   tillbaka till halt av sig själv (ingen hjälp alls, exakt
+   nybörjarfallet igen), väntar tills gångarten verkligen räknas som
+   halt, och mäter sedan hur långt hon rör sig på 30 sekunder. ═══════ */
+const haltStilla = await page.evaluate(() => {
+  G.hastId = G.hastId || Object.keys(HORSES)[0]; G.hastPlats = "box"; G.npcs = [];
+  const dt = 1 / 60;
+  G.ride = nyState(G.dagsform, 0.5, G.sadellage);
+  G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0; G._fastDt = 0; ridNollstallHjalp();
+  const satt = (o) => { RIDIN.skankel = o?.skankel ?? 0; RIDIN.tygel = o?.tygel ?? 0;
+    RIDIN.sits = o?.sits ?? 0; RIDIN.styr = o?.styr ?? 0; RIDIN.parad = o?.parad ?? 0; };
+  satt({ skankel: 1 }); for (let i = 0; i < 60; i++) stegaRitt(dt);
+  /* Hon BÄR gångarten vidare tills en nedåtgående hjälp ber om annat
+     (samma kontrakt som "slicen: hästen BÄR skritten" ovan) — att bara
+     släppa allt håller henne alltså i skritt för evigt, det är inte
+     buggen. Be om halt med samma nedåtcue som "halt igen" längre ned i
+     filen (tygel+sits), håll den tills hon verkligen når halt (ett
+     rejält tak så provet inte hänger om den av någon anledning inte
+     gör det), och släpp DÄREFTER allt — det är när tyglarna släpps
+     efter en lydd halt som läckaget mättes. */
+  satt({ tygel: 1, sits: 1 });
+  /* Vänta på att TEMPOT faktiskt nollställs (D2:s snäpp under 0,02 m/s),
+     inte bara på att gångartsetiketten byter till "halt" — den etiketten
+     (Gait.forTempo) slår om redan vid 0,25 m/s, ett bra tag innan hon
+     verkligen stannat, och mätningen ska gälla STILLASTÅENDE, inte
+     bromssträckans sista decimeter. */
+  for (let i = 0; i < 10 * 60 && G.ride.tempo !== 0; i++) stegaRitt(dt);
+  satt({});
+  const naddeHalt = G.ride.gangart === "halt" && G.ride.tempo === 0;
+  const x0 = G.px, y0 = G.py;
+  let maxAvst = 0;
+  for (let i = 0; i < 30 * 60; i++) {
+    stegaRitt(dt);
+    const d = Math.hypot(G.px - x0, G.py - y0);
+    if (d > maxAvst) maxAvst = d;
+  }
+  return { naddeHalt, maxAvst, gangart: G.ride.gangart, tempo: G.ride.tempo };
+});
+prova("halt: hästen rör sig mindre än 1 cm på 30 sekunder utan hjälper",
+  haltStilla.naddeHalt && haltStilla.gangart === "halt" && haltStilla.maxAvst < 0.01,
+  `nådde halt: ${haltStilla.naddeHalt} · ${nf(haltStilla.maxAvst * 100, 2)} cm på 30 s · ` +
+  `tempo ${nf(haltStilla.tempo, 4)} m/s`);
+
+/* ══════════════════════════════════════════════════════════════════
+   D3 (ridmekanik-grind 0.3): TANGENTBORDET KAN RIDA SKOLFIGURER
+
+   Uppmätt bugg: InputFeel.RIDE.digitalGain (0,42) var ett PERMANENT tak
+   på tangentbordsstyrningen i src/input-feel.js, oavsett hur länge A/D
+   hölls. Räknat ur samma kedja provet mäter: full digital styrning gav
+   RIDIN.styr högst 0,42, G.aids.styrning högst 0,42×0,72=0,3024 och
+   därmed kappaBegard högst 0,3024×kappaTak — i skritt (kappaTak≈0,42
+   vid medelsmidig häst) en minsta radie på ~7,9 m, alltså en volt på
+   minst ~15,7 m i diameter. En 10 m volt (radie 5 m) gick aldrig att
+   rida på tangentbord, hur länge man än höll.
+
+   Fixen i src/input-feel.js låter ett HÅLLET tryck trappa upp mot full
+   styrka (digitalGain → 1,0) efter 0,3 s. Med full styrning blir
+   kappaBegard 0,72×kappaTak — i skritt ~0,30 (radie ~3,3 m) och i trav
+   ~0,25 (radie ~4,0 m), båda klart innanför en 10 m volt.
+
+   Provet rider DIGITALT — IN.styrDigital sätts direkt, som ett riktigt
+   tangenttryck, i stället för att skriva RIDIN.styr rakt av (som
+   volt20/ridVolt ovan gör) — så att HELA kedjan mäts (InputFeel.ride →
+   RIDIN.styr → ridAvsiktTillHjalp → G.aids.styrning → kappaBegard),
+   inte bara styrlagret isolerat (det gör redan
+   tools/control-feel-test.mjs, som också vaktar att korta tryck
+   fortfarande bara ger den lilla nyansen). ══════════════════════════ */
+const digitalVolt = await page.evaluate(() => {
+  G.hastId = G.hastId || Object.keys(HORSES)[0]; G.hastPlats = "box"; G.npcs = [];
+  const dt = 1 / 60;
+  const nyRitt = () => { G.ride = nyState(G.dagsform, 0.5, G.sadellage);
+    G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0; G._fastDt = 0; ridNollstallHjalp(); };
+  const impuls = () => { RIDIN.skankel = 1; for (let i = 0; i < 30; i++) stegaRitt(dt);
+    RIDIN.skankel = 0; for (let i = 0; i < 18; i++) stegaRitt(dt); };
+  /* Rider en figur med A/D HÅLLET (IN.styrDigital), inte en skriven
+     RIDIN.styr — ett FULLT håll (≫ rampens tröskel 0,3 s), för de täta
+     voltarna. */
+  const figur = (gangarter, hallSek, varvSek) => {
+    nyRitt();
+    for (let k = 0; k < gangarter; k++) impuls();
+    RIDIN.skankel = 0.35; RIDIN.tygel = 0.20;
+    IN.styrDigital = 1;
+    for (let i = 0; i < Math.round(hallSek * 60); i++) stegaRitt(dt);
+    const pts = [];
+    for (let i = 0; i < Math.round(varvSek * 60); i++) {
+      stegaRitt(dt);
+      if (i % 4 === 0) pts.push([G.px, G.py]);
+    }
+    IN.styrDigital = 0;
+    return { pts, gangart: G.ride.gangart, kappa: G.kappa, styrning: G.aids.styrning };
+  };
+  /* Den lösa cirkeln rids med UPPREPADE KORTA tryck (på/av, aldrig över
+     rampens 0,3 s-tröskel i ett svep) genom HELA varvet, i stället för
+     ett enda långt håll avbrutet av en kort väntan — annars mäter
+     "kort" bara en fördröjd start på samma långa håll, och provet mäter
+     exakt samma sak som voltarna ovan (fånget en gång: 0,15 s "väntan"
+     följt av 10 s FORTSATT hållet A/D gav samma diameter som ett fullt
+     håll). Varje släpp nollställer IN.styrHallt (src/game.js), så
+     styrkan stannar på digitalGain hela varvet — precis det oförändrade
+     "korta tryck ger små korrigeringar"-kontraktet. */
+  const figurPuls = (gangarter, paSek, avSek, varvSek) => {
+    nyRitt();
+    for (let k = 0; k < gangarter; k++) impuls();
+    RIDIN.skankel = 0.35; RIDIN.tygel = 0.20;
+    const pts = []; let maxStyrning = 0;
+    const total = Math.round(varvSek * 60);
+    for (let i = 0; i < total;) {
+      IN.styrDigital = 1;
+      for (let j = 0; j < Math.round(paSek * 60) && i < total; j++, i++) {
+        stegaRitt(dt); maxStyrning = Math.max(maxStyrning, Math.abs(G.aids.styrning));
+        if (i % 4 === 0) pts.push([G.px, G.py]);
+      }
+      IN.styrDigital = 0;
+      for (let j = 0; j < Math.round(avSek * 60) && i < total; j++, i++) {
+        stegaRitt(dt); maxStyrning = Math.max(maxStyrning, Math.abs(G.aids.styrning));
+        if (i % 4 === 0) pts.push([G.px, G.py]);
+      }
+    }
+    return { pts, gangart: G.ride.gangart, kappa: G.kappa, styrning: G.aids.styrning, maxStyrning };
+  };
+  const skritt = figur(1, 3, 20);                    // halt→skritt, hållet länge
+  const trav = figur(2, 3, 15);                      // halt→skritt→trav, hållet länge
+  const los = figurPuls(2, 0.2, 0.15, 14);            // trav, upprepade korta tryck
+  const galopp = figur(3, 3, 8);                      // halt→skritt→trav→galopp, hållet länge
+  return { skritt, trav, los, galopp };
+});
+{
+  const d = digitalVolt;
+  const skritt = cirkel(d.skritt.pts), trav = cirkel(d.trav.pts), los = cirkel(d.los.pts);
+  prova("tangentbordet: 10 m volt går att rida i skritt (hållet A/D)",
+    d.skritt.gangart === "skritt" && 2 * skritt.r < 10.5 && skritt.max < 0.3,
+    `diameter ${nf(2 * skritt.r, 2)} m · avvikelse ${nf(skritt.max * 100, 1)} cm · ` +
+    `styrning ${nf(d.skritt.styrning, 3)} · κ ${nf(Math.abs(d.skritt.kappa), 4)}`);
+  prova("tangentbordet: 10 m volt går att rida i trav (hållet A/D)",
+    d.trav.gangart === "trav" && 2 * trav.r < 10.5 && trav.max < 0.3,
+    `diameter ${nf(2 * trav.r, 2)} m · avvikelse ${nf(trav.max * 100, 1)} cm · ` +
+    `styrning ${nf(d.trav.styrning, 3)} · κ ${nf(Math.abs(d.trav.kappa), 4)}`);
+  /* Den fitta cirkeln genom ett pulsat spår är i sig naturligt flikig
+     (styrningen kopplas av och på var 0,2–0,35 s, inte ett jämnt
+     svep), så los.max (avvikelsen mot en perfekt cirkel) mäter inte
+     mjukhet här — det gör i stället TAKET på styrningen under hela
+     passet: håller sig den vid digitalGain-nivån (inget tryck hinner
+     över rampens 0,3 s-tröskel innan det släpps) är kontraktet "korta
+     tryck förblir små korrigeringar" intakt. */
+  const korttryckTak = 0.42 * 0.72;
+  prova("tangentbordet: upprepade korta tryck förblir små korrigeringar (ingen smygramp)",
+    d.los.gangart === "trav" && d.los.maxStyrning < korttryckTak + 0.05 && 2 * los.r > 10.5,
+    `störst styrning under passet ${nf(d.los.maxStyrning, 3)} (taket för korta tryck är ` +
+    `${nf(korttryckTak, 3)}) · diameter ${nf(2 * los.r, 2)} m, lösare än de hållna voltarna ovan`);
+  prova("tangentbordet: ett galoppvarv hålls stabilt och i gångart",
+    d.galopp.gangart === "galopp" && d.galopp.pts.length > 100,
+    `${d.galopp.pts.length} punkter i galopp · styrning ${nf(d.galopp.styrning, 3)} · ` +
+    `κ ${nf(Math.abs(d.galopp.kappa), 4)}`);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   VARV, FATTNING OCH HALSENS STÄLLNING (rörelse-grind 0.4, C1/C2)
+
+   tools/gangposetest.mjs mäter benföljden och halsen som rena
+   funktioner. Här mäts det som bara den körande ridloopen kan visa:
+   att den väljer RÄTT varv och fattning ur en riktig ritt, och att
+   halsen ställs mot den volt hästen faktiskt rider.
+
+   Voltens mitt MÄTS ur spåret (medelpunkten av ett varv) — den räknas
+   inte ur krökningens tecken, för det tecknet är just det som provas.
+   Galoppen fattas INNE i volten, så som man gör det på en lektion. ── */
+const varvProv = await page.evaluate(() => {
+  G.hastId = G.hastId || Object.keys(HORSES)[0]; G.hastPlats = "box"; G.npcs = [];
+  const dt = 1 / 60;
+  const impuls = () => { RIDIN.skankel = 1; for (let i = 0; i < 30; i++) stegaRitt(dt);
+    RIDIN.skankel = 0; for (let i = 0; i < 18; i++) stegaRitt(dt); };
+  const kor = (styr) => {
+    G.ride = nyState(G.dagsform, 0.5, G.sadellage);
+    G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0; G._fastDt = 0;
+    G.varv = null; G.fattning = null; ridNollstallHjalp();
+    impuls(); impuls();                                   // trav
+    RIDIN.skankel = 0.35; RIDIN.tygel = 0.20; IN.styrDigital = styr;
+    for (let i = 0; i < 240; i++) stegaRitt(dt);          // in i volten
+    const fattningITrav = G.fattning;
+    impuls();                                             // galoppfattning i bågen
+    RIDIN.skankel = 0.35;
+    const pts = []; const fattningar = new Set();
+    /* Fattningen läses bara medan hon GALOPPERAR: impulsen ber om
+       galopp, och övergången tar några bildrutor i trav först. */
+    for (let i = 0; i < 600; i++) { stegaRitt(dt); pts.push([G.px, G.py]);
+      if (G.ride.gangart === "galopp") fattningar.add(G.fattning); }
+    const gangart = G.ride.gangart;
+    const cx = pts.reduce((a, p) => a + p[0], 0) / pts.length, cy = pts.reduce((a, p) => a + p[1], 0) / pts.length;
+    /* Kartans regel: högervektorn till kursen (fx, fy) är (fy, −fx). */
+    const mx = cx - G.px, my = cy - G.py, ml = Math.hypot(mx, my) || 1;
+    const mittTillHoger = (mx * Math.sin(G.rikt) - my * Math.cos(G.rikt)) / ml;
+    const e = s3MittEkipage();
+    const bojd = s3HuvudPunkt(e), rak = s3HuvudPunkt({ ...e, bojning: 0 });
+    const inat = ((bojd.x - rak.x) * mx + (bojd.z - rak.z) * my) / ml;
+    const varv = G.varv, kappa = G.kappa;
+    /* Ner till trav: fattningen ska släppas. */
+    IN.styrDigital = 0; RIDIN.skankel = 0; RIDIN.tygel = 1; RIDIN.sits = 1;
+    let slappt = false;
+    for (let i = 0; i < 600 && !slappt; i++) { stegaRitt(dt); if (G.ride.gangart !== "galopp") slappt = G.fattning === null; }
+    RIDIN.tygel = 0; RIDIN.sits = 0; ridNollstallHjalp(); G.varv = null; G.fattning = null;
+    return { gangart, varv, kappa, mittTillHoger, inat, fattningITrav, fattningar: [...fattningar], slappt };
+  };
+  return { a: kor(1), b: kor(-1) };
+});
+{
+  const namn = (v) => (v.mittTillHoger > 0 ? "hoger" : "vanster");
+  for (const v of [varvProv.a, varvProv.b]) {
+    const sida = namn(v);
+    prova(`varv och fattning: galopp fattad i en ${sida === "hoger" ? "höger" : "vänster"}volt får ${sida === "hoger" ? "höger" : "vänster"} fattning och håller den`,
+      v.gangart === "galopp" && Math.abs(v.mittTillHoger) > 0.5 && v.varv === sida &&
+      v.fattningar.length === 1 && v.fattningar[0] === sida && v.fattningITrav === null,
+      `uppmätt mitt ${nf(v.mittTillHoger, 2)} (>0 = höger om kursen) · varv ${v.varv} · fattning ${v.fattningar.join("/")} · κ ${nf(v.kappa, 3)}`);
+    prova(`halsen: ställd mot den ${sida === "hoger" ? "högra" : "vänstra"} voltens uppmätta mitt`,
+      v.inat > 0.03 && v.inat < 0.25, `huvudet ${nf(v.inat * 100, 1)} cm inåt`);
+    prova("fattningen släpps när galoppen lämnas", v.slappt === true);
+  }
+  prova("varv och fattning: de två voltarna gick åt var sitt håll (provet mäter båda)",
+    namn(varvProv.a) !== namn(varvProv.b));
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   DEN VISUELLA GÅNGARTEN OCH ÖVERGÅNGARNA (rörelse-grind 0.4, C3)
+
+   Tre fel i bilden, alla uppmätta före ändringen: gångartsbytet poppade
+   på en bildruta, hon gled ur halt med stilla ben, och fastklämd mot
+   sargen galopperade benen på stället.
+
+   Först den rena regeln (ridVisGang) med syntetiska tal vid 30 och 120
+   bilder per sekund, sedan en riktig ritt genom den körande loopen —
+   med en KONTROLLMÄTNING: samma ritt ritad utan korsblandning. Är inte
+   hoppet tydligt större där mäter provet ingenting. ── */
+const visProv = await page.evaluate(() => {
+  const CYK = { skritt: 1.61, trav: 2.21, galopp: 3.5 };
+  const regel = (fps) => {
+    const dt = 1 / fps, V = ridVisNy(), ut = [];
+    /* etikett, markfart, tempo, sekunder */
+    const led = [["halt", 0, 0, 1], ["skritt", 1.5, 1.5, 2], ["trav", 3.2, 3.2, 2], ["galopp", 5.6, 5.6, 2],
+      ["galopp", 0, 5.6, 2], ["halt", 0.3, 0.2, 1.5], ["halt", 0, 0, 1.5]];
+    for (const [et, mf, tempo, sek] of led) {
+      let klar = null, summaFel = 0, storstSteg = 0, forr = ridVisVikter(V);
+      const n = Math.round(sek * fps);
+      for (let i = 0; i < n; i++) {
+        ridVisGang(V, et, mf, tempo, CYK[et] || 0, dt);
+        const w = ridVisVikter(V);
+        summaFel = Math.max(summaFel, Math.abs(Object.values(w).reduce((a, b) => a + b, 0) - 1));
+        for (const g in w) storstSteg = Math.max(storstSteg, Math.abs(w[g] - forr[g]) / dt);
+        forr = w;
+        if (klar === null && w[V.mal] > 0.999) klar = (i + 1) * dt;
+      }
+      ut.push({ et, mf, mal: V.mal, vikt: ridVisVikter(V)[V.mal], klar, summaFel, storstSteg });
+    }
+    return ut;
+  };
+  /* En riktig ritt: halt → skritt → trav → galopp → halt. Varje bildruta
+     läses hovarnas läge i hästens EGET rum (kota minus fäste), dels som
+     det ritas, dels som det hade ritats utan korsblandning. */
+  G.hastId = G.hastId || Object.keys(HORSES)[0]; G.hastPlats = "box"; G.npcs = [];
+  const dt = 1 / 60;
+  G.ride = nyState(G.dagsform, 0.5, G.sadellage);
+  G.px = 4; G.py = 30; G.rikt = 0; G.kappa = 0; G._fastDt = 0;
+  G.varv = null; G.fattning = null; G.visGang = null; G.visCykel = 0; G.visFattning = null; G.gaitFas = 0;
+  ridNollstallHjalp();
+  const lokalt = (o) => { const K = s3HastKropp(o), b = s3BenPunkter(o, K, s3HastBas({ ...o, x: 0, z: 0, rikt: 0 }, K));
+    return b.map((v) => [v.kota[0], v.kota[1]]); };
+  /* Hoppet mäts för sig UNDER ett byte och i ren gångart: en galopperande
+     hov flyttar sig redan ~15 cm per bildruta, så taket för ett byte är
+     gångartens egen rörelse, inte ett tal ur luften. */
+  let forrMed = null, forrUtan = null, hoppMed = 0, hoppUtan = 0, hoppStadig = 0;
+  let glidUrHalt = 0, fasUrHalt = 0, haltMedFart = 0;
+  const steg = () => {
+    const fas0 = G.gaitFas; stegaRitt(dt);
+    const e = s3MittEkipage();
+    const med = lokalt(e), utan = lokalt({ ...e, gangVikt: undefined });
+    const iByte = Math.max(...Object.values(e.gangVikt)) < 0.999;
+    if (forrMed) for (let i = 0; i < 4; i++) {
+      const dMed = Math.hypot(med[i][0] - forrMed[i][0], med[i][1] - forrMed[i][1]);
+      if (iByte) hoppMed = Math.max(hoppMed, dMed); else hoppStadig = Math.max(hoppStadig, dMed);
+      hoppUtan = Math.max(hoppUtan, Math.hypot(utan[i][0] - forrUtan[i][0], utan[i][1] - forrUtan[i][1]));
+    }
+    forrMed = med; forrUtan = utan;
+    if (G.ride.gangart === "halt" && G.visGang.fart > 0.1) {
+      haltMedFart++;
+      if (G.visGang.mal === "skritt") glidUrHalt++;
+      let d = G.gaitFas - fas0; if (d < 0) d += 1; fasUrHalt += d;
+    }
+  };
+  const impuls = () => { RIDIN.skankel = 1; for (let i = 0; i < 30; i++) steg(); RIDIN.skankel = 0; for (let i = 0; i < 18; i++) steg(); };
+  for (let i = 0; i < 30; i++) steg();
+  const gangarter = [];
+  for (let k = 0; k < 3; k++) { impuls(); RIDIN.skankel = 0.35; for (let i = 0; i < 90; i++) steg(); gangarter.push(G.ride.gangart); }
+  RIDIN.skankel = 0; RIDIN.tygel = 1; RIDIN.sits = 1;
+  for (let i = 0; i < 420; i++) steg();
+  const slut = { gangart: G.ride.gangart, mal: G.visGang.mal, vikt: ridVisVikter(G.visGang).halt };
+  RIDIN.tygel = 0; RIDIN.sits = 0; ridNollstallHjalp();
+  G.varv = null; G.fattning = null; G.visGang = null; G.visCykel = 0; G.visFattning = null;
+  return { a: regel(30), b: regel(120), hoppMed, hoppUtan, hoppStadig, gangarter, slut, glidUrHalt, fasUrHalt, haltMedFart };
+});
+{
+  const [halt0, skritt, trav, galopp, kland, kryp, stilla] = visProv.a;
+  prova("visuell gångart: följer etiketten när hon rör sig (skritt, trav, galopp)",
+    skritt.mal === "skritt" && trav.mal === "trav" && galopp.mal === "galopp" && halt0.mal === "halt" &&
+    [skritt, trav, galopp].every((v) => v.vikt > 0.999),
+    `${[halt0, skritt, trav, galopp].map((v) => v.mal).join(" → ")}`);
+  prova("visuell gångart: fastklämd (etikett galopp, markfart 0) ritas som HALT",
+    kland.mal === "halt" && kland.vikt > 0.999, `mål ${kland.mal}, vikt ${nf(kland.vikt, 3)} efter ${nf(kland.klar, 2)} s`);
+  prova("visuell gångart: rör hon sig med etiketten «halt» ritas SKRITT, och står hon still blir det halt igen",
+    kryp.mal === "skritt" && kryp.vikt > 0.999 && stilla.mal === "halt" && stilla.vikt > 0.999,
+    `0,3 m/s → ${kryp.mal} · 0 m/s → ${stilla.mal}`);
+  const alla = [...visProv.a, ...visProv.b];
+  prova("övergång: vikterna summerar till 1 och ändras aldrig fortare än ett helt byte på 0,15 s",
+    alla.every((v) => v.summaFel < 1e-9 && v.storstSteg <= 1 / 0.15 + 1e-6),
+    `största ändring ${nf(Math.max(...alla.map((v) => v.storstSteg)), 2)} per s (tak ${nf(1 / 0.15, 2)})`);
+  prova("övergång: bytet tar ett halvt steg, 0,15–0,6 s med fartens utjämning",
+    [skritt, trav, galopp].every((v) => v.klar >= 0.15 && v.klar <= 0.6),
+    `skritt ${nf(skritt.klar, 2)} s · trav ${nf(trav.klar, 2)} s · galopp ${nf(galopp.klar, 2)} s`);
+  let storstSkillnad = 0;
+  for (let i = 0; i < visProv.a.length; i++)
+    storstSkillnad = Math.max(storstSkillnad, Math.abs((visProv.a[i].klar || 0) - (visProv.b[i].klar || 0)));
+  prova("övergång: samma förlopp vid 30 och 120 bilder per sekund",
+    storstSkillnad < 0.05 && visProv.a.every((v, i) => v.mal === visProv.b[i].mal),
+    `största skillnad i bytestid ${nf(storstSkillnad * 1000, 0)} ms`);
+  prova("övergång i en riktig ritt: hon red skritt → trav → galopp → halt",
+    visProv.gangarter.join(",") === "skritt,trav,galopp" && visProv.slut.gangart === "halt" &&
+    visProv.slut.mal === "halt" && visProv.slut.vikt > 0.999,
+    `${visProv.gangarter.join(" → ")} → ${visProv.slut.gangart} (ritad ${visProv.slut.mal})`);
+  prova("övergång i en riktig ritt: ingen hov hoppar mellan två bildrutor, och kontrollmätningen utan blandning gör det",
+    visProv.hoppMed > 0 && visProv.hoppMed <= visProv.hoppStadig * 1.25 && visProv.hoppUtan > visProv.hoppMed * 2,
+    `största hovflytt per bildruta under ett byte ${nf(visProv.hoppMed * 100, 1)} cm (i ren gångart ` +
+    `${nf(visProv.hoppStadig * 100, 1)} cm) — utan korsblandning ${nf(visProv.hoppUtan * 100, 1)} cm`);
+  prova("ur halt: benen går så fort hon rör sig, och fasen stegas",
+    visProv.haltMedFart > 0 && visProv.glidUrHalt === visProv.haltMedFart && visProv.fasUrHalt > 0.05,
+    `${visProv.haltMedFart} bildrutor med etiketten «halt» över 0,1 m/s — ${visProv.glidUrHalt} ritade som skritt, ` +
+    `fasen gick ${nf(visProv.fasUrHalt, 2)} varv`);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   SPRÅNGET (hopp-grind 0.5, D4)
+
+   Förut började språnget när hon korsade hindret: hon gick igenom bommen
+   på marken och flög sedan över tom sand, och varje hinder fick samma
+   1,15 m höga båge. Här rids ridhusets två stående hinder på riktigt —
+   genom stegaRitt, hinderregeln och språngets steg, i samma ordning som
+   spelets egen bildruta — och det som mäts är VAR hon är när hon lämnar
+   marken, når toppen och landar.
+
+   KONTROLLMÄTNING: samma ritt med den gamla regeln (hopp först när bommen
+   korsas). Ligger inte toppen långt efter hindret där mäter provet
+   ingenting. ── */
+const sprang = await page.evaluate(() => {
+  G.hastId = G.hastId || Object.keys(HORSES)[0]; G.hastPlats = "box"; G.npcs = [];
+  const dt = 1 / 60;
+  const hinder = RIDHUSINNE.hinder.filter((h) => h.h > 0.02);
+  const rid = (hi, impulser, gammal) => {
+    G.ride = nyState(G.dagsform, 0.5, G.sadellage);
+    G.plats = "ridhus"; G.px = hi.x; G.py = hi.y - 14; G.rikt = Math.PI / 2; G.kappa = 0; G._fastDt = 0;
+    G.varv = null; G.fattning = null; G.visGang = null; G.visCykel = 0; G.visFattning = null; G.gaitFas = 0;
+    G.luft = 0; G.luftT = 0; G.hoppLyft = 0; G.hoppVantar = null; ridNollstallHjalp();
+    let fore = null, avstamp = null, landning = null, topp = { y: null, bob: -1 }, bogForst = null;
+    let tid = 0, farten = 0;
+    const steg = () => {
+      stegaRitt(dt);
+      if (gammal) {                                    // gamla regeln: hopp när bommen korsas
+        if (fore && G.luft <= 0 && fore.y < hi.y && G.py >= hi.y) { G.luft = G.luftT = 0.55; G.hoppLyft = 0; }
+      } else ridHinderSprang(fore, dt);
+      const iLuften = G.luft > 0;
+      if (iLuften && avstamp === null) { avstamp = G.py; farten = G.ride.tempo; }
+      if (iLuften) {
+        tid += dt;
+        const e = s3MittEkipage(), K = s3HastKropp(e);
+        if (K.bob > topp.bob) topp = { y: G.py, bob: K.bob };
+        if (bogForst === null && K.u > 0.05) bogForst = K.lut > 0;
+      }
+      fore = { x: G.px, y: G.py };
+      ridHoppSteg(dt);
+      if (!iLuften && avstamp !== null && landning === null) landning = G.py;
+    };
+    for (let k = 0; k < impulser; k++) { RIDIN.skankel = 1; for (let i = 0; i < 30; i++) steg(); RIDIN.skankel = 0; for (let i = 0; i < 18; i++) steg(); }
+    RIDIN.skankel = 0.35;
+    for (let i = 0; i < 900 && landning === null; i++) steg();
+    const gangart = G.ride.gangart;
+    RIDIN.skankel = 0; ridNollstallHjalp(); G.luft = 0; G.luftT = 0; G.hoppLyft = 0; G.hoppVantar = null;
+    G.varv = null; G.fattning = null; G.visGang = null; G.visCykel = 0; G.visFattning = null;
+    return { hinderY: hi.y, hojd: hi.h, gangart, avstamp, landning, toppY: topp.y, lyft: topp.bob, bogForst, tid, farten };
+  };
+  /* Banans språng: begärt i avsprångszonen, startar vid avstampet. */
+  G.ride = nyState(G.dagsform, 0.5, G.sadellage);
+  G.px = 5; G.py = 30; G.rikt = 0; G.ride.tempo = 5.6; G.ride.gangart = "galopp"; G.ride.steglangd = 3.5;
+  G.luft = 0; G.hoppVantar = null;
+  const m = ridHoppMatt(0.6, 5.6, 3.5);
+  ridHoppBegar(5 + m.avstamp + 0.5, 30, 1, 0, 0.6);
+  ridHoppSteg(dt); const vantar = G.luft === 0 && !!G.hoppVantar;
+  G.px += 0.6; ridHoppSteg(dt); const startade = G.luft > 0 && !G.hoppVantar && Math.abs(G.luft - m.T) < 1e-9;
+  G.luft = 0; G.luftT = 0; G.hoppLyft = 0; G.hoppVantar = null;
+  return {
+    trav: rid(hinder[0], 2, false), galopp: rid(hinder[0], 3, false), lagt: rid(hinder[1], 3, false),
+    gammal: rid(hinder[0], 3, true), bana: { vantar, startade, matt: m },
+  };
+});
+{
+  for (const [namn, v] of [["trav", sprang.trav], ["galopp", sprang.galopp]]) {
+    const fore = v.hinderY - v.avstamp, efter = v.landning - v.hinderY, topp = v.toppY - v.hinderY;
+    prova(`språng i ${namn}: avstampet ligger FÖRE hindret och landningen efter`,
+      v.gangart === namn && fore > 0.3 && efter > 0.3,
+      `avstamp ${nf(fore, 2)} m före, landning ${nf(efter, 2)} m efter (${nf(v.farten, 1)} m/s, ${nf(v.tid, 2)} s i luften)`);
+    prova(`språng i ${namn}: toppen ligger över bommen`, Math.abs(topp) < 0.35,
+      `toppen ${nf(topp, 2)} m från hindret`);
+    prova(`språng i ${namn}: bogen stiger först`, v.bogForst === true);
+  }
+  const langdT = sprang.trav.landning - sprang.trav.avstamp, langdG = sprang.galopp.landning - sprang.galopp.avstamp;
+  prova("språng: bågen är längre i galopp än i trav (längden följer farten)", langdG > langdT * 1.2,
+    `trav ${nf(langdT, 2)} m · galopp ${nf(langdG, 2)} m`);
+  prova("språng: lyftet följer hinderhöjden — högre hinder, högre båge, och alltid över bommen",
+    sprang.galopp.lyft > sprang.lagt.lyft + 0.05 && sprang.galopp.lyft > sprang.galopp.hojd &&
+    sprang.lagt.lyft > sprang.lagt.hojd && sprang.galopp.lyft < sprang.galopp.hojd + 0.6,
+    `${nf(sprang.galopp.hojd, 2)} m hinder → ${nf(sprang.galopp.lyft, 2)} m lyft · ` +
+    `${nf(sprang.lagt.hojd, 2)} m hinder → ${nf(sprang.lagt.lyft, 2)} m lyft`);
+  const gTopp = sprang.gammal.toppY - sprang.gammal.hinderY, gFore = sprang.gammal.hinderY - sprang.gammal.avstamp;
+  prova("språng, kontrollmätning: med den gamla regeln börjar hoppet vid bommen och toppen hamnar långt efter",
+    gFore < 0.15 && gTopp > 1.0, `avstamp ${nf(gFore, 2)} m före, toppen ${nf(gTopp, 2)} m efter hindret`);
+  prova("banans språng: bilden väntar i avsprångszonen och startar vid avstampet",
+    sprang.bana.vantar && sprang.bana.startade,
+    `avstamp ${nf(sprang.bana.matt.avstamp, 2)} m före, ${nf(sprang.bana.matt.T, 2)} s, lyft ${nf(sprang.bana.matt.lyft, 2)} m`);
+}
+
+/* ══════════════════════════════════════════════════════════════════
    SÄTET SOM BALANSMODIFIERARE (senior review #87, blocker 1)
 
    #83 kräver vikt/säte som balansmodifierare. `vikt` fanns som ett
@@ -917,7 +1405,7 @@ const sate = await page.evaluate(() => {
   G.hastId = G.hastId || Object.keys(HORSES)[0]; G.hastPlats = "box"; G.npcs = [];
   const dt = 1 / 60;
   const nyRitt = () => { G.ride = nyState(G.dagsform, 0.5, G.sadellage);
-    G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0; ridNollstallHjalp(); };
+    G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0; G._fastDt = 0; ridNollstallHjalp(); };
   const kor = (o, sek) => { for (let i = 0; i < sek * 60; i++) {
     RIDIN.skankel = o.skankel ?? 0; RIDIN.tygel = o.tygel ?? 0; RIDIN.sits = o.sits ?? 0;
     RIDIN.styr = o.styr ?? 0; RIDIN.parad = o.parad ?? 0; stegaRitt(dt); } };
@@ -1213,10 +1701,39 @@ async function ridVolt(styrutslag, skankel, marginal) {
     G.hastPlats = "box";
     G.ride = nyState(G.dagsform, 0.5, G.sadellage);
     G.npcs = [];                                   // volten mäter styrning, inte trängsel
-    G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0;
+    G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0; G._fastDt = 0;
+    /* ridVolt saknade den här, till skillnad från varenda annan
+       ride-hjälpare i filen (nyRitt m.fl.): utan den ärver provet
+       IN.kan-glidningens (skänkel/tygel/sits/styrning) kvardröjande
+       värde från FÖREGÅENDE test i filen, och den resan — inte det
+       konstanta utslaget provet själv sätter — kan läsas som en
+       framåtimpuls. Uppmätt: samma ridVolt-anrop gav helt olika κ och
+       en ridd bana som inte alls var en cirkel beroende på vilket test
+       som råkade köras precis innan. */
+    ridNollstallHjalp();
     const h = HORSES[G.hastId];
     const dt = 1 / 60;                             // fast dt: mätningen ska inte bero på SwiftShader
     const satt = () => { RIDIN.skankel = skankel; RIDIN.styr = styrutslag; RIDIN.tygel = 0; RIDIN.sits = 0.5; };
+    /* En genuin impuls krävs för att be om nästa gångart (cue-systemet i
+       stepRide, src/model.js) — ett konstant, hållet utslag registrerar
+       ALDRIG som en ny begäran, hur högt det än ligger (se #273/G02-B:
+       "varje framåtdrivande IMPULS ber om nästa gångart"). Provet bad
+       därför aldrig uttryckligen om en gångart här, utan höll bara den
+       nyanserande, delvisa skänkeln `skankel` hela tiden.
+       Historiskt "fungerade" provet ändå, men bara av misstag: innan D2
+       (ridmekanik-grind 0.2) glömde "halt" aldrig riktigt bort sig —
+       spänning/framåtbjudning läckte in ett litet men stadigt mål även i
+       halt, och den läckan var vad som höll ekipaget i rörelse. Nu när
+       D2 är rättat (halt betyder verkligen noll, inget läckage) står hon
+       stilla för evigt utan en riktig begäran, och provet mätte en
+       cirkel genom en handfull identiska, stillastående punkter.
+       Rättelsen är att be på riktigt, precis som en spelare trycker W
+       två gånger (halt→skritt→trav), innan den hållna nyansen tar över
+       för resten av uppläggningen. */
+    const impuls = () => { RIDIN.skankel = 1; RIDIN.styr = styrutslag; RIDIN.tygel = 0; RIDIN.sits = 0.5; };
+    for (let i = 0; i < 60 * 0.5; i++) { impuls(); stegaRitt(dt); }
+    for (let i = 0; i < 60 * 0.3; i++) { satt(); stegaRitt(dt); }
+    for (let i = 0; i < 60 * 0.5; i++) { impuls(); stegaRitt(dt); }
 
     /* Upp i gångart och låt kurvaturen lägga sig — den tar tag med
        tidskonstant 0,13 s, så en tidig sampling mäter uppläggningen. */
@@ -1327,7 +1844,7 @@ const styr = await page.evaluate(() => {
      hur mycket kurvaturen någonsin skjuter förbi den. */
   const bage = (tryck) => {
     G.ride = nyState(G.dagsform, 0.5, G.sadellage);
-    G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0;
+    G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0; G._fastDt = 0;
     if (typeof ridNollstallHjalp === "function") ridNollstallHjalp();
     const kor = (sk, st, sek) => { for (let i = 0; i < sek * 60; i++) {
       RIDIN.skankel = sk; RIDIN.styr = st; RIDIN.tygel = 0; RIDIN.sits = 0;
@@ -1375,7 +1892,7 @@ prova("styrningen: kurvaturen sätter sig utan att skjuta över",
 const byte = await page.evaluate(() => {
   const dt = 1 / 60;
   const nyRitt = () => { G.ride = nyState(G.dagsform, 0.5, G.sadellage);
-    G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0;
+    G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0; G._fastDt = 0;
     if (typeof ridNollstallHjalp === "function") ridNollstallHjalp(); };
   const kor = (sk, st, sek, ut) => { for (let i = 0; i < sek * 60; i++) {
     RIDIN.skankel = sk; RIDIN.styr = st; RIDIN.tygel = 0; RIDIN.sits = 0;
@@ -1426,7 +1943,7 @@ const parad = await page.evaluate(() => {
     stegaRitt(dt); if (ut) ut(); } };
   const stopp = (aid) => {
     G.ride = nyState(G.dagsform, 0.5, G.sadellage);
-    G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0;
+    G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0; G._fastDt = 0;
     if (typeof ridNollstallHjalp === "function") ridNollstallHjalp();
     for (let n = 0; n < 3; n++) { kor({ skankel: 1 }, 1.5); kor({}, 1.0); }
     const fran = G.ride.tempo;
@@ -1447,7 +1964,7 @@ const parad = await page.evaluate(() => {
      P5 rör just den siffran — båda ändarna måste rymmas. */
   const forlopp = (aid) => {
     G.ride = nyState(G.dagsform, 0.5, G.sadellage);
-    G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0;
+    G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0; G._fastDt = 0;
     if (typeof ridNollstallHjalp === "function") ridNollstallHjalp();
     for (let n = 0; n < 3; n++) { kor({ skankel: 1 }, 1.5); kor({}, 1.0); }
     /* FÖRSTA förloppet, galopp→trav.
@@ -1536,7 +2053,7 @@ const kam = await page.evaluate(() => {
     RIDIN.sits = o.sits ?? 0; RIDIN.styr = o.styr ?? 0;
     stegaRitt(dt); s3Kamera(dt); } };
   const nyRitt = () => { G.ride = nyState(G.dagsform, 0.5, G.sadellage);
-    G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0; G.npcs = [];
+    G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0; G._fastDt = 0; G.npcs = [];
     S3.kam.satt = false; S3.kam.yaw = undefined;
     S3.kam.bak = undefined; S3.kam.fov = undefined;
     if (typeof ridNollstallHjalp === "function") ridNollstallHjalp(); };
@@ -1757,7 +2274,7 @@ const slice = await page.evaluate(() => {
   G.hastId = G.hastId || Object.keys(HORSES)[0];
   G.hastPlats = "box"; G.npcs = []; G.vy = "3d";
   G.ride = nyState(G.dagsform, 0.5, G.sadellage);
-  G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0;
+  G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0; G._fastDt = 0;
   if (typeof ridNollstallHjalp === "function") ridNollstallHjalp();
   ridSittUpp("bandit", "ridhus");
   const uppe = RID_TILLSTAND.uppsutten;

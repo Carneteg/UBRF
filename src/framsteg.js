@@ -305,9 +305,9 @@ function visaFardighetsSteg(id){
   el.textContent=`${k.namn} ${v} — ${k.text}`;
   el.classList.add("pa"); _blixtT=performance.now();
   /* Två stötar en kvint isär — kort, och bara när något faktiskt hänt. */
-  if(typeof ljudStot==="function"){
-    ljudStot(660,"sine",0.10,0.05);
-    setTimeout(()=>ljudStot(990,"sine",0.14,0.045),90);
+  if(typeof ljudTon==="function"){
+    ljudTon(660,0.10,0.05);
+    setTimeout(()=>ljudTon(990,0.14,0.045),90);
   }
   setTimeout(()=>{ if(performance.now()-_blixtT>1700)el.classList.remove("pa"); },1800);
 }

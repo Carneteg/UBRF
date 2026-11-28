@@ -44,7 +44,13 @@ Historiken står i `audits/`.
 | **Vågräta** runda reglar, luft emellan, fem st | `VERIFIED` | i05 | båda |
 | Lodräta ändstolpar upp till överliggaren | `VERIFIED` | i05 + i06 | båda |
 | Höjder 1,35 / 1,38 / 2,15 / 2,20 | `DERIVED` | spelets tidigare mått | delad data |
-| Dörrbladet är ett rutnät i en smalare sektion | `[REFERENCE GAP]` | i05 visar det, men inte var per box | modelleras inte |
+| Dörren är en **skjutdörr** som hänger i överliggaren och skjuts framför frontens fasta del när den öppnas | `VERIFIED` | Tobias besked 2026-11-28; tydligast i `stall-inne-06-boxen-inifran.jpg` (tagen FRÅN gången in i en öppen box: dörren skjuten åt höger framför den fasta delen, hjulupphängning på överliggaren); också `drive-2026-11-26/IMG_0151` (öppen box, dörren plant mot gången bredvid öppningen) och `IMG_0152` (boxen «Kennedy»: öppen dörr framför den fasta delens vågräta rör, öppning med strö till vänster) | webben bakom `?realism=1`, alltid stängd |
+| Dörröppningen sitter till **vänster** i fronten sett från gången, och dörren skjuts **åt höger** för att öppnas — samma i alla boxar och båda raderna | `VERIFIED` | Tobias besked 2026-11-28; `stall-inne-06`, `IMG_0152` | webben bakom `?realism=1` |
+| Dörrens överdel: en galvad ram med två tätt sittande lodräta plattstänger; ett vågrätt handtag och en egen kappregel ovanpå dörrpanelen | `VERIFIED` | `IMG_0152` (Kennedy) | webben bakom `?realism=1` |
+| Dörrens bredd 1,20 m | `ASSUMPTION` | ingen bild rakt framifrån; samma arbetsvärde som den delade datan | `identitet.stall.boxfront.dorr.bredd` |
+| **Avvikelse i den delade datan och Roblox:** `boxfront.dorr` beskriver en gångjärnsdörr som «slår UT i gången» (läst ur `stall-inne-06`) i fackets ände mot högre y, samma i båda raderna. Bilden visar en skjutdörr, och öppningen till vänster sett från gången ger olika ände i de två raderna | `KNOWN MISMATCH` | `stall-inne-06`, Tobias besked 2026-11-28 | Roblox `Anlaggningen.luau` och `src/site.js` — rättas i en egen leverans (båda plattformarna) |
+| Om dörren har egna vågräta pinnar i överdelen | `[REFERENCE GAP]` | i `IMG_0152` går den fasta delens rör bakom dörren och går inte att skilja från dörrens egna | modelleras utan pinnar |
+| Vilka dörrar som står öppna en vanlig dag | `[REFERENCE GAP]` | varierar i bilderna | alla stängda `[antagande]` |
 | Foderho på fronten | `[REFERENCE GAP]` | syns i i05 | modelleras inte |
 
 Metod för färgerna: ytan lokaliseras, beskärs, **tittas på**, och mäts
@@ -55,12 +61,18 @@ tröskeln sattes — de mätte tröskeln, inte panelen.
 
 | fakta | klass | källa | spelet |
 |---|---|---|---|
-| Limträstomme, tvärbalkar + snedstag + nockbalk | `VERIFIED` | i05 + i06 | båda |
+| Limträstomme: **lutande sparrar som följer takfallet**, lanternin längs nocken. Inga vågräta tvärbalkar och inga snedstag — rättad läsning 2026-11-26, se noten under tabellen | `VERIFIED` | i05 + `drive-2026-11-26/IMG_0146`, `IMG_0159` | **avviker** — spelet bygger tvärbalkar med snedstag |
 | Limträ `#AD8A70` | `MEASURED`, spridning ±0,15 | i05 `#987B65`, i06 `#C2987B` | `…stallgang.limtra` |
 | Korrugerad galvplåt som undertak | `VERIFIED` | i05 + i06 | båda |
 | Plåt `#70716E` | `MEASURED` | i05 `#6B6C68`, i06 `#767574` | `…stallgang.takplat` |
 | Takresning 2,1 m | `DERIVED` | flack sadel i bild, vinkel omätbar | `stall.takresning` |
 | Balkdelning var 4:e meter | `ASSUMPTION` | — | båda |
+
+> **Rättad rad (Batch 1.1, 2026-11-26).** Raden löd «Limträstomme, tvärbalkar +
+> snedstag + nockbalk». Samma bild som den hänvisade till, i05, visar lutande
+> sparrar och en lanternin i nocken, och det gör också de två nya bilderna.
+> Klassen `VERIFIED` står kvar för det bilderna visar; kolumnen «spelet» säger
+> nu att bygget avviker. Läsningen är min och inte bekräftad av produktägaren.
 
 De två bildrutorna skiljer sig **mycket** på limträet — taket är belyst
 olika. Medelvärdet är det ärliga enskilda värdet; spridningen står här så
@@ -96,7 +108,8 @@ gul och för ljus. Rätt åtgärd var att mäta den, inte att ta bort den.
 | Tvärgång mitt i boxhallen | `MEASURED` | plan | båda |
 | Tvärväggar på 0,72–0,755 av längden | `MEASURED` | plan | `klubbY` |
 | Namngivna rum ur utrymningsplanen | `VERIFIED` | plan | båda, som låga volymer |
-| Rummens inredning | `[REFERENCE GAP]` | i01–i04, i07 finns men är inte omsatta | — |
+| Rummens inredning | inventerad 2026-11-26, inte omsatt | `drive-2026-11-26/`, 28 bilder — se «Klubb- och servicedelens rum» i `KORT.md`; i01–i04, i07 | — |
+| Rummens läge i planen (vilket rum som är vilket) | `[REFERENCE GAP]` | bilderna visar innehållet, inte läget | — |
 | Klockan i gångens bortre ände | `VERIFIED` | IMG_0160 + i05 | båda |
 
 ### 7. Hästgången till ridhuset

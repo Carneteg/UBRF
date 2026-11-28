@@ -283,7 +283,7 @@ function ritaRitt2D(){
       markY-CH*0.030, hojd*djup, 0.92);
   }
 
-  if(h)r2Ekipage(CW*0.42, h, G.ride?G.ride.gangart:"halt", G.gaitFas, G.luft,
+  if(h)r2Ekipage(CW*0.42, h, G.ride?G.ride.gangart:"halt", G.gaitFas, ridLuftNorm(),
     G.aids, markY, hojd);
 
   r2Grastuvor();

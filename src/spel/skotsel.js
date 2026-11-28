@@ -275,5 +275,5 @@ const VISITFYND_EN={
 const VISITSVAR=[
   {t:"Säg till ridläraren", ratt:true,  tEn:"Tell the instructor"},
   {t:"Det går nog bra idag", ratt:false, tEn:"It will probably be fine today"},
-  {t:"Lös det själv och sadla", ratt:false, tEn:"Sort it out yourself and tack up"},
+  {t:"Lös det själv och rid ändå", ratt:false, tEn:"Sort it out yourself and ride anyway"},
 ];

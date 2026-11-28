@@ -121,7 +121,7 @@ const INTROSTEG=[
    sag:"Bra. Ta upp tygeln med Space och håll kvar — sikta på det gröna bandet.",
    klar:()=>G.aids&&G.aids.tygel>K.TYGEL_BAND_MIN&&G.aids.tygel<K.TYGEL_BAND_MAX},
   {id:"gang",
-   sag:"Där. Nu går hon. Känn hur hon rör sig under dig.",
+   sag:"Där. Nu går hästen. Känn rörelsen under dig.",
    klar:()=>G.ride&&G.ride.tempo>0.9},
   {id:"styr",
    sag:"Styr med A och D. Rid mot långsidan.",

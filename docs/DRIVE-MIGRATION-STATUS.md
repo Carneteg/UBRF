@@ -1,8 +1,19 @@
 # Drive migration status
 
-Updated: 2026-08-29
+Updated: 2026-11-26
 
 Goal: no build-critical UBRF task may require Google Drive access.
+
+## Status 2026-11-26
+
+The whole Drive folder is inventoried in `references/DRIVE-MANIFEST-2026-11-26.tsv`
+(211 photos, 24 videos, 64 other files). 185 photos resolve to a repository
+file; 26 photos and all 24 videos remain `[DRIVE-ONLY]` pending the club's
+consent (people, number plates or readable personal names in frame). `1.pdf`
+remains `[DRIVE-ONLY]` for copyright reasons and is covered by the verified
+summary in `references/education/`. The sections below are the 2026-08-29
+state and are kept as history; the folders listed as empty there now hold the
+Quaternius CC0 test model. See `docs/ASSET-SOURCE-OF-TRUTH.md`.
 
 ## Migrated
 

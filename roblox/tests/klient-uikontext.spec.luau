@@ -5,7 +5,7 @@
 
 	Ordern, ord för ord:
 
-	  "The top-right «Take care of her» progress card belongs to
+	  "The top-right «Take care of your horse» progress card belongs to
 	   horse-care/box mode only. It must NOT remain as a permanent riding
 	   HUD."
 
@@ -15,7 +15,7 @@
 	session:
 
 	  vid boxen, `halsa` på tur
-	      Sparare.Vaxla.Rubrik      "Greet her calmly"
+	      Sparare.Vaxla.Rubrik      "Greet your horse calmly"
 	      Sparare.Vaxla.Framsteg    "0/5"
 	      Sparare.Hjalp             "Walk up from the side. Say her
 	                                 name before you touch her."

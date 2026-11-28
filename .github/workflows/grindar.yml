@@ -161,6 +161,50 @@ jobs:
           test -f tools/handighetsgrind.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/handighetsgrind.mjs (steget 'Handigheten på webben')" >&2; exit 1; }
           node tools/handighetsgrind.mjs
 
+      # Kulningen (motor-engineering 0.1 / A1). Ett annat varv-fel än
+      # handigheten ovan: inte spegelvänd anläggning, utan svepta nät
+      # (s3Svep) och klossläget (glPlatta) vars LJUSNORMAL pekade inåt
+      # trots att själva triangelvarvet redan var rätt. Falsifierad med
+      # --muter-trasigt, som återinför de exakta rader som orsakade det.
+      - name: Kulningen — nätens ljusnormaler pekar utåt
+        run: |
+          set -euo pipefail
+          test -f tools/kullningsgrind.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/kullningsgrind.mjs (steget 'Kulningen — nätens ljusnormaler pekar utåt')" >&2; exit 1; }
+          node tools/kullningsgrind.mjs
+
+      # Bildtexturernas väg genom bygget (Batch 1.3, produktbeslut
+      # 2026-11-26: bildfiler får bäddas in, taket är 4 MB). Provet bygger
+      # till en tillfällig katalog med egna testbilder: taket, tvåpotenser,
+      # gränsen per fil och källkontrollen i KALLOR.tsv ska alla AVBRYTA
+      # bygget. Falsifierat med --muter-tak och --muter-kalla.
+      - name: Texturbygget — taket 4 MB och källkontrollen (Batch 1.3)
+        run: |
+          set -euo pipefail
+          test -f tools/testa-texturbygge.py || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/testa-texturbygge.py (steget 'Texturbygget — taket 4 MB och källkontrollen (Batch 1.3)')" >&2; exit 1; }
+          python3 tools/testa-texturbygge.py
+
+      # Gångposen (rörelse-grind 0.4 / C1–C3). Webbens häst läser nu
+      # benföljden ur samma GANGFAS-tabell som Roblox. Provet mäter mot
+      # ridlärans facit (inte mot tabellen själv): skritt i lateral
+      # fyrtakt, trav i diagonalpar med sväv, galopp i tretakt med sväv
+      # och fattning, EN uppresning per travcykel, bogen först i
+      # språnget. Falsifierad med --muter-fas, --muter-latt, --muter-hopp.
+      - name: Gångposen — hästen går i en riktig gångart
+        run: |
+          set -euo pipefail
+          test -f tools/gangposetest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/gangposetest.mjs (steget 'Gångposen — hästen går i en riktig gångart')" >&2; exit 1; }
+          node tools/gangposetest.mjs
+
+      # Ljudtakten (ljud-grind 0.6 / F1). Hovslagen läser samma rad i
+      # GANGFAS som benen: skritt fyra slag, trav två, galopp tre och en
+      # paus — lagda på ljudklockan, inte på bildrutan. Falsifierad med
+      # --muter-takt och --muter-klocka.
+      - name: Ljudtakten — hovslagen följer gångartens takt
+        run: |
+          set -euo pipefail
+          test -f tools/ljudtakttest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/ljudtakttest.mjs (steget 'Ljudtakten — hovslagen följer gångartens takt')" >&2; exit 1; }
+          node tools/ljudtakttest.mjs
+
       # PRE_TOBIAS_FIRST_PLAYABLE_GATE (processändringen på #162, 05:42).
       # Samlingsgrinden kör undergrindarna en gång till i ett svep och
       # producerar release evidence bundle + WORLD_MANIFEST. Den ligger
@@ -177,6 +221,12 @@ jobs:
           set -euo pipefail
           test -f references/CHECKSUMS.sha256 || { echo "OBLIGATORISK KONTROLL SAKNAS: references/CHECKSUMS.sha256 (steget 'Referenschecksummor')" >&2; exit 1; }
           cd references && sha256sum -c --quiet CHECKSUMS.sha256
+
+      - name: Referenserna och Drive-manifestet stämmer med filerna (Batch 0.13)
+        run: |
+          set -euo pipefail
+          test -f tools/kolla-referenser.py || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/kolla-referenser.py (steget 'Referenserna och Drive-manifestet stämmer med filerna (Batch 0.13)')" >&2; exit 1; }
+          python3 tools/kolla-referenser.py
 
       - name: Webbygget
         run: |
@@ -421,6 +471,60 @@ jobs:
           set -euo pipefail
           test -f tools/ridpaneltest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/ridpaneltest.mjs (steget 'P3 — ridpanelen (hierarki, meny, Text, tangenter, layout)')" >&2; exit 1; }
           node tools/ridpaneltest.mjs
+
+      - name: Avsittning bara från halt (Batch 0.11)
+        run: |
+          set -euo pipefail
+          test -f tools/avsittningtest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/avsittningtest.mjs (steget 'Avsittning bara från halt (Batch 0.11)')" >&2; exit 1; }
+          node tools/avsittningtest.mjs
+
+      - name: Strömbrytaren och bildrutemätaren ändrar ingenting (Batch 1.2)
+        run: |
+          set -euo pipefail
+          test -f tools/bildmataretest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/bildmataretest.mjs (steget 'Strömbrytaren och bildrutemätaren ändrar ingenting (Batch 1.2)')" >&2; exit 1; }
+          node tools/bildmataretest.mjs
+
+      - name: Stallgångens tak bakom strömbrytaren (Batch 1.6)
+        run: |
+          set -euo pipefail
+          test -f tools/stalltaktest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/stalltaktest.mjs (steget 'Stallgångens tak bakom strömbrytaren (Batch 1.6)')" >&2; exit 1; }
+          node tools/stalltaktest.mjs
+
+      - name: Bildtexturen från fil till grafikkort (Batch 1.3)
+        run: |
+          set -euo pipefail
+          test -f tools/texturtest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/texturtest.mjs (steget 'Bildtexturen från fil till grafikkort (Batch 1.3)')" >&2; exit 1; }
+          node tools/texturtest.mjs
+
+      - name: Linjär färg och provljuset bakom strömbrytaren (Batch 1.5)
+        run: |
+          set -euo pipefail
+          test -f tools/linjartest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/linjartest.mjs (steget 'Linjär färg och provljuset bakom strömbrytaren (Batch 1.5)')" >&2; exit 1; }
+          node tools/linjartest.mjs
+
+      - name: Mjuka figurer och hela hästar i de närmaste boxarna (Batch 1.8)
+        run: |
+          set -euo pipefail
+          test -f tools/boxhasttest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/boxhasttest.mjs (steget 'Mjuka figurer och hela hästar i de närmaste boxarna (Batch 1.8)')" >&2; exit 1; }
+          node tools/boxhasttest.mjs
+
+      - name: Innerljuset i stallgången — ljuskartan (Batch 1.7)
+        run: |
+          set -euo pipefail
+          test -f tools/ljuskartatest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/ljuskartatest.mjs (steget 'Innerljuset i stallgången — ljuskartan (Batch 1.7)')" >&2; exit 1; }
+          node tools/ljuskartatest.mjs
+
+      - name: Stallgångens fotomaterial (Batch 1.4)
+        run: |
+          set -euo pipefail
+          test -f tools/fototexturtest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/fototexturtest.mjs (steget 'Stallgångens fotomaterial (Batch 1.4)')" >&2; exit 1; }
+          node tools/fototexturtest.mjs
+
+      - name: Stallets skjutdörrar bakom strömbrytaren
+        run: |
+          set -euo pipefail
+          test -f tools/boxdorrtest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/boxdorrtest.mjs (steget 'Stallets skjutdörrar bakom strömbrytaren')" >&2; exit 1; }
+          node tools/boxdorrtest.mjs
 
       - name: P3 — kameran efter en flytt (Kimi Q4)
         run: |

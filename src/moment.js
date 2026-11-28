@@ -208,7 +208,7 @@ function hovDrag(p){
      lämnar hoven halvfärdig. Först vid 94 % är den klar och stängs. */
   if(HOV.ren>=0.94){
     SK.hovar[HOV.i]=1;
-    if(typeof ljudStot==="function")ljudStot(720,"sine",0.10,0.05);
+    if(typeof ljudTon==="function")ljudTon(720,0.10,0.05);
     setTimeout(hovStang,420);
   }else SK.hovar[HOV.i]=Math.max(SK.hovar[HOV.i],HOV.ren);
 }
@@ -385,12 +385,12 @@ function ryktDrag(p,f){
     if(!RYKTKRAV[z.typ].includes(R.id)){
       RY.varning = R.id==="skrapa"
         ? "Gummiskrapan går på musklerna, aldrig över ben eller huvud — där sitter huden direkt på benet och det gör ont."
-        : "Kardborsten är för hård för huvudet. Huden är tunn där, och hon lär sig dra undan nosen.";
+        : "Kardborsten är för hård för huvudet. Huden är tunn där, och hästen lär sig dra undan nosen.";
       return;
     }
     if(R.id==="skrapa"){ if(RY.vrid>1.9)RY.gjort[i].add("skrapa"); }
     else if(dx>0.0006)  RY.gjort[i].add(R.id);
-    else if(dx<-0.010)  RY.varning="Borsta med hårets riktning, framifrån och bakåt. Mot håret bryts pälsen och hon blir öm.";
+    else if(dx<-0.010)  RY.varning="Borsta med hårets riktning, framifrån och bakåt. Mot håret bryts pälsen och hästen blir öm.";
   }
   if(traff&&RY.varning&&RY.varning.indexOf("hårets")<0&&RY.varning.indexOf("kittlig")<0)return;
   if(traff)RY.varning=RY.varning.indexOf("hårets")>=0?RY.varning:"";
@@ -469,7 +469,7 @@ function sadelDrag(p,f,klick){
   if(SA.fas===2){
     if(klick&&Math.hypot(x-SK.sadelX,y-0.315)<0.075){
       SA.mankfri=true; SA.fas=3; SA.varning="";
-      if(typeof ljudStot==="function")ljudStot(640,"sine",0.09,0.05);
+      if(typeof ljudTon==="function")ljudTon(640,0.09,0.05);
     }
     return;
   }
@@ -480,7 +480,7 @@ function sadelDrag(p,f,klick){
   const nu=performance.now();
   const takPerTag=0.16;
   if(nu-SA.sisteTag<900&&SA.tag>0&&ny-SK.gjord>0.02&&SK.gjord>0.12){
-    SA.varning="Ett tag i taget. Hon behöver hinna andas ut emellan, annars blir hon gjordsur och börjar hugga när du sadlar.";
+    SA.varning="Ett tag i taget. Hästen behöver hinna andas ut emellan och blir annars gjordsur och börjar hugga när du sadlar.";
     return;
   }
   const fore=SK.gjord;
@@ -544,13 +544,13 @@ function visitNollstall(){
 function visitNasta(){ return VISITPUNKT[VIS.sedd.size]; }
 function visitOppna(id){
   if(VIS.gang<0){
-    VIS.ordningsfel="Gå fram till henne först — hon ska veta att du är där.";
+    VIS.ordningsfel="Gå fram först — hästen ska veta att du är där.";
     return false;
   }
   const nasta=visitNasta();
   if(!VIS.sedd.has(id)&&nasta&&id!==nasta.id){
     VIS.ordningsfel=`Framifrån och bakåt — ${nasta.namn.toLowerCase()} står på tur. `
-      +`Går man huller om buller missar man något, och hon blir orolig av att `
+      +`Går man huller om buller missar man något, och hästen blir orolig av att `
       +`man dyker upp än här, än där.`;
     return false;
   }
@@ -570,7 +570,7 @@ function visitGangKlick(sx,sy,W,H){
   for(const c of visitGangChipp(W,H))
     if(sx*W>=c.x&&sx*W<=c.x+c.b&&sy*H>=c.y&&sy*H<=c.y+c.h){
       VIS.gang=c.i; VIS.ordningsfel="";
-      if(typeof ljudStot==="function")ljudStot(c.v.ratt?700:240,"sine",0.10,0.05);
+      if(typeof ljudTon==="function")ljudTon(c.v.ratt?700:240,0.10,0.05);
       return true;
     }
   return false;
@@ -602,8 +602,8 @@ function visitKlick(sx,sy,W,H){
     for(const c of visitChipp(W,H))
       if(sx*W>=c.x&&sx*W<=c.x+c.b&&sy*H>=c.y&&sy*H<=c.y+c.h){
         VIS.svar=c.i;
-        if(typeof ljudStot==="function")
-          ljudStot(c.v.ratt?720:280,"sine",0.10,0.05);
+        if(typeof ljudTon==="function")
+          ljudTon(c.v.ratt?720:280,0.10,0.05);
         return true;
       }
   }
@@ -695,7 +695,7 @@ function ritaVisit(cx,W,H){
     cx.fillStyle=fynd?(VISITSVAR[VIS.svar].ratt?"#7FB489":"#D0655A"):"#8E939B";
     momentMening(cx,fynd
       ? (VISITSVAR[VIS.svar].ratt
-         ? "Rätt gjort. Ridläraren tittar på det innan ni rider — och hon slipper gå på det."
+         ? "Rätt gjort. Ridläraren tittar på det innan ni rider — och hästen slipper gå på det."
          : "Hon går på det hela lektionen. Det märks imorgon.")
       : "Klicka nederst för att gå vidare.", W*0.03, y0+H*0.215, W*0.94, H*0.040, 2);
   }

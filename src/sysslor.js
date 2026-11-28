@@ -26,7 +26,7 @@ function visaHastbyte(){
   <span class="lbl">Ridläraren · stallgången</span>
   <h1 style="margin-top:6px">Byt häst</h1>
   <p class="dim" style="font-size:13.5px;margin-top:2px">${nu
-    ? `Du har ${nu.namn} i dag. Byter du får du börja om med boxen, sadeln och skötseln.`
+    ? `Du har ${nu.namn} i dag. Byter du gör stallet den nya hästen redo i stället.`
     : "Välj hästen du ska rida i dag."}</p>
   <div style="display:grid;gap:8px;margin-top:14px;max-height:46vh;overflow:auto">
     ${lista.map(knapp).join("")}
@@ -59,8 +59,8 @@ function visaSchema(){
   <p class="dim" style="font-size:13.5px">Din häst i dag: <b style="color:var(--ink)">${hast}</b>.
   Schemat gäller tills lektionen börjar — ridläraren bockar av resten.</p>
   <ul style="list-style:none;padding:0;margin:14px 0;display:grid;gap:9px;font-size:14.5px">
-    ${rad(!!G.hastId,"Din häst i dag — stallet gör henne redo")}
-    ${rad(!!G.skotselRes,"Rida nu — hon står i ridhuset")}
+    ${rad(!!G.hastId,"Din häst i dag — stallet gör hästen redo")}
+    ${rad(!!G.skotselRes,"Rida nu — hästen står i ridhuset")}
     ${rad(false,"Lektion — sitt upp vid sargporten i ridhuset")}
   </ul>
   ${(()=>{

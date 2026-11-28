@@ -76,8 +76,12 @@ const SITE={
    Och bildgåtorna. På UBRF sitter en liten bildskylt till vänster om
    varje bokstav — banan vid B, morot vid M, cykel vid C. Barnen lär sig
    banan på bilderna innan de lär sig bokstäverna, och det är bilderna
-   man känner igen sargen på. Fyra av dem går att läsa i fotona; de
-   övriga är märkta [antagande] i ridhuskortet och behöver en bild. */
+   man känner igen sargen på. Fem av dem går att läsa i fotona (C, F, B,
+   M och — sedan 2026-11-26 — H, som är en häst); de övriga är märkta
+   [antagande] i ridhuskortet och behöver en bild. Vid H sitter bilden
+   till HÖGER om bokstaven sedd inifrån banan (ridhus-inne-30); hur det
+   är vid de andra är inte kontrollerat, och skyltarnas sida är inte
+   ändrad här. */
 /* Vända 2026-09-03: utrymningsplanen lägger C-blocket (bänkarna med de två
    trapporna, `ridhus-inne-01`) vid NORRA änden och läktaren längs VÄSTRA
    långsidan. C står alltså i norr och A i söder, och sedd från A är vänster
@@ -91,7 +95,7 @@ const DRESSYRBOKSTAVER=[
   {b:"V",x:0, y:18, bildKalla:"antagande", bild:"vante"},    // [antagande]
   {b:"E",x:0, y:30, bildKalla:"antagande", bild:"elefant"},  // [antagande] — mot läktaren, IMG_0198
   {b:"S",x:0, y:42, bildKalla:"antagande", bild:"sol"},      // [antagande]
-  {b:"H",x:0, y:54, bildKalla:"antagande", bild:"hus"},      // [antagande] — vid läktarens hörn, ridhus-inne-14/15
+  {b:"H",x:0, y:54, bildKalla:"foto", bild:"hast"},     // ur foto — grå häst i profil, ridhus-inne-30-sargen-vid-h.jpg (var «hus», ett antagande)
   {b:"F",x:20,y:6,  bildKalla:"foto", bild:"fisk"},     // ur foto
   {b:"P",x:20,y:18, bildKalla:"antagande", bild:"paron"},    // [antagande]
   {b:"B",x:20,y:30, bildKalla:"foto", bild:"banan"},    // ur foto

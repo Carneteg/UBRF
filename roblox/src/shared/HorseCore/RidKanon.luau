@@ -779,4 +779,8 @@ RidKanon.GANGFAS = {
 }
 RidKanon.LATTRIDNING = { upp_per_cykel = 1, hojd_m = 0.11 }
 
+--[[ AVSITTNING BARA FRÅN HALT ur RID_KANON.AVSITTNING i
+     src/riding/telemetri.js. STILLA i m/s, NODUTGANG_S i sekunder. ]]
+RidKanon.AVSITTNING = { STILLA = 0.05, NODUTGANG_S = 6 }
+
 return RidKanon

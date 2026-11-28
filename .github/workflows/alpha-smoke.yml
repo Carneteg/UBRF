@@ -14,7 +14,12 @@ permissions:
 
 jobs:
   alpha-webbstart:
-    runs-on: ubuntu-latest
+    # ubuntu-latest löser (2026-11) till Ubuntu 26.04, som den i package.json
+    # låsta playwright@1.55.0 inte stödjer för `--with-deps`-installation av
+    # Chromium ("Playwright does not support chromium on ubuntu26.04-x64").
+    # Felet var deterministiskt och orelaterat till PR-innehåll — se PR #308.
+    # Pinnat till en version Playwright 1.55.0 officiellt stödjer.
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4

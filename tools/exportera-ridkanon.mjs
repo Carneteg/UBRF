@@ -1023,6 +1023,23 @@ rader.push("RidKanon.LATTRIDNING = { upp_per_cykel = " + tal(LATTRIDNING.upp_per
   + ", hojd_m = " + tal(LATTRIDNING.hojd_m) + " }");
 rader.push("");
 
+/* ── AVSITTNING BARA FRÅN HALT (Batch 0.11, E2) ───────────────────
+   Gränsen för «står» och nödutgångens tid. Roblox egna tal bor i
+   Config.AVSITTNING; paritetsspecen kräver att de är identiska med de
+   här. Exporten FALLER om webben tappar dem — en tyst nolla hade låtit
+   specen jämföra mot ingenting. */
+{
+  const AV = vm.runInContext("RID_KANON.AVSITTNING", ctx);
+  if (!AV || !(AV.STILLA > 0) || !(AV.NODUTGANG_S > 0)) {
+    console.error("FEL  hittar inte RID_KANON.AVSITTNING i src/riding/telemetri.js");
+    process.exit(1);
+  }
+  rader.push("--[[ AVSITTNING BARA FRÅN HALT ur RID_KANON.AVSITTNING i");
+  rader.push("     src/riding/telemetri.js. STILLA i m/s, NODUTGANG_S i sekunder. ]]");
+  rader.push(`RidKanon.AVSITTNING = { STILLA = ${tal(AV.STILLA)}, NODUTGANG_S = ${tal(AV.NODUTGANG_S)} }`);
+  rader.push("");
+}
+
 rader.push("return RidKanon");
 rader.push("");
 const utfil = "roblox/src/shared/HorseCore/RidKanon.luau";

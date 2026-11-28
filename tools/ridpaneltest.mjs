@@ -208,7 +208,7 @@ const klick = (page, borjar) => page.evaluate(t => {
   await klick(page, "Tillbaka"); await vanta(page, 120);
   await klick(page, "Raka linjer"); await vanta(page, 120);
   prova("Raka linjer: mittlinjen, diagonalen, bom på marken, Tillbaka",
-    lika((await panel(page)).knappar, ["Mittlinjen", "Diagonalen", "Bom på marken", "Tillbaka"]), (await panel(page)).knappar.join(" | "));
+    lika((await panel(page)).knappar, ["Medellinjen", "Diagonalen", "Bom på marken", "Tillbaka"]), (await panel(page)).knappar.join(" | "));
   const port = await page.evaluate(() => Lektionsmeny.panel().knappar.map(k => k.text));
   prova("DOM:en visar exakt Roblox-portens knappar", JSON.stringify(port) === JSON.stringify((await panel(page)).knappar));
   await klick(page, "Tillbaka"); await vanta(page, 120); await klick(page, "Tillbaka"); await vanta(page, 120);
@@ -251,7 +251,13 @@ const klick = (page, borjar) => page.evaluate(t => {
   await page.keyboard.up("KeyG");
   prova("F är halvhalten i sadeln", f.parad === 1 && f.spo === false, JSON.stringify(f));
   prova("G är spöt", g.spo === true && g.parad === 0, JSON.stringify(g));
-  await page.keyboard.press("KeyE"); await vanta(page, 500);
+  /* Batch 0.11 (avsittning bara från halt): hon går i skritt sedan
+     avsnitt G, så E är en BEGÄRAN — stallet tar ner henne och avsittningen
+     kommer när hon står. Kravet är oförändrat; provet väntar på det i
+     stället för en fast halv sekund. Regeln mäts i tools/avsittningtest.mjs. */
+  await page.keyboard.press("KeyE");
+  await page.waitForFunction(() => G.scen === "resultat", null, { timeout: 10000 }).catch(() => {});
+  await vanta(page, 300);
   const e = await page.evaluate(() => ({ scen: G.scen, p3: G.p3, ov: overlayUppe() }));
   prova("E sitter av — ritten lämnas till vägen efter ritten", e.scen === "resultat" && e.p3 === false && e.ov, JSON.stringify(e));
   await page.evaluate(() => { overlay(false); SPAR.pass = 3; startaVandring(); });

@@ -91,6 +91,9 @@ function ridpanelRubrik() {
 
 /* Meddelandet — Roblox lararMeddelande, i samma ordning. */
 function ridpanelMeddelande(extra) {
+  /* SÄKERHET FÖRST (Batch 0.11): medan stallet tar ner hästen inför en
+     avsittning står det här, före lektionens och ridradens text. */
+  if (typeof ridAvsittVantar === "function" && ridAvsittVantar()) return rpT("avsittning.bromsar");
   if (extra && extra.ersatt) return extra.text || null;
   const chip = typeof FriPass !== "undefined" ? FriPass.chip() : null;
   if (chip) return chip;

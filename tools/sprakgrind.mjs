@@ -132,5 +132,33 @@ saga(utanBesk.length === 0,
   "varje häst har en engelsk beskrivning skild från den svenska",
   utanBesk.length ? utanBesk.map(h => h.id).join(", ") : `${(H.HASTFAKTA || []).length} hästar`);
 
+/* 7. ORDVALEN (ordvals-grind 0.10, E1). Tre saker som stod fel och inte
+      får smyga tillbaka:
+        · «mittlinjen» — på en ridbana heter den medellinjen,
+        · «ett halt» — det heter en halt,
+        · «hon/henne» om en häst vars kön texten inte kan veta. Varje
+          valack kallades «hon». Katalogens rader gäller VILKEN häst som
+          helst och säger därför «hästen»; texter om en namngiven häst
+          hämtar han/hon ur hästens egen beskrivning (harledPronomen).
+      Regeln gäller katalogens STRÄNGAR på båda språken — samma tabell som
+      Roblox läser. Ingen undantagslista behövs i dag: inte en enda rad
+      använder ett könat pronomen.
+
+      Falsifiering: `--muter-ordval` lägger in en rad med alla tre felen,
+      och grinden ska då bli röd. */
+if (process.argv.includes("--muter-ordval"))
+  W.SPRAK["_prov.ordval"] = { sv: "Rid ett halt på mittlinjen så att hon stannar.", en: "Halt so that she stops." };
+const ordfel = [];
+for (const [nyckel, v] of Object.entries(W.SPRAK)) {
+  if (!v || typeof v.sv !== "string") continue;
+  if (/mittlinje/i.test(v.sv)) ordfel.push(`${nyckel}: «mittlinje»`);
+  if (/(^|[^a-zåäö])ett halt([^a-zåäö]|$)/i.test(v.sv)) ordfel.push(`${nyckel}: «ett halt»`);
+  if (/(^|[^a-zåäö])(hon|henne|hennes|han|honom|hans)([^a-zåäö]|$)/i.test(v.sv)) ordfel.push(`${nyckel}: könat pronomen (sv)`);
+  if (/\b(she|her|hers|he|him|his)\b/i.test(v.en || "")) ordfel.push(`${nyckel}: könat pronomen (en)`);
+}
+saga(ordfel.length === 0,
+  "ordvalen: medellinjen, en halt, och inget gissat han/hon om en häst",
+  ordfel.length ? ordfel.slice(0, 8).join(" · ") : `${Object.keys(W.SPRAK).length} rader`);
+
 console.log(fel ? `\n${fel} FEL` : "\nSpråkgrinden (webb): katalogen är EN sanning på båda ytorna.");
 process.exit(fel ? 1 : 0);

@@ -610,7 +610,15 @@ function stepRide(s,a,h,ctx,dt){
    /* Hjälpen nyanserar INOM gångarten — samlad eller utsträckt skritt —
       men bär inte längre över ett band. Se K.HALL_BAND. */
    const begaran=(a.skankel-a.tygel*0.9)*K.HALL_BAND;
-   const mal=clamp(eget+begaran+s.spanning*0.8*h.framatbjudning,0,9);
+   /* D2 (ridmekanik-grind 0.2): halt betyder noll rörelse, inte "nästan
+      noll". gm.norm är 0 bara för halt, så eget är redan 0 där — men
+      begaran och spänningstermen nedan kunde ändå lämna ett litet,
+      STABILT positivt mål (uppmätt: halt glider ~6,8 cm/s, inte en
+      klingande transient). En stilla, lite spänd häst med god
+      framåtbjudning höll alltså aldrig en riktig halt. Hästen är fortsatt
+      inte ett dött ting i halt — spänning/olydnad syns i andra kanaler
+      (t.ex. ryck/sido) — men just TEMPOT hon jagar mot ska vara exakt 0. */
+   const mal=gm.norm<=0?0:clamp(eget+begaran+s.spanning*0.8*h.framatbjudning,0,9);
    /* Trögheten: en olydig häst svarar segare på skänkeln. Hon blir inte
       omöjlig, hon kräver att du ber tydligare och håller kvar. */
    const tr=(1.6+1.4*h.tyngd)*D.tröghet;
@@ -656,6 +664,11 @@ function stepRide(s,a,h,ctx,dt){
      const gg=Gait.G[s.gangart]||Gait.G.halt;
      s.tempo=approach(s.tempo,mal,(gg.upp??3.2)*2/tr,(gg.ner??5.5)*2/tr,dt);
      s.gangart=Gait.forTempo(s.tempo,s.gangart);
+     /* D2: exponentiell approach() når aldrig exakt 0, bara allt
+        närmare — en svans som i teorin aldrig tar slut. Nollställ sub-
+        0,02 m/s-resten exakt när gångarten redan räknas som halt, så
+        att "hon står still" blir sant och mätbart, inte "nästan sant". */
+     if(s.gangart==="halt"&&Math.abs(s.tempo)<0.02)s.tempo=0;
    }
    s._avdrift=vandring;
    /* ÖVERGÅNGSTIDEN: från att ryttaren bad till att hästen faktiskt går

@@ -66,7 +66,38 @@ Det betyder:
 - Ingen plattform får driva spelets design i en riktning som gör den andra onödigt omöjlig att hålla spelbar.
 - Plattformsspecifik rendering/input får skilja sig, men kärnloopen, lärandet, hästlogiken och UBRF-världen ska motsvara varandra.
 
-## Nuvarande Drive-inventering 2026-08-29
+## Drive-inventering 2026-11-26 (gäller)
+
+Hela Drive-mappen `UBRF` är inventerad rad för rad i
+`references/DRIVE-MANIFEST-2026-11-26.tsv`; sammanfattningen och hur manifestet
+ska läsas står i `references/DRIVE-SOURCE-INDEX.md`.
+
+- **185 av 211 foton har en motsvarighet i repot** (93 sedan tidigare, 92
+  migrerade 2026-11-26 som JPEG-derivat utan EXIF).
+- **26 foton är `[DRIVE-ONLY]`**: en person, en registreringsskylt eller
+  läsbara personnamn syns. De används inte som texturkälla och läggs inte i
+  repot. Klubbens samtycke (`references/licenses/SAMTYCKE-UBRF-2026-11-28.md`) ändrar inte det — det täcker inte personerna
+  i bild.
+- **Alla 24 filmer är `[DRIVE-ONLY]`** som originalfiler; 16 av dem har
+  nyckelrutor under `references/video/`.
+- **`1.pdf` är `[DRIVE-ONLY]` och förblir det**: häftet är upphovsrättsskyddat
+  och förbjuder kopiering. Den verifierade sammanfattningen är
+  `references/education/srf-ridning-lektionshandledning.md`.
+- `Models/` innehåller Quaternius CC0-testmodeller: tolv modeller i fyra format
+  (Blender, FBX, OBJ med MTL, glTF), en förhandsbild, en förhandsfilm och licenstexten;
+  licensen ligger i `references/licenses/quaternius-cc0.txt`. Modellen är inte
+  migrerad och är inget build-beroende.
+
+Raderna till Supabase `public.reference_assets` är skrivna som ett förslag i
+`references/manifest/reference_assets-2026-11-26.sql`. **Filen är inte körd**;
+den ligger med avsikt utanför `supabase/migrations/`.
+
+`python3 tools/kolla-referenser.py` (i CI) faller om en `IN_REPO`-rad pekar på
+en fil som saknas eller har fel kontrollsumma, om ett foto med person, skylt
+eller läsbara namn har fått ett derivat, eller om en mediafil under
+`references/` saknas i `references/CHECKSUMS.sha256`.
+
+## Drive-inventering 2026-08-29 (historisk, ersatt av den ovan)
 
 Drive-mappen `UBRF` innehåller vid senaste inventeringen:
 
@@ -78,6 +109,37 @@ Drive-mappen `UBRF` innehåller vid senaste inventeringen:
 - `Models/glTF/` — tom vid inventeringen.
 
 Tomma mappar är inte assets och skapar inget build-beroende.
+
+## Texturer i webbygget (produktbeslut 2026-11-26, Batch 1.3)
+
+Webbygget får innehålla bildfiler. De ligger i `assets/textures/` och bakas
+in i den enda HTML-filen av `tools/build.py` — spelet hämtar fortfarande
+ingenting över nätet när det körs.
+
+- **Tak:** den byggda filen får vara högst 4 MB. Bygget avbryts annars.
+  Taket prövas om när spelet är mätt på riktig iPad och iPhone.
+- **Format:** JPEG, PNG eller WebP; sidor som är tvåpotenser; högst
+  2048 px; en enskild fil högst 256 kB `[antagande]`.
+- **Källa:** varje textur har en rad i `assets/textures/KALLOR.tsv`
+  (`fil`, `kalla`, `rattighet`, `samtycke`). Tillåtna rättigheter:
+  `egen-syntetisk`, `cc0`, `ubrf-foto`.
+- **UBRF-foton:** en ruta utskuren ur ett foto från anläggningen hamnar i
+  spelet och är därmed publicerad. Den kräver klubbens sparade svar,
+  `references/licenses/SAMTYCKE-UBRF-<datum>.md`, angivet i kolumnen
+  `samtycke`. Utkastet till förfrågan räknas inte. Bygget kontrollerar det.
+- **Läget 2026-11-28:** klubbens samtycke finns
+  (`references/licenses/SAMTYCKE-UBRF-2026-11-28.md`, noterat enligt Tobias). Stallgångens material (Batch 1.4) är de
+  första UBRF-fotorutorna.
+- **Stallgångens fem rutor (Batch 1.4):** `stall-marksten.jpg`,
+  `stall-boxpanel.jpg`, `stall-galv.jpg`, `stall-takplat.jpg`,
+  `stall-limtra.jpg`. De görs om ur källfotona med
+  `tools/gor-stalltexturer.py`, som också skriver deras rader i
+  `KALLOR.tsv` (källfoto och utsnittets fyrhörning i originalets pixlar).
+  En ruta får bara skäras ur ett foto som ligger i repot och som
+  Drive-manifestet anger utan personer, registreringsskyltar och läsbara
+  namn — `tools/testa-texturbygge.py` och `tools/fototexturtest.mjs`
+  kontrollerar det. Rutans medelfärg sätts till kortets uppmätta färg:
+  kortet är facit för färgen, fotot för strukturen.
 
 ## Definition of done för nytt källmaterial
 

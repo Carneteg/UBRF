@@ -222,7 +222,7 @@ sektion = "E: ett mål, toningen";
 /* ══ F. TEXTEN ÄR SKANNBAR ═════════════════════════════════════════ */
 sektion = "F: kort text";
 {
-  const f = await ev(() => {
+  let f = await ev(() => {
     const lagen = [];
     const las = () => { const u = uppdragText();
       lagen.push({ id: u.id, rubrik: u.rubrik, punkter: u.punkter }); };
@@ -230,16 +230,34 @@ sektion = "F: kort text";
     const b = hittaBox(G.hastId);
     gaTill("stallinne", { x: b.dorr[0], y: b.dorr[1] - 8, rikt: 0 }); las();
     G.skotselRes = { dagsform: 0.7 }; G.hastPlats = "leds"; las();
-    return lagen;
+    /* VÄRSTA FALLET, uträknat — inte lottat. Hästen ovan följer spelarens
+       nummer, som slumpas för en ny profil; provet blev därför rött ungefär
+       en körning på 33, när lotten föll på det längsta namnet och språket
+       var engelska (74 tecken mot gränsen 72). Samma texter mäts här för
+       VARJE häst på BÅDA språken, så utfallet är detsamma varje gång. */
+    const varst = { rubrik: 0, punkt: 0, hast: "", sprak: "" };
+    for (const h of Object.values(HORSES)) for (const s of ["sv", "en"]) {
+      const r = Math.max(sprakText("guide.ga_till_rubrik", s, h.namn).length,
+                         sprakText("guide.sittupp_rubrik", s, h.namn).length);
+      const p = Math.max(sprakText("guide.ga_till_text", s).length,
+                         sprakText("guide.sittupp_text", s, h.namn).length);
+      if (r > varst.rubrik) varst.rubrik = r;
+      if (p > varst.punkt) { varst.punkt = p; varst.hast = h.namn; varst.sprak = s; }
+    }
+    return { lagen, varst };
   });
-  const langst = f.reduce((m, l) => Math.max(m, l.rubrik.length), 0);
+  const varst = f.varst; f = f.lagen;
+  const langst = Math.max(varst.rubrik, f.reduce((m, l) => Math.max(m, l.rubrik.length), 0));
   const flest = f.reduce((m, l) => Math.max(m, l.punkter.length), 0);
-  const langstPunkt = f.reduce((m, l) => Math.max(m, ...l.punkter.map(p => p.length)), 0);
+  const langstPunkt = Math.max(varst.punkt, f.reduce((m, l) => Math.max(m, ...l.punkter.map(p => p.length)), 0));
   prova("uppgiftstexten är en kort rubrik och 1–3 punkter, aldrig ett stycke",
     /* Punkterna är Roblox stegkortstexter (guide.*) med hästens namn i;
-       gränsen följer den längsta av dem med ett långt namn. */
-    langst <= 40 && flest >= 1 && flest <= 3 && langstPunkt <= 72,
-    `${f.length} lägen · längsta rubrik ${langst} tkn · flest punkter ${flest} · längsta punkt ${langstPunkt} tkn`);
+       gränsen följer den längsta av dem med det längsta namnet, på det
+       längsta språket: «Puma ( Ashdale cougar ) is ready and waiting in the
+       arena. Choose «Mount».» är 74 tecken. Gränsen var 72, satt efter den
+       svenska texten (71). */
+    langst <= 40 && flest >= 1 && flest <= 3 && langstPunkt <= 76,
+    `${f.length} lägen · längsta rubrik ${langst} tkn · flest punkter ${flest} · längsta punkt ${langstPunkt} tkn (${varst.hast}, ${varst.sprak})`);
   prova("och varje läge har en egen rubrik — ingen står kvar från förra steget",
     new Set(f.map(l => l.id)).size === f.length,
     f.map(l => `${l.id}: "${l.rubrik}"`).join(" · "));

@@ -95,9 +95,17 @@ function glPlatta(b){
     const P=t.map(v=>[b.p[v*3],b.p[v*3+1],b.p[v*3+2]]);
     const e1=[P[1][0]-P[0][0],P[1][1]-P[0][1],P[1][2]-P[0][2]];
     const e2=[P[2][0]-P[0][0],P[2][1]-P[0][1],P[2][2]-P[0][2]];
-    let nx=e1[1]*e2[2]-e1[2]*e2[1],
-        ny=e1[2]*e2[0]-e1[0]*e2[2],
-        nz=e1[0]*e2[1]-e1[1]*e2[0];
+    /* e2×e1, inte e1×e2 (motor-engineering 0.1 / A1): varje nät byggs med
+       ett varv som avsiktligt är "inåt sett" (samma konvention som
+       GEO.ladas handskrivna normaler, se kommentaren vid kamerans
+       X-spegling i GL.kamera). e1×e2 följer därför alltid den
+       inåtvända riktningen och skrev över t.ex. GEO.ladas egna,
+       korrekta utåtnormaler med en vänd version — synligt som fel
+       belysta kloss-figurer i spelets standardläge (STIL="kloss").
+       e2×e1 ger triangelns sanna utåtriktning utan att röra varvet. */
+    let nx=e2[1]*e1[2]-e2[2]*e1[1],
+        ny=e2[2]*e1[0]-e2[0]*e1[2],
+        nz=e2[0]*e1[1]-e2[1]*e1[0];
     const l=Math.hypot(nx,ny,nz);
     if(l<1e-9)continue;                    // hoppa över degenererade trianglar
     nx/=l; ny/=l; nz/=l;
@@ -366,16 +374,77 @@ const GL={
         farg = mix(farg, uDimFarg, dim * uDimStyrka);
         gl_FragColor = vec4(farg, uAlfa);
       }`;
-    const p=this._program(vs,fs);
-    if(!p){this.trasig=true;return false;}
-    this.prog=p;
-    gl.useProgram(p);
-    for(const n of ["aPos","aNrm","aCol","aUv"])this.a[n]=gl.getAttribLocation(p,n);
-    for(const n of ["uProj","uVy","uModell","uNM","uSol","uSolFarg","uHimmel","uMark",
-      "uDimFarg","uDimNara","uDimFjarr","uAlfa","uAnvTex","uPlatt","uTex","uTon","uOga",
-      "uKantFarg","uKant","uSolStyrka","uHalvskugga","uAmbient",
-      "uAoHojd","uAoStyrka","uDimStyrka"])
-      this.u[n]=gl.getUniformLocation(p,n);
+    /* TVÅ SKUGGARE (Batch 1.5 och 1.7). `fs` ovan är standardskuggaren —
+       ordagrant den som fanns före Batch 1.5. Provskuggaren görs av SAMMA
+       text med fem tillägg: linjärt ljus (avkodning och återkodning) och
+       ljuskartan. Vilken som används avgörs en gång per bildruta, i
+       GL.start, av ljusförinställningens `linjar`.
+
+       Varför två: tilläggen låg först i den enda skuggaren, bakom
+       `if(uLinjar…)`/`if(uLjuskartaPa…)`. Mjukvarurenderaren räknar ändå
+       båda grenarna, och standardläget blev 6–12 % långsammare — nog för
+       att CI:s lektionsprov inte skulle hinna fram (run 45944571668).
+       Med en egen skuggare kostar provet ingenting när det är av. */
+    const fsProv=(()=>{
+      let t=fs;
+      const byt=(fran,till)=>{
+        if(t.split(fran).length!==2)throw new Error("provskuggaren: ankaret finns inte exakt en gång: "+fran);
+        t=t.replace(fran,till);
+      };
+      byt("uniform float uDimNara, uDimFjarr, uAlfa, uAnvTex, uPlatt;",
+          "uniform float uDimNara, uDimFjarr, uAlfa, uAnvTex, uPlatt, uLjuskartaPa;\n      uniform vec4 uLjusRam;");
+      byt("uniform sampler2D uTex;","uniform sampler2D uTex, uLjuskarta;\n      uniform vec2 uTexVarld;");
+      /* FOTOTEXTUR I METER (Batch 1.4): en yta med `varld` får sin textur
+         lagd efter läget i världen — planet väljs efter normalen — så att
+         en fotoruta har samma storlek i meter på varje yta, hur stor ytan
+         än är. uTexVarld är rutans bredd och höjd i meter; 0 = ytans egna
+         texturkoordinater, som förut. */
+      byt("if(uAnvTex > 0.5) bas *= texture2D(uTex, vUv).rgb;",
+          "vec2 tuv = vUv;\n"+
+          "        if(uTexVarld.x > 0.0){\n"+
+          "          vec3 an = abs(normalize(vNrm));\n"+
+          "          tuv = (an.y >= an.x && an.y >= an.z) ? vPos.xz : (an.x >= an.z ? vPos.zy : vPos.xy);\n"+
+          "          tuv /= uTexVarld;\n"+
+          "        }\n"+
+          "        if(uAnvTex > 0.5) bas *= texture2D(uTex, tuv).rgb;");
+      /* LINJÄRT LJUS: färgerna står kodade för skärmen. Ytfärgen avkodas,
+         belysningen räknas i ljusets egen skala, och resultatet kodas
+         tillbaka sist. Ljusets färger är redan avkodade i GL.start. */
+      byt("vec3 N = normalize(vNrm);","bas = pow(bas, vec3(2.2));\n        vec3 N = normalize(vNrm);");
+      /* INNERLJUS: en karta över planytan säger hur mycket ljus som når
+         platsen — R vid golvet, G i brösthöjd, 1,0 lagrat som 0,5. Den
+         skalar scenens ljus. */
+      byt("vec3 farg = bas * ljus;",
+          "if(uLjuskartaPa > 0.5){\n"+
+          "          vec2 kp = clamp((vPos.xz - uLjusRam.xy) * uLjusRam.zw, 0.0, 1.0);\n"+
+          "          vec3 lk = texture2D(uLjuskarta, kp).rgb;\n"+
+          "          ljus *= mix(lk.r, lk.g, clamp(vPos.y / 1.6, 0.0, 1.0)) * 2.0;   // KARTAN\n"+
+          "        }\n        vec3 farg = bas * ljus;");
+      byt("gl_FragColor = vec4(farg, uAlfa);",
+          "farg = pow(max(farg, vec3(0.0)), vec3(1.0/2.2));   // ÅTERKODNING\n        gl_FragColor = vec4(farg, uAlfa);");
+      return t;
+    })();
+    const ATTRIBUT=["aPos","aNrm","aCol","aUv"];
+    const satt=(kalla,extra)=>{
+      const p=this._program(vs,kalla,ATTRIBUT);
+      if(!p)return null;
+      const a={}, u={};
+      gl.useProgram(p);
+      for(const n of ATTRIBUT)a[n]=gl.getAttribLocation(p,n);
+      for(const n of ["uProj","uVy","uModell","uNM","uSol","uSolFarg","uHimmel","uMark",
+        "uDimFarg","uDimNara","uDimFjarr","uAlfa","uAnvTex","uPlatt","uTex","uTon","uOga",
+        "uKantFarg","uKant","uSolStyrka","uHalvskugga","uAmbient",
+        "uAoHojd","uAoStyrka","uDimStyrka"].concat(extra))
+        u[n]=gl.getUniformLocation(p,n);
+      gl.uniform1i(u.uTex,0);
+      return {prog:p,a,u};
+    };
+    this._std=satt(fs,[]);
+    if(!this._std){this.trasig=true;return false;}
+    this._prov=satt(fsProv,["uLjuskartaPa","uLjusRam","uLjuskarta","uTexVarld"]);
+    if(this._prov)gl.uniform1i(this._prov.u.uLjuskarta,2);   // enhet 2; enhet 1 hör till efterbehandlingen
+    this.prog=this._std.prog; this.a=this._std.a; this.u=this._std.u;
+    gl.useProgram(this.prog);
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
     gl.enable(gl.CULL_FACE);
@@ -386,11 +455,10 @@ const GL={
     gl.bindTexture(gl.TEXTURE_2D,this.vitTex);
     gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,
       new Uint8Array([255,255,255,255]));
-    gl.uniform1i(this.u.uTex,0);
     this.redo=true;
     return true;
   },
-  _program(vsK,fsK){
+  _program(vsK,fsK,attribut){
     const gl=this.gl;
     const bygg=(typ,kod)=>{
       const s=gl.createShader(typ);
@@ -402,7 +470,10 @@ const GL={
     const v=bygg(gl.VERTEX_SHADER,vsK), f=bygg(gl.FRAGMENT_SHADER,fsK);
     if(!v||!f)return null;
     const p=gl.createProgram();
-    gl.attachShader(p,v);gl.attachShader(p,f);gl.linkProgram(p);
+    gl.attachShader(p,v);gl.attachShader(p,f);
+    /* Två program som delar nät ska ha attributen på samma platser. */
+    if(attribut)attribut.forEach((n,i)=>gl.bindAttribLocation(p,i,n));
+    gl.linkProgram(p);
     if(!gl.getProgramParameter(p,gl.LINK_STATUS)){
       console.warn("länkfel:",gl.getProgramInfoLog(p));return null;}
     return p;
@@ -451,6 +522,84 @@ const GL={
     return t;
   },
 
+  /* TEXTUR UR EN BILDFIL (Batch 1.3, produktbeslut 2026-11-26).
+
+     Ger GENAST en textur, fylld med `reserv` — den canvas som koden målar
+     i dag. Finns `namn` bland de inbäddade bilderna avkodas den i
+     bakgrunden och läggs in i SAMMA texturobjekt, så inget nät behöver
+     byggas om och ingen anropare behöver vänta. Finns namnet inte, eller
+     går bilden inte att avkoda, står reserven kvar: spelet ser då ut
+     precis som utan bildfilen.
+
+     Den byggda filen bär ALLTID window.TEXTUR_DATA (tools/build.py), också
+     tom. Där hämtas därför aldrig något över nätet — en textur som inte
+     ligger i filen finns inte. Bara utvecklingsversionen (obyggd
+     index.html, inget manifest) läser assets/textures/. */
+  _bild:{},
+  bildTextur(namn,reserv,upprepa){
+    const gl=this.gl, t=this.textur(reserv,upprepa);               // RESERVEN
+    const post=this._bild[namn]={lage:"saknas",tex:t,b:reserv.width,h:reserv.height};
+    const finns=typeof window!=="undefined", data=finns?window.TEXTUR_DATA:undefined;
+    const uri=data?(data[namn]&&data[namn].uri):(finns&&typeof Image!=="undefined"?"assets/textures/"+namn:null);
+    if(!uri)return t;
+    post.lage="vantar";
+    const img=new Image();
+    img.onerror=()=>{post.lage=data?"fel":"saknas";};
+    img.onload=()=>{
+      const b=img.naturalWidth,h=img.naturalHeight;
+      const pot=b>0&&h>0&&(b&(b-1))===0&&(h&(h-1))===0;
+      if(!pot||(gl.isContextLost&&gl.isContextLost())){post.lage="fel";return;}
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D,t);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);                 // BILDEN RÄTTVÄND
+      /* Samma fil ska ge samma färg i varje webbläsare: ingen tyst
+         färgrymdsomräkning och ingen förmultiplicerad alfa. */
+      gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL,gl.NONE);
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,false);
+      gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,img);
+      gl.generateMipmap(gl.TEXTURE_2D);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+      const lage=upprepa?gl.REPEAT:gl.CLAMP_TO_EDGE;
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,lage);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,lage);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
+      gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL,gl.BROWSER_DEFAULT_WEBGL);
+      post.lage="klar"; post.b=b; post.h=h;
+    };
+    img.src=uri;
+    return t;
+  },
+  /* LJUSKARTA (Batch 1.7). `byte` är RGBA, b×h texlar, över en rektangel
+     i planet. Gör en textur av den; `anvandLjuskarta` slår sedan på den
+     för resten av bildrutan — GL.start slår alltid av den igen. */
+  ljuskartaTex(byte,b,h,gammal){
+    const gl=this.gl, t=gammal||gl.createTexture();
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D,t);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,b,h,0,gl.RGBA,gl.UNSIGNED_BYTE,byte);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+    return t;
+  },
+  anvandLjuskarta(tex,x0,z0,bredd,langd){
+    const gl=this.gl;
+    if(!this._prov||this.prog!==this._prov.prog)return;   // bara provskuggaren har en ljuskarta
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D,tex);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.uniform4f(this.u.uLjusRam,x0,z0,1/bredd,1/langd);
+    gl.uniform1f(this.u.uLjuskartaPa,1);
+  },
+  /* För prov och felsökning: namn → vantar | klar | saknas | fel. */
+  texturLage(){
+    const ut={};
+    for(const n of Object.keys(this._bild))ut[n]=this._bild[n].lage;
+    return ut;
+  },
+
   /* Bildrutans start: storlek, rensning och ljussättning. */
   start(bredd,hojd,dpr,ljus){
     const gl=this.gl;
@@ -466,22 +615,31 @@ const GL={
       gl.bindFramebuffer(gl.FRAMEBUFFER,this.post.scenFB);
     }
     gl.viewport(0,0,w,h);
+    /* Skuggaren väljs här, en gång per bildruta: provskuggaren för en
+       förinställning med `linjar:true`, annars standardskuggaren. */
+    const lin=ljus.linjar===true&&!!this._prov;
+    const P=lin?this._prov:this._std;
+    this.prog=P.prog; this.a=P.a; this.u=P.u;
     gl.useProgram(this.prog);
     gl.clearColor(0,0,0,0);
     gl.depthMask(true);
     gl.disable(gl.BLEND);
     gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
     const s=ljus.sol, l=Math.hypot(s[0],s[1],s[2])||1;
+    /* Batch 1.5: med provskuggaren avkodas ljusfärgerna till linjärt
+       ljus här, en gång per bildruta. Annars: som förut. */
+    const ljusFarg=lin?(h=>glFarg(h).map(v=>Math.pow(v,2.2))):glFarg;
+    if(lin)gl.uniform1f(this.u.uLjuskartaPa,0);  // ingen ljuskarta förrän någon ber om den
     gl.uniform3f(this.u.uSol,s[0]/l,s[1]/l,s[2]/l);
-    gl.uniform3fv(this.u.uSolFarg,glFarg(ljus.solFarg));
-    gl.uniform3fv(this.u.uHimmel,glFarg(ljus.himmel));
-    gl.uniform3fv(this.u.uMark,glFarg(ljus.mark));
-    gl.uniform3fv(this.u.uDimFarg,glFarg(ljus.dimFarg));
+    gl.uniform3fv(this.u.uSolFarg,ljusFarg(ljus.solFarg));
+    gl.uniform3fv(this.u.uHimmel,ljusFarg(ljus.himmel));
+    gl.uniform3fv(this.u.uMark,ljusFarg(ljus.mark));
+    gl.uniform3fv(this.u.uDimFarg,ljusFarg(ljus.dimFarg));
     gl.uniform1f(this.u.uDimNara,ljus.dimNara);
     gl.uniform1f(this.u.uDimFjarr,ljus.dimFjarr);
     gl.uniform1f(this.u.uAlfa,1);
     gl.uniform1f(this.u.uPlatt,0);
-    gl.uniform3fv(this.u.uKantFarg,glFarg(ljus.kantFarg||ljus.solFarg));
+    gl.uniform3fv(this.u.uKantFarg,ljusFarg(ljus.kantFarg||ljus.solFarg));
     const tal=(v,d)=>v===undefined?d:v;
     gl.uniform1f(this.u.uKant,tal(ljus.kant,0.20));
     gl.uniform1f(this.u.uSolStyrka,tal(ljus.solStyrka,0.62));
@@ -541,6 +699,8 @@ const GL={
     gl.uniform3fv(this.u.uTon,o.ton?glFarg(o.ton):[1,1,1]);
     gl.uniform1f(this.u.uAnvTex,o.tex?1:0);
     gl.bindTexture(gl.TEXTURE_2D,o.tex||this.vitTex);
+    /* Bara provskuggaren lägger texturer i meter (Batch 1.4). */
+    if(this._prov&&this.prog===this._prov.prog){const v=o.varld;gl.uniform2f(this.u.uTexVarld,v?v[0]:0,v?v[1]:0);}
     if(o.alfa!==undefined&&o.alfa<1){gl.enable(gl.BLEND);gl.depthMask(false);}
     if(o.baksidor)gl.disable(gl.CULL_FACE);
     const bind=(buf,attr,storlek)=>{
@@ -615,6 +775,24 @@ const POST_KOMP=`
   precision mediump float; varying vec2 vT;
   uniform sampler2D uScen, uGlod;
   uniform float uBloom, uMattnad, uExponering;
+  /* Scenen renderas i en vanlig (icke-multisamplad) textur för
+     glödpasset ovan — motor-engineering 0.1 / A2: WebGL 1 saknar
+     multisamplade renderbuffrar (ingen renderbufferStorageMultisample),
+     så context-flaggan antialias:true kan aldrig jämna till den här
+     texturen, oavsett vad canvasen själv stödjer.
+
+     En FXAA-shader provades här (9 texturläsningar per bildpunkt i
+     kompositeringen) men togs bort igen: den fällde grindar.yml:s
+     tools/lektion-e2e-test.mjs på CI (headless, mjukvaru-rastrerad
+     SwiftShader) — reproducerat två gånger på PR #308, och bekräftat
+     frånvarande på oförändrad main samma dag. Orsaken är
+     src/game.js:1311, const dt=Math.min((now-last)/1000,0.05): sjunker
+     bildrutetakten under ~20 fps klipps dt, och den ridna sträckan under
+     ett fast antal RIKTIGA sekunder blir kortare än väntat — precis det
+     som hände i testets 60 s skrittfas. Kantutjämning för den här
+     rendervägen kräver alltså ett prestandabudgeterat svar (nivåer,
+     se planens Fas 3.0a) innan det kan läggas till riskfritt; se
+     diskussionen på PR #308. */
   void main(){
     vec3 c=texture2D(uScen,vT).rgb;
     c+=texture2D(uGlod,vT).rgb*uBloom;
@@ -798,7 +976,10 @@ GL.himmel=function(ljus){
   gl.useProgram(this.prog);
 };
 
-/* Textur ur en ritfunktion — allt är målat i spelet, inga bildfiler. */
+/* Textur ur en ritfunktion. Allt som levereras i dag är målat i spelet;
+   sedan Batch 1.3 (produktbeslut 2026-11-26) FÅR en yta i stället ta sin
+   textur ur en inbäddad bildfil — se GL.bildTextur, som tar en sådan här
+   målad canvas som reserv. */
 function glCanvasTex(bredd,hojd,rita,upprepa){
   const c=document.createElement("canvas");
   c.width=bredd;c.height=hojd;
