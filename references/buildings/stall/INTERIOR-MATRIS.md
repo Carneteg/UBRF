@@ -45,6 +45,8 @@ Historiken står i `audits/`.
 | Lodräta ändstolpar upp till överliggaren | `VERIFIED` | i05 + i06 | båda |
 | Höjder 1,35 / 1,38 / 2,15 / 2,20 | `DERIVED` | spelets tidigare mått | delad data |
 | Dörrbladet är ett rutnät i en smalare sektion | `[REFERENCE GAP]` | i05 visar det, men inte var per box | modelleras inte |
+| Dörren är troligen en **skjutdörr** som hänger i den gemensamma överliggaren och skjuts framför grannsektionen — inte en gångjärnsdörr | `[REFERENCE GAP]`, min läsning 2026-11-28 | `drive-2026-11-26/IMG_0151` (öppen box, dörren plant mot gången bredvid öppningen), `IMG_0152` och i05 (dörrens rutnät framför grannsektionens vågräta rör; beslag på överliggaren ovanför dörrarna). Snedtagna stillbilder avgör det inte | modelleras inte |
+| Vilken sida av boxen dörren sitter på, och om det är samma för alla boxar | `[REFERENCE GAP]` | går inte att läsa ur de tretton gångbilderna | modelleras inte |
 | Foderho på fronten | `[REFERENCE GAP]` | syns i i05 | modelleras inte |
 
 Metod för färgerna: ytan lokaliseras, beskärs, **tittas på**, och mäts

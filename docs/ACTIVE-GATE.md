@@ -867,13 +867,15 @@ deras beslutsspärrar är auktoritativa för det här arbetet.
     `tools/stalltaktest.mjs` del 3 tillåter nu, utöver panelen, att ramen
     blir vit med brytaren på — inget annat; fingeravtrycket AV
     `fb5652bdf25b3fac` står kvar.
-  - **Inte gjort:** boxfronternas dörrparti — en smalare gångjärnsdörr med
-    stegliknande rutnät upptill och panel nedtill, ofta öppen ut i gången;
-    dess läge per box är `[REFERENCE GAP]` i stallets INTERIOR-MATRIS
-    (Batch 3.2). *Rättelse 2026-11-28:* jag skrev först «stående galler,
-    skjutdörrar». Det var fel: den fasta delens rör är vågräta, som kortet
-    säger och spelet bygger, och inga skjutdörrar syns i de tretton
-    gångbilderna. Inte heller gjort: andra rum, Roblox. Rutorna är grova: ljusfall,
+  - **Inte gjort:** boxfronternas dörrparti — en smalare dörr med
+    stegliknande rutnät upptill och panel nedtill. *Rättelse 2026-11-28:*
+    jag skrev först «stående galler, skjutdörrar». Den fasta delens rör är
+    vågräta, som kortet säger och spelet bygger — «stående galler» var fel.
+    Om dörren är en skjutdörr går inte att avgöra ur stillbilderna; min
+    läsning lutar åt skjutdörr på överliggaren (IMG_0151, IMG_0152, i05).
+    Dörrtypen och vilken sida av boxen dörren sitter på står som
+    `[REFERENCE GAP]` i stallets INTERIOR-MATRIS (Batch 3.2). Inte heller
+    gjort: andra rum, Roblox. Rutorna är grova: ljusfall,
     förvrängning och upprepning kan synas, och färgerna är relativa tills
     gråkortsproverna (G4) finns. **Paritet:** webb bakom brytaren; inget
     levererat skiljer plattformarna åt. Samtycket öppnar också för texturer
