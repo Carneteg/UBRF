@@ -44,9 +44,13 @@ Historiken står i `audits/`.
 | **Vågräta** runda reglar, luft emellan, fem st | `VERIFIED` | i05 | båda |
 | Lodräta ändstolpar upp till överliggaren | `VERIFIED` | i05 + i06 | båda |
 | Höjder 1,35 / 1,38 / 2,15 / 2,20 | `DERIVED` | spelets tidigare mått | delad data |
-| Dörrbladet är ett rutnät i en smalare sektion | `[REFERENCE GAP]` | i05 visar det, men inte var per box | modelleras inte |
-| Dörren är troligen en **skjutdörr** som hänger i den gemensamma överliggaren och skjuts framför grannsektionen — inte en gångjärnsdörr | `[REFERENCE GAP]`, min läsning 2026-11-28 | `drive-2026-11-26/IMG_0151` (öppen box, dörren plant mot gången bredvid öppningen), `IMG_0152` och i05 (dörrens rutnät framför grannsektionens vågräta rör; beslag på överliggaren ovanför dörrarna). Snedtagna stillbilder avgör det inte | modelleras inte |
-| Vilken sida av boxen dörren sitter på, och om det är samma för alla boxar | `[REFERENCE GAP]` | går inte att läsa ur de tretton gångbilderna | modelleras inte |
+| Dörren är en **skjutdörr** som hänger i överliggaren och skjuts framför frontens fasta del när den öppnas | `VERIFIED` | Tobias besked 2026-11-28; tydligast i `stall-inne-06-boxen-inifran.jpg` (tagen FRÅN gången in i en öppen box: dörren skjuten åt höger framför den fasta delen, hjulupphängning på överliggaren); också `drive-2026-11-26/IMG_0151` (öppen box, dörren plant mot gången bredvid öppningen) och `IMG_0152` (boxen «Kennedy»: öppen dörr framför den fasta delens vågräta rör, öppning med strö till vänster) | webben bakom `?realism=1`, alltid stängd |
+| Dörröppningen sitter till **vänster** i fronten sett från gången, och dörren skjuts **åt höger** för att öppnas — samma i alla boxar och båda raderna | `VERIFIED` | Tobias besked 2026-11-28; `stall-inne-06`, `IMG_0152` | webben bakom `?realism=1` |
+| Dörrens överdel: en galvad ram med två tätt sittande lodräta plattstänger; ett vågrätt handtag och en egen kappregel ovanpå dörrpanelen | `VERIFIED` | `IMG_0152` (Kennedy) | webben bakom `?realism=1` |
+| Dörrens bredd 1,20 m | `ASSUMPTION` | ingen bild rakt framifrån; samma arbetsvärde som den delade datan | `identitet.stall.boxfront.dorr.bredd` |
+| **Avvikelse i den delade datan och Roblox:** `boxfront.dorr` beskriver en gångjärnsdörr som «slår UT i gången» (läst ur `stall-inne-06`) i fackets ände mot högre y, samma i båda raderna. Bilden visar en skjutdörr, och öppningen till vänster sett från gången ger olika ände i de två raderna | `KNOWN MISMATCH` | `stall-inne-06`, Tobias besked 2026-11-28 | Roblox `Anlaggningen.luau` och `src/site.js` — rättas i en egen leverans (båda plattformarna) |
+| Om dörren har egna vågräta pinnar i överdelen | `[REFERENCE GAP]` | i `IMG_0152` går den fasta delens rör bakom dörren och går inte att skilja från dörrens egna | modelleras utan pinnar |
+| Vilka dörrar som står öppna en vanlig dag | `[REFERENCE GAP]` | varierar i bilderna | alla stängda `[antagande]` |
 | Foderho på fronten | `[REFERENCE GAP]` | syns i i05 | modelleras inte |
 
 Metod för färgerna: ytan lokaliseras, beskärs, **tittas på**, och mäts

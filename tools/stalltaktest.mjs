@@ -16,7 +16,8 @@
      2. PÅ: inga vågräta tvärbalkar, ingen nockbalk, inga takfönster i
         fallet; sparrar på båda takfallen som följer lutningen; en
         lanternin i nocken; takskivorna lämnar nocken öppen.
-     3. Allt som INTE är tak är detsamma i båda lägena.
+     3. Allt som INTE är tak är detsamma i båda lägena — utom boxfronterna,
+        som med brytaren får en skjutdörr (tools/boxdorrtest.mjs).
 
    Fingeravtrycket för AV-läget skrivs ut. Det jämfördes för hand mot
    bygget före ändringen (se docs/ACTIVE-GATE.md); den löpande vakten för
@@ -83,7 +84,8 @@ async function bygg(fraga) {
       if (n > 8 && stilla >= 6 && logg.length > start) {
         const S = STALLINNE;
         return klar({ logg: logg.slice(start), scen: G.scen, realism: REALISM.pa,
-          S: { bredd: S.bredd, langd: S.langd, tak: S.tak, resn: S.takresning, limtra: IDENTITET.stall.stallgang.limtra } });
+          S: { bredd: S.bredd, langd: S.langd, tak: S.tak, resn: S.takresning, limtra: IDENTITET.stall.stallgang.limtra,
+            fronter: S.rader.map(r => boxFrontX(r)), toppregelZ: IDENTITET.stall.boxfront.toppregelZ } });
       }
       if (n > 400) return klar({ logg: logg.slice(Math.max(start, 0)), scen: G.scen, realism: REALISM.pa, tog_slut: true, S: {} });
       requestAnimationFrame(ruta);
@@ -162,9 +164,14 @@ console.log("3  det som inte är tak har samma FORM i båda lägena");
   /* Brytaren byter medvetet FÄRGEN på boxfrontens panel och ram (se
      nedan). Formen — typ, mått och läge — ska fortfarande vara exakt
      densamma, och ingen ANNAN del under takfoten får ha bytt färg. */
+  /* Boxfronternas zon — inom 0,3 m från en frontlinje och under
+     överliggaren — undantas: med brytaren får varje front en skjutdörr
+     (kortet, INTERIOR-MATRIS § 2), och den zonen mäts i stället av
+     tools/boxdorrtest.mjs. Allt annat ska vara identiskt. */
+  const ejFront = B => x => !x[5] || x[5][13] >= B.S.toppregelZ + 0.05 || !B.S.fronter.some(fx => Math.abs(x[5][12] - fx) < 0.3);
   const form = L => L.map(x => [x[0], x[1], x[2], x[3], x[5]]);
-  const a = underTak(av), p = underTak(pa);
-  prova("samma delar under takfoten (typ, mått och läge)", avtryck(form(a)) === avtryck(form(p)),
+  const a = underTak(av).filter(ejFront(av)), p = underTak(pa).filter(ejFront(pa));
+  prova("samma delar under takfoten utanför boxfronterna (typ, mått och läge)", avtryck(form(a)) === avtryck(form(p)),
     `${a.length} / ${p.length} delar, ${avtryck(form(a))} / ${avtryck(form(p))}`);
   const bytt = a.map((x, i) => [x, p[i]]).filter(([x, y]) => y && x[4] !== y[4]);
   /* Två medvetna färgbyten med brytaren, inget annat:
@@ -172,12 +179,14 @@ console.log("3  det som inte är tak har samma FORM i båda lägena");
      · Batch 1.4: panelen och den galvade ramen får sina foton, som bär
        färgen — ytorna blir då VITA.
      Kravet: varje del som bytt färg var panel eller ram utan brytaren och är
-     vit med den, och båda slagen finns med. */
+     vit med den, och panelen finns med (skiljeväggarna). Ramen sitter i
+     sin helhet i frontzonen ovan; att den får galvfotot mäter
+     tools/fototexturtest.mjs. */
   const PANEL_AV = "#6d757d", RAM_AV = "#9A9B93";
   const avvik = bytt.filter(([x, y]) => ![PANEL_AV, RAM_AV].includes(x[4]) || y[4] !== "#FFFFFF");
   const slag = new Set(bytt.map(([x]) => x[4]));
   prova("bara boxfrontens panel och galvade ram har bytt färg, och då till vitt (fotot bär färgen)",
-    bytt.length > 0 && avvik.length === 0 && slag.has(PANEL_AV) && slag.has(RAM_AV),
+    bytt.length > 0 && avvik.length === 0 && slag.has(PANEL_AV),
     `${bytt.length} delar · ${[...new Set(bytt.map(([x, y]) => x[4] + " → " + y[4]))].join(" | ")}${avvik.length ? " · AVVIKER: " + avvik.slice(0, 3).map(([x, y]) => x[4] + "→" + y[4]).join(", ") : ""}`);
 }
 

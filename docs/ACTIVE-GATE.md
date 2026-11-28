@@ -881,6 +881,45 @@ deras beslutsspärrar är auktoritativa för det här arbetet.
     levererat skiljer plattformarna åt. Samtycket öppnar också för texturer
     i Roblox, som en egen leverans.
   - `JEV_DECISION: JEV_NOT_NEEDED` — deterministisk rendering och data.
+- **Stallets skjutdörrar, bakom `?realism=1` (2026-11-28, READY_FOR_REVIEW).**
+  Tobias valde boxfronternas form. Efter min felbeskrivning (rättad i
+  `abda65c`/`d9c6226`) gav Tobias besked om dörrarna: det är
+  **skjutdörrar**; öppningen sitter till **vänster** sett från gången, och
+  dörren skjuts **åt höger** för att öppnas, i alla boxar. `stall-inne-06`,
+  tagen från gången in i en öppen box, visar exakt det.
+  - **Kortet först:** stallets INTERIOR-MATRIS § 2 har nya rader för
+    dörrtyp, sida och överdel (`VERIFIED`, Tobias besked + bilder). Bredden
+    är `ASSUMPTION`; luckor kvar: egna pinnar i dörrens överdel, och vilka
+    dörrar som står öppna.
+  - **Avvikelse som hittades, inte rättad:** den delade datan
+    (`IDENTITET.stall.boxfront.dorr`, `src/site.js`) och Roblox
+    (`Anlaggningen.luau`) bygger en gångjärnsdörr som «slår ut i gången»,
+    alltid i fackets ände mot högre y. Bilden visar en skjutdörr, och
+    öppningen till vänster hamnar i olika ände i de två raderna. Det är
+    `KNOWN MISMATCH` i kortet. Rättningen ändrar Roblox och den delade
+    datan, och är en egen leverans på båda plattformarna — Tobias beslut.
+  - **Koden:** `v3dBoxfrontMedDorr` i `src/varld3d.js`, bara med
+    `V3DREAL`. Varje front blir en fast del (panel, kappregel och de
+    vågräta reglarna över sin egen bredd) och en stängd skjutdörr till
+    vänster, 0,06 m utanför frontens plan `[antagande]`: panel, egen
+    kappregel, handtag, och en galvad ram med två plattstänger. Bredden är
+    den delade datans 1,20 m. Dörren hamnar i panel- och galvnäten och får
+    fotomaterialen från Batch 1.4. Utan brytaren går koden exakt den gamla
+    vägen. Spelets bild är spegelvänd i x, så «vänster» är −ut i y — uppmätt
+    i skärmdump och i provet, inte räknat.
+  - **Prov:** nytt `tools/boxdorrtest.mjs` (CI, jobb `ridning`): AV ingen
+    dörr och en hel panel i alla 49 boxar; PÅ exakt en dörr med den delade
+    bredden i varje box, reglarna slutar vid dörren, dörr och fast del
+    fyller fronten, och i alla fyra raderna ligger dörren till vänster på
+    skärmen, mätt genom `GL.proj`/`GL.vy`. `--muter-sida` ger 4 FEL och
+    `--muter-lacka` 2 FEL. `tools/stalltaktest.mjs` del 3 undantar nu
+    boxfronternas zon (inom 0,3 m från frontlinjen, under överliggaren);
+    607 delar utanför den är identiska i båda lägena, och fingeravtrycket
+    AV `fb5652bdf25b3fac` står kvar.
+  - **Inte gjort:** öppna dörrar, hjulupphängningen, skyltarnas läge på den
+    smala delen, Roblox. **Paritet:** webb bakom brytaren; inget levererat
+    skiljer plattformarna åt.
+  - `JEV_DECISION: JEV_NOT_NEEDED`.
 - **A2 (kantutjämning) uppskjuten, inte löst i 0.1:** en FXAA-shader
   provades i post-kompositeringen men orsakade en mätbar, reproducerbar
   CI-regression i `tools/lektion-e2e-test.mjs` (headless, mjukvaru-

@@ -520,6 +520,12 @@ jobs:
           test -f tools/fototexturtest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/fototexturtest.mjs (steget 'Stallgångens fotomaterial (Batch 1.4)')" >&2; exit 1; }
           node tools/fototexturtest.mjs
 
+      - name: Stallets skjutdörrar bakom strömbrytaren
+        run: |
+          set -euo pipefail
+          test -f tools/boxdorrtest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/boxdorrtest.mjs (steget 'Stallets skjutdörrar bakom strömbrytaren')" >&2; exit 1; }
+          node tools/boxdorrtest.mjs
+
       - name: P3 — kameran efter en flytt (Kimi Q4)
         run: |
           set -euo pipefail

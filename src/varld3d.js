@@ -860,6 +860,55 @@ function v3dFoto(namn){
   return T.foto[namn];
 }
 
+/* ── Boxfront med skjutdörr (bara med ?realism=1) ────────────────
+   Kortet (references/buildings/stall/INTERIOR-MATRIS.md § 2) säger, ur
+   Tobias besked 2026-11-28 och stall-inne-06/IMG_0152: varje front har en
+   SKJUTDÖRR som hänger i överliggaren. Öppningen sitter till VÄNSTER sett
+   från gången, och dörren skjuts åt höger, framför frontens fasta del.
+   Här står alla dörrar stängda [antagande]: dörren täcker öppningen och
+   ligger en bit utanför frontens plan, mot gången.
+   · fasta delen: panel, kappregel och de vågräta reglarna — som förut,
+     men bara över sin egen bredd;
+   · dörren: panel, egen kappregel, handtag, och överdelens galvade ram
+     med två tätt sittande lodräta plattstänger (IMG_0152). Om dörren har
+     egna vågräta pinnar är [REFERENCE GAP] — den byggs utan;
+   · bredden är den delade datans arbetsvärde (boxfront.dorr.bredd).
+   Den som står i gången tittar in åt −ut i x. Spelets bild är spegelvänd
+   i x, så vänster hand pekar åt −ut i y — uppmätt i skärmdump och i
+   tools/boxdorrtest.mjs, inte räknat på känn.
+   Utan brytaren anropas den här inte — fronten byggs som förut. */
+const V3D_DORR_UT=0.06;   // [antagande] dörrbladet utanför frontens plan
+function v3dBoxfrontMedDorr(front,galler,BF,PANEL,RAM,fx,y0,y1,my,vetter){
+  const ut=vetter>0?1:-1, V=-ut;                 // V: tecknet för «vänster» i y
+  const a=y0+0.07, b=y1-0.07;                     // mellan stolparnas innerkanter
+  const D=Math.min(BF.dorr?BF.dorr.bredd:1.20, b-a-0.30);
+  const dv=V>0?b:a, dh=dv-V*D;                    // dörrens vänstra och högra kant
+  const f0=V>0?a:dh, f1=V>0?dh:b;                 // den fasta delen
+  const fm=(f0+f1)/2, fl=f1-f0, dm=(dv+dh)/2, dx=fx+ut*V3D_DORR_UT;
+  /* Fasta delen. */
+  front.lada(0.12,BF.heldelH,fl,PANEL,M4.translation(fx,BF.heldelH/2,fm));
+  galler.lada(0.16,0.10,fl,RAM,M4.translation(fx,BF.ramZ,fm));
+  for(let g=1;g<=BF.reglar;g++)
+    galler.cyl(BF.regelD/2,BF.regelD/2,fl,RAM,
+      M4.mul(M4.translation(fx,BF.ramZ+(BF.toppregelZ-BF.ramZ)*g/(BF.reglar+1),f0),
+             M4.rotX(Math.PI/2)),8);
+  /* Stolparna och överliggaren som förut. */
+  for(const dy of [y0,y1])
+    galler.lada(0.14,BF.stolpH,0.14,RAM,M4.translation(fx,BF.stolpH/2,dy));
+  galler.lada(0.14,0.10,y1-y0,RAM,M4.translation(fx,BF.toppregelZ,my));
+  /* Dörren. */
+  front.lada(0.06,BF.heldelH,D,PANEL,M4.translation(dx,BF.heldelH/2,dm));
+  galler.lada(0.10,0.08,D,RAM,M4.translation(dx,BF.ramZ,dm));
+  const topp=BF.toppregelZ-0.10, oH=topp-BF.ramZ;
+  for(const y of [dv-V*0.03,dh+V*0.03])          // ramens sidor
+    galler.lada(0.05,oH,0.06,RAM,M4.translation(dx,BF.ramZ+oH/2,y));
+  galler.lada(0.05,0.06,D,RAM,M4.translation(dx,topp,dm));   // ramens överkant
+  for(const t of [0.29,0.45])                    // plattstängerna, mätta från vänster kant
+    galler.lada(0.03,oH,0.04,RAM,M4.translation(dx,BF.ramZ+oH/2,dv-V*t*D));
+  galler.cyl(0.016,0.016,0.85*D,RAM,               // handtaget
+    M4.mul(M4.translation(dx+ut*0.07,BF.heldelH-0.16,dm-0.425*D),M4.rotX(Math.PI/2)),8);
+}
+
 /* ── Stallets ljuskällor och ljuskarta (Batch 1.7) ────────────── */
 /* VAR LAMPORNA SITTER — en enda källa. `v3dStall` RITAR armaturerna ur
    den här listan och `v3dStallLjuskarta` LJUSSÄTTER ur samma lista, så
@@ -1919,6 +1968,8 @@ function v3dStall(lagg,opp){
     for(let i=0;i<antalFack(rad2.id);i++){
       const my=boxY(i, rad2.id), y0=my-S.boxB/2, y1=my+S.boxB/2;
       if(y1>S.klubbY)break;
+      if(V3DREAL){ v3dBoxfrontMedDorr(front,galler,BF,BF_PANEL,BF_RAM,fx,y0,y1,my,rad2.vetter); }
+      else{
       front.lada(0.12,BF.heldelH,S.boxB-0.04,BF_PANEL,
         M4.translation(fx,BF.heldelH/2,my));
       ramNat.lada(0.16,0.10,S.boxB,BF_RAM,M4.translation(fx,BF.ramZ,my));
@@ -1933,6 +1984,7 @@ function v3dStall(lagg,opp){
                    BF.ramZ+(BF.toppregelZ-BF.ramZ)*g/(BF.reglar+1), y0+0.07),
                  M4.rotX(Math.PI/2)),8);
       galler.lada(0.14,0.10,S.boxB,BF_RAM,M4.translation(fx,BF.toppregelZ,my));
+      }
       /* Skiljeväggar mellan boxarna. */
       const ut=sida==="W"?-1:1;
       front.lada(rad2.djup,BF.heldelH,0.10,BF_PANEL,
