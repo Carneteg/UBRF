@@ -779,8 +779,8 @@ deras beslutsspärrar är auktoritativa för det här arbetet.
   - **Min läsning av bilden, inte en bedömning:** provet är neutralare,
     hästarna står hela i boxarna och figurerna är mjuka — men det är
     fortfarande långt från fotot. Golvet är ljusare och varmare än
-    fotots mörka marksten, boxfronterna saknar fotots stående galler och
-    dörrar, och alla ytor är målade, inte fotograferade (1.4 väntar på
+    fotots mörka marksten, boxfronterna saknar fotots dörrparti (rättat
+    2026-11-28: de vågräta rören stämmer, se Batch 1.4), och alla ytor är målade, inte fotograferade (1.4 väntar på
     klubben). **Om det övertygar avgör Tobias.**
   - **Paritet:** webb bakom brytaren; inget levererat skiljer
     plattformarna åt. Inga Roblox-filer rörda.
@@ -867,8 +867,13 @@ deras beslutsspärrar är auktoritativa för det här arbetet.
     `tools/stalltaktest.mjs` del 3 tillåter nu, utöver panelen, att ramen
     blir vit med brytaren på — inget annat; fingeravtrycket AV
     `fb5652bdf25b3fac` står kvar.
-  - **Inte gjort:** boxfronternas FORM (stående galler, skjutdörrar —
-    Batch 3.2, kräver mått), andra rum, Roblox. Rutorna är grova: ljusfall,
+  - **Inte gjort:** boxfronternas dörrparti — en smalare gångjärnsdörr med
+    stegliknande rutnät upptill och panel nedtill, ofta öppen ut i gången;
+    dess läge per box är `[REFERENCE GAP]` i stallets INTERIOR-MATRIS
+    (Batch 3.2). *Rättelse 2026-11-28:* jag skrev först «stående galler,
+    skjutdörrar». Det var fel: den fasta delens rör är vågräta, som kortet
+    säger och spelet bygger, och inga skjutdörrar syns i de tretton
+    gångbilderna. Inte heller gjort: andra rum, Roblox. Rutorna är grova: ljusfall,
     förvrängning och upprepning kan synas, och färgerna är relativa tills
     gråkortsproverna (G4) finns. **Paritet:** webb bakom brytaren; inget
     levererat skiljer plattformarna åt. Samtycket öppnar också för texturer
