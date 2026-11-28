@@ -164,7 +164,7 @@ insert into public.reference_assets (id, title, asset_type, source_origin, githu
     sha256 = excluded.sha256, bytes = excluded.bytes, updated_at = now();
 
 insert into public.reference_assets (id, title, asset_type, source_origin, github_path, external_source_url, verification_status, required_for_build, notes, sha256, bytes) values
-  ('drive-1znBuTE-RBbdxwwzWTCj_kuPQlM6x-khl', 'IMG_0308.MOV — gard-omnejd', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1znBuTE-RBbdxwwzWTCj_kuPQlM6x-khl/view', 'unverified', false, 'Drive: Omnejd/IMG_0308.MOV; byggnad: omnejd; status: DRIVE-ONLY; alla filmer väntar på samtycket (Batch 0.14)', '8cf09f628ab092305403c74271eccb259443c6f0c7f375dea9123552be18ffa3', 13653709)
+  ('drive-1znBuTE-RBbdxwwzWTCj_kuPQlM6x-khl', 'IMG_0308.MOV — gard-omnejd', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1znBuTE-RBbdxwwzWTCj_kuPQlM6x-khl/view', 'unverified', false, 'Drive: Omnejd/IMG_0308.MOV; byggnad: omnejd; status: DRIVE-ONLY; originalfilen inte migrerad (storlek); klubbens samtycke finns sedan 2026-11-28 — personer i bild avgör användningen', '8cf09f628ab092305403c74271eccb259443c6f0c7f375dea9123552be18ffa3', 13653709)
   on conflict (id) do update set github_path = excluded.github_path, notes = excluded.notes,
     sha256 = excluded.sha256, bytes = excluded.bytes, updated_at = now();
 
@@ -434,7 +434,7 @@ insert into public.reference_assets (id, title, asset_type, source_origin, githu
     sha256 = excluded.sha256, bytes = excluded.bytes, updated_at = now();
 
 insert into public.reference_assets (id, title, asset_type, source_origin, github_path, external_source_url, verification_status, required_for_build, notes, sha256, bytes) values
-  ('drive-1pO3hgCViM4zwAwaQJhPj2UXP8MBmJ2Wr', 'IMG_0169.MOV — ridhus-klubbdel', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1pO3hgCViM4zwAwaQJhPj2UXP8MBmJ2Wr/view', 'unverified', false, 'Drive: Ridhuset/IMG_0169.MOV; byggnad: ridhus; status: DRIVE-ONLY; 5 nyckelrutor under references/video/; personer i bild; alla filmer väntar på samtycket (Batch 0.14)', '31352e648b7fac073c109c0809eb20781353812bacebd1582442db826fb0fb17', 31729716)
+  ('drive-1pO3hgCViM4zwAwaQJhPj2UXP8MBmJ2Wr', 'IMG_0169.MOV — ridhus-klubbdel', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1pO3hgCViM4zwAwaQJhPj2UXP8MBmJ2Wr/view', 'unverified', false, 'Drive: Ridhuset/IMG_0169.MOV; byggnad: ridhus; status: DRIVE-ONLY; 5 nyckelrutor under references/video/; personer i bild; originalfilen inte migrerad (storlek); klubbens samtycke finns sedan 2026-11-28 — personer i bild avgör användningen', '31352e648b7fac073c109c0809eb20781353812bacebd1582442db826fb0fb17', 31729716)
   on conflict (id) do update set github_path = excluded.github_path, notes = excluded.notes,
     sha256 = excluded.sha256, bytes = excluded.bytes, updated_at = now();
 
@@ -509,27 +509,27 @@ insert into public.reference_assets (id, title, asset_type, source_origin, githu
     sha256 = excluded.sha256, bytes = excluded.bytes, updated_at = now();
 
 insert into public.reference_assets (id, title, asset_type, source_origin, github_path, external_source_url, verification_status, required_for_build, notes, sha256, bytes) values
-  ('drive-1BTTG0o3gKq32ld_WtYgT6JbRqgaVUNtT', 'IMG_0185.MOV — ridhus-arena', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1BTTG0o3gKq32ld_WtYgT6JbRqgaVUNtT/view', 'unverified', false, 'Drive: Ridhuset/IMG_0185.MOV; byggnad: ridhus; status: DRIVE-ONLY; 4 nyckelrutor under references/video/; personer i bild; alla filmer väntar på samtycket (Batch 0.14)', 'd441e373cf25b248d5284e1a20d31a795db51354ca9a7e1e4175df61b0931885', 23208283)
+  ('drive-1BTTG0o3gKq32ld_WtYgT6JbRqgaVUNtT', 'IMG_0185.MOV — ridhus-arena', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1BTTG0o3gKq32ld_WtYgT6JbRqgaVUNtT/view', 'unverified', false, 'Drive: Ridhuset/IMG_0185.MOV; byggnad: ridhus; status: DRIVE-ONLY; 4 nyckelrutor under references/video/; personer i bild; originalfilen inte migrerad (storlek); klubbens samtycke finns sedan 2026-11-28 — personer i bild avgör användningen', 'd441e373cf25b248d5284e1a20d31a795db51354ca9a7e1e4175df61b0931885', 23208283)
   on conflict (id) do update set github_path = excluded.github_path, notes = excluded.notes,
     sha256 = excluded.sha256, bytes = excluded.bytes, updated_at = now();
 
 insert into public.reference_assets (id, title, asset_type, source_origin, github_path, external_source_url, verification_status, required_for_build, notes, sha256, bytes) values
-  ('drive-1qV9oq8Qd7iPxl90UHvjiy9ldDSLxg_3y', 'IMG_0188.MOV — ridhus-arena', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1qV9oq8Qd7iPxl90UHvjiy9ldDSLxg_3y/view', 'unverified', false, 'Drive: Ridhuset/IMG_0188.MOV; byggnad: ridhus; status: DRIVE-ONLY; personer i bild; alla filmer väntar på samtycket (Batch 0.14)', '6c8bbb6227479ca01eda008c7a841e6d5468b0698c75b7d2b1234e2c83be4ab1', 69964568)
+  ('drive-1qV9oq8Qd7iPxl90UHvjiy9ldDSLxg_3y', 'IMG_0188.MOV — ridhus-arena', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1qV9oq8Qd7iPxl90UHvjiy9ldDSLxg_3y/view', 'unverified', false, 'Drive: Ridhuset/IMG_0188.MOV; byggnad: ridhus; status: DRIVE-ONLY; personer i bild; originalfilen inte migrerad (storlek); klubbens samtycke finns sedan 2026-11-28 — personer i bild avgör användningen', '6c8bbb6227479ca01eda008c7a841e6d5468b0698c75b7d2b1234e2c83be4ab1', 69964568)
   on conflict (id) do update set github_path = excluded.github_path, notes = excluded.notes,
     sha256 = excluded.sha256, bytes = excluded.bytes, updated_at = now();
 
 insert into public.reference_assets (id, title, asset_type, source_origin, github_path, external_source_url, verification_status, required_for_build, notes, sha256, bytes) values
-  ('drive-1x3DNA1yIENHDEbmhN3lqiDdnDJ8vYRxw', 'IMG_0189.MOV — ridhus-arena', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1x3DNA1yIENHDEbmhN3lqiDdnDJ8vYRxw/view', 'unverified', false, 'Drive: Ridhuset/IMG_0189.MOV; byggnad: ridhus; status: DRIVE-ONLY; 6 nyckelrutor under references/video/; personer i bild; alla filmer väntar på samtycket (Batch 0.14)', '7988239250c54184f66bdb2102ef95f3f83ca400b257e4a5ab828bc4642fdda4', 39142412)
+  ('drive-1x3DNA1yIENHDEbmhN3lqiDdnDJ8vYRxw', 'IMG_0189.MOV — ridhus-arena', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1x3DNA1yIENHDEbmhN3lqiDdnDJ8vYRxw/view', 'unverified', false, 'Drive: Ridhuset/IMG_0189.MOV; byggnad: ridhus; status: DRIVE-ONLY; 6 nyckelrutor under references/video/; personer i bild; originalfilen inte migrerad (storlek); klubbens samtycke finns sedan 2026-11-28 — personer i bild avgör användningen', '7988239250c54184f66bdb2102ef95f3f83ca400b257e4a5ab828bc4642fdda4', 39142412)
   on conflict (id) do update set github_path = excluded.github_path, notes = excluded.notes,
     sha256 = excluded.sha256, bytes = excluded.bytes, updated_at = now();
 
 insert into public.reference_assets (id, title, asset_type, source_origin, github_path, external_source_url, verification_status, required_for_build, notes, sha256, bytes) values
-  ('drive-1jzZa1yc90eYyhl38Y0sIiTRWuMFGbcZy', 'IMG_0191.MOV — ridhus-arena', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1jzZa1yc90eYyhl38Y0sIiTRWuMFGbcZy/view', 'unverified', false, 'Drive: Ridhuset/IMG_0191.MOV; byggnad: ridhus; status: DRIVE-ONLY; personer i bild; alla filmer väntar på samtycket (Batch 0.14)', '1c79cdec7a908428ead52bf188e02b10c03496b49e3251c0cee1670fc3b249f1', 98812338)
+  ('drive-1jzZa1yc90eYyhl38Y0sIiTRWuMFGbcZy', 'IMG_0191.MOV — ridhus-arena', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1jzZa1yc90eYyhl38Y0sIiTRWuMFGbcZy/view', 'unverified', false, 'Drive: Ridhuset/IMG_0191.MOV; byggnad: ridhus; status: DRIVE-ONLY; personer i bild; originalfilen inte migrerad (storlek); klubbens samtycke finns sedan 2026-11-28 — personer i bild avgör användningen', '1c79cdec7a908428ead52bf188e02b10c03496b49e3251c0cee1670fc3b249f1', 98812338)
   on conflict (id) do update set github_path = excluded.github_path, notes = excluded.notes,
     sha256 = excluded.sha256, bytes = excluded.bytes, updated_at = now();
 
 insert into public.reference_assets (id, title, asset_type, source_origin, github_path, external_source_url, verification_status, required_for_build, notes, sha256, bytes) values
-  ('drive-1mzYSHM7EAA3cmYsrfOjhGWFuLLyz3Z2Z', 'IMG_0192.MOV — ridhus-arena', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1mzYSHM7EAA3cmYsrfOjhGWFuLLyz3Z2Z/view', 'unverified', false, 'Drive: Ridhuset/IMG_0192.MOV; byggnad: ridhus; status: DRIVE-ONLY; 8 nyckelrutor under references/video/; personer i bild; alla filmer väntar på samtycket (Batch 0.14)', 'd3eb10e72cb16e4d2201d327ffed5f159b67f0a63d7af520f6d64920a35e5a9c', 51303177)
+  ('drive-1mzYSHM7EAA3cmYsrfOjhGWFuLLyz3Z2Z', 'IMG_0192.MOV — ridhus-arena', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1mzYSHM7EAA3cmYsrfOjhGWFuLLyz3Z2Z/view', 'unverified', false, 'Drive: Ridhuset/IMG_0192.MOV; byggnad: ridhus; status: DRIVE-ONLY; 8 nyckelrutor under references/video/; personer i bild; originalfilen inte migrerad (storlek); klubbens samtycke finns sedan 2026-11-28 — personer i bild avgör användningen', 'd3eb10e72cb16e4d2201d327ffed5f159b67f0a63d7af520f6d64920a35e5a9c', 51303177)
   on conflict (id) do update set github_path = excluded.github_path, notes = excluded.notes,
     sha256 = excluded.sha256, bytes = excluded.bytes, updated_at = now();
 
@@ -539,12 +539,12 @@ insert into public.reference_assets (id, title, asset_type, source_origin, githu
     sha256 = excluded.sha256, bytes = excluded.bytes, updated_at = now();
 
 insert into public.reference_assets (id, title, asset_type, source_origin, github_path, external_source_url, verification_status, required_for_build, notes, sha256, bytes) values
-  ('drive-1FiTariRohVx5a-wHIkxD2yWEQbLjZ00I', 'IMG_0195.MOV — ridhus-arena', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1FiTariRohVx5a-wHIkxD2yWEQbLjZ00I/view', 'unverified', false, 'Drive: Ridhuset/IMG_0195.MOV; byggnad: ridhus; status: DRIVE-ONLY; personer i bild; alla filmer väntar på samtycket (Batch 0.14)', '3653fff6a984a6bbc2c8507102c29be0ac4cab60bfc25ea0c5ee34997cb2e92e', 69652420)
+  ('drive-1FiTariRohVx5a-wHIkxD2yWEQbLjZ00I', 'IMG_0195.MOV — ridhus-arena', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1FiTariRohVx5a-wHIkxD2yWEQbLjZ00I/view', 'unverified', false, 'Drive: Ridhuset/IMG_0195.MOV; byggnad: ridhus; status: DRIVE-ONLY; personer i bild; originalfilen inte migrerad (storlek); klubbens samtycke finns sedan 2026-11-28 — personer i bild avgör användningen', '3653fff6a984a6bbc2c8507102c29be0ac4cab60bfc25ea0c5ee34997cb2e92e', 69652420)
   on conflict (id) do update set github_path = excluded.github_path, notes = excluded.notes,
     sha256 = excluded.sha256, bytes = excluded.bytes, updated_at = now();
 
 insert into public.reference_assets (id, title, asset_type, source_origin, github_path, external_source_url, verification_status, required_for_build, notes, sha256, bytes) values
-  ('drive-1pwK34ZGhQm3loI0IATaLD1DscFfGOYgo', 'IMG_0196.MOV — ridhus-arena', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1pwK34ZGhQm3loI0IATaLD1DscFfGOYgo/view', 'unverified', false, 'Drive: Ridhuset/IMG_0196.MOV; byggnad: ridhus; status: DRIVE-ONLY; 4 nyckelrutor under references/video/; personer i bild; alla filmer väntar på samtycket (Batch 0.14)', '46d86dcd68013141e54b1894a2c3674832b3ab640cec8c60ddc8e49165e66354', 25430699)
+  ('drive-1pwK34ZGhQm3loI0IATaLD1DscFfGOYgo', 'IMG_0196.MOV — ridhus-arena', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1pwK34ZGhQm3loI0IATaLD1DscFfGOYgo/view', 'unverified', false, 'Drive: Ridhuset/IMG_0196.MOV; byggnad: ridhus; status: DRIVE-ONLY; 4 nyckelrutor under references/video/; personer i bild; originalfilen inte migrerad (storlek); klubbens samtycke finns sedan 2026-11-28 — personer i bild avgör användningen', '46d86dcd68013141e54b1894a2c3674832b3ab640cec8c60ddc8e49165e66354', 25430699)
   on conflict (id) do update set github_path = excluded.github_path, notes = excluded.notes,
     sha256 = excluded.sha256, bytes = excluded.bytes, updated_at = now();
 
@@ -599,7 +599,7 @@ insert into public.reference_assets (id, title, asset_type, source_origin, githu
     sha256 = excluded.sha256, bytes = excluded.bytes, updated_at = now();
 
 insert into public.reference_assets (id, title, asset_type, source_origin, github_path, external_source_url, verification_status, required_for_build, notes, sha256, bytes) values
-  ('drive-1lhGuikpzUKrcyy6mAR-MDeIAeIQ0jt7n', 'IMG_0252.MOV — stall-exterior', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1lhGuikpzUKrcyy6mAR-MDeIAeIQ0jt7n/view', 'unverified', false, 'Drive: Ridhuset/IMG_0252.MOV; byggnad: stall; status: DRIVE-ONLY; 8 nyckelrutor under references/video/; alla filmer väntar på samtycket (Batch 0.14)', '9c02efd79753acffae88b01b493f25d5ab935a6a76b823085e9323cda7a5f7f3', 17191371)
+  ('drive-1lhGuikpzUKrcyy6mAR-MDeIAeIQ0jt7n', 'IMG_0252.MOV — stall-exterior', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1lhGuikpzUKrcyy6mAR-MDeIAeIQ0jt7n/view', 'unverified', false, 'Drive: Ridhuset/IMG_0252.MOV; byggnad: stall; status: DRIVE-ONLY; 8 nyckelrutor under references/video/; originalfilen inte migrerad (storlek); klubbens samtycke finns sedan 2026-11-28 — personer i bild avgör användningen', '9c02efd79753acffae88b01b493f25d5ab935a6a76b823085e9323cda7a5f7f3', 17191371)
   on conflict (id) do update set github_path = excluded.github_path, notes = excluded.notes,
     sha256 = excluded.sha256, bytes = excluded.bytes, updated_at = now();
 
@@ -609,37 +609,37 @@ insert into public.reference_assets (id, title, asset_type, source_origin, githu
     sha256 = excluded.sha256, bytes = excluded.bytes, updated_at = now();
 
 insert into public.reference_assets (id, title, asset_type, source_origin, github_path, external_source_url, verification_status, required_for_build, notes, sha256, bytes) values
-  ('drive-12Jh6NA-ZfIvbBkgb7nNQdEjUMZHjP6k9', 'IMG_0254.MOV — stall-exterior', 'video', 'google_drive', null, 'https://drive.google.com/file/d/12Jh6NA-ZfIvbBkgb7nNQdEjUMZHjP6k9/view', 'unverified', false, 'Drive: Ridhuset/IMG_0254.MOV; byggnad: stall; status: DRIVE-ONLY; 19 nyckelrutor under references/video/; alla filmer väntar på samtycket (Batch 0.14)', 'a34b5b3dba2043eb6b90ae9aec4f0d70c432a059f09ae142bba62e7edb3c51e1', 35996489)
+  ('drive-12Jh6NA-ZfIvbBkgb7nNQdEjUMZHjP6k9', 'IMG_0254.MOV — stall-exterior', 'video', 'google_drive', null, 'https://drive.google.com/file/d/12Jh6NA-ZfIvbBkgb7nNQdEjUMZHjP6k9/view', 'unverified', false, 'Drive: Ridhuset/IMG_0254.MOV; byggnad: stall; status: DRIVE-ONLY; 19 nyckelrutor under references/video/; originalfilen inte migrerad (storlek); klubbens samtycke finns sedan 2026-11-28 — personer i bild avgör användningen', 'a34b5b3dba2043eb6b90ae9aec4f0d70c432a059f09ae142bba62e7edb3c51e1', 35996489)
   on conflict (id) do update set github_path = excluded.github_path, notes = excluded.notes,
     sha256 = excluded.sha256, bytes = excluded.bytes, updated_at = now();
 
 insert into public.reference_assets (id, title, asset_type, source_origin, github_path, external_source_url, verification_status, required_for_build, notes, sha256, bytes) values
-  ('drive-1iCMB71cLfVNKoHEVKO06Dhif2vlkR23y', 'IMG_0255.MOV — ridhus-exterior', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1iCMB71cLfVNKoHEVKO06Dhif2vlkR23y/view', 'unverified', false, 'Drive: Ridhuset/IMG_0255.MOV; byggnad: ridhus; status: DRIVE-ONLY; 15 nyckelrutor under references/video/; alla filmer väntar på samtycket (Batch 0.14)', '2f094aa2ecf641ee232eebb65ddbebd9c8b566621bfab7904244728a8b86a911', 25816559)
+  ('drive-1iCMB71cLfVNKoHEVKO06Dhif2vlkR23y', 'IMG_0255.MOV — ridhus-exterior', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1iCMB71cLfVNKoHEVKO06Dhif2vlkR23y/view', 'unverified', false, 'Drive: Ridhuset/IMG_0255.MOV; byggnad: ridhus; status: DRIVE-ONLY; 15 nyckelrutor under references/video/; originalfilen inte migrerad (storlek); klubbens samtycke finns sedan 2026-11-28 — personer i bild avgör användningen', '2f094aa2ecf641ee232eebb65ddbebd9c8b566621bfab7904244728a8b86a911', 25816559)
   on conflict (id) do update set github_path = excluded.github_path, notes = excluded.notes,
     sha256 = excluded.sha256, bytes = excluded.bytes, updated_at = now();
 
 insert into public.reference_assets (id, title, asset_type, source_origin, github_path, external_source_url, verification_status, required_for_build, notes, sha256, bytes) values
-  ('drive-1jYclouyulb53iifowQLPuDzAP8xHE5b_', 'IMG_0256.MOV — ridhus-exterior', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1jYclouyulb53iifowQLPuDzAP8xHE5b_/view', 'unverified', false, 'Drive: Ridhuset/IMG_0256.MOV; byggnad: ridhus; status: DRIVE-ONLY; 8 nyckelrutor under references/video/; alla filmer väntar på samtycket (Batch 0.14)', 'ec7b02fd801c54168f901fe44c412d49544dd2af7aaca58cdbd5560a719c47d5', 15300365)
+  ('drive-1jYclouyulb53iifowQLPuDzAP8xHE5b_', 'IMG_0256.MOV — ridhus-exterior', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1jYclouyulb53iifowQLPuDzAP8xHE5b_/view', 'unverified', false, 'Drive: Ridhuset/IMG_0256.MOV; byggnad: ridhus; status: DRIVE-ONLY; 8 nyckelrutor under references/video/; originalfilen inte migrerad (storlek); klubbens samtycke finns sedan 2026-11-28 — personer i bild avgör användningen', 'ec7b02fd801c54168f901fe44c412d49544dd2af7aaca58cdbd5560a719c47d5', 15300365)
   on conflict (id) do update set github_path = excluded.github_path, notes = excluded.notes,
     sha256 = excluded.sha256, bytes = excluded.bytes, updated_at = now();
 
 insert into public.reference_assets (id, title, asset_type, source_origin, github_path, external_source_url, verification_status, required_for_build, notes, sha256, bytes) values
-  ('drive-1uLDznXvAE45n8Uh4-g6cjqVQPPL29Gv0', 'IMG_0257.MOV — gard-omnejd', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1uLDznXvAE45n8Uh4-g6cjqVQPPL29Gv0/view', 'unverified', false, 'Drive: Ridhuset/IMG_0257.MOV; byggnad: omnejd; status: DRIVE-ONLY; alla filmer väntar på samtycket (Batch 0.14)', 'a73852fa9163ff1284c02dee455eede698b5442c6639578d0264e62c28ee7dae', 7528267)
+  ('drive-1uLDznXvAE45n8Uh4-g6cjqVQPPL29Gv0', 'IMG_0257.MOV — gard-omnejd', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1uLDznXvAE45n8Uh4-g6cjqVQPPL29Gv0/view', 'unverified', false, 'Drive: Ridhuset/IMG_0257.MOV; byggnad: omnejd; status: DRIVE-ONLY; originalfilen inte migrerad (storlek); klubbens samtycke finns sedan 2026-11-28 — personer i bild avgör användningen', 'a73852fa9163ff1284c02dee455eede698b5442c6639578d0264e62c28ee7dae', 7528267)
   on conflict (id) do update set github_path = excluded.github_path, notes = excluded.notes,
     sha256 = excluded.sha256, bytes = excluded.bytes, updated_at = now();
 
 insert into public.reference_assets (id, title, asset_type, source_origin, github_path, external_source_url, verification_status, required_for_build, notes, sha256, bytes) values
-  ('drive-1SNZSHFA5TLI74IlfOu86OwHX4ivPkAC_', 'IMG_0258.MOV — ridhus-exterior', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1SNZSHFA5TLI74IlfOu86OwHX4ivPkAC_/view', 'unverified', false, 'Drive: Ridhuset/IMG_0258.MOV; byggnad: ridhus; status: DRIVE-ONLY; 11 nyckelrutor under references/video/; alla filmer väntar på samtycket (Batch 0.14)', 'e6509b7b3079dd3e363a74c1077599a9afddb2e0230a18ae6361971db891fcd3', 38204315)
+  ('drive-1SNZSHFA5TLI74IlfOu86OwHX4ivPkAC_', 'IMG_0258.MOV — ridhus-exterior', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1SNZSHFA5TLI74IlfOu86OwHX4ivPkAC_/view', 'unverified', false, 'Drive: Ridhuset/IMG_0258.MOV; byggnad: ridhus; status: DRIVE-ONLY; 11 nyckelrutor under references/video/; originalfilen inte migrerad (storlek); klubbens samtycke finns sedan 2026-11-28 — personer i bild avgör användningen', 'e6509b7b3079dd3e363a74c1077599a9afddb2e0230a18ae6361971db891fcd3', 38204315)
   on conflict (id) do update set github_path = excluded.github_path, notes = excluded.notes,
     sha256 = excluded.sha256, bytes = excluded.bytes, updated_at = now();
 
 insert into public.reference_assets (id, title, asset_type, source_origin, github_path, external_source_url, verification_status, required_for_build, notes, sha256, bytes) values
-  ('drive-1eJ-znx0cl5kMiv4bCTbzasCfTGASigW-', 'IMG_0259.MOV — ridhus-exterior', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1eJ-znx0cl5kMiv4bCTbzasCfTGASigW-/view', 'unverified', false, 'Drive: Ridhuset/IMG_0259.MOV; byggnad: ridhus; status: DRIVE-ONLY; 6 nyckelrutor under references/video/; alla filmer väntar på samtycket (Batch 0.14)', '5f6ca6df53a6dde996ea3f3cedacb14c23aa7ec3624b3a003d702c4a0e74b081', 32749256)
+  ('drive-1eJ-znx0cl5kMiv4bCTbzasCfTGASigW-', 'IMG_0259.MOV — ridhus-exterior', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1eJ-znx0cl5kMiv4bCTbzasCfTGASigW-/view', 'unverified', false, 'Drive: Ridhuset/IMG_0259.MOV; byggnad: ridhus; status: DRIVE-ONLY; 6 nyckelrutor under references/video/; originalfilen inte migrerad (storlek); klubbens samtycke finns sedan 2026-11-28 — personer i bild avgör användningen', '5f6ca6df53a6dde996ea3f3cedacb14c23aa7ec3624b3a003d702c4a0e74b081', 32749256)
   on conflict (id) do update set github_path = excluded.github_path, notes = excluded.notes,
     sha256 = excluded.sha256, bytes = excluded.bytes, updated_at = now();
 
 insert into public.reference_assets (id, title, asset_type, source_origin, github_path, external_source_url, verification_status, required_for_build, notes, sha256, bytes) values
-  ('drive-1ubf6BstApp5SnxZbwigSyQzZRqQYHGM0', 'IMG_0260.MOV — ridhus-exterior', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1ubf6BstApp5SnxZbwigSyQzZRqQYHGM0/view', 'unverified', false, 'Drive: Ridhuset/IMG_0260.MOV; byggnad: ridhus; status: DRIVE-ONLY; 7 nyckelrutor under references/video/; alla filmer väntar på samtycket (Batch 0.14)', 'c444147835fd4969688095f1e7703243754b5835ae9c976395ab6c1ff06dedbe', 28231496)
+  ('drive-1ubf6BstApp5SnxZbwigSyQzZRqQYHGM0', 'IMG_0260.MOV — ridhus-exterior', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1ubf6BstApp5SnxZbwigSyQzZRqQYHGM0/view', 'unverified', false, 'Drive: Ridhuset/IMG_0260.MOV; byggnad: ridhus; status: DRIVE-ONLY; 7 nyckelrutor under references/video/; originalfilen inte migrerad (storlek); klubbens samtycke finns sedan 2026-11-28 — personer i bild avgör användningen', 'c444147835fd4969688095f1e7703243754b5835ae9c976395ab6c1ff06dedbe', 28231496)
   on conflict (id) do update set github_path = excluded.github_path, notes = excluded.notes,
     sha256 = excluded.sha256, bytes = excluded.bytes, updated_at = now();
 
@@ -679,7 +679,7 @@ insert into public.reference_assets (id, title, asset_type, source_origin, githu
     sha256 = excluded.sha256, bytes = excluded.bytes, updated_at = now();
 
 insert into public.reference_assets (id, title, asset_type, source_origin, github_path, external_source_url, verification_status, required_for_build, notes, sha256, bytes) values
-  ('drive-1cLysl4PEQeM4sdJ_52oG6wGY-bnsbKpA', 'IMG_0268.MOV — ridhus-klubbdel', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1cLysl4PEQeM4sdJ_52oG6wGY-bnsbKpA/view', 'unverified', false, 'Drive: Ridhuset/IMG_0268.MOV; byggnad: ridhus; status: DRIVE-ONLY; 26 nyckelrutor under references/video/; personer i bild; alla filmer väntar på samtycket (Batch 0.14)', '751a4bfa81246a0f1b3c6d31405f29ba0ec96298bb1119e99a564ab83c97f69b', 28721696)
+  ('drive-1cLysl4PEQeM4sdJ_52oG6wGY-bnsbKpA', 'IMG_0268.MOV — ridhus-klubbdel', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1cLysl4PEQeM4sdJ_52oG6wGY-bnsbKpA/view', 'unverified', false, 'Drive: Ridhuset/IMG_0268.MOV; byggnad: ridhus; status: DRIVE-ONLY; 26 nyckelrutor under references/video/; personer i bild; originalfilen inte migrerad (storlek); klubbens samtycke finns sedan 2026-11-28 — personer i bild avgör användningen', '751a4bfa81246a0f1b3c6d31405f29ba0ec96298bb1119e99a564ab83c97f69b', 28721696)
   on conflict (id) do update set github_path = excluded.github_path, notes = excluded.notes,
     sha256 = excluded.sha256, bytes = excluded.bytes, updated_at = now();
 
@@ -714,7 +714,7 @@ insert into public.reference_assets (id, title, asset_type, source_origin, githu
     sha256 = excluded.sha256, bytes = excluded.bytes, updated_at = now();
 
 insert into public.reference_assets (id, title, asset_type, source_origin, github_path, external_source_url, verification_status, required_for_build, notes, sha256, bytes) values
-  ('drive-1uwspuPfSji_CtsXIT0MDG7Q4FDMLTVVY', 'IMG_0275.MOV — ridhus-arena', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1uwspuPfSji_CtsXIT0MDG7Q4FDMLTVVY/view', 'unverified', false, 'Drive: Ridhuset/IMG_0275.MOV; byggnad: ridhus; status: DRIVE-ONLY; 6 nyckelrutor under references/video/; alla filmer väntar på samtycket (Batch 0.14)', '3d97b655fb75313c4b7590434d699429161c69ae75e355f7f0b38d5104c2d8fc', 24582357)
+  ('drive-1uwspuPfSji_CtsXIT0MDG7Q4FDMLTVVY', 'IMG_0275.MOV — ridhus-arena', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1uwspuPfSji_CtsXIT0MDG7Q4FDMLTVVY/view', 'unverified', false, 'Drive: Ridhuset/IMG_0275.MOV; byggnad: ridhus; status: DRIVE-ONLY; 6 nyckelrutor under references/video/; originalfilen inte migrerad (storlek); klubbens samtycke finns sedan 2026-11-28 — personer i bild avgör användningen', '3d97b655fb75313c4b7590434d699429161c69ae75e355f7f0b38d5104c2d8fc', 24582357)
   on conflict (id) do update set github_path = excluded.github_path, notes = excluded.notes,
     sha256 = excluded.sha256, bytes = excluded.bytes, updated_at = now();
 
@@ -749,12 +749,12 @@ insert into public.reference_assets (id, title, asset_type, source_origin, githu
     sha256 = excluded.sha256, bytes = excluded.bytes, updated_at = now();
 
 insert into public.reference_assets (id, title, asset_type, source_origin, github_path, external_source_url, verification_status, required_for_build, notes, sha256, bytes) values
-  ('drive-18gls36hRAK8CR9kD3Nr7PbnoWUrHwvC1', 'IMG_0282.MOV — ridhus-klubbdel', 'video', 'google_drive', null, 'https://drive.google.com/file/d/18gls36hRAK8CR9kD3Nr7PbnoWUrHwvC1/view', 'unverified', false, 'Drive: Ridhuset/IMG_0282.MOV; byggnad: ridhus; status: DRIVE-ONLY; 33 nyckelrutor under references/video/; alla filmer väntar på samtycket (Batch 0.14)', 'ba4df6dd00d46ad88248706c2cb615c5d9526c64fb45f5f173df96114e99da31', 29850724)
+  ('drive-18gls36hRAK8CR9kD3Nr7PbnoWUrHwvC1', 'IMG_0282.MOV — ridhus-klubbdel', 'video', 'google_drive', null, 'https://drive.google.com/file/d/18gls36hRAK8CR9kD3Nr7PbnoWUrHwvC1/view', 'unverified', false, 'Drive: Ridhuset/IMG_0282.MOV; byggnad: ridhus; status: DRIVE-ONLY; 33 nyckelrutor under references/video/; originalfilen inte migrerad (storlek); klubbens samtycke finns sedan 2026-11-28 — personer i bild avgör användningen', 'ba4df6dd00d46ad88248706c2cb615c5d9526c64fb45f5f173df96114e99da31', 29850724)
   on conflict (id) do update set github_path = excluded.github_path, notes = excluded.notes,
     sha256 = excluded.sha256, bytes = excluded.bytes, updated_at = now();
 
 insert into public.reference_assets (id, title, asset_type, source_origin, github_path, external_source_url, verification_status, required_for_build, notes, sha256, bytes) values
-  ('drive-1mruWebcJN8tPXafotPIzS6wGDmNXDk9e', 'IMG_0283.MOV — ridhus-klubbdel', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1mruWebcJN8tPXafotPIzS6wGDmNXDk9e/view', 'unverified', false, 'Drive: Ridhuset/IMG_0283.MOV; byggnad: ridhus; status: DRIVE-ONLY; 26 nyckelrutor under references/video/; alla filmer väntar på samtycket (Batch 0.14)', 'eacf5a57bf23900a321da8b4af1b8329d7e2928673fcdbd36c0fb5d9a32d9a25', 43052166)
+  ('drive-1mruWebcJN8tPXafotPIzS6wGDmNXDk9e', 'IMG_0283.MOV — ridhus-klubbdel', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1mruWebcJN8tPXafotPIzS6wGDmNXDk9e/view', 'unverified', false, 'Drive: Ridhuset/IMG_0283.MOV; byggnad: ridhus; status: DRIVE-ONLY; 26 nyckelrutor under references/video/; originalfilen inte migrerad (storlek); klubbens samtycke finns sedan 2026-11-28 — personer i bild avgör användningen', 'eacf5a57bf23900a321da8b4af1b8329d7e2928673fcdbd36c0fb5d9a32d9a25', 43052166)
   on conflict (id) do update set github_path = excluded.github_path, notes = excluded.notes,
     sha256 = excluded.sha256, bytes = excluded.bytes, updated_at = now();
 
@@ -1069,12 +1069,12 @@ insert into public.reference_assets (id, title, asset_type, source_origin, githu
     sha256 = excluded.sha256, bytes = excluded.bytes, updated_at = now();
 
 insert into public.reference_assets (id, title, asset_type, source_origin, github_path, external_source_url, verification_status, required_for_build, notes, sha256, bytes) values
-  ('drive-1P8YF_veojJxNuqWbr9vNC5xP-zLr3qY6', 'IMG_0238.MOV — stall-servicedel', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1P8YF_veojJxNuqWbr9vNC5xP-zLr3qY6/view', 'unverified', false, 'Drive: Stallhuset/IMG_0238.MOV; byggnad: stall; status: DRIVE-ONLY; alla filmer väntar på samtycket (Batch 0.14)', 'a4c3238ddcc1d857055177376354ac6cfc6c2d1f62aca1c40a390e014b41a935', 18461218)
+  ('drive-1P8YF_veojJxNuqWbr9vNC5xP-zLr3qY6', 'IMG_0238.MOV — stall-servicedel', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1P8YF_veojJxNuqWbr9vNC5xP-zLr3qY6/view', 'unverified', false, 'Drive: Stallhuset/IMG_0238.MOV; byggnad: stall; status: DRIVE-ONLY; originalfilen inte migrerad (storlek); klubbens samtycke finns sedan 2026-11-28 — personer i bild avgör användningen', 'a4c3238ddcc1d857055177376354ac6cfc6c2d1f62aca1c40a390e014b41a935', 18461218)
   on conflict (id) do update set github_path = excluded.github_path, notes = excluded.notes,
     sha256 = excluded.sha256, bytes = excluded.bytes, updated_at = now();
 
 insert into public.reference_assets (id, title, asset_type, source_origin, github_path, external_source_url, verification_status, required_for_build, notes, sha256, bytes) values
-  ('drive-1PrRzHEXhI73A8dO2mmwFw2gA5t076yRv', 'IMG_0239.MOV — stall-servicedel', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1PrRzHEXhI73A8dO2mmwFw2gA5t076yRv/view', 'unverified', false, 'Drive: Stallhuset/IMG_0239.MOV; byggnad: stall; status: DRIVE-ONLY; alla filmer väntar på samtycket (Batch 0.14)', 'f91b576f1d33683bb58f0dd38d835750dda5d3e62933ee69a7dd01d315940ee1', 32947865)
+  ('drive-1PrRzHEXhI73A8dO2mmwFw2gA5t076yRv', 'IMG_0239.MOV — stall-servicedel', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1PrRzHEXhI73A8dO2mmwFw2gA5t076yRv/view', 'unverified', false, 'Drive: Stallhuset/IMG_0239.MOV; byggnad: stall; status: DRIVE-ONLY; originalfilen inte migrerad (storlek); klubbens samtycke finns sedan 2026-11-28 — personer i bild avgör användningen', 'f91b576f1d33683bb58f0dd38d835750dda5d3e62933ee69a7dd01d315940ee1', 32947865)
   on conflict (id) do update set github_path = excluded.github_path, notes = excluded.notes,
     sha256 = excluded.sha256, bytes = excluded.bytes, updated_at = now();
 
@@ -1134,7 +1134,7 @@ insert into public.reference_assets (id, title, asset_type, source_origin, githu
     sha256 = excluded.sha256, bytes = excluded.bytes, updated_at = now();
 
 insert into public.reference_assets (id, title, asset_type, source_origin, github_path, external_source_url, verification_status, required_for_build, notes, sha256, bytes) values
-  ('drive-1gcHtOAMqZwtJ7JuJrwFc13PBPIzznyhS', 'IMG_0289.MOV — stall-exterior', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1gcHtOAMqZwtJ7JuJrwFc13PBPIzznyhS/view', 'unverified', false, 'Drive: Stallhuset/IMG_0289.MOV; byggnad: stall; status: DRIVE-ONLY; personer i bild; alla filmer väntar på samtycket (Batch 0.14)', '2afeb64def8d0d932157d8d134ac7bd71d6b836d790850f7c39168cc271f06e5', 28055440)
+  ('drive-1gcHtOAMqZwtJ7JuJrwFc13PBPIzznyhS', 'IMG_0289.MOV — stall-exterior', 'video', 'google_drive', null, 'https://drive.google.com/file/d/1gcHtOAMqZwtJ7JuJrwFc13PBPIzznyhS/view', 'unverified', false, 'Drive: Stallhuset/IMG_0289.MOV; byggnad: stall; status: DRIVE-ONLY; personer i bild; originalfilen inte migrerad (storlek); klubbens samtycke finns sedan 2026-11-28 — personer i bild avgör användningen', '2afeb64def8d0d932157d8d134ac7bd71d6b836d790850f7c39168cc271f06e5', 28055440)
   on conflict (id) do update set github_path = excluded.github_path, notes = excluded.notes,
     sha256 = excluded.sha256, bytes = excluded.bytes, updated_at = now();
 

@@ -53,8 +53,9 @@ Två saker om det som låg i repot **före** den här batchen, noterade men inte
 
 - 28 av de 93 tidigare migrerade bilderna visar en person och 4 en
   registreringsskylt (kolumnerna `personer` / `skyltar` på rader med
-  «migrerad före»). Om de ska ligga kvar är samma fråga som samtycket i
-  `references/licenses/SAMTYCKE-FORFRAGAN-UTKAST.md`.
+  «migrerad före»). Klubbens samtycke finns sedan 2026-11-28
+  (`references/licenses/SAMTYCKE-UBRF-2026-11-28.md`), men det täcker inte personerna i bild. Om de här bilderna ska ligga
+  kvar är fortfarande en öppen fråga för Tobias.
 - `buildings/stall/stall-inne-07-spolspiltan.jpg` ligger upp och ner (golvet
   överst), som de åtta `stall-entre`-bilderna gjorde före rättelsen i
   `references/README.md`.

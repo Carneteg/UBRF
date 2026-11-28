@@ -142,9 +142,9 @@ Detaljfärger:
 - **Skyltbandet på långsidan mot grusvägen**: vitt, med texten
   «UPPLANDS-BRO RYTTARFÖRENING» och klubbmärket som en rund skiva i mitten,
   högre än bandet. Sitter på ungefär två tredjedelar av vägghöjden
-  (`drive-2026-11-26/IMG_0069-ridhus-exterior.jpg`). Att återge märket och
-  namnet väntar på klubbens svar, se
-  `references/licenses/SAMTYCKE-FORFRAGAN-UTKAST.md`.
+  (`drive-2026-11-26/IMG_0069-ridhus-exterior.jpg`). Märket och namnet får
+  återges — klubbens samtycke 2026-11-28, se
+  `references/licenses/SAMTYCKE-UBRF-2026-11-28.md`.
 - **Entrétaket med rampen** i hörnet mot cafégaveln, och **den galvade
   trappan** upp till dörren i långsidans bortre ände.
 

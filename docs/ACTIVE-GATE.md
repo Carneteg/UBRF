@@ -811,6 +811,24 @@ deras beslutsspärrar är auktoritativa för det här arbetet.
   - **Lärdom för resten av Fas 1:** «bakom brytaren» ska betyda en egen
     kodväg, inte en gren i den gemensamma — och «oförändrat» ska mätas i
     bildrutetakt också, inte bara i färg.
+- **Klubbens samtycke, noterat 2026-11-28.** Tobias meddelar att
+  samtycket redan är givet, av ridskolechefen. Det täcker alla fyra
+  områden: foto, film och mätning · igenkännbar återgivning med
+  föreningens namn, också med ytor ur foton · sponsorskyltar och
+  klubbmärke · skolhästarna och ljud.
+  - **Sparat** i `references/licenses/SAMTYCKE-UBRF-2026-11-28.md`, utifrån
+    Tobias besked; själva meddelandet från klubben finns inte i repot, och
+    datum och form (skriftligt/muntligt) är inte angivna.
+  - **Förfrågan från Batch 0.14 behövdes inte** och är borttagen
+    (`SAMTYCKE-FORFRAGAN-UTKAST.md`; finns i historiken). Posten för 0.14
+    ovan står kvar som historik.
+  - **Står kvar, oberoende av samtycket:** inga igenkännbara personer, inga
+    registreringsskyltar eller läsbara namn, inga röster eller
+    lektionsljud. De 26 Drive-fotona med sådant och alla 24 filmer
+    stannar `[DRIVE-ONLY]`; skälet är nu personerna i bild, inte klubben.
+    Privatägda hästar omfattas inte.
+  - **Följd:** stallgångens fotomaterial (Batch 1.4) kan byggas; byggets
+    spärr släpper in UBRF-fotorutor som pekar på samtyckesfilen.
 - **A2 (kantutjämning) uppskjuten, inte löst i 0.1:** en FXAA-shader
   provades i post-kompositeringen men orsakade en mätbar, reproducerbar
   CI-regression i `tools/lektion-e2e-test.mjs` (headless, mjukvaru-

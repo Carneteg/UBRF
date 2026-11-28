@@ -125,6 +125,7 @@ def main():
     (rot / "index.html").write_text('<!doctype html><html><body><script src="src/a.js"></script></body></html>',
                                     encoding="utf-8")
     (rot / "src" / "a.js").write_text("var A=1;\n", encoding="utf-8")
+    # Ett UTKAST till förfrågan (så hette det i Batch 0.14) ska aldrig räknas som samtycke.
     (rot / "references" / "licenses" / "SAMTYCKE-FORFRAGAN-UTKAST.md").write_text("utkast\n", encoding="utf-8")
 
     nr = [0]

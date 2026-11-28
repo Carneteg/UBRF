@@ -14,7 +14,8 @@ Kontrollerar:
        · varje IN_REPO-rad pekar på en fil som finns, med rätt sha256,
        · en DRIVE-ONLY-rad pekar inte på någon repo-fil,
        · inget foto med person, registreringsskylt eller läsbara personnamn
-         har fått ett NYTT derivat (Batch 0.13: de väntar på samtycket),
+         har fått ett NYTT derivat (Batch 0.13; klubbens samtycke från
+         2026-11-28 täcker inte personerna i bild, så regeln står kvar),
        · ingen film är migrerad av den här batchen,
        · varje bildfil i en drive-<datum>-mapp har en manifestrad.
   3. De nya derivaten bär ingen EXIF eller XMP (plats, tid, telefonmodell).

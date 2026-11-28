@@ -75,8 +75,9 @@ ska läsas står i `references/DRIVE-SOURCE-INDEX.md`.
 - **185 av 211 foton har en motsvarighet i repot** (93 sedan tidigare, 92
   migrerade 2026-11-26 som JPEG-derivat utan EXIF).
 - **26 foton är `[DRIVE-ONLY]`**: en person, en registreringsskylt eller
-  läsbara personnamn syns. De får inte användas som texturkälla eller läggas
-  i repot förrän samtycket finns (`references/licenses/SAMTYCKE-FORFRAGAN-UTKAST.md`).
+  läsbara personnamn syns. De används inte som texturkälla och läggs inte i
+  repot. Klubbens samtycke (`references/licenses/SAMTYCKE-UBRF-2026-11-28.md`) ändrar inte det — det täcker inte personerna
+  i bild.
 - **Alla 24 filmer är `[DRIVE-ONLY]`** som originalfiler; 16 av dem har
   nyckelrutor under `references/video/`.
 - **`1.pdf` är `[DRIVE-ONLY]` och förblir det**: häftet är upphovsrättsskyddat
@@ -126,8 +127,9 @@ ingenting över nätet när det körs.
   spelet och är därmed publicerad. Den kräver klubbens sparade svar,
   `references/licenses/SAMTYCKE-UBRF-<datum>.md`, angivet i kolumnen
   `samtycke`. Utkastet till förfrågan räknas inte. Bygget kontrollerar det.
-- **Läget 2026-11-26:** mappen innehåller ingen bildfil. Stallgångens
-  material (Batch 1.4) väntar på klubbens svar.
+- **Läget 2026-11-28:** klubbens samtycke finns
+  (`references/licenses/SAMTYCKE-UBRF-2026-11-28.md`, noterat enligt Tobias). Stallgångens material (Batch 1.4) är de
+  första UBRF-fotorutorna.
 
 ## Definition of done för nytt källmaterial
 
